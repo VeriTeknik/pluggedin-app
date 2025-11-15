@@ -746,10 +746,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       // Priority 1: Decrypted streamableHTTPOptions from dedicated column
       if (serverConfig.streamableHTTPOptions) {
         streamableOptions = serverConfig.streamableHTTPOptions;
-        console.log('[OAuth/SSE] Using streamableHTTPOptions from decrypted dedicated column');
-        if (streamableOptions?.headers?.Authorization) {
-          console.log('[OAuth/SSE] Authorization header found and will be used for SSE requests');
-        }
       }
       // Priority 2: Legacy env.__streamableHTTPOptions (backward compatibility)
       else if (serverConfig.env?.__streamableHTTPOptions) {
@@ -757,7 +753,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           const parsed = JSON.parse(serverConfig.env.__streamableHTTPOptions);
           if (parsed && typeof parsed === 'object') {
             streamableOptions = parsed;
-            console.log('[OAuth/SSE] Using streamableHTTPOptions from legacy env field');
           }
         } catch (e) {
           console.error('[OAuth/SSE] Failed to parse legacy streamableHTTPOptions:', e);
@@ -776,12 +771,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             cache: 'no-store' as RequestCache,
             next: { revalidate: 0 }
           };
-          console.log('[OAuth/SSE] Added OAuth headers to SSE transport');
         } else {
           console.warn('[OAuth/SSE] Invalid headers, skipping:', headerValidation.error);
         }
-      } else if (!streamableOptions?.headers) {
-        console.log('[OAuth/SSE] No OAuth headers found in streamableHTTPOptions');
       }
 
       transport = new SSEClientTransport(transportOptions.url, transportOptions.requestInit);
@@ -808,10 +800,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         // Priority 1: Decrypted streamableHTTPOptions from dedicated column
         if (serverConfig.streamableHTTPOptions) {
           streamableOptions = serverConfig.streamableHTTPOptions;
-          console.log('[OAuth] Using streamableHTTPOptions from decrypted dedicated column');
-          if (streamableOptions?.headers?.Authorization) {
-            console.log('[OAuth] Authorization header found and will be used for requests');
-          }
         }
         // Priority 2: Legacy env.__streamableHTTPOptions (backward compatibility)
         else if (serverConfig.env?.__streamableHTTPOptions) {
@@ -820,7 +808,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             // Validate the parsed options have expected structure
             if (parsed && typeof parsed === 'object') {
               streamableOptions = parsed;
-              console.log('[OAuth] Using streamableHTTPOptions from legacy env field');
             } else {
               streamableOptions = {};
             }
@@ -828,11 +815,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             console.error('[OAuth] Failed to parse legacy streamableHTTPOptions:', e);
             streamableOptions = {};
           }
-        }
-
-        // Log if no OAuth headers found
-        if (!streamableOptions?.headers?.Authorization) {
-          console.log('[OAuth] No Authorization header found in streamableHTTPOptions');
         }
         
         // Create StreamableHTTPClientTransport with options

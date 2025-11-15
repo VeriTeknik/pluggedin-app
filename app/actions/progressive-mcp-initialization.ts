@@ -25,6 +25,78 @@ export interface ProgressiveInitResult {
 }
 
 /**
+ * Initialize a single MCP server with error handling and status tracking
+ */
+async function initializeOneServer(
+  serverName: string,
+  serverConfig: any,
+  context: {
+    logger: any;
+    timeout: number;
+    maxRetries: number;
+    profileUuid: string;
+    llmProvider: any;
+    skipHealthChecks?: boolean;
+    healthResults: Record<string, boolean>;
+  }
+): Promise<{
+  serverName: string;
+  status: 'success' | 'error' | 'skipped';
+  result?: { tools: any[]; cleanup: McpServerCleanupFn };
+  error?: string;
+  statusEntry: ServerInitStatus;
+}> {
+  const startTime = Date.now();
+  const statusEntry: ServerInitStatus = {
+    serverName,
+    status: 'pending',
+    startTime
+  };
+
+  // Check health status
+  if (!context.skipHealthChecks && !context.healthResults[serverName]) {
+    statusEntry.status = 'skipped';
+    statusEntry.error = 'Skipped due to failed health check';
+    statusEntry.endTime = Date.now();
+    await addServerLogForProfile(
+      context.profileUuid,
+      'warn',
+      `[MCP] Skipping initialization for ${serverName} due to failed health check.`
+    );
+    return { serverName, status: 'skipped', statusEntry };
+  }
+
+  try {
+    const result = await initializeSingleServer(
+      serverName,
+      serverConfig,
+      {
+        logger: context.logger,
+        timeout: context.timeout,
+        maxRetries: context.maxRetries,
+        profileUuid: context.profileUuid,
+        llmProvider: context.llmProvider
+      }
+    );
+
+    statusEntry.status = 'success';
+    statusEntry.endTime = Date.now();
+    await addServerLogForProfile(
+      context.profileUuid,
+      'info',
+      `[MCP] Successfully initialized server: ${serverName}`
+    );
+    return { serverName, status: 'success', result, statusEntry };
+  } catch (error) {
+    statusEntry.status = 'error';
+    statusEntry.error = error instanceof Error ? error.message : String(error);
+    statusEntry.endTime = Date.now();
+    console.error(`[MCP] Failed to initialize server "${serverName}":`, error);
+    return { serverName, status: 'error', error: statusEntry.error, statusEntry };
+  }
+}
+
+/**
  * Performs health checks on SSE servers before initialization
  * Note: Streamable HTTP servers are skipped as they may require special auth handling
  */
@@ -260,56 +332,26 @@ export async function progressivelyInitializeMcpServers(
 
     // Start initialization process with overall timeout
     // Initialize servers in PARALLEL to avoid transport-type state conflicts
+    // Note: Promise.race ensures the overall timeout is still respected - if totalTimeout
+    // is reached, the initialization will be canceled even if some servers are still initializing
     await Promise.race([
       (async () => {
         // Create initialization promises for all servers in parallel
-        const initializationPromises = serverNames.map(async (serverName) => {
-          const serverConfig = mcpServersConfig[serverName];
-          const startTime = Date.now();
-          const statusEntry: ServerInitStatus = { serverName, status: 'pending', startTime };
-          initStatus.push(statusEntry);
-
-          if (!skipHealthChecks && !healthResults[serverName]) {
-            statusEntry.status = 'skipped';
-            statusEntry.error = 'Skipped due to failed health check';
-            statusEntry.endTime = Date.now();
-            await addServerLogForProfile(
+        const initializationPromises = serverNames.map(serverName =>
+          initializeOneServer(
+            serverName,
+            mcpServersConfig[serverName],
+            {
+              logger,
+              timeout: perServerTimeout,
+              maxRetries,
               profileUuid,
-              'warn',
-              `[MCP] Skipping initialization for ${serverName} due to failed health check.`
-            );
-            return { serverName, status: 'skipped' as const, statusEntry };
-          }
-
-          try {
-            const result = await initializeSingleServer(
-              serverName,
-              serverConfig,
-              {
-                logger,
-                timeout: perServerTimeout,
-                maxRetries,
-                profileUuid,
-                llmProvider
-              }
-            );
-
-            statusEntry.status = 'success';
-            statusEntry.endTime = Date.now();
-            await addServerLogForProfile(
-              profileUuid,
-              'info',
-              `[MCP] Successfully initialized server: ${serverName}`
-            );
-            return { serverName, status: 'success' as const, result, statusEntry };
-          } catch (error) {
-            statusEntry.status = 'error';
-            statusEntry.error = error instanceof Error ? error.message : String(error);
-            statusEntry.endTime = Date.now();
-            console.error(`[MCP] Failed to initialize server "${serverName}":`, error);
-            return { serverName, status: 'error' as const, error, statusEntry };
-          }
-        });
+              llmProvider,
+              skipHealthChecks,
+              healthResults
+            }
+          )
+        );
 
         // Wait for all servers to initialize in parallel with error isolation
         const results = await Promise.allSettled(initializationPromises);
@@ -317,7 +359,10 @@ export async function progressivelyInitializeMcpServers(
         // Process results after all initializations complete
         for (const promiseResult of results) {
           if (promiseResult.status === 'fulfilled') {
-            const { serverName, status, result } = promiseResult.value;
+            const { serverName, status, result, statusEntry } = promiseResult.value;
+
+            // Add status entry to tracking
+            initStatus.push(statusEntry);
 
             if (status === 'success' && result) {
               allTools.push(...result.tools);
@@ -327,8 +372,17 @@ export async function progressivelyInitializeMcpServers(
             }
             // 'skipped' status is already logged, no additional action needed
           } else {
-            // Promise itself rejected (unexpected)
+            // Promise itself rejected (unexpected) - this should rarely happen
+            // as initializeOneServer handles all errors internally
             console.error('[MCP] Unexpected promise rejection during initialization:', promiseResult.reason);
+
+            // TODO: Integrate with error tracking service (e.g., Sentry)
+            // if (typeof reportError === 'function') {
+            //   reportError(promiseResult.reason, {
+            //     context: 'progressive-mcp-initialization',
+            //     profileUuid,
+            //   });
+            // }
           }
         }
       })(),

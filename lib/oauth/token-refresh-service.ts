@@ -455,7 +455,9 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
         Authorization: `${tokenType} ${newTokens.access_token}`,
       };
 
-      // Also keep legacy format for backward compatibility
+      // @deprecated: Legacy format for backward compatibility
+      // TODO: Remove options.headers format once all downstream clients
+      // have migrated to use requestInit.headers (target: Q2 2025)
       options.headers = {
         ...(options.headers || {}),
         Authorization: `${tokenType} ${newTokens.access_token}`,
