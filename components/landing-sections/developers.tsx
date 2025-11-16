@@ -12,6 +12,7 @@ import {
   Terminal,
   TrendingUp,
   Users} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
@@ -19,6 +20,14 @@ import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+
+interface PlatformMetrics {
+  totalUsers: number;
+  totalProjects: number;
+  totalServers: number;
+  activeProfiles30d: number;
+  newUsers30d: number;
+}
 
 interface DeveloperFeature {
   icon: React.ElementType;
@@ -87,10 +96,26 @@ export function LandingDevelopersSection() {
     triggerOnce: true,
   });
 
+  const [metrics, setMetrics] = useState<PlatformMetrics>({
+    totalUsers: 848, // Production fallback
+    totalProjects: 900,
+    totalServers: 782, // Production fallback
+    activeProfiles30d: 135,
+    newUsers30d: 123,
+  });
+
+  useEffect(() => {
+    // Fetch metrics from API
+    fetch('/api/platform-metrics')
+      .then(res => res.json())
+      .then(data => setMetrics(data))
+      .catch(err => console.error('Error fetching metrics:', err));
+  }, []);
+
   const communityStats = [
-    { icon: Users, value: 620, suffix: '+', label: 'Active Developers' },
-    { icon: Star, value: 650, suffix: '+', label: 'Projects Created' },
-    { icon: Github, value: 460, suffix: '+', label: 'Active Servers' },
+    { icon: Users, value: metrics.totalUsers, suffix: '+', label: 'Active Developers' },
+    { icon: Star, value: metrics.totalProjects, suffix: '+', label: 'Projects Created' },
+    { icon: Github, value: metrics.totalServers, suffix: '+', label: 'Active Servers' },
     { icon: Rocket, value: 87, suffix: '+', label: 'AI Documents' },
   ];
 
@@ -136,7 +161,7 @@ export function LandingDevelopersSection() {
             transition={{ delay: 0.2 }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neon-purple/10 border border-neon-purple/20 mb-4">
             <TrendingUp className="h-4 w-4 text-neon-purple" />
-            <span className="text-sm font-semibold text-neon-purple">620+ Active Developers</span>
+            <span className="text-sm font-semibold text-neon-purple">{metrics.totalUsers}+ Active Developers</span>
           </motion.div>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-electric-cyan">
@@ -147,7 +172,7 @@ export function LandingDevelopersSection() {
             Join the fastest-growing AI developer community
           </p>
           <p className="mt-2 text-base text-muted-foreground">
-            Build alongside 620+ developers creating the future of AI integration
+            Build alongside {metrics.totalUsers}+ developers creating the future of AI integration
           </p>
         </div>
 
@@ -194,7 +219,7 @@ export function LandingDevelopersSection() {
               <span className="text-xs font-semibold text-glow-green">Quick Start</span>
             </div>
             <h3 className="text-xl font-semibold mb-2">
-              Join 620+ developers in seconds
+              Join {metrics.totalUsers}+ developers in seconds
             </h3>
             <p className="text-sm text-muted-foreground">
               Use 7,268+ verified tools with encrypted keys - no config exposure needed
@@ -228,7 +253,7 @@ export function LandingDevelopersSection() {
           transition={{ delay: 0.8 }}
           className="mt-12 text-center">
           <p className="text-sm text-muted-foreground mb-4">
-            Join 620+ developers using 7,268+ verified tools with secure key management
+            Join {metrics.totalUsers}+ developers using 7,268+ verified tools with secure key management
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -244,7 +269,7 @@ export function LandingDevelopersSection() {
               variant="outline"
               size="lg"
               className="border-neon-purple/20 hover:bg-neon-purple/10">
-              <a href="https://github.com/pluggedin" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/veriteknik" target="_blank" rel="noopener noreferrer">
                 <Github className="mr-2 h-4 w-4" />
                 View on GitHub
               </a>

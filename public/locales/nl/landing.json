@@ -6,19 +6,27 @@
     "collections": "Collecties",
     "playground": "Playground",
     "documentation": "Documentatie",
-    "getStarted": "Aan de slag"
+    "getStarted": "Verbind"
   },
   "hero": {
+    "badge": "'s Werelds Eerste AI-CMS",
+    "headline": "Waar Kennis, Tools, Geheugen en Agenten Samenkomen",
+    "subheadline": "Eén uniform platform om al je AI-interacties te organiseren. Model-agnostische infrastructuur die je AI echt van jou maakt—persistent over Claude, ChatGPT, Cursor en elk platform dat je gebruikt.",
+    "tagline": "Eén Platform. Al Je AI. Voor Altijd.",
+    "cta": {
+      "primary": "Verbind",
+      "secondary": "Bekijk Hoe Het Werkt"
+    },
+    "pillars": {
+      "knowledge": "Kennis",
+      "tools": "Tools",
+      "memory": "Geheugen",
+      "agents": "Agenten"
+    },
     "title": "Het AI-kruispunt",
     "subtitle": "Verbind, creëer en breid uw AI-mogelijkheden uit met een uniform platform. Bouw en beheer plug-ins die uw AI-workflows verbeteren.",
-    "headline": "Verbind, deel en ontdek MCP Servers",
-    "subheadline": "De community-hub, universele proxy en AI-kennisplatform voor het Model Context Protocol",
     "analogy": "\"Uw AI-ecosysteem, uniform en sociaal\"",
     "openSource": "Trots Open Source",
-    "cta": {
-      "getStarted": "Word lid van de community",
-      "learnMore": "Verken functies"
-    },
     "features": {
       "security": "Enterprise Security",
       "fast": "Lightning Fast",
@@ -505,10 +513,10 @@
     "certifications": {
       "soc2": {
         "label": "SOC 2 Type II",
-        "description": "Gecertificeerd"
+        "description": "Compatibel"
       },
-      "iso": {
-        "label": "ISO 27001",
+      "pciDss": {
+        "label": "PCI-DSS",
         "description": "Conform"
       },
       "gdpr": {
@@ -582,5 +590,163 @@
       "suffix": "+",
       "label": "AI-documenten"
     }
+  },
+  "problemStatement": {
+    "title": "AI-fragmentatie kost u tijd, geld en intelligentie",
+    "subtitle": "De belofte van AI-productiviteit is reëel. Maar de realiteit? Uw AI-mogelijkheden zijn verspreid over platforms, tools resetten na elke sessie, en niets communiceert met elkaar.",
+    "problems": {
+      "scattered": {
+        "title": "Kennis overal verspreid",
+        "description": "Uw documenten bevinden zich in Google Drive, Notion, Confluence en lokale bestanden. Elk AI-platform vereist dat u alles opnieuw uploadt of heeft er helemaal geen toegang toe."
+      },
+      "reconfiguring": {
+        "title": "Eindeloze toolconfiguratie",
+        "description": "Uren besteed aan het opzetten van GitHub-integratie in Claude? Nu opnieuw doen voor ChatGPT. En opnieuw voor Cursor. En opnieuw voor elke nieuwe AI-tool die u probeert."
+      },
+      "noMemory": {
+        "title": "Geen geheugen tussen sessies",
+        "description": "Elk gesprek begint vanaf nul. De context die u gisteren hebt opgebouwd? Weg. De voorkeuren die u vorige week hebt ingesteld? Vergeten. U legt uzelf constant opnieuw uit."
+      },
+      "agentFailures": {
+        "title": "Agents die stilletjes verdwijnen",
+        "description": "Een autonome agent ingezet? Hoop dat het niet crasht. U weet het pas uren later. Geen lifecycle management, geen monitoring, geen controle."
+      },
+      "productionGap": {
+        "title": "Proof-of-Concept hel",
+        "description": "88% van AI-projecten haalt nooit productie. Waarom? Omdat API's aan elkaar knopen, state beheren en beveiliging garanderen een fulltime baan wordt."
+      }
+    },
+    "quote": "We hebben weken besteed aan het individueel configureren van MCP-servers voor elk teamlid. Plugged.in gaf ons alles op één plek—nu bespaart ons team 15 uur per week en onthoudt onze AI daadwerkelijk onze codebase.",
+    "quoteAuthor": "Engineering Lead, Series B SaaS Bedrijf"
+  },
+  "fourPillars": {
+    "badge": "Het complete platform",
+    "title": "Vier pijlers. Oneindige mogelijkheden.",
+    "subtitle": "Het enige uniforme platform dat MCP-orkestratie, RAG v2-documentbeheer, persistente geheugensystemen en autonome agent lifecycle management combineert.",
+    "knowledge": {
+      "title": "De geheugenbank van uw AI",
+      "description": "Upload documenten één keer, toegang overal. Onze RAG v2-engine transformeert uw institutionele kennis in persistente, doorzoekbare context waar elke AI gebruik van kan maken.",
+      "features": {
+        "1": "AI-gegenereerde documenten met volledige modelattributie en versiegeschiedenis",
+        "2": "Sub-seconde semantisch zoeken door uw hele bibliotheek",
+        "3": "Multi-format ondersteuning: Markdown, JSON, HTML, PDF met automatische indexering"
+      },
+      "highlightLabel": "Echte impact",
+      "highlight": "Code review geheugen dat persistent is over AI-platforms. Uw debugging-sessies worden institutionele kennis die zich in de loop van de tijd opbouwt."
+    },
+    "tools": {
+      "title": "1.500+ tools, één interface",
+      "description": "Stop met het configureren van dezelfde MCP-servers voor elk AI-platform. Verbind één keer, gebruik overal. Van GitHub tot Linear tot aangepaste API's—als het een MCP-server heeft, werkt het.",
+      "features": {
+        "1": "Slimme Server Wizard met automatische GitHub-verificatie en OAuth 2.1-integratie",
+        "2": "30-55% token-efficiëntieverbetering vs. typische MCP-proxies",
+        "3": "Universele compatibiliteit: Claude, Cursor, Cline, ChatGPT, LM Studio, en meer"
+      },
+      "highlightLabel": "De efficiëntiewinst",
+      "highlight": "Vervang 100 individuele MCP-configuraties door één uniforme proxy. Update één keer, pas overal toe. Uw team bespaart alleen al aan setup uren per week."
+    },
+    "memory": {
+      "title": "Context die nooit vergeet",
+      "description": "Persistente gesprekscontext die reist over AI-platforms en sessies. Uw AI onthoudt voorkeuren, eerdere beslissingen en lopende projecten—geen heruitleg meer nodig.",
+      "features": {
+        "1": "Semantisch geheugen zoeken over alle eerdere gesprekken",
+        "2": "Multi-workspace isolatie met project-gebaseerde context",
+        "3": "Cross-platform synchronisatie: wat Claude leert, weet ChatGPT"
+      },
+      "comingSoon": "Geheugenlaag lanceert Q1 2026. Sluit u aan bij de wachtlijst voor vroege toegang."
+    },
+    "agents": {
+      "title": "Autonome agents met militaire governance",
+      "description": "'s Werelds eerste uitgebreide agent lifecycle management protocol. Deploy, monitor en controleer autonome agents met de betrouwbaarheid die ondernemingen eisen.",
+      "features": {
+        "1": "Sub-50ms control plane latency met DNS-gebaseerde agent-adressering",
+        "2": "Uitgebreid lifecycle management: NEW → PROVISIONED → ACTIVE → DRAINING → TERMINATED",
+        "3": "99.9% uptime onder chaos testing met automatisch foutherstel"
+      },
+      "highlightLabel": "Academische innovatie",
+      "highlight": "PAP protocol academisch paper klaar voor arXiv-indiening. Het oplossen van de 28% kloof tussen menselijke en AI-prestaties op realistische taken door protocol-niveau betrouwbaarheid."
+    },
+    "cta": {
+      "text": "Klaar om uw AI-infrastructuur te verenigen?",
+      "button": "Start vandaag gratis"
+    }
+  },
+  "videoTutorials": {
+    "title": "Zie het in actie",
+    "subtitle": "Bekijk stap-voor-stap tutorials om binnen enkele minuten aan de slag te gaan met plugged.in. Van basisinstellingen tot geavanceerde functies.",
+    "quickSetup": {
+      "title": "Snelle setup",
+      "duration": "3 min",
+      "description": "Verbind MCP-servers met Claude Desktop, VS Code, Cursor en andere AI-tools in minder dan 3 minuten."
+    },
+    "ragArchive": {
+      "title": "RAG & documentarchief",
+      "duration": "5 min",
+      "description": "Leer hoe u bestanden opslaat in uw kennisbank en ze opvraagt met AI-aangedreven semantisch zoeken over alle platforms."
+    },
+    "notifications": {
+      "title": "Taakmeldingen",
+      "duration": "4 min",
+      "description": "Stel geautomatiseerde meldingen en taaktracking in om op de hoogte te blijven van uw AI-workflows en agentactiviteiten."
+    },
+    "oauthServers": {
+      "title": "OAuth-integratie",
+      "duration": "6 min",
+      "description": "Verbind OAuth-enabled services zoals Notion, Linear en GitHub met automatisch tokenbeheer en vernieuwing."
+    },
+    "moreVideos": "Meer tutorials beschikbaar in onze",
+    "docsLink": "documentatie"
+  },
+  "roadmap": {
+    "badge": "Product Roadmap",
+    "title": "De Plugged.in Roadmap",
+    "subtitle": "Van een uniform AI-controlevlak naar autonoom agenten in de echte wereld",
+    "stage1": {
+      "date": "Maart 2025",
+      "title": "Het Begin: Uniform AI-Controlevlak",
+      "description": "Plugged.in gelanceerd. Eerste fundament: Kennis, Tools en Geheugen onder één controlevlak. Model Context Protocol-ondersteuning begint."
+    },
+    "stage2": {
+      "date": "19 Juni 2025",
+      "title": "Plugged.in App v2.1.0 — RAG Gaat Naar Productie",
+      "description": "Volledige semantische zoekopdracht. Documentversie, metadata, embeddings. AI kan eindelijk door de gebruiker beheerde kennis zien. Dit wordt de ruggengraat voor gefundeerde redenering."
+    },
+    "stage3": {
+      "date": "Eind Oktober 2025",
+      "title": "PAP — Plugged.in Agent Protocol (Mijlpaal)",
+      "description": "PAP vrijgegeven als de controle + telemetrie ruggengraat. Autonome agenten hebben nu: levenscyclusbeheer, beleidsmotor, veilige kanalen, kill-switch, eventstroom en cross-model orkestratie. PAP transformeert Plugged.in van een controlelaag naar een autonoom agentplatform."
+    },
+    "stage4": {
+      "date": "Q1 2026",
+      "title": "Sensoren → Agenten → Cognitieve Predictieve Automatisering",
+      "description": "Plugged.in breidt uit naar de fysieke wereld. Raspberry Pi & lichtgewicht sensorknooppunten streamen: druk, vibratie, warmte, akoestiek, spanning & stroom. Cloud-agenten leren, passen zich aan, voorspellen en handelen. Resultaat: 'Agenten die werken.' Maakt een wereldwijde agent-ondersteunde workforce mogelijk."
+    },
+    "outcome": {
+      "title": "Cognitieve Predictieve Automatisering",
+      "line1": "Autonome agenten die echte-wereld data analyseren, leren van patronen en handelen voordat fouten optreden.",
+      "line2": "Dit is waar digitale intelligentie fysieke systemen ontmoet."
+    },
+    "workforce": {
+      "title": "Agent-Ondersteunde Workforce",
+      "line1": "Duizenden technici die sensoren installeren en configureren.",
+      "line2": "Technologie die mensen schaalt, niet vervangt."
+    },
+    "cta": {
+      "primary": "Verkrijg API-sleutel",
+      "secondary": "Bekijk GitHub"
+    },
+    "status": {
+      "completed": "Voltooid",
+      "inProgress": "Bezig",
+      "planned": "Gepland",
+      "future": "Toekomst"
+    }
+  },
+  "popularServers": {
+    "badge": "Meest Populair",
+    "title": "Top MCP Servers",
+    "subtitle": "Ontdek de meest geïnstalleerde en hoogst gewaardeerde MCP servers van onze community",
+    "viewDetails": "Details Bekijken",
+    "exploreAll": "Verken Alle 782+ Servers"
   }
 }

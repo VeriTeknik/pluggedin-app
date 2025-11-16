@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Layers, Rocket, Shield, TrendingUp, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -9,6 +11,14 @@ import { useInView } from 'react-intersection-observer';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+
+interface PlatformMetrics {
+  totalUsers: number;
+  totalProjects: number;
+  totalServers: number;
+  activeProfiles30d: number;
+  newUsers30d: number;
+}
 
 // Animation variants
 const sectionVariants = {
@@ -28,10 +38,26 @@ export function LandingCta() {
     triggerOnce: true,
   });
 
+  // Fetch metrics from API
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
+    totalUsers: 848, // Production fallback
+    totalProjects: 900,
+    totalServers: 782, // Production fallback
+    activeProfiles30d: 135,
+    newUsers30d: 123,
+  });
+
+  useEffect(() => {
+    fetch('/api/platform-metrics')
+      .then(res => res.json())
+      .then(data => setPlatformMetrics(data))
+      .catch(err => console.error('Error fetching metrics:', err));
+  }, []);
+
   const stats = [
     { icon: TrendingUp, value: 718, suffix: '%', label: 'Monthly Growth' },
     { icon: Layers, value: 7268, suffix: '+', label: 'Verified Tools' },
-    { icon: Users, value: 620, suffix: '+', label: 'Active Developers' },
+    { icon: Users, value: platformMetrics.totalUsers, suffix: '+', label: 'Active Developers' },
     { icon: Zap, value: 14000, suffix: '+', label: 'API Calls/Month' },
   ];
 
@@ -98,11 +124,11 @@ export function LandingCta() {
 
         <h2 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-neon-purple">
-            Join 620+ Developers Building the Future
+            Join {platformMetrics.totalUsers}+ Developers Building the Future
           </span>
         </h2>
         <p className="text-xl text-muted-foreground mb-4">
-          7,000+ verified tools with encrypted keys and 1,500+ MCP servers
+          7,000+ verified tools with encrypted keys and {platformMetrics.totalServers}+ MCP servers
         </p>
         <p className="text-base text-muted-foreground mb-8 max-w-2xl mx-auto">
           From startup to scale-up in 30 days. Be part of the 718% monthly growth story.
@@ -123,7 +149,7 @@ export function LandingCta() {
               <div className="flex items-start">
                 <Check className="h-5 w-5 text-glow-green mr-3 mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">1,500+ MCP Servers</span>
+                  <span className="font-semibold">{platformMetrics.totalServers}+ MCP Servers</span>
                   <p className="text-sm text-muted-foreground">Pre-configured and ready to use</p>
                 </div>
               </div>
@@ -152,7 +178,7 @@ export function LandingCta() {
                 <Check className="h-5 w-5 text-glow-green mr-3 mt-0.5 flex-shrink-0" />
                 <div>
                   <span className="font-semibold">24/7 Support</span>
-                  <p className="text-sm text-muted-foreground">Join 620+ active developers</p>
+                  <p className="text-sm text-muted-foreground">Join {platformMetrics.totalUsers}+ active developers</p>
                 </div>
               </div>
             </div>
@@ -176,7 +202,7 @@ export function LandingCta() {
             size="lg"
             className="border-electric-cyan/20 hover:bg-electric-cyan/10"
           >
-            <Link href="/search">
+            <Link href="/discover">
               Explore Verified Tools
               <Layers className="ml-2 h-4 w-4" />
             </Link>

@@ -21,6 +21,7 @@ interface UnifiedServerCardProps {
   serverKey: string;
   isInstalled: boolean;
   isOwned: boolean;
+  isAuthenticated?: boolean;
   selectable?: boolean;
   isSelected?: boolean;
   onInstallClick: (key: string, server: McpIndex) => void;
@@ -118,6 +119,7 @@ export function UnifiedServerCard({
   serverKey,
   isInstalled,
   isOwned,
+  isAuthenticated = true,
   selectable = false,
   isSelected = false,
   onInstallClick,
@@ -292,7 +294,9 @@ export function UnifiedServerCard({
                           className="flex-1"
                         >
                           <Download className="w-4 h-4 mr-2" />
-                          <span className="truncate">{t('search.card.install')}</span>
+                          <span className="truncate">
+                            {isAuthenticated ? t('search.card.install') : t('search.card.signupToInstall', 'Sign up to install')}
+                          </span>
                         </Button>
                       )}
                       

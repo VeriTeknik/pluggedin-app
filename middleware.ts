@@ -116,7 +116,6 @@ export async function middleware(request: NextRequest) {
   // Define routes that require authentication
   const protectedRoutes = [
     '/analytics',
-    '/search',
     '/mcp-servers',
     '/mcp-playground',
     '/custom-mcp-servers',

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   Brain,
@@ -17,6 +19,14 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent } from '@/components/ui/card';
+
+interface PlatformMetrics {
+  totalUsers: number;
+  totalProjects: number;
+  totalServers: number;
+  activeProfiles30d: number;
+  newUsers30d: number;
+}
 
 // TODO: Integrate MagicUI components when available:
 // - Safari component
@@ -44,11 +54,27 @@ export function LandingSearchFunctionality() {
     triggerOnce: true,
   });
 
+  // Fetch metrics from API
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
+    totalUsers: 848, // Production fallback
+    totalProjects: 900,
+    totalServers: 782, // Production fallback
+    activeProfiles30d: 135,
+    newUsers30d: 123,
+  });
+
+  useEffect(() => {
+    fetch('/api/platform-metrics')
+      .then(res => res.json())
+      .then(data => setPlatformMetrics(data))
+      .catch(err => console.error('Error fetching metrics:', err));
+  }, []);
+
   const stats = [
     { value: 7268, suffix: '+', label: 'Verified Tools' },
-    { value: 1500, suffix: '+', label: 'MCP Servers' },
+    { value: platformMetrics.totalServers, suffix: '+', label: 'MCP Servers' },
     { value: 460, suffix: '+', label: 'Active Servers' },
-    { value: 620, suffix: '+', label: 'Contributors' },
+    { value: platformMetrics.totalUsers, suffix: '+', label: 'Contributors' },
   ];
 
   return (
@@ -103,10 +129,10 @@ export function LandingSearchFunctionality() {
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Search 7,268+ verified tools with secure keys and 1,500+ MCP servers
+            Search 7,268+ verified tools with secure keys and {platformMetrics.totalServers}+ MCP servers
           </p>
           <p className="mt-2 text-base text-muted-foreground">
-            Join 620+ developers discovering new AI capabilities daily
+            Join {platformMetrics.totalUsers}+ developers discovering new AI capabilities daily
           </p>
         </motion.div>
 

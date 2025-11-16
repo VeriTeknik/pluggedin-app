@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { motion } from 'framer-motion';
 import { ArrowRight, Brain, CheckCircle,Cloud, Database, Layers, Lock, TrendingUp, Users, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +10,14 @@ import { useInView } from 'react-intersection-observer';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+
+interface PlatformMetrics {
+  totalUsers: number;
+  totalProjects: number;
+  totalServers: number;
+  activeProfiles30d: number;
+  newUsers30d: number;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -37,10 +47,26 @@ export function LandingWhyPluggedin() {
     triggerOnce: true,
   });
 
+  // Fetch metrics from API
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
+    totalUsers: 848, // Production fallback
+    totalProjects: 900,
+    totalServers: 782, // Production fallback
+    activeProfiles30d: 135,
+    newUsers30d: 123,
+  });
+
+  useEffect(() => {
+    fetch('/api/platform-metrics')
+      .then(res => res.json())
+      .then(data => setPlatformMetrics(data))
+      .catch(err => console.error('Error fetching metrics:', err));
+  }, []);
+
   const metrics = [
     { icon: TrendingUp, value: 718, suffix: '%', label: 'Monthly Growth', color: 'text-glow-green' },
     { icon: Layers, value: 7268, suffix: '+', label: 'Verified Tools', color: 'text-electric-cyan' },
-    { icon: Users, value: 620, suffix: '+', label: 'Active Developers', color: 'text-neon-purple' },
+    { icon: Users, value: platformMetrics.totalUsers, suffix: '+', label: 'Active Developers', color: 'text-neon-purple' },
     { icon: Zap, value: 14000, suffix: '+', label: 'API Calls/Month', color: 'text-electric-cyan' },
   ];
 
@@ -102,7 +128,7 @@ export function LandingWhyPluggedin() {
               </span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Join 620+ developers who chose the fastest-growing AI platform
+              Join {platformMetrics.totalUsers}+ developers who chose the fastest-growing AI platform
             </p>
           </motion.div>
 
@@ -144,7 +170,7 @@ export function LandingWhyPluggedin() {
                       {t('whyPluggedin.solution.title')}
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      7,268+ verified tools with encrypted keys and 1,500+ MCP servers - all managed securely
+                      7,268+ verified tools with encrypted keys and {platformMetrics.totalServers}+ MCP servers - all managed securely
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                       <div className="flex items-start gap-2">
@@ -171,16 +197,10 @@ export function LandingWhyPluggedin() {
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-glow-green mt-0.5" />
                         <div>
-                          <span className="font-semibold">620+ Developers</span>
+                          <span className="font-semibold">{platformMetrics.totalUsers}+ Developers</span>
                           <p className="text-xs text-muted-foreground">Growing daily</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-3 bg-glow-green/5 border border-glow-green/20 rounded-lg">
-                      <p className="text-sm font-semibold text-glow-green mb-1">718% Monthly Growth</p>
-                      <p className="text-xs text-muted-foreground">
-                        From 0 to 14,000+ API calls in just 30 days
-                      </p>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   Bell,
@@ -27,6 +29,14 @@ import { useInView } from 'react-intersection-observer';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+
+interface PlatformMetrics {
+  totalUsers: number;
+  totalProjects: number;
+  totalServers: number;
+  activeProfiles30d: number;
+  newUsers30d: number;
+}
 
 // Define feature data structure
 interface Feature {
@@ -228,10 +238,26 @@ export function LandingFeaturesOverview() {
     triggerOnce: true,
   });
 
+  // Fetch metrics from API
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
+    totalUsers: 848, // Production fallback
+    totalProjects: 900,
+    totalServers: 782, // Production fallback
+    activeProfiles30d: 135,
+    newUsers30d: 123,
+  });
+
+  useEffect(() => {
+    fetch('/api/platform-metrics')
+      .then(res => res.json())
+      .then(data => setPlatformMetrics(data))
+      .catch(err => console.error('Error fetching metrics:', err));
+  }, []);
+
   const stats = [
     { icon: Layers, value: 7268, suffix: '+', label: 'Verified Tools' },
-    { icon: Rocket, value: 1500, suffix: '+', label: 'MCP Servers' },
-    { icon: Users, value: 620, suffix: '+', label: 'Active Developers' },
+    { icon: Rocket, value: platformMetrics.totalServers, suffix: '+', label: 'MCP Servers' },
+    { icon: Users, value: platformMetrics.totalUsers, suffix: '+', label: 'Active Developers' },
     { icon: Zap, value: 99.9, suffix: '%', label: 'Uptime SLA', decimals: 1 },
   ];
 
@@ -282,7 +308,7 @@ export function LandingFeaturesOverview() {
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Join 620+ developers leveraging our comprehensive AI infrastructure
+            Join {platformMetrics.totalUsers}+ developers leveraging our comprehensive AI infrastructure
           </p>
         </div>
 

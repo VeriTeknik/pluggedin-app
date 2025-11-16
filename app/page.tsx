@@ -21,6 +21,47 @@ const SectionLoader = ({ height = '400px' }: { height?: string }) => (
   </div>
 );
 
+// New v3 sections
+const ProblemStatementSection = dynamic(
+  () => import('@/components/landing-sections/problem-statement').then(mod => ({ default: mod.ProblemStatementSection })),
+  {
+    loading: () => <SectionLoader />,
+    ssr: true
+  }
+);
+
+const FourPillarsSection = dynamic(
+  () => import('@/components/landing-sections/four-pillars').then(mod => ({ default: mod.FourPillarsSection })),
+  {
+    loading: () => <SectionLoader height="800px" />,
+    ssr: true
+  }
+);
+
+const VideoTutorialsSection = dynamic(
+  () => import('@/components/landing-sections/video-tutorials').then(mod => ({ default: mod.VideoTutorialsSection })),
+  {
+    loading: () => <SectionLoader height="600px" />,
+    ssr: true
+  }
+);
+
+const RoadmapSection = dynamic(
+  () => import('@/components/landing-sections/roadmap').then(mod => ({ default: mod.RoadmapSection })),
+  {
+    loading: () => <SectionLoader height="800px" />,
+    ssr: true
+  }
+);
+
+const PopularServersSection = dynamic(
+  () => import('@/components/landing-sections/popular-servers').then(mod => ({ default: mod.PopularServersSection })),
+  {
+    loading: () => <SectionLoader height="600px" />,
+    ssr: true
+  }
+);
+
 // Dynamically imported sections with code splitting
 const LandingOpenSourceSection = dynamic(
   () => import('@/components/landing-sections/opensource').then(mod => ({ default: mod.LandingOpenSourceSection })),
@@ -159,6 +200,40 @@ export default function Home() {
           <TrustIndicatorsSection />
         </ErrorBoundary>
 
+        {/* Popular Servers Section */}
+        <Suspense fallback={<SectionLoader height="600px" />}>
+          <ErrorBoundary sectionName="Popular Servers">
+            <PopularServersSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* New v3 sections */}
+        <Suspense fallback={<SectionLoader />}>
+          <ErrorBoundary sectionName="Problem Statement">
+            <ProblemStatementSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        <Suspense fallback={<SectionLoader height="800px" />}>
+          <ErrorBoundary sectionName="Four Pillars">
+            <FourPillarsSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Video Tutorials Section */}
+        <Suspense fallback={<SectionLoader height="600px" />}>
+          <ErrorBoundary sectionName="Video Tutorials">
+            <VideoTutorialsSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Roadmap Section */}
+        <Suspense fallback={<SectionLoader height="800px" />}>
+          <ErrorBoundary sectionName="Roadmap">
+            <RoadmapSection />
+          </ErrorBoundary>
+        </Suspense>
+
         {/* Open Source Section */}
         <Suspense fallback={<SectionLoader />}>
           <ErrorBoundary sectionName="Open Source">
@@ -167,12 +242,6 @@ export default function Home() {
         </Suspense>
 
         {/* Progressively loaded sections */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Why Plugged.in">
-            <LandingWhyPluggedin />
-          </ErrorBoundary>
-        </Suspense>
-
         <Suspense fallback={<SectionLoader />}>
           <ErrorBoundary sectionName="Features">
             <LandingFeaturesOverview />

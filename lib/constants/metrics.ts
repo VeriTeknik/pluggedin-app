@@ -15,16 +15,16 @@ export const PLATFORM_METRICS = {
     shortLabel: 'Servers'
   },
   DEVELOPERS: {
-    value: 620,
+    value: 844,
     suffix: '+',
-    label: 'Active Developers',
-    shortLabel: 'Developers'
+    label: 'Active Users',
+    shortLabel: 'Users'
   },
   GROWTH: {
-    value: 718,
-    suffix: '%',
-    label: 'Monthly Growth',
-    shortLabel: 'Growth'
+    value: 135,
+    suffix: '+',
+    label: 'Active Profiles (30d)',
+    shortLabel: 'Active'
   },
   API_CALLS: {
     value: 14000,
@@ -34,7 +34,7 @@ export const PLATFORM_METRICS = {
     formatted: '14K+'
   },
   PROJECTS: {
-    value: 650,
+    value: 900,
     suffix: '+',
     label: 'Active Projects',
     shortLabel: 'Projects'
@@ -60,10 +60,70 @@ export const PLATFORM_METRICS = {
     shortLabel: 'Documents'
   },
   ACTIVE_SERVERS: {
-    value: 460,
+    value: 2525,
     suffix: '+',
-    label: 'Active Servers',
-    shortLabel: 'Servers'
+    label: 'Configured Servers',
+    shortLabel: 'Configured'
+  },
+  // PAP Protocol Metrics
+  PAP_LATENCY: {
+    value: 50,
+    suffix: 'ms',
+    label: 'Control Plane Latency',
+    shortLabel: 'PAP Latency',
+    prefix: '<',
+    description: 'Sub-50ms control plane latency for PAP protocol'
+  },
+  PAP_REQUESTS_PER_SECOND: {
+    value: 10000,
+    suffix: '+',
+    label: 'Requests/Second Capacity',
+    shortLabel: 'RPS',
+    formatted: '10K+',
+    description: 'PAP protocol capacity under load'
+  },
+  CHAOS_UPTIME: {
+    value: 99.9,
+    suffix: '%',
+    label: 'Uptime Under Chaos Testing',
+    shortLabel: 'Chaos Uptime',
+    decimals: 1,
+    description: '99.9% availability under chaos testing'
+  },
+  TOKEN_EFFICIENCY: {
+    value: 45,
+    suffix: '%',
+    label: 'Token Efficiency Improvement',
+    shortLabel: 'Efficiency',
+    description: '30-55% token efficiency vs. typical MCP proxies'
+  },
+  RAG_SEARCH_TIME: {
+    value: 1,
+    suffix: 's',
+    label: 'Semantic Search Time',
+    shortLabel: 'Search Time',
+    prefix: '<',
+    description: 'Sub-second semantic search in RAG v2'
+  },
+  ACADEMIC_PAPERS: {
+    value: 1,
+    label: 'Academic Papers',
+    shortLabel: 'Papers',
+    description: 'PAP protocol academic publication'
+  },
+  ACTIVE_USERS: {
+    value: 844,
+    suffix: '+',
+    label: 'Active Users',
+    shortLabel: 'Users',
+    description: 'Active users on the platform'
+  },
+  NEW_USERS_30D: {
+    value: 123,
+    suffix: '+',
+    label: 'New Users (30d)',
+    shortLabel: 'New Users',
+    description: 'New users in the last 30 days'
   }
 } as const;
 
@@ -78,7 +138,13 @@ export const METRIC_STRINGS = {
   PROJECTS: `${PLATFORM_METRICS.PROJECTS.value}${PLATFORM_METRICS.PROJECTS.suffix} projects`,
   RESPONSE_TIME: '<100ms response time',
   UPTIME: `${PLATFORM_METRICS.UPTIME.value}${PLATFORM_METRICS.UPTIME.suffix} uptime`,
-  GROWTH_STORY: 'From 0 to 14,000+ API calls in 30 days'
+  GROWTH_STORY: 'From 0 to 14,000+ API calls in 30 days',
+  PAP_LATENCY: '<50ms control plane latency',
+  PAP_RPS: '10,000+ requests/second',
+  CHAOS_UPTIME: '99.9% uptime under chaos testing',
+  TOKEN_EFFICIENCY: '30-55% token efficiency improvement',
+  RAG_SEARCH: 'Sub-second semantic search',
+  ACTIVE_USERS: '500+ active users'
 } as const;
 
 // Common metric combinations for sections
@@ -106,5 +172,23 @@ export const METRIC_GROUPS = {
     PLATFORM_METRICS.RESPONSE_TIME,
     PLATFORM_METRICS.API_CALLS,
     PLATFORM_METRICS.GROWTH
+  ],
+  PAP_STATS: [
+    PLATFORM_METRICS.PAP_LATENCY,
+    PLATFORM_METRICS.PAP_REQUESTS_PER_SECOND,
+    PLATFORM_METRICS.CHAOS_UPTIME,
+    PLATFORM_METRICS.ACADEMIC_PAPERS
+  ],
+  TECHNICAL_STATS: [
+    PLATFORM_METRICS.PAP_LATENCY,
+    PLATFORM_METRICS.RAG_SEARCH_TIME,
+    PLATFORM_METRICS.TOKEN_EFFICIENCY,
+    PLATFORM_METRICS.CHAOS_UPTIME
+  ],
+  SOCIAL_PROOF_STATS: [
+    PLATFORM_METRICS.ACTIVE_USERS,
+    PLATFORM_METRICS.DEVELOPERS,
+    PLATFORM_METRICS.GROWTH,
+    PLATFORM_METRICS.ACADEMIC_PAPERS
   ]
 } as const;
