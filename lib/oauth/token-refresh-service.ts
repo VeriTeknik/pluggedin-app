@@ -10,6 +10,24 @@ import {
   recordTokenReuseDetected,
   recordTokenRevocation,
 } from '@/lib/observability/oauth-metrics';
+import { validateHeaders } from '@/lib/security/validators';
+
+/**
+ * Standardized OAuth audit logging helper
+ * Logs to both console (for journalctl/stdout) and structured logger
+ */
+function oauthAudit(
+  event: string,
+  details: Record<string, any>,
+  level: 'info' | 'error' = 'info'
+) {
+  const payload = { timestamp: new Date().toISOString(), ...details };
+  if (level === 'error') {
+    console.error(`[OAuth Token Lifecycle] ${event}:`, payload);
+  } else {
+    console.log(`[OAuth Token Lifecycle] ${event}:`, payload);
+  }
+}
 
 /**
  * Waits for a concurrent token refresh to complete
@@ -161,6 +179,7 @@ export async function isTokenExpired(serverUuid: string): Promise<boolean> {
  */
 export async function refreshOAuthToken(serverUuid: string, userId: string): Promise<boolean> {
   const startTime = Date.now();
+  oauthAudit('TOKEN REFRESH INITIATED', { serverUuid, userId });
   log.oauth('token_refresh_initiated', { serverUuid, userId });
 
   // P0 Security: Validate server belongs to user (prevents token substitution)
@@ -194,6 +213,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
 
   if (!lockResult || lockResult.length === 0) {
     // Lock is held by another request - wait for it to complete
+    oauthAudit('LOCK HELD BY CONCURRENT REQUEST', { serverUuid, userId });
     log.oauth('token_refresh_lock_held_by_another_request', { serverUuid });
     const refreshCompleted = await waitForRefreshCompletion(serverUuid, 0);
     const durationSeconds = (Date.now() - startTime) / 1000;
@@ -211,6 +231,14 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
 
   const tokenRecord = lockResult[0];
 
+  oauthAudit('LOCK ACQUIRED', {
+    serverUuid,
+    userId,
+    tokenExpiresAt: tokenRecord.expires_at?.toISOString(),
+    hasRefreshToken: !!tokenRecord.refresh_token_encrypted,
+    refreshTokenUsedAt: tokenRecord.refresh_token_used_at?.toISOString(),
+  });
+
   if (!tokenRecord.refresh_token_encrypted) {
     log.oauth('token_refresh_no_refresh_token', { serverUuid });
     // Clear the lock since we're not proceeding
@@ -223,20 +251,42 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
   }
 
   // OAuth 2.1: Check for refresh token reuse (security measure)
-  // If token was already used, this indicates a replay attack or race condition
-  if (tokenRecord.refresh_token_used_at) {
+  // Only flag as reuse if attempted within a short time window (e.g., concurrent requests)
+  // After successful rotation, the refresh_token_used_at timestamp should be old
+  const REUSE_DETECTION_WINDOW = 10 * 1000; // 10 seconds
+  const timeSinceLastUse = tokenRecord.refresh_token_used_at
+    ? Date.now() - tokenRecord.refresh_token_used_at.getTime()
+    : Infinity;
+
+  if (tokenRecord.refresh_token_used_at && timeSinceLastUse < REUSE_DETECTION_WINDOW) {
+    // Token was used very recently - this indicates a replay attack or race condition
     log.security('oauth_refresh_token_reuse_detected', userId, {
       serverUuid,
       tokenUsedAt: tokenRecord.refresh_token_used_at,
       currentAttempt: new Date(),
+      timeSinceLastUseMs: timeSinceLastUse,
     });
 
     // Record security event
     recordTokenReuseDetected();
 
+    // CRITICAL: Log token deletion BEFORE deleting for audit trail
+    oauthAudit('DELETING TOKEN - Reuse Detected', {
+      serverUuid,
+      userId,
+      reason: 'refresh_token_reuse',
+      tokenUsedAt: tokenRecord.refresh_token_used_at?.toISOString(),
+      tokenExpiresAt: tokenRecord.expires_at?.toISOString(),
+      currentAttempt: new Date().toISOString(),
+      timeSinceLastUseMs: timeSinceLastUse,
+      stack: new Error().stack,
+    }, 'error');
+
     // Revoke all tokens as a security measure (OAuth 2.1 best practice)
     await db.delete(mcpServerOAuthTokensTable)
       .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+
+    oauthAudit('TOKEN DELETED - Reuse Detected', { serverUuid, userId }, 'error');
 
     // Audit log for security monitoring
     log.security('oauth_tokens_revoked', userId, { serverUuid, reason: 'refresh_token_reuse' });
@@ -245,6 +295,15 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     const durationSeconds = (Date.now() - startTime) / 1000;
     recordTokenRefresh(false, durationSeconds, 'reuse_detected');
     return false;
+  } else if (tokenRecord.refresh_token_used_at) {
+    // Token was used before but outside the reuse window - this is normal after rotation
+    oauthAudit('REFRESH TOKEN ROTATED PREVIOUSLY', {
+      serverUuid,
+      userId,
+      lastUsedAt: tokenRecord.refresh_token_used_at?.toISOString(),
+      timeSinceLastUseSeconds: Math.floor(timeSinceLastUse / 1000),
+      status: 'normal_rotation',
+    });
   }
 
   // 2. Check if token actually needs refresh
@@ -343,6 +402,14 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       : null;
 
     // OAuth 2.1: Store new tokens, mark old refresh token as used, clear lock
+    oauthAudit('UPDATING TOKEN IN DATABASE', {
+      serverUuid,
+      userId,
+      newExpiresAt: newExpiresAt?.toISOString(),
+      hasNewRefreshToken: !!newTokens.refresh_token,
+      expiresInSeconds: newTokens.expires_in,
+    });
+
     await db.update(mcpServerOAuthTokensTable)
       .set({
         access_token_encrypted: newAccessTokenEncrypted,
@@ -353,6 +420,13 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
         updated_at: new Date(),
       })
       .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+
+    oauthAudit('TOKEN UPDATED SUCCESSFULLY', {
+      serverUuid,
+      userId,
+      newExpiresAt: newExpiresAt?.toISOString(),
+      lockCleared: true,
+    });
 
     log.oauth('token_rotation_complete', {
       serverUuid,
@@ -372,8 +446,35 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
         ? newTokens.token_type.charAt(0).toUpperCase() + newTokens.token_type.slice(1).toLowerCase()
         : 'Bearer';
 
+      // Store OAuth token in the format expected by @h1deya/langchain-mcp-tools
+      // The library expects: streamableHTTPOptions.requestInit.headers
+      if (!options.requestInit) {
+        options.requestInit = {};
+      }
+
+      // Validate existing headers before merging with OAuth token
+      const existingHeaders = options.requestInit?.headers || {};
+      const headerValidation = validateHeaders(existingHeaders);
+      if (!headerValidation.valid) {
+        throw new Error(`Invalid existing headers in streamableHTTPOptions: ${headerValidation.error}`);
+      }
+
+      // Merge sanitized headers with OAuth Authorization header
+      options.requestInit.headers = {
+        ...headerValidation.sanitizedHeaders,
+        Authorization: `${tokenType} ${newTokens.access_token}`,
+      };
+
+      // @deprecated: Legacy format for backward compatibility
+      // TODO: Remove options.headers format once all downstream clients
+      // have migrated to use requestInit.headers (target: Q2 2025)
+      // Validate legacy headers as well
+      const legacyHeaderValidation = validateHeaders(options.headers || {});
+      if (!legacyHeaderValidation.valid) {
+        throw new Error(`Invalid legacy headers in streamableHTTPOptions: ${legacyHeaderValidation.error}`);
+      }
       options.headers = {
-        ...(options.headers || {}),
+        ...legacyHeaderValidation.sanitizedHeaders,
         Authorization: `${tokenType} ${newTokens.access_token}`,
       };
 
@@ -387,12 +488,27 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       log.oauth('token_updated_streamable_options', { serverUuid });
     }
 
+    oauthAudit('TOKEN REFRESH COMPLETE', {
+      serverUuid,
+      userId,
+      durationMs: Date.now() - startTime,
+      success: true,
+    });
+
     log.oauth('token_refresh_success', { serverUuid });
     const durationSeconds = (Date.now() - startTime) / 1000;
     recordTokenRefresh(true, durationSeconds);
     return true;
 
   } catch (error) {
+    oauthAudit('TOKEN REFRESH FAILED', {
+      serverUuid,
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      durationMs: Date.now() - startTime,
+    }, 'error');
+
     log.error('OAuth Refresh: Exception during token refresh', error, { serverUuid });
 
     // Error recovery: Clear the lock so the user can retry
@@ -401,8 +517,14 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
         .set({ refresh_token_locked_at: null })
         .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
 
+      oauthAudit('LOCK CLEARED AFTER ERROR', { serverUuid, userId });
       log.oauth('token_refresh_lock_cleared', { serverUuid, reason: 'exception' });
     } catch (unlockError) {
+      oauthAudit('FAILED TO CLEAR LOCK', {
+        serverUuid,
+        userId,
+        error: unlockError instanceof Error ? unlockError.message : String(unlockError),
+      }, 'error');
       log.error('OAuth Refresh: Failed to clear lock', unlockError, { serverUuid });
     }
 

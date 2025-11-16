@@ -65,6 +65,7 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
       'https://js.stripe.com',
       'https://www.googletagmanager.com',
       'https://www.google-analytics.com',
+      'https://cdn.jsdelivr.net',
     ],
     'style-src': [
       "'self'",
@@ -72,6 +73,7 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
       // Nonce is omitted because when present, it causes unsafe-inline to be ignored per CSP spec
       // This is a known limitation but much safer than script unsafe-inline
       "'unsafe-inline'",
+      'https://cdn.jsdelivr.net',
     ],
     'img-src': [
       "'self'",
@@ -81,7 +83,7 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
       'https://www.google-analytics.com',
       'https://www.googletagmanager.com',
     ],
-    'font-src': ["'self'", 'data:'],
+    'font-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
     'connect-src': [
       "'self'",
       'ws:',
@@ -97,6 +99,7 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
       'https://*.google-analytics.com',
       'https://*.analytics.google.com',
       'https://*.googletagmanager.com',
+      'https://cdn.jsdelivr.net',
     ],
     'frame-src': [
       "'self'",

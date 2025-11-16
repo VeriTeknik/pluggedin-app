@@ -253,6 +253,28 @@ const sendBulkEmailSchema = z.object({
   }).optional(),
 });
 
+/**
+ * Replace template variables in email content
+ * Supports: {{firstName}}, {{lastName}}, {{email}}, {{appUrl}}, {{unsubscribeUrl}}, {{preferencesUrl}}
+ */
+function replaceTemplateVariables(
+  content: string,
+  recipient: { id: string; email: string; name: string | null },
+  appUrl: string,
+  unsubscribeUrl: string
+): string {
+  const firstName = recipient.name?.split(' ')[0] || 'there';
+  const lastName = recipient.name?.split(' ').slice(1).join(' ') || '';
+
+  return content
+    .replace(/\{\{firstName\}\}/g, firstName)
+    .replace(/\{\{lastName\}\}/g, lastName)
+    .replace(/\{\{email\}\}/g, recipient.email)
+    .replace(/\{\{appUrl\}\}/g, appUrl)
+    .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl)
+    .replace(/\{\{preferencesUrl\}\}/g, `${appUrl}/settings`);
+}
+
 export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailSchema>) {
   try {
     const session = await checkAdminAuth();
@@ -323,6 +345,13 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
               emailContent = translation.content;
             }
           }
+
+          // Generate URLs for template variable replacement
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
+          const unsubscribeUrl = await generateUnsubscribeUrl(recipient.id);
+
+          // Replace template variables BEFORE markdown conversion
+          emailContent = replaceTemplateVariables(emailContent, recipient, appUrl, unsubscribeUrl);
 
           // Convert markdown to HTML for the selected language content
           const rawHtml = await marked(emailContent);
