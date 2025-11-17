@@ -136,10 +136,8 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
         isActive = false;
       });
 
-    return () => {
-      isActive = false;
-      abortController.abort();
-    };
+    // Note: No cleanup function returned since this is a callback, not useEffect
+    // The isActive flag in .finally() handles cleanup automatically
   }, []); // Empty deps - stable function reference
 
   return (
