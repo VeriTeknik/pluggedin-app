@@ -102,19 +102,19 @@ export function validateYouTubeUrl(url: string): VideoUrlValidationResult {
     };
   }
 
-  // Validate path (must be /embed/VIDEO_ID)
-  const pathMatch = parsedUrl.pathname.match(/^\/embed\/([a-zA-Z0-9_-]+)$/);
+  // Validate path (must be /embed/VIDEO_ID with optional additional parameters)
+  const pathMatch = parsedUrl.pathname.match(/^\/embed\/([a-zA-Z0-9_-]{11})(?:[/?].*)?$/);
   if (!pathMatch) {
     return {
       isValid: false,
-      error: 'URL must be in format: /embed/VIDEO_ID',
+      error: 'URL must be in format: /embed/VIDEO_ID (with optional parameters)',
     };
   }
 
   const videoId = pathMatch[1];
 
-  // Validate video ID format (YouTube video IDs are 11 characters)
-  if (videoId.length !== 11 || !/^[a-zA-Z0-9_-]+$/.test(videoId)) {
+  // Validate video ID format (YouTube video IDs are 11 characters, alphanumeric, underscore, or hyphen)
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
     return {
       isValid: false,
       error: 'Invalid YouTube video ID format',
@@ -135,10 +135,8 @@ export function validateYouTubeUrl(url: string): VideoUrlValidationResult {
         }
       }
       // Validate boolean parameters (0 or 1)
-      else if (['autoplay', 'mute', 'loop', 'controls', 'rel', 'modestbranding', 'playsinline'].includes(key)) {
-        if (value === '0' || value === '1') {
-          sanitizedParams.set(key, value);
-        }
+      else if (['autoplay', 'mute', 'loop', 'controls', 'rel', 'modestbranding', 'playsinline'].includes(key) && (value === '0' || value === '1')) {
+        sanitizedParams.set(key, value);
       }
     }
   }

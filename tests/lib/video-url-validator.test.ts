@@ -108,13 +108,13 @@ describe('validateYouTubeUrl', () => {
     it('should reject video IDs that are too short', () => {
       const result = validateYouTubeUrl('https://www.youtube.com/embed/short');
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('Invalid YouTube video ID format');
+      expect(result.error).toContain('URL must be in format: /embed/VIDEO_ID');
     });
 
     it('should reject video IDs that are too long', () => {
       const result = validateYouTubeUrl('https://www.youtube.com/embed/toolongvideoid123');
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('Invalid YouTube video ID format');
+      expect(result.error).toContain('URL must be in format: /embed/VIDEO_ID');
     });
 
     it('should reject video IDs with invalid characters', () => {

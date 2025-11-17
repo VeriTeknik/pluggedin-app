@@ -106,7 +106,7 @@ export function LandingHeroEnterpriseSection() {
               size="lg"
               className="border-electric-cyan/20 hover:bg-electric-cyan/10 text-base px-8"
             >
-              <Link href="#how-it-works">
+              <Link href="#video-tutorials">
                 {t('hero.cta.secondary')}
               </Link>
             </Button>

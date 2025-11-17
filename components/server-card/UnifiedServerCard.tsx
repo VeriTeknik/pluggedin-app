@@ -119,7 +119,7 @@ export function UnifiedServerCard({
   serverKey,
   isInstalled,
   isOwned,
-  isAuthenticated = true,
+  isAuthenticated = false,
   selectable = false,
   isSelected = false,
   onInstallClick,
