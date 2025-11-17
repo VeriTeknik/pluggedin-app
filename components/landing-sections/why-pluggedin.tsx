@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import { motion } from 'framer-motion';
 import { ArrowRight, Brain, CheckCircle,Cloud, Database, Layers, Lock, TrendingUp, Users, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,15 +7,8 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 import { cn } from '@/lib/utils';
-
-interface PlatformMetrics {
-  totalUsers: number;
-  totalProjects: number;
-  totalServers: number;
-  activeProfiles30d: number;
-  newUsers30d: number;
-}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -47,21 +38,8 @@ export function LandingWhyPluggedin() {
     triggerOnce: true,
   });
 
-  // Fetch metrics from API
-  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
-  });
-
-  useEffect(() => {
-    fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setPlatformMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
-  }, []);
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
 
   const metrics = [
     { icon: TrendingUp, value: 718, suffix: '%', label: 'Monthly Growth', color: 'text-glow-green' },

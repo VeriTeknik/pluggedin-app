@@ -10,13 +10,13 @@ interface PlatformMetrics {
   totalUsers: number;
   totalProjects: number;
   totalServers: number;
-  activeProfiles30d: number;
+  newProfiles30d: number; // New profiles created in last 30 days
   newUsers30d: number;
 }
 
 /**
  * Query platform metrics from database with caching
- * Cache revalidates every 1 hour (3600 seconds)
+ * Cache revalidates every 15 minutes (900 seconds)
  * This is a regular cached function, not a server action
  */
 async function queryPlatformMetrics(): Promise<PlatformMetrics> {
@@ -46,7 +46,7 @@ async function queryPlatformMetrics(): Promise<PlatformMetrics> {
         totalUsers: Number(metrics?.total_users || 0),
         totalProjects: Number(metrics?.total_projects || 0),
         totalServers: Number(metrics?.total_servers || 0),
-        activeProfiles30d: Number(metrics?.new_profiles_30d || 0), // Note: This is actually "new profiles" not "active profiles"
+        newProfiles30d: Number(metrics?.new_profiles_30d || 0),
         newUsers30d: Number(metrics?.new_users_30d || 0),
       };
   } catch (error) {
@@ -56,7 +56,7 @@ async function queryPlatformMetrics(): Promise<PlatformMetrics> {
       totalUsers: FALLBACK_METRICS.totalUsers,
       totalProjects: FALLBACK_METRICS.totalProjects,
       totalServers: FALLBACK_METRICS.totalServers,
-      activeProfiles30d: FALLBACK_METRICS.newProfiles30d,
+      newProfiles30d: FALLBACK_METRICS.newProfiles30d,
       newUsers30d: FALLBACK_METRICS.newUsers30d,
     };
   }
@@ -67,7 +67,7 @@ export const getPlatformMetrics = unstable_cache(
   queryPlatformMetrics,
   ['platform-metrics'], // Cache key
   {
-    revalidate: 3600, // Revalidate every 1 hour
+    revalidate: 900, // Revalidate every 15 minutes
     tags: ['metrics'], // Tags for manual invalidation if needed
   }
 );

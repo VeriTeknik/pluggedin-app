@@ -7,6 +7,7 @@ import { Play, XIcon } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
+import { getSafeYouTubeUrl } from "@/lib/video-url-validator"
 
 type AnimationStyle =
   | "from-bottom"
@@ -81,6 +82,17 @@ export function HeroVideoDialog({
   const [isVideoOpen, setIsVideoOpen] = useState(false)
   const selectedAnimation = animationVariants[animationStyle]
 
+  // Validate video URL for security
+  const safeVideoSrc = getSafeYouTubeUrl(videoSrc)
+
+  // If URL validation fails, don't render the video player
+  if (!safeVideoSrc) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Invalid video URL provided to HeroVideoDialog:', videoSrc)
+    }
+    return null
+  }
+
   const modalContent = (
     <AnimatePresence>
       {isVideoOpen && (
@@ -115,7 +127,7 @@ export function HeroVideoDialog({
             </motion.button>
             <div className="relative isolate z-[1] size-full overflow-hidden rounded-xl md:rounded-2xl border-2 border-white shadow-2xl">
               <iframe
-                src={videoSrc}
+                src={safeVideoSrc}
                 title={ariaLabel || "Hero Video player"}
                 className="size-full rounded-xl md:rounded-2xl"
                 allowFullScreen

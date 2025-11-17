@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Heart, Layers,TrendingUp, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -10,14 +8,7 @@ import { useInView } from 'react-intersection-observer';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface PlatformMetrics {
-  totalUsers: number;
-  totalProjects: number;
-  totalServers: number;
-  activeProfiles30d: number;
-  newUsers30d: number;
-}
+import { useMetrics } from '@/contexts/metrics-context';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -47,21 +38,8 @@ export function LandingPricingSection() {
     triggerOnce: true,
   });
 
-  // Fetch metrics from API
-  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
-  });
-
-  useEffect(() => {
-    fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setPlatformMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
-  }, []);
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
 
   const features = [
     { key: 'pricing.features.mcp_server_integrations', highlight: `${platformMetrics.totalServers}+ MCP Servers` },

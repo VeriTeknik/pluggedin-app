@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
 import { getPlatformMetrics } from '@/app/actions/metrics';
+import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 3600; // Cache for 1 hour
+export const revalidate = 900; // Cache for 15 minutes
 
 export async function GET() {
   try {
@@ -11,19 +12,19 @@ export async function GET() {
 
     return NextResponse.json(metrics, {
       headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=3600',
       },
     });
   } catch (error) {
     console.error('Error fetching platform metrics:', error);
 
-    // Return fallback values - matches production values
+    // Return fallback values from centralized constants
     return NextResponse.json({
-      totalUsers: 848, // Production value from /admin/emails
-      totalProjects: 900,
-      totalServers: 782, // Production value from /search
-      activeProfiles30d: 135,
-      newUsers30d: 123,
+      totalUsers: FALLBACK_METRICS.totalUsers,
+      totalProjects: FALLBACK_METRICS.totalProjects,
+      totalServers: FALLBACK_METRICS.totalServers,
+      newProfiles30d: FALLBACK_METRICS.newProfiles30d,
+      newUsers30d: FALLBACK_METRICS.newUsers30d,
     });
   }
 }

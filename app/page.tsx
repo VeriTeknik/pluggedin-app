@@ -10,6 +10,7 @@ import { LandingNavbar } from '@/components/landing-navbar';
 import { LandingHeroEnterpriseSection } from '@/components/landing-sections/hero-enterprise';
 import { TrustIndicatorsSection } from '@/components/landing-sections/trust-indicators';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { MetricsProvider } from '@/contexts/metrics-context';
 
 // Loading skeleton component
 const SectionLoader = ({ height = '400px' }: { height?: string }) => (
@@ -180,9 +181,10 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <LandingNavbar />
-      <main className="flex-grow">
+    <MetricsProvider>
+      <div className="flex flex-col min-h-screen">
+        <LandingNavbar />
+        <main className="flex-grow">
         {/* Critical above-the-fold content */}
         <ErrorBoundary sectionName="Hero">
           <LandingHeroEnterpriseSection />
@@ -302,5 +304,6 @@ export default function Home() {
       </main>
       <Footer />
     </div>
+    </MetricsProvider>
   );
 }

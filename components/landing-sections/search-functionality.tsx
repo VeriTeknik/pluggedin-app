@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import { motion } from 'framer-motion';
 import {
   Brain,
@@ -19,14 +17,7 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent } from '@/components/ui/card';
-
-interface PlatformMetrics {
-  totalUsers: number;
-  totalProjects: number;
-  totalServers: number;
-  activeProfiles30d: number;
-  newUsers30d: number;
-}
+import { useMetrics } from '@/contexts/metrics-context';
 
 // TODO: Integrate MagicUI components when available:
 // - Safari component
@@ -54,21 +45,8 @@ export function LandingSearchFunctionality() {
     triggerOnce: true,
   });
 
-  // Fetch metrics from API
-  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
-  });
-
-  useEffect(() => {
-    fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setPlatformMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
-  }, []);
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
 
   const stats = [
     { value: 7268, suffix: '+', label: 'Verified Tools' },

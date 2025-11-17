@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import { motion } from 'framer-motion';
 import {
   Bell,
@@ -28,15 +26,8 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 import { cn } from '@/lib/utils';
-
-interface PlatformMetrics {
-  totalUsers: number;
-  totalProjects: number;
-  totalServers: number;
-  activeProfiles30d: number;
-  newUsers30d: number;
-}
 
 // Define feature data structure
 interface Feature {
@@ -238,21 +229,8 @@ export function LandingFeaturesOverview() {
     triggerOnce: true,
   });
 
-  // Fetch metrics from API
-  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
-  });
-
-  useEffect(() => {
-    fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setPlatformMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
-  }, []);
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
 
   const stats = [
     { icon: Layers, value: 7268, suffix: '+', label: 'Verified Tools' },

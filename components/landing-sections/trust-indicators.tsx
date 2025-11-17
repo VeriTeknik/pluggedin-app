@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, CheckCircle2, Lock, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
+import { useMetrics } from '@/contexts/metrics-context';
 
 const certifications = [
   { icon: Shield, key: 'soc2' },
@@ -15,14 +15,6 @@ const certifications = [
   { icon: CheckCircle2, key: 'hipaa' },
 ];
 
-interface PlatformMetrics {
-  totalUsers: number;
-  totalProjects: number;
-  totalServers: number;
-  activeProfiles30d: number;
-  newUsers30d: number;
-}
-
 export function TrustIndicatorsSection() {
   const { t } = useTranslation('landing');
   const { ref, inView } = useInView({
@@ -30,21 +22,8 @@ export function TrustIndicatorsSection() {
     triggerOnce: true,
   });
 
-  // Fetch metrics from API
-  const [metrics, setMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
-  });
-
-  useEffect(() => {
-    fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
-  }, []);
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics } = useMetrics();
 
   // Dynamic stats based on fetched metrics
   const stats = [

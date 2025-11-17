@@ -12,7 +12,6 @@ import {
   Terminal,
   TrendingUp,
   Users} from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
@@ -20,14 +19,7 @@ import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-
-interface PlatformMetrics {
-  totalUsers: number;
-  totalProjects: number;
-  totalServers: number;
-  activeProfiles30d: number;
-  newUsers30d: number;
-}
+import { useMetrics } from '@/contexts/metrics-context';
 
 interface DeveloperFeature {
   icon: React.ElementType;
@@ -96,21 +88,8 @@ export function LandingDevelopersSection() {
     triggerOnce: true,
   });
 
-  const [metrics, setMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
-  });
-
-  useEffect(() => {
-    // Fetch metrics from API
-    fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
-  }, []);
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics } = useMetrics();
 
   const communityStats = [
     { icon: Users, value: metrics.totalUsers, suffix: '+', label: 'Active Developers' },

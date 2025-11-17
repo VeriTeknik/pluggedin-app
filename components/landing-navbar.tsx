@@ -15,11 +15,9 @@ import { useKeyPress } from '@/hooks/useKeyPress';
 
 // Navigation links
 const navLinks: Array<{ href: string; labelKey: string; external?: boolean }> = [
-  { href: '#why-pluggedin', labelKey: 'navigation.whyPluggedin' },
   { href: '#features', labelKey: 'navigation.features' },
   { href: '#ai-models', labelKey: 'navigation.aiModels' },
   { href: '#pricing', labelKey: 'navigation.pricing' },
-  { href: '#community', labelKey: 'navigation.community' },
   { href: 'https://docs.plugged.in', labelKey: 'navigation.documentation', external: true },
 ];
 
