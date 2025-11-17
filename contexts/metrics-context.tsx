@@ -46,7 +46,8 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const fetchMetrics = useCallback(() => {
+  // Fetch metrics on mount with proper cleanup
+  useEffect(() => {
     const abortController = new AbortController();
 
     setIsLoading(true);
@@ -88,15 +89,48 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
       });
 
     return () => abortController.abort();
-  }, []); // Empty deps - function is stable and doesn't depend on external values
+  }, []); // Empty deps - fetch once on mount
 
-  useEffect(() => {
-    const cleanup = fetchMetrics();
-    return cleanup;
-  }, [fetchMetrics]); // Now includes fetchMetrics in dependency array
+  const refetch = useCallback(() => {
+    const abortController = new AbortController();
+
+    setIsLoading(true);
+    setHasError(false);
+
+    fetch('/api/platform-metrics', { signal: abortController.signal })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (!abortController.signal.aborted) {
+          const validationResult = PlatformMetricsSchema.safeParse(data);
+
+          if (validationResult.success) {
+            setMetrics(validationResult.data);
+            setIsLoading(false);
+          } else {
+            throw new Error(`Invalid metrics data: ${validationResult.error.message}`);
+          }
+        }
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+
+        if (!abortController.signal.aborted) {
+          setHasError(true);
+          setIsLoading(false);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Failed to fetch platform metrics, using fallback values:', err);
+          }
+        }
+      });
+  }, []); // Empty deps - stable function reference
 
   return (
-    <MetricsContext.Provider value={{ metrics, isLoading, hasError, refetch: fetchMetrics }}>
+    <MetricsContext.Provider value={{ metrics, isLoading, hasError, refetch }}>
       {children}
     </MetricsContext.Provider>
   );
