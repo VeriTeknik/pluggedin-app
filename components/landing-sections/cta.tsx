@@ -11,6 +11,7 @@ import { useInView } from 'react-intersection-observer';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 
 interface PlatformMetrics {
   totalUsers: number;
@@ -38,19 +39,24 @@ export function LandingCta() {
     triggerOnce: true,
   });
 
-  // Fetch metrics from API
+  // Fetch metrics from API with centralized fallback values
   const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics>({
-    totalUsers: 848, // Production fallback
-    totalProjects: 900,
-    totalServers: 782, // Production fallback
-    activeProfiles30d: 135,
-    newUsers30d: 123,
+    totalUsers: FALLBACK_METRICS.totalUsers,
+    totalProjects: FALLBACK_METRICS.totalProjects,
+    totalServers: FALLBACK_METRICS.totalServers,
+    activeProfiles30d: FALLBACK_METRICS.newProfiles30d,
+    newUsers30d: FALLBACK_METRICS.newUsers30d,
   });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     setIsLoadingMetrics(true);
-    fetch('/api/platform-metrics')
+    setHasError(false);
+
+    fetch('/api/platform-metrics', { signal: abortController.signal })
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -58,17 +64,27 @@ export function LandingCta() {
         return res.json();
       })
       .then(data => {
-        setPlatformMetrics(data);
-        setIsLoadingMetrics(false);
+        if (!abortController.signal.aborted) {
+          setPlatformMetrics(data);
+          setIsLoadingMetrics(false);
+        }
       })
       .catch(err => {
-        // Silently fail and use fallback values
-        // Only log in development
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Failed to fetch platform metrics, using fallback values:', err);
+        // Ignore abort errors
+        if (err.name === 'AbortError') return;
+
+        if (!abortController.signal.aborted) {
+          setHasError(true);
+          setIsLoadingMetrics(false);
+          // Only log in development
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Failed to fetch platform metrics, using fallback values:', err);
+          }
         }
-        setIsLoadingMetrics(false);
       });
+
+    // Cleanup: abort fetch if component unmounts
+    return () => abortController.abort();
   }, []);
 
   const stats = [

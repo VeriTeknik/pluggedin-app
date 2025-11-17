@@ -87,10 +87,11 @@ export function HeroVideoDialog({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          role="button"
-          tabIndex={0}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel || "Video player dialog"}
           onKeyDown={(e) => {
-            if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+            if (e.key === "Escape") {
               setIsVideoOpen(false)
             }
           }}
@@ -102,8 +103,14 @@ export function HeroVideoDialog({
             {...selectedAnimation}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="relative aspect-video w-[95vw] md:w-[90vw] lg:w-[85vw] xl:w-[80vw]"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.button className="absolute -top-12 right-0 md:-top-16 rounded-full bg-neutral-900/50 p-2 text-xl text-white ring-1 backdrop-blur-md dark:bg-neutral-100/50 dark:text-black hover:bg-neutral-900/70 transition-colors">
+            <motion.button
+              type="button"
+              onClick={() => setIsVideoOpen(false)}
+              aria-label="Close video dialog"
+              className="absolute -top-12 right-0 md:-top-16 rounded-full bg-neutral-900/50 p-2 text-xl text-white ring-1 backdrop-blur-md dark:bg-neutral-100/50 dark:text-black hover:bg-neutral-900/70 transition-colors"
+            >
               <XIcon className="size-5" />
             </motion.button>
             <div className="relative isolate z-[1] size-full overflow-hidden rounded-xl md:rounded-2xl border-2 border-white shadow-2xl">

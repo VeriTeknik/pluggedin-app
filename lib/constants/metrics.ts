@@ -1,3 +1,15 @@
+/**
+ * Fallback metrics used when database queries fail
+ * These values should match production data and be updated periodically
+ */
+export const FALLBACK_METRICS = {
+  totalUsers: 848, // Production value from /admin/emails
+  totalProjects: 900,
+  totalServers: 782, // Production value from /search
+  newProfiles30d: 135,
+  newUsers30d: 123,
+} as const;
+
 // Centralized metrics for consistent usage across landing page components
 export const PLATFORM_METRICS = {
   TOOLS: {
@@ -15,16 +27,16 @@ export const PLATFORM_METRICS = {
     shortLabel: 'Servers'
   },
   DEVELOPERS: {
-    value: 844,
+    value: FALLBACK_METRICS.totalUsers,
     suffix: '+',
     label: 'Active Users',
     shortLabel: 'Users'
   },
   GROWTH: {
-    value: 135,
+    value: FALLBACK_METRICS.newProfiles30d,
     suffix: '+',
-    label: 'Active Profiles (30d)',
-    shortLabel: 'Active'
+    label: 'New Profiles (30d)',
+    shortLabel: 'New'
   },
   API_CALLS: {
     value: 14000,
@@ -112,14 +124,14 @@ export const PLATFORM_METRICS = {
     description: 'PAP protocol academic publication'
   },
   ACTIVE_USERS: {
-    value: 844,
+    value: FALLBACK_METRICS.totalUsers,
     suffix: '+',
     label: 'Active Users',
     shortLabel: 'Users',
     description: 'Active users on the platform'
   },
   NEW_USERS_30D: {
-    value: 123,
+    value: FALLBACK_METRICS.newUsers30d,
     suffix: '+',
     label: 'New Users (30d)',
     shortLabel: 'New Users',

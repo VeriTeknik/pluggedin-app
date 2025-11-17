@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/db';
+import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 
 interface PlatformMetrics {
   totalUsers: number;
@@ -20,52 +21,43 @@ interface PlatformMetrics {
  */
 async function queryPlatformMetrics(): Promise<PlatformMetrics> {
     try {
-      // Query total users
-      const usersResult = await db.execute<{ count: number }>(
-        sql`SELECT COUNT(*) as count FROM users`
-      );
-      const totalUsers = Number(usersResult.rows[0]?.count || 0);
+      // Combine all metrics into a single optimized query using CTEs
+      const result = await db.execute<{
+        total_users: number;
+        total_projects: number;
+        total_servers: number;
+        new_profiles_30d: number;
+        new_users_30d: number;
+      }>(sql`
+        WITH metrics AS (
+          SELECT
+            (SELECT COUNT(*) FROM users) as total_users,
+            (SELECT COUNT(*) FROM projects) as total_projects,
+            (SELECT COUNT(*) FROM mcp_servers) as total_servers,
+            (SELECT COUNT(*) FROM profiles WHERE created_at >= NOW() - INTERVAL '30 days') as new_profiles_30d,
+            (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '30 days') as new_users_30d
+        )
+        SELECT * FROM metrics
+      `);
 
-      // Query total projects
-      const projectsResult = await db.execute<{ count: number }>(
-        sql`SELECT COUNT(*) as count FROM projects`
-      );
-      const totalProjects = Number(projectsResult.rows[0]?.count || 0);
+      const metrics = result.rows[0];
 
-      // Query total MCP servers
-      const serversResult = await db.execute<{ count: number }>(
-        sql`SELECT COUNT(*) as count FROM mcp_servers`
-      );
-      const totalServers = Number(serversResult.rows[0]?.count || 0);
-
-      // Query active profiles in last 30 days (using created_at since updated_at doesn't exist)
-      const activeProfilesResult = await db.execute<{ count: number }>(
-        sql`SELECT COUNT(*) as count FROM profiles WHERE created_at >= NOW() - INTERVAL '30 days'`
-      );
-      const activeProfiles30d = Number(activeProfilesResult.rows[0]?.count || 0);
-
-      // Query new users in last 30 days
-      const newUsersResult = await db.execute<{ count: number }>(
-        sql`SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '30 days'`
-      );
-      const newUsers30d = Number(newUsersResult.rows[0]?.count || 0);
-
-    return {
-      totalUsers,
-      totalProjects,
-      totalServers,
-      activeProfiles30d,
-      newUsers30d,
-    };
+      return {
+        totalUsers: Number(metrics?.total_users || 0),
+        totalProjects: Number(metrics?.total_projects || 0),
+        totalServers: Number(metrics?.total_servers || 0),
+        activeProfiles30d: Number(metrics?.new_profiles_30d || 0), // Note: This is actually "new profiles" not "active profiles"
+        newUsers30d: Number(metrics?.new_users_30d || 0),
+      };
   } catch (error) {
     console.error('Error fetching platform metrics:', error);
-    // Return fallback values on error - matches production values
+    // Return fallback values on error - from centralized constants
     return {
-      totalUsers: 848, // Production value from /admin/emails
-      totalProjects: 900,
-      totalServers: 782, // Production value from /search
-      activeProfiles30d: 135,
-      newUsers30d: 123,
+      totalUsers: FALLBACK_METRICS.totalUsers,
+      totalProjects: FALLBACK_METRICS.totalProjects,
+      totalServers: FALLBACK_METRICS.totalServers,
+      activeProfiles30d: FALLBACK_METRICS.newProfiles30d,
+      newUsers30d: FALLBACK_METRICS.newUsers30d,
     };
   }
 }
