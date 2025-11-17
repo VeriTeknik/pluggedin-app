@@ -123,22 +123,26 @@
     "quickSetup": {
       "title": "快速设置",
       "duration": "3分钟",
-      "description": "在3分钟内将MCP服务器连接到Claude Desktop、VS Code、Cursor和其他AI工具。"
+      "description": "在3分钟内将MCP服务器连接到Claude Desktop、VS Code、Cursor和其他AI工具。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
     },
     "ragArchive": {
       "title": "RAG和文档存档",
       "duration": "5分钟",
-      "description": "了解如何将文件保存到知识库，并使用AI驱动的语义搜索在所有平台上查询它们。"
+      "description": "了解如何将文件保存到知识库，并使用AI驱动的语义搜索在所有平台上查询它们。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
     },
     "notifications": {
       "title": "任务通知",
       "duration": "4分钟",
-      "description": "设置自动通知和任务跟踪，掌握AI工作流和智能体活动。"
+      "description": "设置自动通知和任务跟踪，掌握AI工作流和智能体活动。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
     },
     "oauthServers": {
       "title": "OAuth集成",
       "duration": "6分钟",
-      "description": "连接启用OAuth的服务，如Notion、Linear和GitHub，具有自动令牌管理和刷新。"
+      "description": "通过OAuth连接Notion、Linear和GitHub等服务。一次认证，令牌在过期前自动刷新。无需手动管理令牌。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
     },
     "moreVideos": "更多教程可在我们的",
     "docsLink": "文档中找到"
@@ -207,17 +211,17 @@
     "subtitle": "管理 MCP 服务器所需的一切",
     "sectionTitle": "完整的 AI 生态系统平台",
     "sectionSubtitle": "从数据所有权到社区协作 - 您需要的一切都在一个平台上。",
-    "communitySharing": {
-      "title": "社交平台和社区",
-      "description": "共享 MCP 服务器，关注开发者，接收通知，构建您的 AI 网络。公开档案、评分和协作发现。"
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 自动轮换",
+      "description": "过期前15分钟自动刷新令牌。符合OAuth 2.1标准的令牌轮换。零服务中断，零手动操作。"
     },
-    "collectionManagement": {
-      "title": "智能集合与版本控制",
-      "description": "将服务器组织成版本化集合。公开或私下共享，跟踪安装，协作构建精选工具集。"
+    "mcpProxy": {
+      "title": "统一MCP代理",
+      "description": "所有MCP服务器的单一端点。内置AI演练场、通知系统和文档交换。支持STDIO、SSE和Streamable HTTP传输。"
     },
-    "workspaceOrganization": {
-      "title": "多工作区管理",
-      "description": "通过专用工作区隔离项目。在开发、测试和生产环境之间即时切换。"
+    "officialSdks": {
+      "title": "JavaScript、Python和Go SDK",
+      "description": "适用于JavaScript/TypeScript、Python和Go的全功能SDK。跨语言一致接口的文档管理、RAG查询和API访问。"
     },
     "advancedSearch": {
       "title": "智能发现引擎",

@@ -46,12 +46,29 @@ export function LandingCta() {
     activeProfiles30d: 135,
     newUsers30d: 123,
   });
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   useEffect(() => {
+    setIsLoadingMetrics(true);
     fetch('/api/platform-metrics')
-      .then(res => res.json())
-      .then(data => setPlatformMetrics(data))
-      .catch(err => console.error('Error fetching metrics:', err));
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        setPlatformMetrics(data);
+        setIsLoadingMetrics(false);
+      })
+      .catch(err => {
+        // Silently fail and use fallback values
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to fetch platform metrics, using fallback values:', err);
+        }
+        setIsLoadingMetrics(false);
+      });
   }, []);
 
   const stats = [

@@ -103,14 +103,6 @@ const LandingPricingSection = dynamic(
   }
 );
 
-const LandingCommunitySharing = dynamic(
-  () => import('@/components/landing-sections/community-sharing').then(mod => ({ default: mod.LandingCommunitySharing })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: false // Client-side only for interactive features
-  }
-);
-
 const LandingCollectionManagement = dynamic(
   () => import('@/components/landing-sections/collection-management').then(mod => ({ default: mod.LandingCollectionManagement })),
   {
@@ -257,12 +249,6 @@ export default function Home() {
         <Suspense fallback={<SectionLoader height="600px" />}>
           <ErrorBoundary sectionName="Pricing">
             <LandingPricingSection />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Community">
-            <LandingCommunitySharing />
           </ErrorBoundary>
         </Suspense>
 

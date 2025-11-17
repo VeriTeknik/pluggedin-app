@@ -24,6 +24,7 @@ interface HeroVideoProps {
   thumbnailSrc: string
   thumbnailAlt?: string
   className?: string
+  'aria-label'?: string
 }
 
 const animationVariants = {
@@ -75,6 +76,7 @@ export function HeroVideoDialog({
   thumbnailSrc,
   thumbnailAlt = "Video thumbnail",
   className,
+  'aria-label': ariaLabel,
 }: HeroVideoProps) {
   const [isVideoOpen, setIsVideoOpen] = useState(false)
   const selectedAnimation = animationVariants[animationStyle]
@@ -107,10 +109,12 @@ export function HeroVideoDialog({
             <div className="relative isolate z-[1] size-full overflow-hidden rounded-xl md:rounded-2xl border-2 border-white shadow-2xl">
               <iframe
                 src={videoSrc}
-                title="Hero Video player"
+                title={ariaLabel || "Hero Video player"}
                 className="size-full rounded-xl md:rounded-2xl"
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                aria-label={ariaLabel}
               ></iframe>
             </div>
           </motion.div>

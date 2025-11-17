@@ -38,17 +38,17 @@
     "subtitle": "MCPサーバーを管理するために必要なすべて",
     "sectionTitle": "完全なAIエコシステムプラットフォーム",
     "sectionSubtitle": "エンタープライズグレードの機能でAI機能を接続、共有、発見、拡張します。",
-    "communitySharing": {
-      "title": "ソーシャルプラットフォーム＆コミュニティ",
-      "description": "MCPサーバーを共有し、開発者をフォローし、通知を受け取り、AIネットワークを構築します。公開プロフィール、評価、協力的な発見機能。"
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1自動ローテーション",
+      "description": "期限切れの15分前に自動トークン更新。OAuth 2.1準拠のトークンローテーション。サービス中断ゼロ、手動作業ゼロ。"
     },
-    "collectionManagement": {
-      "title": "バージョン管理付きスマートコレクション",
-      "description": "サーバーをバージョン管理されたコレクションに整理します。公開または非公開で共有し、インストールを追跡し、厳選されたツールセットで協力します。"
+    "mcpProxy": {
+      "title": "統一MCPプロキシ",
+      "description": "すべてのMCPサーバー用の単一エンドポイント。内蔵AIプレイグラウンド、通知システム、ドキュメント交換。STDIO、SSE、Streamable HTTPトランスポートをサポート。"
     },
-    "workspaceOrganization": {
-      "title": "マルチワークスペース管理",
-      "description": "専用ワークスペースでプロジェクトを分離します。開発、ステージング、本番環境間でコンテキストを瞬時に切り替えます。"
+    "officialSdks": {
+      "title": "JavaScript、Python、Go SDK",
+      "description": "JavaScript/TypeScript、Python、Go向けのフル機能SDK。言語間で一貫したインターフェースを備えたドキュメント管理、RAGクエリ、APIアクセス。"
     },
     "advancedSearch": {
       "title": "インテリジェント発見エンジン",
@@ -630,22 +630,26 @@
     "quickSetup": {
       "title": "クイックセットアップ",
       "duration": "3分",
-      "description": "Claude Desktop、VS Code、Cursor、その他のAIツールにMCPサーバーを3分以内で接続します。"
+      "description": "Claude Desktop、VS Code、Cursor、その他のAIツールにMCPサーバーを3分以内で接続します。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
     },
     "ragArchive": {
       "title": "RAGとドキュメントアーカイブ",
       "duration": "5分",
-      "description": "ナレッジベースにファイルを保存し、すべてのプラットフォームでAI駆動のセマンティック検索を使用してクエリする方法を学びます。"
+      "description": "ナレッジベースにファイルを保存し、すべてのプラットフォームでAI駆動のセマンティック検索を使用してクエリする方法を学びます。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
     },
     "notifications": {
       "title": "タスク通知",
       "duration": "4分",
-      "description": "自動通知とタスク追跡を設定して、AIワークフローとエージェントアクティビティの最新情報を把握します。"
+      "description": "自動通知とタスク追跡を設定して、AIワークフローとエージェントアクティビティの最新情報を把握します。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
     },
     "oauthServers": {
       "title": "OAuth統合",
       "duration": "6分",
-      "description": "Notion、Linear、GitHubなどのOAuth対応サービスを自動トークン管理と更新で接続します。"
+      "description": "Notion、Linear、GitHubなどのサービスをOAuthで接続。一度認証すればトークンは期限切れ前に自動更新されます。手動でのトークン管理は不要です。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
     },
     "moreVideos": "より多くのチュートリアルは私たちの",
     "docsLink": "ドキュメント"

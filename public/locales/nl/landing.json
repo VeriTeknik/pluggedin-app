@@ -66,21 +66,17 @@
       "title": "Trending Analytics",
       "description": "Ontdek populaire servers met real-time analytics. Leer van de community terwijl u uw data privé houdt."
     },
-    "oauthTokenManagement": {
-      "title": "OAuth & Token Management",
-      "description": "Veilige authenticatiestromen met ingebouwde OAuth-ondersteuning. Beheer tokens en machtigingen over al uw AI-services."
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 Auto-Rotatie",
+      "description": "Automatische tokenvernieuwing 15 minuten voor vervaldatum. OAuth 2.1-conform met tokenrotatie. Geen service-onderbrekingen, geen handmatig werk."
     },
-    "communitySharing": {
-      "title": "Sociaal platform & Community",
-      "description": "Deel MCP-servers, volg ontwikkelaars, ontvang meldingen en bouw uw AI-netwerk. Openbare profielen, beoordelingen en collaboratieve ontdekking."
+    "mcpProxy": {
+      "title": "Unified MCP Proxy",
+      "description": "Enkel endpoint voor alle MCP-servers. Ingebouwde AI-playground, meldingssysteem en documentuitwisseling. Ondersteunt STDIO, SSE en Streamable HTTP-transporten."
     },
-    "collectionManagement": {
-      "title": "Slimme collecties met versiebeheer",
-      "description": "Organiseer servers in collecties met versiebeheer. Deel publiek of privé, volg installaties en werk samen aan gecureerde toolsets."
-    },
-    "workspaceOrganization": {
-      "title": "Multi-werkruimte beheer",
-      "description": "Isoleer projecten met toegewijde werkruimtes. Schakel direct tussen ontwikkeling-, staging- en productieomgevingen."
+    "officialSdks": {
+      "title": "JavaScript, Python & Go SDK's",
+      "description": "Volledig uitgeruste SDK's voor JavaScript/TypeScript, Python en Go. Documentbeheer, RAG-queries en API-toegang met consistente interfaces over talen heen."
     },
     "advancedSearch": {
       "title": "Intelligente ontdekkingsengine",
@@ -677,22 +673,26 @@
     "quickSetup": {
       "title": "Snelle setup",
       "duration": "3 min",
-      "description": "Verbind MCP-servers met Claude Desktop, VS Code, Cursor en andere AI-tools in minder dan 3 minuten."
+      "description": "Verbind MCP-servers met Claude Desktop, VS Code, Cursor en andere AI-tools in minder dan 3 minuten.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
     },
     "ragArchive": {
       "title": "RAG & documentarchief",
       "duration": "5 min",
-      "description": "Leer hoe u bestanden opslaat in uw kennisbank en ze opvraagt met AI-aangedreven semantisch zoeken over alle platforms."
+      "description": "Leer hoe u bestanden opslaat in uw kennisbank en ze opvraagt met AI-aangedreven semantisch zoeken over alle platforms.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
     },
     "notifications": {
       "title": "Taakmeldingen",
       "duration": "4 min",
-      "description": "Stel geautomatiseerde meldingen en taaktracking in om op de hoogte te blijven van uw AI-workflows en agentactiviteiten."
+      "description": "Stel geautomatiseerde meldingen en taaktracking in om op de hoogte te blijven van uw AI-workflows en agentactiviteiten.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
     },
     "oauthServers": {
       "title": "OAuth-integratie",
       "duration": "6 min",
-      "description": "Verbind OAuth-enabled services zoals Notion, Linear en GitHub met automatisch tokenbeheer en vernieuwing."
+      "description": "Verbind services zoals Notion, Linear en GitHub met OAuth. Authenticeer één keer—tokens worden automatisch vernieuwd voordat ze verlopen. Geen handmatig tokenbeheer nodig.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
     },
     "moreVideos": "Meer tutorials beschikbaar in onze",
     "docsLink": "documentatie"

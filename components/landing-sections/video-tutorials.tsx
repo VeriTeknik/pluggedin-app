@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { BookOpen, Bell, Lock, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
+import { useMemo } from 'react';
 
 import { HeroVideoDialog } from '@/components/ui/hero-video-dialog';
 import { useMounted } from '@/hooks/use-mounted';
+import { getSafeYouTubeUrl } from '@/lib/video-url-validator';
 
 const tutorials = [
   {
@@ -16,7 +18,6 @@ const tutorials = [
     iconColor: 'text-blue-500',
     // Placeholder thumbnail - replace with actual video thumbnail
     thumbnail: 'https://placehold.co/600x400/1e293b/06b6d4?text=Quick+Setup',
-    video: 'https://www.youtube.com/embed/iQBhMUUHpUQ',
   },
   {
     key: 'ragArchive',
@@ -24,7 +25,6 @@ const tutorials = [
     color: 'from-purple-500 to-pink-500',
     iconColor: 'text-purple-500',
     thumbnail: 'https://placehold.co/600x400/1e293b/a855f7?text=RAG+Archive',
-    video: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
   },
   {
     key: 'notifications',
@@ -32,7 +32,6 @@ const tutorials = [
     color: 'from-orange-500 to-red-500',
     iconColor: 'text-orange-500',
     thumbnail: 'https://placehold.co/600x400/1e293b/f97316?text=Notifications',
-    video: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
   },
   {
     key: 'oauthServers',
@@ -40,7 +39,6 @@ const tutorials = [
     color: 'from-green-500 to-emerald-500',
     iconColor: 'text-green-500',
     thumbnail: 'https://placehold.co/600x400/1e293b/10b981?text=OAuth+Setup',
-    video: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
   },
 ];
 
@@ -115,10 +113,11 @@ export function VideoTutorialsSection() {
                 {/* Video Player */}
                 <HeroVideoDialog
                   animationStyle="from-center"
-                  videoSrc={tutorial.video}
+                  videoSrc={getSafeYouTubeUrl(t(`videoTutorials.${tutorial.key}.videoUrl`)) || ''}
                   thumbnailSrc={tutorial.thumbnail}
                   thumbnailAlt={t(`videoTutorials.${tutorial.key}.title`)}
                   className="rounded-lg overflow-hidden"
+                  aria-label={t(`videoTutorials.${tutorial.key}.title`)}
                 />
               </div>
             </motion.div>

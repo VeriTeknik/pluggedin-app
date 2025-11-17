@@ -123,22 +123,26 @@
     "quickSetup": {
       "title": "Hızlı Kurulum",
       "duration": "3 dk",
-      "description": "MCP sunucularını Claude Desktop, VS Code, Cursor ve diğer AI araçlarına 3 dakikadan kısa sürede bağlayın."
+      "description": "MCP sunucularını Claude Desktop, VS Code, Cursor ve diğer AI araçlarına 3 dakikadan kısa sürede bağlayın.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
     },
     "ragArchive": {
       "title": "RAG ve Belge Arşivi",
       "duration": "5 dk",
-      "description": "Dosyaları bilgi tabanınıza nasıl kaydedeceğinizi ve AI destekli semantik arama kullanarak tüm platformlarda nasıl sorgulayacağınızı öğrenin."
+      "description": "Dosyaları bilgi tabanınıza nasıl kaydedeceğinizi ve AI destekli semantik arama kullanarak tüm platformlarda nasıl sorgulayacağınızı öğrenin.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
     },
     "notifications": {
       "title": "Görev Bildirimleri",
       "duration": "4 dk",
-      "description": "AI iş akışlarınızın ve ajan etkinliklerinizin üstünde kalmak için otomatik bildirimleri ve görev takibini ayarlayın."
+      "description": "AI iş akışlarınızın ve ajan etkinliklerinizin üstünde kalmak için otomatik bildirimleri ve görev takibini ayarlayın.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
     },
     "oauthServers": {
       "title": "OAuth Entegrasyonu",
       "duration": "6 dk",
-      "description": "Otomatik token yönetimi ve yenileme ile Notion, Linear ve GitHub gibi OAuth özellikli hizmetleri bağlayın."
+      "description": "Notion, Linear ve GitHub gibi servisleri OAuth ile bağlayın. Bir kez kimlik doğrulayın—tokenlar süresi dolmadan otomatik olarak yenilenir. Manuel token yönetimi gerekmez.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
     },
     "moreVideos": "Daha fazla eğitim",
     "docsLink": "belgelerimizde"
@@ -235,21 +239,17 @@
       "title": "Trend Analitiği",
       "description": "Gerçek zamanlı analitiklerle popüler sunucuları keşfedin. Verilerinizi gizli tutarken topluluktan öğrenin."
     },
-    "oauthTokenManagement": {
-      "title": "OAuth ve Token Yönetimi",
-      "description": "Yerleşik OAuth desteği ile güvenli kimlik doğrulama akışları. Tüm AI hizmetlerinizde token ve izinleri yönetin."
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 Otomatik Rotasyon",
+      "description": "Süre dolmadan 15 dakika önce otomatik token yenileme. OAuth 2.1 uyumlu token rotasyon. Sıfır kesinti, sıfır manuel iş."
     },
-    "communitySharing": {
-      "title": "Sosyal Platform ve Topluluk",
-      "description": "MCP sunucularını paylaşın, geliştiricileri takip edin, bildirimler alın ve yapay zeka ağınızı kurun. Herkese açık profiller, derecelendirmeler ve işbirlikçi keşif."
+    "mcpProxy": {
+      "title": "Birleşik MCP Proxy",
+      "description": "Tüm MCP sunucuları için tek uç nokta. Dahili AI oyun alanı, bildirim sistemi ve belge değişimi. STDIO, SSE ve Streamable HTTP transportlarını destekler."
     },
-    "collectionManagement": {
-      "title": "Sürüm Kontrolü ile Akıllı Koleksiyonlar",
-      "description": "Sunucuları sürümlendirilmiş koleksiyonlar halinde düzenleyin. Herkese açık veya özel paylaşın, kurulumları takip edin ve seçilmiş araç setleri üzerinde işbirliği yapın."
-    },
-    "workspaceOrganization": {
-      "title": "Çoklu Çalışma Alanı Yönetimi",
-      "description": "Özel çalışma alanlarıyla projeleri izole edin. Geliştirme, hazırlık ve üretim ortamları arasında anında geçiş yapın."
+    "officialSdks": {
+      "title": "JavaScript, Python ve Go SDK'ları",
+      "description": "JavaScript/TypeScript, Python ve Go için tam özellikli SDK'lar. Diller arasında tutarlı arayüzlerle belge yönetimi, RAG sorguları ve API erişimi."
     },
     "advancedSearch": {
       "title": "Akıllı Keşif Motoru",

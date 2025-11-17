@@ -113,22 +113,26 @@
     "quickSetup": {
       "title": "Quick Setup",
       "duration": "3 min",
-      "description": "Connect MCP servers to Claude Desktop, VS Code, Cursor, and other AI tools in under 3 minutes."
+      "description": "Connect MCP servers to Claude Desktop, VS Code, Cursor, and other AI tools in under 3 minutes.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
     },
     "ragArchive": {
       "title": "RAG & Document Archive",
       "duration": "5 min",
-      "description": "Learn how to save files to your knowledge base and query them using AI-powered semantic search across all platforms."
+      "description": "Learn how to save files to your knowledge base and query them using AI-powered semantic search across all platforms.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
     },
     "notifications": {
       "title": "Task Notifications",
       "duration": "4 min",
-      "description": "Set up automated notifications and task tracking to stay on top of your AI workflows and agent activities."
+      "description": "Set up automated notifications and task tracking to stay on top of your AI workflows and agent activities.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
     },
     "oauthServers": {
       "title": "OAuth Integration",
       "duration": "6 min",
-      "description": "Connect OAuth-enabled services like Notion, Linear, and GitHub with automatic token management and refresh."
+      "description": "Connect services like Notion, Linear, and GitHub with OAuth. Authenticate once—tokens automatically refresh before they expire. No manual token management needed.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
     },
     "moreVideos": "More tutorials available in our",
     "docsLink": "documentation"
@@ -239,21 +243,17 @@
       "title": "Trending Analytics",
       "description": "Discover popular servers with real-time analytics. Learn from the community while keeping your data private."
     },
-    "oauthTokenManagement": {
-      "title": "OAuth & Token Management",
-      "description": "Secure authentication flows with built-in OAuth support. Manage tokens and permissions across all your AI services."
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 Auto-Rotation",
+      "description": "Automatic token refresh 15 minutes before expiry. OAuth 2.1 compliant with token rotation. Zero service interruptions, zero manual work."
     },
-    "communitySharing": {
-      "title": "Social Platform & Community",
-      "description": "Share MCP servers, follow developers, get notifications, and build your AI network. Public profiles, ratings, and collaborative discovery."
+    "mcpProxy": {
+      "title": "Unified MCP Proxy",
+      "description": "Single endpoint for all MCP servers. Built-in AI playground, notification system, and document exchange. Supports STDIO, SSE, and Streamable HTTP transports."
     },
-    "collectionManagement": {
-      "title": "Smart Collections with Version Control",
-      "description": "Organize servers into versioned collections. Share publicly or privately, track installations, and collaborate on curated toolsets."
-    },
-    "workspaceOrganization": {
-      "title": "Multi-Workspace Management",
-      "description": "Isolate projects with dedicated workspaces. Switch contexts instantly between development, staging, and production environments."
+    "officialSdks": {
+      "title": "JavaScript, Python & Go SDKs",
+      "description": "Full-featured SDKs for JavaScript/TypeScript, Python, and Go. Document management, RAG queries, and API access with consistent interfaces across languages."
     },
     "advancedSearch": {
       "title": "Intelligent Discovery Engine",
