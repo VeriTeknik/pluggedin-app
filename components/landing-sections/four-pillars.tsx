@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BookOpen, Bot, Database, Wrench, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Bot, CheckCircle2,Database, Sparkles, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';

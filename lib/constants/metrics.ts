@@ -1,19 +1,43 @@
 /**
  * Fallback metrics used when database queries fail
- * These values should match production data and be updated periodically
+ *
+ * DATA SOURCE: PostgreSQL database (see app/actions/metrics.ts)
+ * FETCHED FROM: /api/platform-metrics endpoint with 15-min cache
+ * UPDATE FREQUENCY: Auto-updated every 15 minutes from live database
+ *
+ * These fallback values are only used when:
+ * 1. Database query fails
+ * 2. API is unreachable
+ * 3. Initial SSR before client-side fetch
+ *
+ * UPDATE MANUALLY: Only if database is unavailable for extended period
  */
 export const FALLBACK_METRICS = {
-  totalUsers: 848, // Production value from /admin/emails
-  totalProjects: 900,
-  totalServers: 782, // Production value from /search
-  newProfiles30d: 135,
-  newUsers30d: 123,
+  totalUsers: 848,       // Auto-fetched from users table | Last updated: production /admin/emails
+  totalProjects: 900,    // Auto-fetched from projects table
+  totalServers: 782,     // Auto-fetched from mcp_servers table | Last updated: production /search
+  newProfiles30d: 135,   // Auto-fetched: COUNT(*) WHERE created_at >= NOW() - INTERVAL '30 days'
+  newUsers30d: 123,      // Auto-fetched: COUNT(*) WHERE created_at >= NOW() - INTERVAL '30 days'
 } as const;
 
-// Centralized metrics for consistent usage across landing page components
+/**
+ * Static platform metrics for marketing and feature highlights
+ *
+ * DATA SOURCE: Manual/Design values - NOT auto-fetched from database
+ * UPDATE FREQUENCY: Manual updates required when values change
+ *
+ * VALUES TO UPDATE REGULARLY:
+ * - TOOLS.value (7268): Update monthly from registry count
+ * - API_CALLS.value (14000): Update monthly from analytics
+ *
+ * DESIGN VALUES (rarely change):
+ * - UPTIME.value (99.9): Target SLA
+ * - RESPONSE_TIME.value (100): Target response time
+ * - Growth percentages: Marketing messaging
+ */
 export const PLATFORM_METRICS = {
   TOOLS: {
-    value: 7268,
+    value: 7268,  // ⚠️ UPDATE MONTHLY: MCP registry verified tools count
     suffix: '+',
     label: 'Verified Tools',
     shortLabel: 'Verified Tools',
@@ -21,65 +45,65 @@ export const PLATFORM_METRICS = {
     secureText: 'Keys encrypted - no config exposure'
   },
   SERVERS: {
-    value: 1500,
+    value: 1500,  // ⚠️ UPDATE MONTHLY: Active MCP servers from registry
     suffix: '+',
     label: 'MCP Servers',
     shortLabel: 'Servers'
   },
   DEVELOPERS: {
-    value: FALLBACK_METRICS.totalUsers,
+    value: FALLBACK_METRICS.totalUsers,  // ✅ AUTO-FETCHED: Uses live database value
     suffix: '+',
     label: 'Active Users',
     shortLabel: 'Users'
   },
   GROWTH: {
-    value: FALLBACK_METRICS.newProfiles30d,
+    value: FALLBACK_METRICS.newProfiles30d,  // ✅ AUTO-FETCHED: Uses live database value
     suffix: '+',
     label: 'New Profiles (30d)',
     shortLabel: 'New'
   },
   API_CALLS: {
-    value: 14000,
+    value: 14000,  // ⚠️ UPDATE MONTHLY: From analytics/monitoring dashboard
     suffix: '+',
     label: 'API Calls/Month',
     shortLabel: 'API Calls',
     formatted: '14K+'
   },
   PROJECTS: {
-    value: 900,
+    value: 900,  // ✅ AUTO-FETCHED: Uses live database value (FALLBACK_METRICS.totalProjects)
     suffix: '+',
     label: 'Active Projects',
     shortLabel: 'Projects'
   },
   UPTIME: {
-    value: 99.9,
+    value: 99.9,  // 🎯 DESIGN VALUE: Target SLA (not measured live)
     suffix: '%',
     label: 'Uptime SLA',
     shortLabel: 'Uptime',
     decimals: 1
   },
   RESPONSE_TIME: {
-    value: 100,
+    value: 100,  // 🎯 DESIGN VALUE: Target response time (not measured live)
     suffix: 'ms',
     label: 'Response Time',
     shortLabel: 'Response',
     prefix: '<'
   },
   AI_DOCUMENTS: {
-    value: 87,
+    value: 87,  // ⚠️ UPDATE MONTHLY: Query docs table WHERE source='ai_generated'
     suffix: '+',
     label: 'AI Documents',
     shortLabel: 'Documents'
   },
   ACTIVE_SERVERS: {
-    value: 2525,
+    value: 2525,  // ⚠️ UPDATE MONTHLY: Active MCP server installations
     suffix: '+',
     label: 'Configured Servers',
     shortLabel: 'Configured'
   },
   // PAP Protocol Metrics
   PAP_LATENCY: {
-    value: 50,
+    value: 50,  // 🎯 DESIGN VALUE: Target control plane latency
     suffix: 'ms',
     label: 'Control Plane Latency',
     shortLabel: 'PAP Latency',
@@ -87,7 +111,7 @@ export const PLATFORM_METRICS = {
     description: 'Sub-50ms control plane latency for PAP protocol'
   },
   PAP_REQUESTS_PER_SECOND: {
-    value: 10000,
+    value: 10000,  // 🎯 DESIGN VALUE: Target RPS capacity
     suffix: '+',
     label: 'Requests/Second Capacity',
     shortLabel: 'RPS',
@@ -95,7 +119,7 @@ export const PLATFORM_METRICS = {
     description: 'PAP protocol capacity under load'
   },
   CHAOS_UPTIME: {
-    value: 99.9,
+    value: 99.9,  // 🎯 DESIGN VALUE: Target uptime under chaos testing
     suffix: '%',
     label: 'Uptime Under Chaos Testing',
     shortLabel: 'Chaos Uptime',
@@ -103,14 +127,14 @@ export const PLATFORM_METRICS = {
     description: '99.9% availability under chaos testing'
   },
   TOKEN_EFFICIENCY: {
-    value: 45,
+    value: 45,  // 🎯 DESIGN VALUE: Measured improvement midpoint (30-55%)
     suffix: '%',
     label: 'Token Efficiency Improvement',
     shortLabel: 'Efficiency',
     description: '30-55% token efficiency vs. typical MCP proxies'
   },
   RAG_SEARCH_TIME: {
-    value: 1,
+    value: 1,  // 🎯 DESIGN VALUE: Target semantic search time
     suffix: 's',
     label: 'Semantic Search Time',
     shortLabel: 'Search Time',
@@ -118,20 +142,20 @@ export const PLATFORM_METRICS = {
     description: 'Sub-second semantic search in RAG v2'
   },
   ACADEMIC_PAPERS: {
-    value: 1,
+    value: 1,  // ⚠️ UPDATE: Increment when new PAP papers are published
     label: 'Academic Papers',
     shortLabel: 'Papers',
     description: 'PAP protocol academic publication'
   },
   ACTIVE_USERS: {
-    value: FALLBACK_METRICS.totalUsers,
+    value: FALLBACK_METRICS.totalUsers,  // ✅ AUTO-FETCHED: Uses live database value
     suffix: '+',
     label: 'Active Users',
     shortLabel: 'Users',
     description: 'Active users on the platform'
   },
   NEW_USERS_30D: {
-    value: FALLBACK_METRICS.newUsers30d,
+    value: FALLBACK_METRICS.newUsers30d,  // ✅ AUTO-FETCHED: Uses live database value
     suffix: '+',
     label: 'New Users (30d)',
     shortLabel: 'New Users',

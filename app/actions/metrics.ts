@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { unstable_cache } from 'next/cache';
 import { sql } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
 import { db } from '@/db';
 import { FALLBACK_METRICS } from '@/lib/constants/metrics';

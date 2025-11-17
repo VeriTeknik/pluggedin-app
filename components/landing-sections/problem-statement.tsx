@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { AlertCircle, Users, Clock, GitBranch, Zap, XCircle } from 'lucide-react';
+import { AlertCircle, Clock, GitBranch, Users, XCircle,Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 

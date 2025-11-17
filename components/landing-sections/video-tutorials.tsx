@@ -1,10 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BookOpen, Bell, Lock, Zap } from 'lucide-react';
+import { Bell, BookOpen, Lock, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
-import { useMemo } from 'react';
 
 import { HeroVideoDialog } from '@/components/ui/hero-video-dialog';
 import { useMounted } from '@/hooks/use-mounted';

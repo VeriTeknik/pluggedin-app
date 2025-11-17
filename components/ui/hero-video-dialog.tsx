@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
+import { AnimatePresence, motion } from "framer-motion"
+import { Play, XIcon } from "lucide-react"
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { Play, XIcon } from "lucide-react"
-import { AnimatePresence, motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 import { getSafeYouTubeUrl } from "@/lib/video-url-validator"

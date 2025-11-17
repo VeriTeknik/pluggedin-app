@@ -18,8 +18,8 @@ import { useInView } from 'react-intersection-observer';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import { useMetrics } from '@/contexts/metrics-context';
+import { cn } from '@/lib/utils';
 
 interface DeveloperFeature {
   icon: React.ElementType;

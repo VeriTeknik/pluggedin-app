@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 
 import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 
@@ -36,7 +36,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const fetchMetrics = () => {
+  const fetchMetrics = useCallback(() => {
     const abortController = new AbortController();
 
     setIsLoading(true);
@@ -70,12 +70,12 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
       });
 
     return () => abortController.abort();
-  };
+  }, []); // Empty deps - function is stable and doesn't depend on external values
 
   useEffect(() => {
     const cleanup = fetchMetrics();
     return cleanup;
-  }, []);
+  }, [fetchMetrics]); // Now includes fetchMetrics in dependency array
 
   return (
     <MetricsContext.Provider value={{ metrics, isLoading, hasError, refetch: fetchMetrics }}>

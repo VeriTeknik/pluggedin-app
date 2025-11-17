@@ -181,12 +181,13 @@ export default function Home() {
   }
 
   return (
-    <MetricsProvider>
-      <div className="flex flex-col min-h-screen">
-        <LandingNavbar />
-        <main className="flex-grow">
-        {/* Critical above-the-fold content */}
-        <ErrorBoundary sectionName="Hero">
+    <ErrorBoundary sectionName="Metrics Context">
+      <MetricsProvider>
+        <div className="flex flex-col min-h-screen">
+          <LandingNavbar />
+          <main className="flex-grow">
+          {/* Critical above-the-fold content */}
+          <ErrorBoundary sectionName="Hero">
           <LandingHeroEnterpriseSection />
         </ErrorBoundary>
 
@@ -301,9 +302,10 @@ export default function Home() {
             <LandingCta />
           </ErrorBoundary>
         </Suspense>
-      </main>
-      <Footer />
-    </div>
-    </MetricsProvider>
+        </main>
+        <Footer />
+      </div>
+      </MetricsProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import { motion } from 'framer-motion';
 import { ArrowRight, Download, ExternalLink, Star, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';

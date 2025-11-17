@@ -18,14 +18,14 @@ import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import pLimit from 'p-limit';
 
 import { db } from '@/db';
-import { mcpServersTable, mcpServerOAuthTokensTable, profilesTable, projectsTable } from '@/db/schema';
+import { mcpServerOAuthTokensTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
+import { refreshOAuthToken } from '@/lib/oauth/token-refresh-service';
 import { log } from '@/lib/observability/logger';
 import {
   recordScheduledRefresh,
   recordScheduledRefreshError,
   updateTokensExpiringSoonGauge,
 } from '@/lib/observability/oauth-metrics';
-import { refreshOAuthToken } from '@/lib/oauth/token-refresh-service';
 
 // Configuration
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
