@@ -46,8 +46,9 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // Fetch metrics on mount with proper cleanup
+  // Fetch metrics on mount with proper cleanup and race condition prevention
   useEffect(() => {
+    let isMounted = true;
     const abortController = new AbortController();
 
     setIsLoading(true);
@@ -61,7 +62,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
         return res.json();
       })
       .then(data => {
-        if (!abortController.signal.aborted) {
+        if (isMounted) {
           // Validate response with Zod schema
           const validationResult = PlatformMetricsSchema.safeParse(data);
 
@@ -78,7 +79,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
         // Ignore abort errors
         if (err.name === 'AbortError') return;
 
-        if (!abortController.signal.aborted) {
+        if (isMounted) {
           setHasError(true);
           setIsLoading(false);
           // Only log in development
@@ -88,10 +89,14 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
         }
       });
 
-    return () => abortController.abort();
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []); // Empty deps - fetch once on mount
 
   const refetch = useCallback(() => {
+    let isActive = true;
     const abortController = new AbortController();
 
     setIsLoading(true);
@@ -105,7 +110,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
         return res.json();
       })
       .then(data => {
-        if (!abortController.signal.aborted) {
+        if (isActive) {
           const validationResult = PlatformMetricsSchema.safeParse(data);
 
           if (validationResult.success) {
@@ -119,14 +124,22 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
       .catch(err => {
         if (err.name === 'AbortError') return;
 
-        if (!abortController.signal.aborted) {
+        if (isActive) {
           setHasError(true);
           setIsLoading(false);
           if (process.env.NODE_ENV === 'development') {
             console.warn('Failed to fetch platform metrics, using fallback values:', err);
           }
         }
+      })
+      .finally(() => {
+        isActive = false;
       });
+
+    return () => {
+      isActive = false;
+      abortController.abort();
+    };
   }, []); // Empty deps - stable function reference
 
   return (

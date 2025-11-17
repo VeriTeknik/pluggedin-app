@@ -21,12 +21,13 @@ interface PlatformMetrics {
  */
 async function queryPlatformMetrics(): Promise<PlatformMetrics> {
     try {
-      // Optimized query using FILTER clause to reduce table scans from 7 to 5
-      // - users: 1 scan (total + new_30d combined)
-      // - profiles: 1 scan (new_30d only)
-      // - projects: 1 scan (total only)
-      // - mcp_servers: 1 scan (total only)
-      // Total: 5 scans (down from 7 with separate subqueries)
+      // Optimized query using CTEs and FILTER clause for maximum parallelization
+      // All counts are executed in parallel CTEs, then combined in final SELECT
+      // - users: 1 scan (total + new_30d combined with FILTER)
+      // - profiles: 1 scan (new_30d with FILTER)
+      // - projects: 1 scan (total)
+      // - mcp_servers: 1 scan (total)
+      // Total: 4 table scans with optimal parallelization
       const result = await db.execute<{
         total_users: number;
         total_projects: number;
@@ -45,14 +46,20 @@ async function queryPlatformMetrics(): Promise<PlatformMetrics> {
             SELECT
               COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as new_30d
             FROM profiles
+          ),
+          project_counts AS (
+            SELECT COUNT(*) as total FROM projects
+          ),
+          server_counts AS (
+            SELECT COUNT(*) as total FROM mcp_servers
           )
         SELECT
           user_counts.total as total_users,
           user_counts.new_30d as new_users_30d,
           profile_counts.new_30d as new_profiles_30d,
-          (SELECT COUNT(*) FROM projects) as total_projects,
-          (SELECT COUNT(*) FROM mcp_servers) as total_servers
-        FROM user_counts, profile_counts
+          project_counts.total as total_projects,
+          server_counts.total as total_servers
+        FROM user_counts, profile_counts, project_counts, server_counts
       `);
 
       const metrics = result.rows[0];

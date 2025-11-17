@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 import { getPlatformMetrics } from '@/app/actions/metrics';
 import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 
-export const dynamic = 'force-dynamic';
+// Enable ISR caching with 15-minute revalidation
+// Note: Removed 'force-dynamic' to allow unstable_cache to work properly
 export const revalidate = 900; // Cache for 15 minutes
 
 /**
