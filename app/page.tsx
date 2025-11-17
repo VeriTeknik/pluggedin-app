@@ -181,15 +181,14 @@ export default function Home() {
   }
 
   return (
-    <ErrorBoundary sectionName="Metrics Context">
-      <MetricsProvider>
-        <div className="flex flex-col min-h-screen">
-          <LandingNavbar />
-          <main className="flex-grow">
-          {/* Critical above-the-fold content */}
-          <ErrorBoundary sectionName="Hero">
-          <LandingHeroEnterpriseSection />
-        </ErrorBoundary>
+    <MetricsProvider>
+      <div className="flex flex-col min-h-screen">
+        <LandingNavbar />
+        <main className="flex-grow">
+        {/* Critical above-the-fold content */}
+        <ErrorBoundary sectionName="Hero">
+        <LandingHeroEnterpriseSection />
+      </ErrorBoundary>
 
         <ErrorBoundary sectionName="Trust Indicators">
           <TrustIndicatorsSection />
@@ -302,10 +301,9 @@ export default function Home() {
             <LandingCta />
           </ErrorBoundary>
         </Suspense>
-        </main>
-        <Footer />
-      </div>
-      </MetricsProvider>
-    </ErrorBoundary>
+      </main>
+      <Footer />
+    </div>
+    </MetricsProvider>
   );
 }

@@ -6,9 +6,42 @@ import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 export const dynamic = 'force-dynamic';
 export const revalidate = 900; // Cache for 15 minutes
 
+/**
+ * Cache stampeding protection: Prevent multiple concurrent requests from hitting the database
+ * When cache expires, only the first request fetches from DB, others wait for that result
+ */
+class RequestCoalescer<T> {
+  private pendingRequests = new Map<string, Promise<T>>();
+
+  async deduplicate(key: string, fn: () => Promise<T>): Promise<T> {
+    // Check if there's already a pending request for this key
+    const pending = this.pendingRequests.get(key);
+    if (pending) {
+      return pending;
+    }
+
+    // Create a new request
+    const promise = fn()
+      .finally(() => {
+        // Clean up after completion (success or error)
+        this.pendingRequests.delete(key);
+      });
+
+    this.pendingRequests.set(key, promise);
+    return promise;
+  }
+}
+
+// Singleton instance for metrics requests
+const metricsCoalescer = new RequestCoalescer<Awaited<ReturnType<typeof getPlatformMetrics>>>();
+
 export async function GET() {
   try {
-    const metrics = await getPlatformMetrics();
+    // Use request coalescing to prevent cache stampeding
+    // All concurrent requests will share the same database query
+    const metrics = await metricsCoalescer.deduplicate('platform-metrics', async () => {
+      return await getPlatformMetrics();
+    });
 
     return NextResponse.json(metrics, {
       headers: {

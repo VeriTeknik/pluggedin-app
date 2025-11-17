@@ -1,8 +1,18 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { z } from 'zod';
 
 import { FALLBACK_METRICS } from '@/lib/constants/metrics';
+
+// Zod schema for validating API response
+const PlatformMetricsSchema = z.object({
+  totalUsers: z.number().int().nonnegative(),
+  totalProjects: z.number().int().nonnegative(),
+  totalServers: z.number().int().nonnegative(),
+  newProfiles30d: z.number().int().nonnegative(),
+  newUsers30d: z.number().int().nonnegative(),
+});
 
 export interface PlatformMetrics {
   totalUsers: number;
@@ -51,8 +61,16 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
       })
       .then(data => {
         if (!abortController.signal.aborted) {
-          setMetrics(data);
-          setIsLoading(false);
+          // Validate response with Zod schema
+          const validationResult = PlatformMetricsSchema.safeParse(data);
+
+          if (validationResult.success) {
+            setMetrics(validationResult.data);
+            setIsLoading(false);
+          } else {
+            // Invalid data structure, use fallback
+            throw new Error(`Invalid metrics data: ${validationResult.error.message}`);
+          }
         }
       })
       .catch(err => {
