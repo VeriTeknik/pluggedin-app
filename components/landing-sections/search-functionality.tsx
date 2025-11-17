@@ -17,6 +17,7 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 
 // TODO: Integrate MagicUI components when available:
 // - Safari component
@@ -44,11 +45,14 @@ export function LandingSearchFunctionality() {
     triggerOnce: true,
   });
 
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
+
   const stats = [
     { value: 7268, suffix: '+', label: 'Verified Tools' },
-    { value: 1500, suffix: '+', label: 'MCP Servers' },
+    { value: platformMetrics.totalServers, suffix: '+', label: 'MCP Servers' },
     { value: 460, suffix: '+', label: 'Active Servers' },
-    { value: 620, suffix: '+', label: 'Contributors' },
+    { value: platformMetrics.totalUsers, suffix: '+', label: 'Contributors' },
   ];
 
   return (
@@ -103,10 +107,10 @@ export function LandingSearchFunctionality() {
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Search 7,268+ verified tools with secure keys and 1,500+ MCP servers
+            Search 7,268+ verified tools with secure keys and {platformMetrics.totalServers}+ MCP servers
           </p>
           <p className="mt-2 text-base text-muted-foreground">
-            Join 620+ developers discovering new AI capabilities daily
+            Join {platformMetrics.totalUsers}+ developers discovering new AI capabilities daily
           </p>
         </motion.div>
 

@@ -8,6 +8,7 @@ import { useInView } from 'react-intersection-observer';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -37,12 +38,15 @@ export function LandingPricingSection() {
     triggerOnce: true,
   });
 
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
+
   const features = [
-    { key: 'pricing.features.mcp_server_integrations', highlight: '1,500+ MCP Servers' },
+    { key: 'pricing.features.mcp_server_integrations', highlight: `${platformMetrics.totalServers}+ MCP Servers` },
     { key: 'pricing.features.unlimited_ai_model_connections', highlight: '7,268+ Verified Tools' },
     { key: 'pricing.features.full_data_ownership_and_export', highlight: null },
     { key: 'pricing.features.unlimited_workspaces_and_projects', highlight: '650+ Active Projects' },
-    { key: 'pricing.features.community_sharing_and_collaboration', highlight: '620+ Developers' },
+    { key: 'pricing.features.community_sharing_and_collaboration', highlight: `${platformMetrics.totalUsers}+ Developers` },
     { key: 'pricing.features.end_to_end_encryption', highlight: '99.9% Uptime SLA' },
     { key: 'pricing.features.rag_document_storage', highlight: '87+ AI Documents' },
     { key: 'pricing.features.real_time_notifications', highlight: '14K+ API Calls/Month' },
@@ -71,7 +75,7 @@ export function LandingPricingSection() {
               transition={{ delay: 0.1 }}
               className="inline-flex items-center gap-2 bg-glow-green/10 border border-glow-green/20 rounded-full px-4 py-2 text-sm font-medium mb-4">
               <TrendingUp className="h-4 w-4 text-glow-green" />
-              <span className="text-glow-green">718% Monthly Growth - Join 620+ Developers</span>
+              <span className="text-glow-green">718% Monthly Growth - Join {platformMetrics.totalUsers}+ Developers</span>
             </motion.div>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-neon-purple">
@@ -79,7 +83,7 @@ export function LandingPricingSection() {
               </span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              7,268+ verified tools with encrypted keys and 1,500+ MCP servers - no config exposure needed
+              7,268+ verified tools with encrypted keys and {platformMetrics.totalServers}+ MCP servers - no config exposure needed
             </p>
           </motion.div>
 
@@ -102,7 +106,7 @@ export function LandingPricingSection() {
                   <span className="text-muted-foreground">forever</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Join 620+ developers using 7,268+ verified tools with secure key management
+                  Join {platformMetrics.totalUsers}+ developers using 7,268+ verified tools with secure key management
                 </p>
               </CardHeader>
               
@@ -170,12 +174,6 @@ export function LandingPricingSection() {
                     <p className="text-muted-foreground mb-3">
                       {t('pricing.whyFree.description')}
                     </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-glow-green/10 border border-glow-green/20">
-                      <div className="w-2 h-2 rounded-full bg-glow-green animate-pulse" />
-                      <span className="text-xs font-semibold text-glow-green">
-                        From 0 to 14,000+ API calls in 30 days
-                      </span>
-                    </div>
                   </div>
                 </div>
               </CardContent>

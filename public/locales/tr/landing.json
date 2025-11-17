@@ -9,25 +9,143 @@
     "collections": "Koleksiyonlar",
     "playground": "Oyun Alanı",
     "documentation": "Dokümantasyon",
-    "getStarted": "Ücretsiz Başla"
+    "getStarted": "Bağlan"
   },
   "hero": {
+    "badge": "Dünyanın İlk AI-CMS'i",
+    "headline": "Bilgi, Araçlar, Hafıza ve Ajanların Birleştiği Yer",
+    "subheadline": "Tüm AI etkileşimlerinizi düzenlemek için birleşik bir platform. AI'nızı gerçekten sizin yapan model-agnostik altyapı—Claude, ChatGPT, Cursor ve kullandığınız her platformda kalıcı.",
+    "tagline": "Tek Platform. Tüm AI'nız. Sonsuza Kadar.",
+    "cta": {
+      "primary": "Bağlan",
+      "secondary": "Nasıl Çalıştığını Gör"
+    },
+    "pillars": {
+      "knowledge": "Bilgi",
+      "tools": "Araçlar",
+      "memory": "Hafıza",
+      "agents": "Ajanlar"
+    },
     "title": "Yapay Zeka Kavşağı",
     "subtitle": "Birleşik bir platformla yapay zeka yeteneklerinizi bağlayın, oluşturun ve genişletin. Yapay zeka iş akışlarınızı geliştiren eklentiler oluşturun ve yönetin.",
-    "headline": "Yapay Zeka Kavşağı: Her Modeli Bağlayın, Her Etkileşimi Sahiplenin",
-    "subheadline": "MCP Registry tarafından destekleniyor - AI Veri Sahipliği için Açık Standart",
     "analogy": "\"Yapay zeka ekosistemin, birleşik ve sosyal\"",
     "valueBanner": "AI Tarafından Üretilen Verileriniz. Her Model. Her Etkileşim. Sizin Kontrolünüzde.",
     "openSource": "Gururla Açık Kaynak",
-    "cta": {
-      "getStarted": "Ücretsiz Başla",
-      "learnMore": "Neden plugged.in"
-    },
     "features": {
       "security": "Enterprise Security",
       "fast": "Lightning Fast",
       "scale": "Global Scale"
     }
+  },
+  "problemStatement": {
+    "title": "AI Parçalanması Size Zaman, Para ve Akıllılık Kaybettiriyor",
+    "subtitle": "AI üretkenliğinin vaadi gerçek. Ama gerçek mi? AI yetenekleriniz platformlar arasında dağılmış durumda, araçlar her oturumdan sonra sıfırlanıyor ve hiçbir şey birbiriyle konuşmuyor.",
+    "problems": {
+      "scattered": {
+        "title": "Bilgi Her Yerde Dağılmış",
+        "description": "Belgeleriniz Google Drive, Notion, Confluence ve yerel dosyalarda yaşıyor. Her AI platformu her şeyi yeniden yüklemenizi gerektiriyor veya hiç erişemiyor."
+      },
+      "reconfiguring": {
+        "title": "Sonsuz Araç Yapılandırması",
+        "description": "Claude'da GitHub entegrasyonunu kurmak için saatler harcadınız mı? Şimdi ChatGPT için tekrar yapın. Cursor için tekrar. Denediğiniz her yeni AI aracı için tekrar."
+      },
+      "noMemory": {
+        "title": "Oturumlar Arasında Bellek Yok",
+        "description": "Her konuşma sıfırdan başlıyor. Dün oluşturduğunuz bağlam? Gitti. Geçen hafta ayarladığınız tercihler? Unutuldu. Kendinizi sürekli yeniden açıklıyorsunuz."
+      },
+      "agentFailures": {
+        "title": "Sessizce Kaybolan Ajanlar",
+        "description": "Otonom bir ajan dağıttınız mı? Çökmediğini umun. Saatler sonrasına kadar bilemezsiniz. Yaşam döngüsü yönetimi yok, izleme yok, kontrol yok."
+      },
+      "productionGap": {
+        "title": "Kanıt-Konsept Cehennemi",
+        "description": "%88 AI projesi hiç üretime ulaşmıyor. Neden? Çünkü API'leri birleştirmek, durum yönetmek ve güvenliği sağlamak tam zamanlı bir iş haline geliyor."
+      }
+    },
+    "quote": "Her ekip üyesi için MCP sunucularını ayrı ayrı yapılandırmak için haftalar harcadık. Plugged.in her şeyi tek yerde verdi—şimdi ekibimiz haftada 15 saat kazanıyor ve AI'mız kod tabanımızı gerçekten hatırlıyor.",
+    "quoteAuthor": "Mühendislik Lideri, Series B SaaS Şirketi"
+  },
+  "fourPillars": {
+    "badge": "Eksiksiz Platform",
+    "title": "Dört Sütun. Sonsuz Olasılıklar.",
+    "subtitle": "MCP orkestrasyonu, RAG v2 doküman yönetimi, kalıcı bellek sistemleri ve otonom ajan yaşam döngüsü yönetimini birleştiren tek birleşik platform.",
+    "knowledge": {
+      "title": "AI'nızın Bellek Bankası",
+      "description": "Belgeleri bir kez yükleyin, her yerden erişin. RAG v2 motorumuz kurumsal bilginizi her AI'nın kullanabileceği kalıcı, aranabilir bağlama dönüştürür.",
+      "features": {
+        "1": "Tam model atıf ve sürüm geçmişi ile AI tarafından üretilen belgeler",
+        "2": "Tüm kütüphanenizde bir saniyenin altında semantik arama",
+        "3": "Çoklu format desteği: Otomatik indeksleme ile Markdown, JSON, HTML, PDF"
+      },
+      "highlightLabel": "Gerçek Dünya Etkisi",
+      "highlight": "AI platformları arasında kalıcı kod inceleme belleği. Hata ayıklama oturumlarınız zamanla biriken kurumsal bilgiye dönüşür."
+    },
+    "tools": {
+      "title": "1.500+ Araç, Tek Arayüz",
+      "description": "Her AI platformu için aynı MCP sunucularını yapılandırmayı bırakın. Bir kez bağlanın, her yerde kullanın. GitHub'dan Linear'a, özel API'lere kadar—MCP sunucusu varsa, çalışır.",
+      "features": {
+        "1": "Otomatik GitHub doğrulama ve OAuth 2.1 entegrasyonu ile Akıllı Sunucu Sihirbazı",
+        "2": "Tipik MCP proxy'lerine kıyasla %30-55 token verimliliği artışı",
+        "3": "Evrensel uyumluluk: Claude, Cursor, Cline, ChatGPT, LM Studio ve daha fazlası"
+      },
+      "highlightLabel": "Verimlilik Kazancı",
+      "highlight": "100 ayrı MCP yapılandırmasını tek birleşik proxy ile değiştirin. Bir kez güncelleyin, her yere uygulayın. Ekibiniz sadece kurulumda haftada saatler kazanır."
+    },
+    "memory": {
+      "title": "Asla Unutmayan Bağlam",
+      "description": "AI platformları ve oturumlar arasında hareket eden kalıcı konuşma bağlamı. AI'nız tercihleri, geçmiş kararları ve devam eden projeleri hatırlayacak—artık kendinizi yeniden açıklamanıza gerek yok.",
+      "features": {
+        "1": "Tüm geçmiş konuşmalarda semantik bellek araması",
+        "2": "Proje tabanlı bağlam ile çok çalışma alanı izolasyonu",
+        "3": "Platformlar arası senkronizasyon: Claude'un öğrendiğini ChatGPT de bilir"
+      },
+      "comingSoon": "Bellek katmanı 2026 Q1'de başlatılıyor. Erken erişim için bekleme listesine katılın."
+    },
+    "agents": {
+      "title": "Askeri Düzey Yönetişim ile Otonom Ajanlar",
+      "description": "Dünyanın ilk kapsamlı ajan yaşam döngüsü yönetim protokolü. Kurumların talep ettiği güvenilirlikle otonom ajanları dağıtın, izleyin ve kontrol edin.",
+      "features": {
+        "1": "DNS tabanlı ajan adresleme ile 50ms altı kontrol düzlemi gecikmesi",
+        "2": "Kapsamlı yaşam döngüsü yönetimi: NEW → PROVISIONED → ACTIVE → DRAINING → TERMINATED",
+        "3": "Otomatik arıza kurtarma ile kaos testinde %99.9 çalışma süresi"
+      },
+      "highlightLabel": "Akademik İnovasyon",
+      "highlight": "PAP protokolü akademik makalesi arXiv sunumu için hazır. Gerçekçi görevlerde insan ve AI performansı arasındaki %28'lik farkı protokol düzeyinde güvenilirlikle çözmek."
+    },
+    "cta": {
+      "text": "AI altyapınızı birleştirmeye hazır mısınız?",
+      "button": "Bugün Ücretsiz Başlayın"
+    }
+  },
+  "videoTutorials": {
+    "title": "Canlı Olarak Görün",
+    "subtitle": "plugged.in ile dakikalar içinde başlamak için adım adım eğitimleri izleyin. Temel kurulumdan gelişmiş özelliklere.",
+    "quickSetup": {
+      "title": "Hızlı Kurulum",
+      "duration": "3 dk",
+      "description": "MCP sunucularını Claude Desktop, VS Code, Cursor ve diğer AI araçlarına 3 dakikadan kısa sürede bağlayın.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
+    },
+    "ragArchive": {
+      "title": "RAG ve Belge Arşivi",
+      "duration": "5 dk",
+      "description": "Dosyaları bilgi tabanınıza nasıl kaydedeceğinizi ve AI destekli semantik arama kullanarak tüm platformlarda nasıl sorgulayacağınızı öğrenin.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
+    },
+    "notifications": {
+      "title": "Görev Bildirimleri",
+      "duration": "4 dk",
+      "description": "AI iş akışlarınızın ve ajan etkinliklerinizin üstünde kalmak için otomatik bildirimleri ve görev takibini ayarlayın.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
+    },
+    "oauthServers": {
+      "title": "OAuth Entegrasyonu",
+      "duration": "6 dk",
+      "description": "Notion, Linear ve GitHub gibi servisleri OAuth ile bağlayın. Bir kez kimlik doğrulayın—tokenlar süresi dolmadan otomatik olarak yenilenir. Manuel token yönetimi gerekmez.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
+    },
+    "moreVideos": "Daha fazla eğitim",
+    "docsLink": "belgelerimizde"
   },
   "whyPluggedin": {
     "title": "Neden plugged.in?",
@@ -121,21 +239,17 @@
       "title": "Trend Analitiği",
       "description": "Gerçek zamanlı analitiklerle popüler sunucuları keşfedin. Verilerinizi gizli tutarken topluluktan öğrenin."
     },
-    "oauthTokenManagement": {
-      "title": "OAuth ve Token Yönetimi",
-      "description": "Yerleşik OAuth desteği ile güvenli kimlik doğrulama akışları. Tüm AI hizmetlerinizde token ve izinleri yönetin."
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 Otomatik Rotasyon",
+      "description": "Süre dolmadan 15 dakika önce otomatik token yenileme. OAuth 2.1 uyumlu token rotasyon. Sıfır kesinti, sıfır manuel iş."
     },
-    "communitySharing": {
-      "title": "Sosyal Platform ve Topluluk",
-      "description": "MCP sunucularını paylaşın, geliştiricileri takip edin, bildirimler alın ve yapay zeka ağınızı kurun. Herkese açık profiller, derecelendirmeler ve işbirlikçi keşif."
+    "mcpProxy": {
+      "title": "Birleşik MCP Proxy",
+      "description": "Tüm MCP sunucuları için tek uç nokta. Dahili AI oyun alanı, bildirim sistemi ve belge değişimi. STDIO, SSE ve Streamable HTTP transportlarını destekler."
     },
-    "collectionManagement": {
-      "title": "Sürüm Kontrolü ile Akıllı Koleksiyonlar",
-      "description": "Sunucuları sürümlendirilmiş koleksiyonlar halinde düzenleyin. Herkese açık veya özel paylaşın, kurulumları takip edin ve seçilmiş araç setleri üzerinde işbirliği yapın."
-    },
-    "workspaceOrganization": {
-      "title": "Çoklu Çalışma Alanı Yönetimi",
-      "description": "Özel çalışma alanlarıyla projeleri izole edin. Geliştirme, hazırlık ve üretim ortamları arasında anında geçiş yapın."
+    "officialSdks": {
+      "title": "JavaScript, Python ve Go SDK'ları",
+      "description": "JavaScript/TypeScript, Python ve Go için tam özellikli SDK'lar. Diller arasında tutarlı arayüzlerle belge yönetimi, RAG sorguları ve API erişimi."
     },
     "advancedSearch": {
       "title": "Akıllı Keşif Motoru",
@@ -483,10 +597,10 @@
     "certifications": {
       "soc2": {
         "label": "SOC 2 Type II",
-        "description": "Sertifikalı"
+        "description": "Uyumlu"
       },
-      "iso": {
-        "label": "ISO 27001",
+      "pciDss": {
+        "label": "PCI-DSS",
         "description": "Uyumlu"
       },
       "gdpr": {
@@ -560,5 +674,57 @@
       "suffix": "+",
       "label": "AI Belgeleri"
     }
+  },
+  "roadmap": {
+    "badge": "Ürün Yol Haritası",
+    "title": "Plugged.in Yol Haritası",
+    "subtitle": "Birleşik bir AI kontrol düzleminden gerçek dünya otonom ajanlarına",
+    "stage1": {
+      "date": "Mart 2025",
+      "title": "Başlangıç: Birleşik AI Kontrol Düzlemi",
+      "description": "Plugged.in başlatıldı. İlk temel: Bilgi, Araçlar ve Hafıza tek bir kontrol düzlemi altında. Model Context Protocol desteği başlıyor."
+    },
+    "stage2": {
+      "date": "19 Haziran 2025",
+      "title": "Plugged.in App v2.1.0 — RAG Üretime Giriyor",
+      "description": "Tam semantik arama. Belge sürümleme, metadata, gömülmeler. AI sonunda kullanıcı sahipliğindeki bilgiyi görebiliyor. Bu, temellendirilmiş akıl yürütme için omurga haline geliyor."
+    },
+    "stage3": {
+      "date": "Ekim 2025 Sonu",
+      "title": "PAP — Plugged.in Agent Protocol (Kilometre Taşı)",
+      "description": "PAP, kontrol + telemetri omurgası olarak yayınlandı. Otonom ajanlar artık şunlara sahip: yaşam döngüsü yönetimi, politika motoru, güvenli kanallar, kill-switch, olay akışı ve çapraz model orkestrasyonu. PAP, Plugged.in'i bir kontrol katmanından otonom bir ajan platformuna dönüştürüyor."
+    },
+    "stage4": {
+      "date": "2026 Q1",
+      "title": "Sensörler → Ajanlar → Bilişsel Öngörücü Otomasyon",
+      "description": "Plugged.in fiziksel dünyaya genişliyor. Raspberry Pi ve hafif sensör düğümleri şunları akıtıyor: basınç, titreşim, ısı, akustik, voltaj ve akım. Bulut ajanları öğreniyor, uyum sağlıyor, tahmin ediyor ve hareket ediyor. Sonuç: 'Çalışan ajanlar.' Küresel bir ajan destekli iş gücünü mümkün kılıyor."
+    },
+    "outcome": {
+      "title": "Bilişsel Öngörücü Otomasyon",
+      "line1": "Gerçek dünya verilerini analiz eden, desenlerden öğrenen ve arızalar oluşmadan önce hareket eden otonom ajanlar.",
+      "line2": "Dijital zekanın fiziksel sistemlerle buluştuğu yer burası."
+    },
+    "workforce": {
+      "title": "Ajan Destekli İş Gücü",
+      "line1": "Sensörleri kuran ve yapılandıran binlerce teknisyen.",
+      "line2": "İnsanları değiştirmeyen, ölçeklendiren teknoloji."
+    },
+    "cta": {
+      "primary": "API Anahtarı Al",
+      "secondary": "GitHub'da Görüntüle"
+    },
+    "status": {
+      "completed": "Tamamlandı",
+      "inProgress": "Devam Ediyor",
+      "planned": "Planlandı",
+      "future": "Gelecek"
+    }
+  },
+  "popularServers": {
+    "badge": "En Popüler",
+    "title": "En İyi MCP Sunucuları",
+    "subtitle": "Topluluğumuzdan en çok yüklenen ve en yüksek puanlı MCP sunucularını keşfedin",
+    "viewDetails": "Detayları Görüntüle",
+    "exploreAll": "Tüm 782+ Sunucuyu Keşfet"
   }
 }

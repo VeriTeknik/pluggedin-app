@@ -9,28 +9,133 @@
     "collections": "Collections",
     "playground": "Playground",
     "documentation": "Documentation",
-    "getStarted": "Start Free"
+    "getStarted": "Connect"
   },
   "hero": {
-    "title": "The AI Crossroads",
-    "subtitle": "Connect, create, and extend your AI capabilities with a unified platform. Build and manage plugins that enhance your AI workflows.",
-    "headline": "Give Your AI Knowledge, Memory, and Tools",
-    "subheadline": "Join the fastest-growing AI platform with 718% monthly growth. Access 7,000+ tools through MCP and transform your AI capabilities.",
-    "analogy": "\"7,000+ Tools. 1,500+ Servers. One Platform.\"",
-    "valueBanner": "📚 Knowledge from your documents • 🧠 Memory across conversations • 🔧 Tools to take action",
-    "growthBadge": "718% Monthly Growth",
-    "statsBar": "7,000+ Tools | 1,500+ Servers | <100ms Response | 99.9% Uptime",
-    "openSource": "Proudly Open Source",
+    "badge": "World's First AI-CMS",
+    "headline": "Where Knowledge, Tools, Memory, and Agents Converge",
+    "subheadline": "One unified platform to orchestrate all your AI interactions. Model-agnostic infrastructure that makes your AI truly yours—persistent across Claude, ChatGPT, Cursor, and every platform you use.",
+    "tagline": "One Platform. All Your AI. Forever.",
     "cta": {
-      "getStarted": "Join 620+ Developers",
-      "learnMore": "Explore 7,000+ Tools",
-      "watchDemo": "Watch Demo"
+      "primary": "Connect",
+      "secondary": "See How It Works"
     },
-    "features": {
-      "security": "Enterprise Security",
-      "fast": "Lightning Fast",
-      "scale": "Global Scale"
+    "pillars": {
+      "knowledge": "Knowledge",
+      "tools": "Tools",
+      "memory": "Memory",
+      "agents": "Agents"
     }
+  },
+  "problemStatement": {
+    "title": "AI Fragmentation Is Costing You Time, Money, and Intelligence",
+    "subtitle": "The promise of AI productivity is real. But the reality? Your AI capabilities are scattered across platforms, tools reset after every session, and nothing talks to each other.",
+    "problems": {
+      "scattered": {
+        "title": "Knowledge Scattered Everywhere",
+        "description": "Your documents live in Google Drive, Notion, Confluence, and local files. Each AI platform requires you to re-upload everything or can't access them at all."
+      },
+      "reconfiguring": {
+        "title": "Endless Tool Configuration",
+        "description": "Spent hours setting up GitHub integration in Claude? Now do it again for ChatGPT. And again for Cursor. And again for every new AI tool you try."
+      },
+      "noMemory": {
+        "title": "No Memory Between Sessions",
+        "description": "Every conversation starts from zero. The context you built yesterday? Gone. The preferences you set last week? Forgotten. You're constantly re-explaining yourself."
+      },
+      "agentFailures": {
+        "title": "Agents That Vanish Silently",
+        "description": "Deployed an autonomous agent? Hope it doesn't crash. You won't know until hours later. No lifecycle management, no monitoring, no control."
+      },
+      "productionGap": {
+        "title": "Proof-of-Concept Hell",
+        "description": "88% of AI projects never reach production. Why? Because cobbling together APIs, managing state, and ensuring security becomes a full-time job."
+      }
+    },
+    "quote": "We spent weeks configuring MCP servers individually for each team member. Plugged.in gave us everything in one place—now our team saves 15 hours per week and our AI actually remembers our codebase.",
+    "quoteAuthor": "Engineering Lead, Series B SaaS Company"
+  },
+  "fourPillars": {
+    "badge": "The Complete Platform",
+    "title": "Four Pillars. Infinite Possibilities.",
+    "subtitle": "The only unified platform combining MCP orchestration, RAG v2 document management, persistent memory systems, and autonomous agent lifecycle management.",
+    "knowledge": {
+      "title": "Your AI's Memory Bank",
+      "description": "Upload documents once, access everywhere. Our RAG v2 engine transforms your institutional knowledge into persistent, searchable context that every AI can tap into.",
+      "features": {
+        "1": "AI-generated documents with full model attribution and version history",
+        "2": "Sub-second semantic search across your entire library",
+        "3": "Multi-format support: Markdown, JSON, HTML, PDF with automatic indexing"
+      },
+      "highlightLabel": "Real-World Impact",
+      "highlight": "Code review memory that persists across AI platforms. Your debugging sessions become institutional knowledge that compounds over time."
+    },
+    "tools": {
+      "title": "1,500+ Tools, One Interface",
+      "description": "Stop configuring the same MCP servers for every AI platform. Connect once, use everywhere. From GitHub to Linear to custom APIs—if it has an MCP server, it works.",
+      "features": {
+        "1": "Smart Server Wizard with automatic GitHub verification and OAuth 2.1 integration",
+        "2": "30-55% token efficiency improvement vs. typical MCP proxies",
+        "3": "Universal compatibility: Claude, Cursor, Cline, ChatGPT, LM Studio, and more"
+      },
+      "highlightLabel": "The Efficiency Gain",
+      "highlight": "Replace 100 individual MCP configurations with one unified proxy. Update once, apply everywhere. Your team saves hours per week on setup alone."
+    },
+    "memory": {
+      "title": "Context That Never Forgets",
+      "description": "Persistent conversation context that travels across AI platforms and sessions. Your AI will remember preferences, past decisions, and ongoing projects—no more re-explaining yourself.",
+      "features": {
+        "1": "Semantic memory search across all past conversations",
+        "2": "Multi-workspace isolation with project-based context",
+        "3": "Cross-platform synchronization: what Claude learns, ChatGPT knows"
+      },
+      "comingSoon": "Memory layer launching Q1 2026. Join the waitlist to get early access."
+    },
+    "agents": {
+      "title": "Autonomous Agents with Military-Grade Governance",
+      "description": "The world's first comprehensive agent lifecycle management protocol. Deploy, monitor, and control autonomous agents with the reliability enterprises demand.",
+      "features": {
+        "1": "Sub-50ms control plane latency with DNS-based agent addressing",
+        "2": "Comprehensive lifecycle management: NEW → PROVISIONED → ACTIVE → DRAINING → TERMINATED",
+        "3": "99.9% uptime under chaos testing with automatic failure recovery"
+      },
+      "highlightLabel": "Academic Innovation",
+      "highlight": "PAP protocol academic paper ready for arXiv submission. Solving the 28% gap between human and AI performance on realistic tasks through protocol-level reliability."
+    },
+    "cta": {
+      "text": "Ready to unify your AI infrastructure?",
+      "button": "Start Free Today"
+    }
+  },
+  "videoTutorials": {
+    "title": "See It In Action",
+    "subtitle": "Watch step-by-step tutorials to get started with plugged.in in minutes. From basic setup to advanced features.",
+    "quickSetup": {
+      "title": "Quick Setup",
+      "duration": "3 min",
+      "description": "Connect MCP servers to Claude Desktop, VS Code, Cursor, and other AI tools in under 3 minutes.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
+    },
+    "ragArchive": {
+      "title": "RAG & Document Archive",
+      "duration": "5 min",
+      "description": "Learn how to save files to your knowledge base and query them using AI-powered semantic search across all platforms.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
+    },
+    "notifications": {
+      "title": "Task Notifications",
+      "duration": "4 min",
+      "description": "Set up automated notifications and task tracking to stay on top of your AI workflows and agent activities.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
+    },
+    "oauthServers": {
+      "title": "OAuth Integration",
+      "duration": "6 min",
+      "description": "Connect services like Notion, Linear, and GitHub with OAuth. Authenticate once—tokens automatically refresh before they expire. No manual token management needed.",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
+    },
+    "moreVideos": "More tutorials available in our",
+    "docsLink": "documentation"
   },
   "whyPluggedin": {
     "title": "Why plugged.in?",
@@ -138,21 +243,17 @@
       "title": "Trending Analytics",
       "description": "Discover popular servers with real-time analytics. Learn from the community while keeping your data private."
     },
-    "oauthTokenManagement": {
-      "title": "OAuth & Token Management",
-      "description": "Secure authentication flows with built-in OAuth support. Manage tokens and permissions across all your AI services."
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 Auto-Rotation",
+      "description": "Automatic token refresh 15 minutes before expiry. OAuth 2.1 compliant with token rotation. Zero service interruptions, zero manual work."
     },
-    "communitySharing": {
-      "title": "Social Platform & Community",
-      "description": "Share MCP servers, follow developers, get notifications, and build your AI network. Public profiles, ratings, and collaborative discovery."
+    "mcpProxy": {
+      "title": "Unified MCP Proxy",
+      "description": "Single endpoint for all MCP servers. Built-in AI playground, notification system, and document exchange. Supports STDIO, SSE, and Streamable HTTP transports."
     },
-    "collectionManagement": {
-      "title": "Smart Collections with Version Control",
-      "description": "Organize servers into versioned collections. Share publicly or privately, track installations, and collaborate on curated toolsets."
-    },
-    "workspaceOrganization": {
-      "title": "Multi-Workspace Management",
-      "description": "Isolate projects with dedicated workspaces. Switch contexts instantly between development, staging, and production environments."
+    "officialSdks": {
+      "title": "JavaScript, Python & Go SDKs",
+      "description": "Full-featured SDKs for JavaScript/TypeScript, Python, and Go. Document management, RAG queries, and API access with consistent interfaces across languages."
     },
     "advancedSearch": {
       "title": "Intelligent Discovery Engine",
@@ -520,10 +621,10 @@
     "certifications": {
       "soc2": {
         "label": "SOC 2 Type II",
-        "description": "Certified"
+        "description": "Compatible"
       },
-      "iso": {
-        "label": "ISO 27001",
+      "pciDss": {
+        "label": "PCI-DSS",
         "description": "Compliant"
       },
       "gdpr": {
@@ -597,5 +698,57 @@
       "suffix": "+",
       "label": "AI Documents"
     }
+  },
+  "roadmap": {
+    "badge": "Product Roadmap",
+    "title": "The Plugged.in Roadmap",
+    "subtitle": "From a unified AI control plane to real-world autonomous agents",
+    "stage1": {
+      "date": "March 2025",
+      "title": "The Beginning: Unified AI Control Plane",
+      "description": "Plugged.in launched. First foundation: Knowledge, Tools, and Memory under one control plane. Model Context Protocol support begins."
+    },
+    "stage2": {
+      "date": "19 June 2025",
+      "title": "Plugged.in App v2.1.0 — RAG Enters Production",
+      "description": "Full semantic search. Document versioning, metadata, embeddings. AI can finally see user-owned knowledge. This becomes the backbone for grounded reasoning."
+    },
+    "stage3": {
+      "date": "Late October 2025",
+      "title": "PAP — Plugged.in Agent Protocol (Milestone)",
+      "description": "PAP released as the control + telemetry backbone. Autonomous agents now have: lifecycle management, policy engine, secure channels, kill-switch, event streaming, and cross-model orchestration. PAP turns Plugged.in from a control layer into an autonomous agent platform."
+    },
+    "stage4": {
+      "date": "Q1 2026",
+      "title": "Sensors → Agents → Cognitive Predictive Automation",
+      "description": "Plugged.in expands into the physical world. Raspberry Pi & lightweight sensor nodes stream: pressure, vibration, heat, acoustics, voltage & current. Cloud agents learn, adapt, predict, and act. Outcome: 'Agents that work.' Enables a global agent-enabled workforce."
+    },
+    "outcome": {
+      "title": "Cognitive Predictive Automation",
+      "line1": "Autonomous agents that analyze real-world data, learn from patterns, and act before failures occur.",
+      "line2": "This is where digital intelligence meets physical systems."
+    },
+    "workforce": {
+      "title": "Agent-Enabled Workforce",
+      "line1": "Thousands of technicians installing and configuring sensors.",
+      "line2": "Technology that scales people, not replaces them."
+    },
+    "cta": {
+      "primary": "Get API Key",
+      "secondary": "View GitHub"
+    },
+    "status": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "planned": "Planned",
+      "future": "Future"
+    }
+  },
+  "popularServers": {
+    "badge": "Most Popular",
+    "title": "Top MCP Servers",
+    "subtitle": "Discover the most installed and highly-rated MCP servers from our community",
+    "viewDetails": "View Details",
+    "exploreAll": "Explore All 782+ Servers"
   }
 }
