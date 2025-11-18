@@ -725,6 +725,6 @@
     "title": "En İyi MCP Sunucuları",
     "subtitle": "Topluluğumuzdan en çok yüklenen ve en yüksek puanlı MCP sunucularını keşfedin",
     "viewDetails": "Detayları Görüntüle",
-    "exploreAll": "Tüm 782+ Sunucuyu Keşfet"
+    "exploreAll": "Explore All {{count}}+ Servers"
   }
 }

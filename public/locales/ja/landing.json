@@ -704,6 +704,6 @@
     "title": "トップMCPサーバー",
     "subtitle": "コミュニティから最もインストールされ、高評価のMCPサーバーを発見",
     "viewDetails": "詳細を見る",
-    "exploreAll": "782以上のサーバーを探索"
+    "exploreAll": "Explore All {{count}}+ Servers"
   }
 }

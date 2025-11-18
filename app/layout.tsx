@@ -96,8 +96,92 @@ const comfortaa = Comfortaa({
 });
 
 export const metadata: Metadata = {
-  title: 'Plugged.in - Enterprise MCP Platform for AI Integration',
-  description: 'Plugged.in is the enterprise Model Context Protocol (MCP) platform for seamless AI integration. Connect 7,000+ tools and 1,500+ MCP servers with SOC 2 certified security.',
+  metadataBase: new URL('https://plugged.in'),
+  title: {
+    default: 'Plugged.in - Enterprise MCP Platform for AI Integration',
+    template: '%s | Plugged.in'
+  },
+  description: 'Plugged.in is the enterprise Model Context Protocol (MCP) platform for seamless AI integration. Connect 7,000+ tools and 1,500+ MCP servers with SOC 2 certified security. Start free today.',
+  keywords: [
+    'MCP platform',
+    'Model Context Protocol',
+    'AI integration',
+    'enterprise AI',
+    'MCP servers',
+    'AI tools integration',
+    'Claude integration',
+    'GPT integration',
+    'AI development platform',
+    'enterprise AI platform',
+    'SOC 2 compliance',
+    'AI security',
+    'AI orchestration',
+    'AI automation',
+    'developer tools',
+    'AI infrastructure',
+    'multi-agent systems',
+    'AI workflow automation'
+  ],
+  authors: [{ name: 'Plugged.in Team' }],
+  creator: 'Plugged.in',
+  publisher: 'Plugged.in',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://plugged.in',
+    title: 'Plugged.in - Enterprise MCP Platform for AI Integration',
+    description: 'The leading enterprise Model Context Protocol platform. Connect 7,000+ tools, 1,500+ MCP servers with enterprise-grade security. SOC 2 certified, GDPR compliant.',
+    siteName: 'Plugged.in',
+    images: [
+      {
+        url: 'https://plugged.in/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Plugged.in - Enterprise MCP Platform Dashboard',
+        type: 'image/png',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Plugged.in - Enterprise MCP Platform for AI Integration',
+    description: 'Enterprise Model Context Protocol platform. 7,000+ tools, 1,500+ MCP servers, SOC 2 certified. Start free.',
+    creator: '@pluggedin',
+    site: '@pluggedin',
+    images: ['https://plugged.in/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: 'https://plugged.in',
+    languages: {
+      'en-US': 'https://plugged.in',
+      'tr-TR': 'https://plugged.in?lang=tr',
+      'zh-CN': 'https://plugged.in?lang=zh',
+      'hi-IN': 'https://plugged.in?lang=hi',
+      'ja-JP': 'https://plugged.in?lang=ja',
+      'nl-NL': 'https://plugged.in?lang=nl',
+    },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
+  category: 'technology',
+  classification: 'Software Development',
 };
 
 // Get the GA ID from environment variables
@@ -115,6 +199,19 @@ export default async function RootLayout({
     <html lang='en' suppressHydrationWarning>
       <head>
       {/* Removed the <link> tag for Quicksand font */}
+
+        {/* Additional SEO tags */}
+        <meta name="application-name" content="Plugged.in" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Plugged.in" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#06b6d4" />
+
+        {/* Preconnect to external domains for performance */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://www.google-analytics.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
         {/* Google Analytics Scripts with CSP nonce */}
         {gaMeasurementId && (

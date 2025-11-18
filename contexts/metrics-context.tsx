@@ -10,6 +10,7 @@ const PlatformMetricsSchema = z.object({
   totalUsers: z.number().int().nonnegative(),
   totalProjects: z.number().int().nonnegative(),
   totalServers: z.number().int().nonnegative(),
+  totalRegistryServers: z.number().int().nonnegative(),
   newProfiles30d: z.number().int().nonnegative(),
   newUsers30d: z.number().int().nonnegative(),
 });
@@ -17,7 +18,8 @@ const PlatformMetricsSchema = z.object({
 export interface PlatformMetrics {
   totalUsers: number;
   totalProjects: number;
-  totalServers: number;
+  totalServers: number; // Local user installations
+  totalRegistryServers: number; // Total servers available in registry
   newProfiles30d: number;
   newUsers30d: number;
 }
@@ -40,6 +42,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
     totalUsers: FALLBACK_METRICS.totalUsers,
     totalProjects: FALLBACK_METRICS.totalProjects,
     totalServers: FALLBACK_METRICS.totalServers,
+    totalRegistryServers: FALLBACK_METRICS.totalRegistryServers,
     newProfiles30d: FALLBACK_METRICS.newProfiles30d,
     newUsers30d: FALLBACK_METRICS.newUsers30d,
   });

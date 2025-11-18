@@ -9,7 +9,8 @@ import { FALLBACK_METRICS } from '@/lib/constants/metrics';
 interface PlatformMetrics {
   totalUsers: number;
   totalProjects: number;
-  totalServers: number;
+  totalServers: number; // Local user installations
+  totalRegistryServers: number; // Total servers available in registry
   newProfiles30d: number; // New profiles created in last 30 days
   newUsers30d: number;
 }
@@ -64,10 +65,26 @@ async function queryPlatformMetrics(): Promise<PlatformMetrics> {
 
       const metrics = result.rows[0];
 
+      // Fetch registry server count from registry API
+      let { totalRegistryServers } = FALLBACK_METRICS;
+      try {
+        const registryResponse = await fetch('https://registry.plugged.in/v0/enhanced/servers?limit=1', {
+          signal: AbortSignal.timeout(3000), // 3-second timeout
+        });
+        if (registryResponse.ok) {
+          const registryData = await registryResponse.json();
+          totalRegistryServers = registryData.total_count || FALLBACK_METRICS.totalRegistryServers;
+        }
+      } catch (registryError) {
+        console.warn('Failed to fetch registry server count, using fallback:', registryError);
+        // Use fallback value, already set above
+      }
+
       return {
         totalUsers: Number(metrics?.total_users || 0),
         totalProjects: Number(metrics?.total_projects || 0),
         totalServers: Number(metrics?.total_servers || 0),
+        totalRegistryServers,
         newProfiles30d: Number(metrics?.new_profiles_30d || 0),
         newUsers30d: Number(metrics?.new_users_30d || 0),
       };
@@ -78,6 +95,7 @@ async function queryPlatformMetrics(): Promise<PlatformMetrics> {
       totalUsers: FALLBACK_METRICS.totalUsers,
       totalProjects: FALLBACK_METRICS.totalProjects,
       totalServers: FALLBACK_METRICS.totalServers,
+      totalRegistryServers: FALLBACK_METRICS.totalRegistryServers,
       newProfiles30d: FALLBACK_METRICS.newProfiles30d,
       newUsers30d: FALLBACK_METRICS.newUsers30d,
     };

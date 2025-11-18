@@ -697,6 +697,6 @@
     "title": "热门MCP服务器",
     "subtitle": "发现我们社区中安装次数最多和评分最高的MCP服务器",
     "viewDetails": "查看详情",
-    "exploreAll": "浏览全部782+服务器"
+    "exploreAll": "Explore All {{count}}+ Servers"
   }
 }

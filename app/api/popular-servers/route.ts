@@ -20,6 +20,31 @@ interface PopularServerResponse {
   githubUrl?: string;
 }
 
+/**
+ * Helper function to enrich a single server with local activity metrics
+ */
+async function enrichServerWithActivity(server: any): Promise<PopularServerResponse> {
+  const activityMetrics = await getServerActivityMetrics(
+    server.id,
+    McpServerSource.REGISTRY,
+    '30d'
+  );
+
+  const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
+
+  return {
+    id: server.id,
+    name: mcpIndex.name,
+    description: server.description || '',
+    installation_count: activityMetrics.install_count,
+    tool_call_count: activityMetrics.tool_call_count,
+    rating: server.rating || 0,
+    ratingCount: server.rating_count || 0,
+    github_stars: mcpIndex.github_stars || undefined,
+    githubUrl: mcpIndex.githubUrl || server.repository?.url || undefined,
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -33,42 +58,29 @@ export async function GET(request: Request) {
     );
 
     // Enrich each server with local activity metrics
-    const enrichedServers: PopularServerResponse[] = await Promise.all(
-      response.servers.map(async (server) => {
-        // Get local activity metrics for this server
-        const activityMetrics = await getServerActivityMetrics(
-          server.id,
-          McpServerSource.REGISTRY,
-          '30d' // Last 30 days
-        );
-
-        // Transform to MCP index format
-        const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
-
-        return {
-          id: server.id,
-          name: server.name,
-          description: server.description || '',
-          installation_count: activityMetrics.install_count,
-          tool_call_count: activityMetrics.tool_call_count,
-          rating: server.rating || 0,
-          ratingCount: server.rating_count || 0,
-          github_stars: mcpIndex.github_stars || undefined,
-          githubUrl: mcpIndex.githubUrl || server.repository?.url || undefined,
-        };
-      })
+    // Use Promise.allSettled to handle individual failures gracefully
+    const enrichmentResults = await Promise.allSettled(
+      response.servers.map(enrichServerWithActivity)
     );
 
-    // Sort by install count (descending), then by tool calls
+    // Filter out failed enrichments and extract successful results
+    const enrichedServers: PopularServerResponse[] = enrichmentResults
+      .filter((result): result is PromiseFulfilledResult<PopularServerResponse> => result.status === 'fulfilled')
+      .map(result => result.value);
+
+    // Sort by activity first, then by rating as fallback
     const sortedServers = enrichedServers
-      .filter(server => server.installation_count > 0 || server.tool_call_count > 0) // Only show servers with activity
       .sort((a, b) => {
-        // Primary sort: install count
+        // Primary sort: install count (if either has activity)
         if (b.installation_count !== a.installation_count) {
           return b.installation_count - a.installation_count;
         }
         // Secondary sort: tool call count
-        return b.tool_call_count - a.tool_call_count;
+        if (b.tool_call_count !== a.tool_call_count) {
+          return b.tool_call_count - a.tool_call_count;
+        }
+        // Tertiary sort: rating (for servers with no activity)
+        return b.rating - a.rating;
       })
       .slice(0, limit);
 
