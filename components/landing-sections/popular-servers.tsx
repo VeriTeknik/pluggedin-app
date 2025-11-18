@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 
 // Animation variants
 const sectionVariants = {
@@ -40,6 +41,7 @@ interface PopularServer {
 
 export function PopularServersSection() {
   const { t } = useTranslation('landing');
+  const { metrics } = useMetrics();
   const [servers, setServers] = useState<PopularServer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -207,7 +209,7 @@ export function PopularServersSection() {
             className="border-electric-cyan/20 hover:bg-electric-cyan/10"
           >
             <Link href="/search">
-              {t('popularServers.exploreAll', 'Explore All 782+ Servers')}
+              {t('popularServers.exploreAll', `Explore All ${metrics.totalServers}+ Servers`)}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
