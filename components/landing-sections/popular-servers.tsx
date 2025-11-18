@@ -46,13 +46,13 @@ export function PopularServersSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch popular servers from API
-    fetch('/api/service/search?sort=popularity&pageSize=6&source=registry')
+    // Fetch popular servers from new API endpoint that uses local activity data
+    fetch('/api/popular-servers?limit=6')
       .then(res => res.json())
       .then(data => {
-        if (data.results) {
-          const serverList: PopularServer[] = Object.entries(data.results).map(([id, server]: [string, any]) => ({
-            id,
+        if (data.servers && Array.isArray(data.servers)) {
+          const serverList: PopularServer[] = data.servers.map((server: any) => ({
+            id: server.id,
             name: server.name || 'Unknown',
             description: server.description || '',
             installation_count: server.installation_count || 0,
