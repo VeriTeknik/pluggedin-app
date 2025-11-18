@@ -20,6 +20,31 @@ interface PopularServerResponse {
   githubUrl?: string;
 }
 
+/**
+ * Helper function to enrich a single server with local activity metrics
+ */
+async function enrichServerWithActivity(server: any): Promise<PopularServerResponse> {
+  const activityMetrics = await getServerActivityMetrics(
+    server.id,
+    McpServerSource.REGISTRY,
+    '30d'
+  );
+
+  const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
+
+  return {
+    id: server.id,
+    name: mcpIndex.name,
+    description: server.description || '',
+    installation_count: activityMetrics.install_count,
+    tool_call_count: activityMetrics.tool_call_count,
+    rating: server.rating || 0,
+    ratingCount: server.rating_count || 0,
+    github_stars: mcpIndex.github_stars || undefined,
+    githubUrl: mcpIndex.githubUrl || server.repository?.url || undefined,
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -35,34 +60,7 @@ export async function GET(request: Request) {
     // Enrich each server with local activity metrics
     // Use Promise.allSettled to handle individual failures gracefully
     const enrichmentResults = await Promise.allSettled(
-      response.servers.map(async (server) => {
-        try {
-          // Get local activity metrics for this server
-          const activityMetrics = await getServerActivityMetrics(
-            server.id,
-            McpServerSource.REGISTRY,
-            '30d' // Last 30 days
-          );
-
-          // Transform to MCP index format
-          const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
-
-          return {
-            id: server.id,
-            name: mcpIndex.name, // Use transformed display name instead of raw ID
-            description: server.description || '',
-            installation_count: activityMetrics.install_count,
-            tool_call_count: activityMetrics.tool_call_count,
-            rating: server.rating || 0,
-            ratingCount: server.rating_count || 0,
-            github_stars: mcpIndex.github_stars || undefined,
-            githubUrl: mcpIndex.githubUrl || server.repository?.url || undefined,
-          };
-        } catch (error) {
-          console.error(`Failed to enrich server ${server.id}:`, error);
-          throw error; // Re-throw to mark as rejected
-        }
-      })
+      response.servers.map(enrichServerWithActivity)
     );
 
     // Filter out failed enrichments and extract successful results

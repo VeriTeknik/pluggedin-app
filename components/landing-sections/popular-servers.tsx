@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMetrics } from '@/contexts/metrics-context';
+import { ALL_PACKAGE_REGISTRIES_PARAM } from '@/lib/constants/mcp-search';
 
 // Animation variants
 const sectionVariants = {
@@ -37,21 +38,6 @@ interface PopularServer {
   ratingCount: number;
   github_stars: number | null;
   githubUrl: string | null;
-}
-
-// Extract searchable name from server ID (e.g., "ai.explorium/mcp-explorium" -> "explorium")
-function extractSearchName(serverId: string): string {
-  // Try to extract the meaningful part from reverse domain notation
-  // Examples: "ai.exa/exa" -> "exa", "ai.explorium/mcp-explorium" -> "explorium"
-  const parts = serverId.split('/');
-  if (parts.length > 1) {
-    // Has a slash, use the part after slash and remove common prefixes
-    const afterSlash = parts[1].replace(/^(mcp-|server-)/, '');
-    return afterSlash;
-  }
-  // No slash, use the last part of domain
-  const domainParts = serverId.split('.');
-  return domainParts[domainParts.length - 1];
 }
 
 export function PopularServersSection() {
@@ -192,7 +178,7 @@ export function PopularServersSection() {
                       size="sm"
                       className="flex-1 bg-electric-cyan hover:bg-electric-cyan/90"
                     >
-                      <Link href={`/search?query=${encodeURIComponent(server.id)}&source=REGISTRY&packageRegistry=npm,pypi,oci,remote,mcpb,nuget`}>
+                      <Link href={`/search?query=${encodeURIComponent(server.id)}&source=REGISTRY&packageRegistry=${ALL_PACKAGE_REGISTRIES_PARAM}`}>
                         {t('popularServers.viewDetails', 'View Details')}
                       </Link>
                     </Button>

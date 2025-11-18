@@ -61,7 +61,7 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
       "'self'",
       `'nonce-${nonce}'`,
       // Only use strict-dynamic in production (causes issues with Next.js HMR in dev)
-      ...(!isDevelopment ? ["'strict-dynamic'"] : []),
+      ...(isDevelopment ? [] : ["'strict-dynamic'"]),
       ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'"] : []), // Allow eval and inline in development for HMR
       'https://js.stripe.com',
       'https://www.googletagmanager.com',

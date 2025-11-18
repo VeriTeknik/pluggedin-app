@@ -66,7 +66,7 @@ async function queryPlatformMetrics(): Promise<PlatformMetrics> {
       const metrics = result.rows[0];
 
       // Fetch registry server count from registry API
-      let totalRegistryServers = FALLBACK_METRICS.totalRegistryServers;
+      let { totalRegistryServers } = FALLBACK_METRICS;
       try {
         const registryResponse = await fetch('https://registry.plugged.in/v0/enhanced/servers?limit=1', {
           signal: AbortSignal.timeout(3000), // 3-second timeout
