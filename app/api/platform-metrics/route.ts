@@ -57,6 +57,7 @@ export async function GET() {
       totalUsers: FALLBACK_METRICS.totalUsers,
       totalProjects: FALLBACK_METRICS.totalProjects,
       totalServers: FALLBACK_METRICS.totalServers,
+      totalRegistryServers: FALLBACK_METRICS.totalRegistryServers,
       newProfiles30d: FALLBACK_METRICS.newProfiles30d,
       newUsers30d: FALLBACK_METRICS.newUsers30d,
     });

@@ -131,8 +131,11 @@ export async function middleware(request: NextRequest) {
 
   // Define routes that can be accessed regardless of authentication status
   const publicRoutes = [
-    '/', 
+    '/',
     '/logout',
+    '/search', // Public MCP server search
+    '/to', // Public user profiles
+    '/release-notes', // Public release notes
     '/setup-guide',
     '/inspector-guide',
     '/legal',

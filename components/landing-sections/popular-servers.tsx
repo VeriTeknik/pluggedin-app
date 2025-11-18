@@ -39,6 +39,21 @@ interface PopularServer {
   githubUrl: string | null;
 }
 
+// Extract searchable name from server ID (e.g., "ai.explorium/mcp-explorium" -> "explorium")
+function extractSearchName(serverId: string): string {
+  // Try to extract the meaningful part from reverse domain notation
+  // Examples: "ai.exa/exa" -> "exa", "ai.explorium/mcp-explorium" -> "explorium"
+  const parts = serverId.split('/');
+  if (parts.length > 1) {
+    // Has a slash, use the part after slash and remove common prefixes
+    const afterSlash = parts[1].replace(/^(mcp-|server-)/, '');
+    return afterSlash;
+  }
+  // No slash, use the last part of domain
+  const domainParts = serverId.split('.');
+  return domainParts[domainParts.length - 1];
+}
+
 export function PopularServersSection() {
   const { t } = useTranslation('landing');
   const { metrics } = useMetrics();
@@ -177,7 +192,7 @@ export function PopularServersSection() {
                       size="sm"
                       className="flex-1 bg-electric-cyan hover:bg-electric-cyan/90"
                     >
-                      <Link href={`/search?query=${encodeURIComponent(server.name)}`}>
+                      <Link href={`/search?query=${encodeURIComponent(server.id)}&source=REGISTRY&packageRegistry=npm,pypi,oci,remote,mcpb,nuget`}>
                         {t('popularServers.viewDetails', 'View Details')}
                       </Link>
                     </Button>
@@ -209,7 +224,7 @@ export function PopularServersSection() {
             className="border-electric-cyan/20 hover:bg-electric-cyan/10"
           >
             <Link href="/search">
-              {t('popularServers.exploreAll', `Explore All ${metrics.totalServers}+ Servers`)}
+              {t('popularServers.exploreAll', { count: metrics.totalRegistryServers })}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

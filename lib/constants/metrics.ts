@@ -15,7 +15,8 @@
 export const FALLBACK_METRICS = {
   totalUsers: 848,       // Auto-fetched from users table | Last updated: production /admin/emails
   totalProjects: 900,    // Auto-fetched from projects table
-  totalServers: 782,     // Auto-fetched from mcp_servers table | Last updated: production /search
+  totalServers: 782,     // Auto-fetched from mcp_servers table (local user installations)
+  totalRegistryServers: 838, // Auto-fetched from registry API | Last updated: 2025-11-18 (total available servers)
   newProfiles30d: 135,   // Auto-fetched: COUNT(*) WHERE created_at >= NOW() - INTERVAL '30 days'
   newUsers30d: 123,      // Auto-fetched: COUNT(*) WHERE created_at >= NOW() - INTERVAL '30 days'
 } as const;

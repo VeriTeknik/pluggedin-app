@@ -749,6 +749,6 @@
     "title": "Top MCP Servers",
     "subtitle": "Discover the most installed and highly-rated MCP servers from our community",
     "viewDetails": "View Details",
-    "exploreAll": "Explore All 782+ Servers"
+    "exploreAll": "Explore All {{count}}+ Servers"
   }
 }
