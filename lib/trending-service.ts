@@ -152,7 +152,7 @@ export async function getServerActivityMetrics(
       and(
         eq(serverField, serverId),
         eq(mcpActivityTable.source, source),
-        gte(mcpActivityTable.created_at, cutoffDate)
+        period === 'all' ? undefined : gte(mcpActivityTable.created_at, cutoffDate)
       )
     );
 

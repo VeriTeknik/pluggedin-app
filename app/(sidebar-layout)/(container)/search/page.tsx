@@ -384,7 +384,7 @@ function SearchContent() {
   };
 
   return (
-    <div className='container-fluid h-[var(--search-content)] flex flex-col bg-background py-4 space-y-6'>
+    <div className='container mx-auto max-w-7xl min-h-[var(--search-content)] flex flex-col bg-background py-4 space-y-6'>
       <div className='flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0'>
         <div className='flex flex-col space-y-1.5'>
           <h1 className='text-2xl font-bold tracking-tight'>
@@ -442,13 +442,13 @@ function SearchContent() {
           {/* Notice Banner about supported package types - only show when non-default types selected */}
           {(source === McpServerSource.REGISTRY || source === 'all') &&
             packageRegistries.some(r => !['npm', 'pypi'].includes(r)) && (
-            <Alert className='border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800'>
-              <AlertDescription className='text-sm text-amber-800 dark:text-amber-200'>
-                <strong>Note:</strong> OCI (Docker), MCPB, and NuGet packages have limited support.
-                For best compatibility, use NPM or PyPI packages.
-              </AlertDescription>
-            </Alert>
-          )}
+              <Alert className='border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800'>
+                <AlertDescription className='text-sm text-amber-800 dark:text-amber-200'>
+                  <strong>Note:</strong> OCI (Docker), MCPB, and NuGet packages have limited support.
+                  For best compatibility, use NPM or PyPI packages.
+                </AlertDescription>
+              </Alert>
+            )}
 
           {/* Filter Controls - Responsive horizontal scroll on mobile */}
           <div className='w-full'>
@@ -510,13 +510,13 @@ function SearchContent() {
                         <span className="hidden sm:inline">{t('search.packageType', 'Package Type')}</span>
                         <span className="sm:hidden">Pkg</span>
                         {packageRegistries.length > 0 &&
-                         !(packageRegistries.length === 2 &&
-                           packageRegistries.includes('npm') &&
-                           packageRegistries.includes('pypi')) && (
-                          <span className='ml-1 hidden lg:inline'>
-                            ({packageRegistries.length})
-                          </span>
-                        )}
+                          !(packageRegistries.length === 2 &&
+                            packageRegistries.includes('npm') &&
+                            packageRegistries.includes('pypi')) && (
+                            <span className='ml-1 hidden lg:inline'>
+                              ({packageRegistries.length})
+                            </span>
+                          )}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align='end' className='w-56'>
@@ -681,73 +681,73 @@ function SearchContent() {
             tags.length > 0 ||
             packageRegistries.length > 0 ||
             repositorySource) && (
-            <div className='flex flex-wrap gap-2'>
-              {category && (
-                <Badge variant='secondary' className='flex items-center gap-1'>
-                  {renderCategoryIcon(category)}
-                  <span className="truncate max-w-[120px]">{t(`search.categories.${category}`)}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => handleCategoryChange('')}>
-                    ✕
-                  </button>
-                </Badge>
-              )}
+              <div className='flex flex-wrap gap-2'>
+                {category && (
+                  <Badge variant='secondary' className='flex items-center gap-1'>
+                    {renderCategoryIcon(category)}
+                    <span className="truncate max-w-[120px]">{t(`search.categories.${category}`)}</span>
+                    <button
+                      className='ml-1 hover:bg-accent p-1 rounded-full'
+                      onClick={() => handleCategoryChange('')}>
+                      ✕
+                    </button>
+                  </Badge>
+                )}
 
-              {tags.map((tag) => (
-                <Badge key={tag} variant='outline' className="max-w-[120px]">
-                  <span className="truncate">#{tag}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => handleTagToggle(tag)}>
-                    ✕
-                  </button>
-                </Badge>
-              ))}
+                {tags.map((tag) => (
+                  <Badge key={tag} variant='outline' className="max-w-[120px]">
+                    <span className="truncate">#{tag}</span>
+                    <button
+                      className='ml-1 hover:bg-accent p-1 rounded-full'
+                      onClick={() => handleTagToggle(tag)}>
+                      ✕
+                    </button>
+                  </Badge>
+                ))}
 
-              {packageRegistries.map((pkg) => (
-                <Badge key={pkg} variant='secondary' className='flex items-center gap-1'>
-                  <Package className='h-3 w-3' />
-                  <span className="truncate max-w-[80px]">{pkg.toUpperCase()}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => setPackageRegistries(packageRegistries.filter((p) => p !== pkg))}>
-                    ✕
-                  </button>
-                </Badge>
-              ))}
+                {packageRegistries.map((pkg) => (
+                  <Badge key={pkg} variant='secondary' className='flex items-center gap-1'>
+                    <Package className='h-3 w-3' />
+                    <span className="truncate max-w-[80px]">{pkg.toUpperCase()}</span>
+                    <button
+                      className='ml-1 hover:bg-accent p-1 rounded-full'
+                      onClick={() => setPackageRegistries(packageRegistries.filter((p) => p !== pkg))}>
+                      ✕
+                    </button>
+                  </Badge>
+                ))}
 
-              {repositorySource && (
-                <Badge variant='secondary' className='flex items-center gap-1'>
-                  <Github className='h-3 w-3' />
-                  <span className="truncate max-w-[80px]">{repositorySource}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => setRepositorySource('')}>
-                    ✕
-                  </button>
-                </Badge>
-              )}
+                {repositorySource && (
+                  <Badge variant='secondary' className='flex items-center gap-1'>
+                    <Github className='h-3 w-3' />
+                    <span className="truncate max-w-[80px]">{repositorySource}</span>
+                    <button
+                      className='ml-1 hover:bg-accent p-1 rounded-full'
+                      onClick={() => setRepositorySource('')}>
+                      ✕
+                    </button>
+                  </Badge>
+                )}
 
-              {(category ||
-                tags.length > 0 ||
-                packageRegistries.length > 0 ||
-                repositorySource) && (
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-6 text-xs shrink-0'
-                  onClick={() => {
-                    setCategory('');
-                    setTags([]);
-                    setPackageRegistries(['npm', 'pypi']);
-                    setRepositorySource('');
-                  }}>
-                  {t('search.clearAllFilters')}
-                </Button>
-              )}
-            </div>
-          )}
+                {(category ||
+                  tags.length > 0 ||
+                  packageRegistries.length > 0 ||
+                  repositorySource) && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-6 text-xs shrink-0'
+                      onClick={() => {
+                        setCategory('');
+                        setTags([]);
+                        setPackageRegistries(['npm', 'pypi']);
+                        setRepositorySource('');
+                      }}>
+                      {t('search.clearAllFilters')}
+                    </Button>
+                  )}
+              </div>
+            )}
 
           {/* Results Summary */}
           {data?.results && (() => {
@@ -810,14 +810,16 @@ function SearchContent() {
         </div>
 
         {/* Trending Servers Sidebar */}
-        {!searchQuery && (
-          <div className='xl:col-span-1 order-first xl:order-last'>
-            <div className="sticky top-4">
-              <TrendingServers />
+        {
+          !searchQuery && (
+            <div className='xl:col-span-1 order-first xl:order-last'>
+              <div className="sticky top-4">
+                <TrendingServers />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )
+        }
+      </div >
 
       {showAddServerWizard && (
         <SmartServerWizard
@@ -829,8 +831,9 @@ function SearchContent() {
             mutate();
           }}
         />
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }
 

@@ -27,7 +27,7 @@ async function enrichServerWithActivity(server: any): Promise<PopularServerRespo
   const activityMetrics = await getServerActivityMetrics(
     server.id,
     McpServerSource.REGISTRY,
-    '30d'
+    'all'
   );
 
   const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
