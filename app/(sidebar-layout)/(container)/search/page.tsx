@@ -384,7 +384,7 @@ function SearchContent() {
   };
 
   return (
-    <div className='container mx-auto max-w-7xl min-h-[var(--search-content)] flex flex-col bg-background py-4 space-y-6'>
+    <div className='w-full min-h-[var(--search-content)] flex flex-col bg-background py-4 px-4 lg:px-6 space-y-6'>
       <div className='flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0'>
         <div className='flex flex-col space-y-1.5'>
           <h1 className='text-2xl font-bold tracking-tight'>
