@@ -46,25 +46,18 @@ import {
 } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
+import { ActiveFilters } from './components/ActiveFilters';
 import CardGrid from './components/CardGrid';
 import { PageSizeSelector } from './components/PageSizeSelector';
 import { PaginationUi } from './components/PaginationUi';
+import {
+  DEFAULT_PACKAGE_REGISTRIES,
+  DEFAULT_PAGE_SIZE,
+  PACKAGE_REGISTRIES,
+  SortOption,
+} from './constants';
 import { useFilteredResults } from './hooks/useFilteredResults';
 import { useSortedResults } from './hooks/useSortedResults';
-
-const DEFAULT_PAGE_SIZE = 12;
-
-type SortOption = 'relevance' | 'popularity' | 'rating' | 'recent' | 'stars';
-
-// Package registry filter options
-const PACKAGE_REGISTRIES = [
-  { value: 'npm', label: 'NPM (Node.js)', icon: Package },
-  { value: 'pypi', label: 'PyPI (Python)', icon: Package },
-  { value: 'oci', label: 'Docker (OCI)', icon: Box },
-  { value: 'remote', label: 'Remote (SSE/HTTP)', icon: Globe },
-  { value: 'mcpb', label: 'MCPB', icon: Package },
-  { value: 'nuget', label: 'NuGet', icon: Package },
-] as const;
 
 function SearchContent() {
   const { t } = useTranslation();
@@ -92,7 +85,7 @@ function SearchContent() {
   );
   const [pageSize, setPageSize] = useState(pageSizeParam);
   const [packageRegistries, setPackageRegistries] = useState<string[]>(
-    packageRegistryParam ? packageRegistryParam.split(',') : []
+    packageRegistryParam ? packageRegistryParam.split(',') : DEFAULT_PACKAGE_REGISTRIES
   );
   const [repositorySource, setRepositorySource] = useState<string>(
     repositorySourceParam
@@ -326,7 +319,7 @@ function SearchContent() {
     setCategory(cat);
   };
 
-  // Render category icon dynamically
+  // Render category icon dynamically (for dropdowns)
   const renderCategoryIcon = (cat: McpServerCategory) => {
     const iconName = getCategoryIcon(cat);
     const IconComponent = (LucideIcons as Record<string, any>)[iconName];
@@ -519,16 +512,19 @@ function SearchContent() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
 
-                      {PACKAGE_REGISTRIES.map(({ value, label, icon: Icon }) => (
-                        <DropdownMenuCheckboxItem
-                          key={value}
-                          checked={packageRegistries.includes(value)}
-                          onCheckedChange={(checked) => handlePackageRegistryToggle(value, checked)}
-                          aria-label={`Filter by ${label} package registry`}>
-                          <Icon className='h-4 w-4 mr-2' />
-                          {label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
+                      {PACKAGE_REGISTRIES.map(({ value, label, icon: iconName }) => {
+                        const IconComponent = (LucideIcons as Record<string, any>)[iconName] || Package;
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={value}
+                            checked={packageRegistries.includes(value)}
+                            onCheckedChange={(checked) => handlePackageRegistryToggle(value, checked)}
+                            aria-label={`Filter by ${label} package registry`}>
+                            <IconComponent className='h-4 w-4 mr-2' />
+                            {label}
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -668,77 +664,24 @@ function SearchContent() {
           </div>
 
           {/* Active filters display */}
-          {(category ||
-            tags.length > 0 ||
-            packageRegistries.length > 0 ||
-            repositorySource) && (
-              <div className='flex flex-wrap gap-2'>
-                {category && (
-                  <Badge variant='secondary' className='flex items-center gap-1'>
-                    {renderCategoryIcon(category)}
-                    <span className="truncate max-w-[120px]">{t(`search.categories.${category}`)}</span>
-                    <button
-                      className='ml-1 hover:bg-accent p-1 rounded-full'
-                      onClick={() => handleCategoryChange('')}>
-                      ✕
-                    </button>
-                  </Badge>
-                )}
-
-                {tags.map((tag) => (
-                  <Badge key={tag} variant='outline' className="max-w-[120px]">
-                    <span className="truncate">#{tag}</span>
-                    <button
-                      className='ml-1 hover:bg-accent p-1 rounded-full'
-                      onClick={() => handleTagToggle(tag)}>
-                      ✕
-                    </button>
-                  </Badge>
-                ))}
-
-                {packageRegistries.map((pkg) => (
-                  <Badge key={pkg} variant='secondary' className='flex items-center gap-1'>
-                    <Package className='h-3 w-3' />
-                    <span className="truncate max-w-[80px]">{pkg.toUpperCase()}</span>
-                    <button
-                      className='ml-1 hover:bg-accent p-1 rounded-full'
-                      onClick={() => setPackageRegistries(packageRegistries.filter((p) => p !== pkg))}>
-                      ✕
-                    </button>
-                  </Badge>
-                ))}
-
-                {repositorySource && (
-                  <Badge variant='secondary' className='flex items-center gap-1'>
-                    <Github className='h-3 w-3' />
-                    <span className="truncate max-w-[80px]">{repositorySource}</span>
-                    <button
-                      className='ml-1 hover:bg-accent p-1 rounded-full'
-                      onClick={() => setRepositorySource('')}>
-                      ✕
-                    </button>
-                  </Badge>
-                )}
-
-                {(category ||
-                  tags.length > 0 ||
-                  packageRegistries.length > 0 ||
-                  repositorySource) && (
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='h-6 text-xs shrink-0'
-                      onClick={() => {
-                        setCategory('');
-                        setTags([]);
-                        setPackageRegistries([]);
-                        setRepositorySource('');
-                      }}>
-                      {t('search.clearAllFilters')}
-                    </Button>
-                  )}
-              </div>
-            )}
+          <ActiveFilters
+            category={category}
+            tags={tags}
+            packageRegistries={packageRegistries}
+            repositorySource={repositorySource}
+            onClearCategory={() => handleCategoryChange('')}
+            onRemoveTag={handleTagToggle}
+            onRemoveRegistry={(registry) =>
+              setPackageRegistries((prev) => prev.filter((p) => p !== registry))
+            }
+            onClearSource={() => setRepositorySource('')}
+            onClearAll={() => {
+              setCategory('');
+              setTags([]);
+              setPackageRegistries(DEFAULT_PACKAGE_REGISTRIES);
+              setRepositorySource('');
+            }}
+          />
 
           {/* Results Summary */}
           {data?.results && (() => {

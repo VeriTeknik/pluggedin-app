@@ -899,7 +899,10 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
 
     const client = new Client(
       { name: clientName, version: clientVersion },
-      { capabilities: {} } // Client capabilities
+      // Empty capabilities object - MCP SDK v1.22.0+ handles capability
+      // negotiation during connection. Client capabilities are optional
+      // and will be populated based on server response.
+      { capabilities: {} }
     );
 
     return { client, transport };

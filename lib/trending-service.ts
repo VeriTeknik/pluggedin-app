@@ -140,6 +140,18 @@ export async function getServerActivityMetrics(
     ? mcpActivityTable.server_uuid 
     : mcpActivityTable.external_id;
 
+  // Build base filters
+  const baseFilters = [
+    eq(serverField, serverId),
+    eq(mcpActivityTable.source, source),
+  ];
+
+  // Add date filter only if not 'all' period
+  // Note: Drizzle's and() automatically filters out undefined values
+  const metricsFilters = period === 'all'
+    ? baseFilters
+    : [...baseFilters, gte(mcpActivityTable.created_at, cutoffDate)];
+
   // Get aggregate metrics
   const metricsQuery = await db
     .select({
@@ -148,28 +160,24 @@ export async function getServerActivityMetrics(
       total_count: count(),
     })
     .from(mcpActivityTable)
-    .where(
-      and(
-        eq(serverField, serverId),
-        eq(mcpActivityTable.source, source),
-        period === 'all' ? undefined : gte(mcpActivityTable.created_at, cutoffDate)
-      )
-    );
+    .where(and(...metricsFilters));
 
-  // Get daily activity breakdown
-  const dailyActivityQuery = await db
-    .select({
-      date: sql<string>`DATE(${mcpActivityTable.created_at})`,
-      count: count(),
-    })
-    .from(mcpActivityTable)
-    .where(
-      and(
-        eq(serverField, serverId),
-        eq(mcpActivityTable.source, source),
-        gte(mcpActivityTable.created_at, cutoffDate)
-      )
-    )
+  // Get daily activity breakdown (only for non-'all' periods)
+  const dailyActivityQuery = period === 'all'
+    ? []
+    : await db
+        .select({
+          date: sql<string>`DATE(${mcpActivityTable.created_at})`,
+          count: count(),
+        })
+        .from(mcpActivityTable)
+        .where(
+          and(
+            eq(serverField, serverId),
+            eq(mcpActivityTable.source, source),
+            gte(mcpActivityTable.created_at, cutoffDate)
+          )
+        )
     .groupBy(sql`DATE(${mcpActivityTable.created_at})`)
     .orderBy(sql`DATE(${mcpActivityTable.created_at})`);
 
