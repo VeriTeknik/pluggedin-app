@@ -209,7 +209,7 @@ export function PopularServersSection() {
             variant="outline"
             className="border-electric-cyan/20 hover:bg-electric-cyan/10"
           >
-            <Link href="/search">
+            <Link href="/search?source=REGISTRY&offset=0">
               {t('popularServers.exploreAll', { count: metrics.totalRegistryServers })}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

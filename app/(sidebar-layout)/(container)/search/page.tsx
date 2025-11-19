@@ -92,7 +92,7 @@ function SearchContent() {
   );
   const [pageSize, setPageSize] = useState(pageSizeParam);
   const [packageRegistries, setPackageRegistries] = useState<string[]>(
-    packageRegistryParam ? packageRegistryParam.split(',') : ['npm', 'pypi']
+    packageRegistryParam ? packageRegistryParam.split(',') : []
   );
   const [repositorySource, setRepositorySource] = useState<string>(
     repositorySourceParam
@@ -439,16 +439,7 @@ function SearchContent() {
             </Tabs>
           </div>
 
-          {/* Notice Banner about supported package types - only show when non-default types selected */}
-          {(source === McpServerSource.REGISTRY || source === 'all') &&
-            packageRegistries.some(r => !['npm', 'pypi'].includes(r)) && (
-              <Alert className='border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800'>
-                <AlertDescription className='text-sm text-amber-800 dark:text-amber-200'>
-                  <strong>Note:</strong> OCI (Docker), MCPB, and NuGet packages have limited support.
-                  For best compatibility, use NPM or PyPI packages.
-                </AlertDescription>
-              </Alert>
-            )}
+
 
           {/* Filter Controls - Responsive horizontal scroll on mobile */}
           <div className='w-full'>
@@ -740,7 +731,7 @@ function SearchContent() {
                       onClick={() => {
                         setCategory('');
                         setTags([]);
-                        setPackageRegistries(['npm', 'pypi']);
+                        setPackageRegistries([]);
                         setRepositorySource('');
                       }}>
                       {t('search.clearAllFilters')}
@@ -757,7 +748,7 @@ function SearchContent() {
             // Only consider filters active if they differ from defaults
             const hasActiveFilters = category ||
               tags.length > 0 ||
-              !(packageRegistries.length === 2 && packageRegistries.includes('npm') && packageRegistries.includes('pypi')) ||
+              packageRegistries.length > 0 ||
               repositorySource;
 
             return (
