@@ -408,7 +408,7 @@ export async function discoverSingleServerTools(
                     uri_template: template.uriTemplate,
                     name: template.name,
                     description: template.description,
-                    mime_type: typeof template.mediaType === 'string' ? template.mediaType : null, // Ensure it's a string or null
+                    mime_type: typeof template.mimeType === 'string' ? template.mimeType : null, // Ensure it's a string or null
                     template_variables: variables, // Store extracted variables
                 };
             });
@@ -483,7 +483,6 @@ export async function discoverSingleServerTools(
                 name: resource.name,
                 description: resource.description,
                 mime_type: typeof resource.mimeType === 'string' ? resource.mimeType : null, // Ensure it's a string or null
-                size: resource.size ?? null, // Handle optional size
             }));
             await db.insert(resourcesTable).values(resourcesToInsert);
         }

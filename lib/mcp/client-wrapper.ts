@@ -899,7 +899,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
 
     const client = new Client(
       { name: clientName, version: clientVersion },
-      { capabilities: { tools: {}, resources: {}, prompts: {} } } // Assume all capabilities initially
+      { capabilities: {} } // Client capabilities
     );
 
     return { client, transport };
