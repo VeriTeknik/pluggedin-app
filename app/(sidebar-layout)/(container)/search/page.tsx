@@ -46,25 +46,18 @@ import {
 } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
+import { ActiveFilters } from './components/ActiveFilters';
 import CardGrid from './components/CardGrid';
 import { PageSizeSelector } from './components/PageSizeSelector';
 import { PaginationUi } from './components/PaginationUi';
+import {
+  DEFAULT_PACKAGE_REGISTRIES,
+  DEFAULT_PAGE_SIZE,
+  PACKAGE_REGISTRIES,
+  SortOption,
+} from './constants';
 import { useFilteredResults } from './hooks/useFilteredResults';
 import { useSortedResults } from './hooks/useSortedResults';
-
-const DEFAULT_PAGE_SIZE = 12;
-
-type SortOption = 'relevance' | 'popularity' | 'rating' | 'recent' | 'stars';
-
-// Package registry filter options
-const PACKAGE_REGISTRIES = [
-  { value: 'npm', label: 'NPM (Node.js)', icon: Package },
-  { value: 'pypi', label: 'PyPI (Python)', icon: Package },
-  { value: 'oci', label: 'Docker (OCI)', icon: Box },
-  { value: 'remote', label: 'Remote (SSE/HTTP)', icon: Globe },
-  { value: 'mcpb', label: 'MCPB', icon: Package },
-  { value: 'nuget', label: 'NuGet', icon: Package },
-] as const;
 
 function SearchContent() {
   const { t } = useTranslation();
@@ -92,7 +85,7 @@ function SearchContent() {
   );
   const [pageSize, setPageSize] = useState(pageSizeParam);
   const [packageRegistries, setPackageRegistries] = useState<string[]>(
-    packageRegistryParam ? packageRegistryParam.split(',') : ['npm', 'pypi']
+    packageRegistryParam ? packageRegistryParam.split(',') : DEFAULT_PACKAGE_REGISTRIES
   );
   const [repositorySource, setRepositorySource] = useState<string>(
     repositorySourceParam
@@ -326,7 +319,7 @@ function SearchContent() {
     setCategory(cat);
   };
 
-  // Render category icon dynamically
+  // Render category icon dynamically (for dropdowns)
   const renderCategoryIcon = (cat: McpServerCategory) => {
     const iconName = getCategoryIcon(cat);
     const IconComponent = (LucideIcons as Record<string, any>)[iconName];
@@ -384,7 +377,7 @@ function SearchContent() {
   };
 
   return (
-    <div className='container-fluid h-[var(--search-content)] flex flex-col bg-background py-4 space-y-6'>
+    <div className='w-full min-h-[var(--search-content)] flex flex-col bg-background py-4 px-4 lg:px-6 space-y-6'>
       <div className='flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0'>
         <div className='flex flex-col space-y-1.5'>
           <h1 className='text-2xl font-bold tracking-tight'>
@@ -439,16 +432,7 @@ function SearchContent() {
             </Tabs>
           </div>
 
-          {/* Notice Banner about supported package types - only show when non-default types selected */}
-          {(source === McpServerSource.REGISTRY || source === 'all') &&
-            packageRegistries.some(r => !['npm', 'pypi'].includes(r)) && (
-            <Alert className='border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800'>
-              <AlertDescription className='text-sm text-amber-800 dark:text-amber-200'>
-                <strong>Note:</strong> OCI (Docker), MCPB, and NuGet packages have limited support.
-                For best compatibility, use NPM or PyPI packages.
-              </AlertDescription>
-            </Alert>
-          )}
+
 
           {/* Filter Controls - Responsive horizontal scroll on mobile */}
           <div className='w-full'>
@@ -510,13 +494,13 @@ function SearchContent() {
                         <span className="hidden sm:inline">{t('search.packageType', 'Package Type')}</span>
                         <span className="sm:hidden">Pkg</span>
                         {packageRegistries.length > 0 &&
-                         !(packageRegistries.length === 2 &&
-                           packageRegistries.includes('npm') &&
-                           packageRegistries.includes('pypi')) && (
-                          <span className='ml-1 hidden lg:inline'>
-                            ({packageRegistries.length})
-                          </span>
-                        )}
+                          !(packageRegistries.length === 2 &&
+                            packageRegistries.includes('npm') &&
+                            packageRegistries.includes('pypi')) && (
+                            <span className='ml-1 hidden lg:inline'>
+                              ({packageRegistries.length})
+                            </span>
+                          )}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align='end' className='w-56'>
@@ -528,16 +512,19 @@ function SearchContent() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
 
-                      {PACKAGE_REGISTRIES.map(({ value, label, icon: Icon }) => (
-                        <DropdownMenuCheckboxItem
-                          key={value}
-                          checked={packageRegistries.includes(value)}
-                          onCheckedChange={(checked) => handlePackageRegistryToggle(value, checked)}
-                          aria-label={`Filter by ${label} package registry`}>
-                          <Icon className='h-4 w-4 mr-2' />
-                          {label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
+                      {PACKAGE_REGISTRIES.map(({ value, label, icon: iconName }) => {
+                        const IconComponent = (LucideIcons as Record<string, any>)[iconName] || Package;
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={value}
+                            checked={packageRegistries.includes(value)}
+                            onCheckedChange={(checked) => handlePackageRegistryToggle(value, checked)}
+                            aria-label={`Filter by ${label} package registry`}>
+                            <IconComponent className='h-4 w-4 mr-2' />
+                            {label}
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -677,77 +664,24 @@ function SearchContent() {
           </div>
 
           {/* Active filters display */}
-          {(category ||
-            tags.length > 0 ||
-            packageRegistries.length > 0 ||
-            repositorySource) && (
-            <div className='flex flex-wrap gap-2'>
-              {category && (
-                <Badge variant='secondary' className='flex items-center gap-1'>
-                  {renderCategoryIcon(category)}
-                  <span className="truncate max-w-[120px]">{t(`search.categories.${category}`)}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => handleCategoryChange('')}>
-                    ✕
-                  </button>
-                </Badge>
-              )}
-
-              {tags.map((tag) => (
-                <Badge key={tag} variant='outline' className="max-w-[120px]">
-                  <span className="truncate">#{tag}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => handleTagToggle(tag)}>
-                    ✕
-                  </button>
-                </Badge>
-              ))}
-
-              {packageRegistries.map((pkg) => (
-                <Badge key={pkg} variant='secondary' className='flex items-center gap-1'>
-                  <Package className='h-3 w-3' />
-                  <span className="truncate max-w-[80px]">{pkg.toUpperCase()}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => setPackageRegistries(packageRegistries.filter((p) => p !== pkg))}>
-                    ✕
-                  </button>
-                </Badge>
-              ))}
-
-              {repositorySource && (
-                <Badge variant='secondary' className='flex items-center gap-1'>
-                  <Github className='h-3 w-3' />
-                  <span className="truncate max-w-[80px]">{repositorySource}</span>
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => setRepositorySource('')}>
-                    ✕
-                  </button>
-                </Badge>
-              )}
-
-              {(category ||
-                tags.length > 0 ||
-                packageRegistries.length > 0 ||
-                repositorySource) && (
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-6 text-xs shrink-0'
-                  onClick={() => {
-                    setCategory('');
-                    setTags([]);
-                    setPackageRegistries(['npm', 'pypi']);
-                    setRepositorySource('');
-                  }}>
-                  {t('search.clearAllFilters')}
-                </Button>
-              )}
-            </div>
-          )}
+          <ActiveFilters
+            category={category}
+            tags={tags}
+            packageRegistries={packageRegistries}
+            repositorySource={repositorySource}
+            onClearCategory={() => handleCategoryChange('')}
+            onRemoveTag={handleTagToggle}
+            onRemoveRegistry={(registry) =>
+              setPackageRegistries((prev) => prev.filter((p) => p !== registry))
+            }
+            onClearSource={() => setRepositorySource('')}
+            onClearAll={() => {
+              setCategory('');
+              setTags([]);
+              setPackageRegistries(DEFAULT_PACKAGE_REGISTRIES);
+              setRepositorySource('');
+            }}
+          />
 
           {/* Results Summary */}
           {data?.results && (() => {
@@ -757,7 +691,7 @@ function SearchContent() {
             // Only consider filters active if they differ from defaults
             const hasActiveFilters = category ||
               tags.length > 0 ||
-              !(packageRegistries.length === 2 && packageRegistries.includes('npm') && packageRegistries.includes('pypi')) ||
+              packageRegistries.length > 0 ||
               repositorySource;
 
             return (
@@ -810,14 +744,16 @@ function SearchContent() {
         </div>
 
         {/* Trending Servers Sidebar */}
-        {!searchQuery && (
-          <div className='xl:col-span-1 order-first xl:order-last'>
-            <div className="sticky top-4">
-              <TrendingServers />
+        {
+          !searchQuery && (
+            <div className='xl:col-span-1 order-first xl:order-last'>
+              <div className="sticky top-4">
+                <TrendingServers />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )
+        }
+      </div >
 
       {showAddServerWizard && (
         <SmartServerWizard
@@ -829,8 +765,9 @@ function SearchContent() {
             mutate();
           }}
         />
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }
 
