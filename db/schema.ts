@@ -131,7 +131,7 @@ export const voteTypeEnum = pgEnum(
 export const users = pgTable('users', {
   id: text('id').notNull().primaryKey(),
   name: text('name'),
-  email: text('email').notNull(),
+  email: text('email').notNull().unique(),
   password: text('password'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   image: text('image'),

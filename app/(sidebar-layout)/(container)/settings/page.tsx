@@ -29,7 +29,7 @@ export default async function SettingsPage() {
   }
 
   // Fetch connected account providers
-  const connectedAccounts = await getConnectedAccounts(session.user.id);
+  const connectedAccounts = await getConnectedAccounts();
 
   // Fetch email preferences
   const emailPreferences = await getUserEmailPreferences(session.user.id);

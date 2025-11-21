@@ -39,6 +39,8 @@
     "password": {
       "title": "密码",
       "description": "更改您的密码",
+      "descriptionWithRemove": "更改或删除您的密码",
+      "descriptionNoPassword": "设置用于邮箱/密码登录的密码",
       "current": {
         "label": "当前密码",
         "placeholder": "输入当前密码"
@@ -52,8 +54,48 @@
         "placeholder": "确认新密码"
       },
       "updateButton": "更改密码",
+      "removeButton": "删除密码",
+      "setButton": "设置密码",
+      "noPasswordSet": "您目前使用 OAuth 登录。设置密码后，您也可以使用邮箱/密码登录。",
       "success": "密码更新成功",
-      "error": "更新密码失败"
+      "error": "更新密码失败",
+      "removeDialog": {
+        "title": "删除密码？",
+        "description": "您将只能使用已连接的 OAuth 帐户登录。此操作无法撤销。",
+        "confirmLabel": "输入您的电子邮箱以确认",
+        "confirmPlaceholder": "输入您的电子邮箱",
+        "warning": "在删除密码之前，请确保您至少连接了一个 OAuth 帐户。",
+        "cancel": "取消",
+        "confirm": "删除密码"
+      },
+      "errors": {
+        "onlyLoginMethod": "无法删除密码。这是您唯一的登录方式。请先连接 OAuth 帐户。",
+        "confirmEmailMismatch": "电子邮箱确认不匹配。",
+        "removalFailed": "删除密码失败。",
+        "setFailed": "设置密码失败。",
+        "alreadyExists": "密码已存在。请使用更改密码选项。"
+      },
+      "successMessages": {
+        "removed": "密码已成功删除。您现在只能使用 OAuth 登录。",
+        "set": "密码已成功设置。您现在可以使用邮箱/密码登录。"
+      }
+    },
+    "loginMethods": {
+      "title": "登录方式",
+      "description": "管理您的帐户登录方式",
+      "emailPassword": "邮箱和密码",
+      "active": "活跃",
+      "inactive": "未激活",
+      "notConfigured": "未配置",
+      "connected": "已连接",
+      "notConnected": "未连接",
+      "disconnect": "断开连接",
+      "connect": "连接",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "twitter": "Twitter"
+      }
     },
     "account": {
       "title": "删除帐户",

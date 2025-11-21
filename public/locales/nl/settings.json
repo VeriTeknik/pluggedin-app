@@ -39,6 +39,8 @@
     "password": {
       "title": "Wachtwoord",
       "description": "Wijzig uw wachtwoord",
+      "descriptionWithRemove": "Wijzig of verwijder uw wachtwoord",
+      "descriptionNoPassword": "Stel een wachtwoord in voor e-mail/wachtwoord login",
       "current": {
         "label": "Huidig wachtwoord",
         "placeholder": "Voer huidig wachtwoord in"
@@ -52,8 +54,48 @@
         "placeholder": "Bevestig nieuw wachtwoord"
       },
       "updateButton": "Wachtwoord wijzigen",
+      "removeButton": "Wachtwoord verwijderen",
+      "setButton": "Wachtwoord instellen",
+      "noPasswordSet": "U meldt zich momenteel aan met OAuth. Door een wachtwoord in te stellen, kunt u ook inloggen met e-mail/wachtwoord.",
       "success": "Wachtwoord succesvol bijgewerkt",
-      "error": "Bijwerken wachtwoord mislukt"
+      "error": "Bijwerken wachtwoord mislukt",
+      "removeDialog": {
+        "title": "Wachtwoord verwijderen?",
+        "description": "U kunt zich alleen aanmelden met uw verbonden OAuth-accounts. Deze actie kan niet ongedaan worden gemaakt.",
+        "confirmLabel": "Typ uw e-mailadres ter bevestiging",
+        "confirmPlaceholder": "Voer uw e-mailadres in",
+        "warning": "Zorg ervoor dat u minstens één OAuth-account verbonden hebt voordat u uw wachtwoord verwijdert.",
+        "cancel": "Annuleren",
+        "confirm": "Wachtwoord verwijderen"
+      },
+      "errors": {
+        "onlyLoginMethod": "Kan wachtwoord niet verwijderen. Dit is uw enige inlogmethode. Verbind eerst een OAuth-account.",
+        "confirmEmailMismatch": "E-mailbevestiging komt niet overeen.",
+        "removalFailed": "Verwijderen wachtwoord mislukt.",
+        "setFailed": "Instellen wachtwoord mislukt.",
+        "alreadyExists": "Wachtwoord bestaat al. Gebruik de optie wachtwoord wijzigen."
+      },
+      "successMessages": {
+        "removed": "Wachtwoord succesvol verwijderd. U kunt zich nu alleen aanmelden met OAuth.",
+        "set": "Wachtwoord succesvol ingesteld. U kunt zich nu aanmelden met e-mail/wachtwoord."
+      }
+    },
+    "loginMethods": {
+      "title": "Inlogmethoden",
+      "description": "Beheer hoe u inlogt op uw account",
+      "emailPassword": "E-mail & Wachtwoord",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "notConfigured": "Niet geconfigureerd",
+      "connected": "Verbonden",
+      "notConnected": "Niet verbonden",
+      "disconnect": "Verbinding verbreken",
+      "connect": "Verbinden",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "twitter": "Twitter"
+      }
     },
     "account": {
       "title": "Account verwijderen",

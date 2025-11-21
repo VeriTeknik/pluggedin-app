@@ -139,7 +139,7 @@ export function generateVerificationEmail(email: string, token: string) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
   const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
   const appName = process.env.EMAIL_FROM_NAME || 'Plugged.in';
-  
+
   return {
     to: email,
     subject: 'Verify your email address',
@@ -174,6 +174,235 @@ export function generateVerificationEmail(email: string, token: string) {
               <p style="margin: 0 0 20px; line-height: 1.6; font-size: 12px; color: #999; word-break: break-all;">
                 ${verifyUrl}
               </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 30px; background-color: #f3f4f6; border-radius: 0 0 8px 8px; text-align: center; color: #666; font-size: 14px;">
+              <p style="margin: 0 0 10px;">Thanks,<br>The ${appName} Team</p>
+              <p style="margin: 0; font-size: 12px; color: #999;">© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  };
+}
+
+/**
+ * Generate a password set notification email
+ * Used when an OAuth user adds a password to their account
+ */
+export function generatePasswordSetEmail(
+  email: string,
+  ipAddress: string,
+  userAgent: string,
+  timestamp: Date
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
+  const settingsUrl = `${baseUrl}/settings`;
+  const appName = process.env.EMAIL_FROM_NAME || 'Plugged.in';
+  const formattedDate = timestamp.toLocaleString('en-US', {
+    dateStyle: 'full',
+    timeStyle: 'long',
+  });
+
+  return {
+    to: email,
+    subject: 'Password added to your account',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Added</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; color: #333;">
+        <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <tr>
+            <td style="padding: 20px 0; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0; border-bottom: 2px solid #f0f0f0;">
+              <img src="${DEFAULT_LOGO_BASE64}" alt="${appName}" style="height: 50px; max-width: 150px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px; background-color: #ffffff;">
+              <h1 style="margin: 0 0 20px; color: #333; font-size: 24px; text-align: center;">Password Added</h1>
+              <p style="margin: 0 0 15px; line-height: 1.6;">Hello,</p>
+              <p style="margin: 0 0 20px; line-height: 1.6;">A password has been added to your account. You can now sign in using both OAuth and email/password.</p>
+
+              <div style="background-color: #f8f9fa; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Security Details:</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>Date:</strong> ${formattedDate}</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${ipAddress}</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${userAgent}</p>
+              </div>
+
+              <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0; line-height: 1.6; font-size: 14px; color: #856404;">
+                  <strong>⚠️ Was this you?</strong><br>
+                  If you did not add a password to your account, your account may be compromised. Please review your account settings immediately and consider changing your password.
+                </p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${settingsUrl}" style="display: inline-block; background-color: #0070f3; color: white; text-decoration: none; font-weight: bold; padding: 14px 28px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">Review Account Settings</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 30px; background-color: #f3f4f6; border-radius: 0 0 8px 8px; text-align: center; color: #666; font-size: 14px;">
+              <p style="margin: 0 0 10px;">Thanks,<br>The ${appName} Team</p>
+              <p style="margin: 0; font-size: 12px; color: #999;">© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  };
+}
+
+/**
+ * Generate a password removed notification email
+ * Used when a user removes their password (OAuth-only account)
+ */
+export function generatePasswordRemovedEmail(
+  email: string,
+  ipAddress: string,
+  userAgent: string,
+  timestamp: Date,
+  remainingLoginMethods: string[]
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
+  const settingsUrl = `${baseUrl}/settings`;
+  const appName = process.env.EMAIL_FROM_NAME || 'Plugged.in';
+  const formattedDate = timestamp.toLocaleString('en-US', {
+    dateStyle: 'full',
+    timeStyle: 'long',
+  });
+  const methodsList = remainingLoginMethods.map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(', ');
+
+  return {
+    to: email,
+    subject: 'Password removed from your account',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Removed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; color: #333;">
+        <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <tr>
+            <td style="padding: 20px 0; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0; border-bottom: 2px solid #f0f0f0;">
+              <img src="${DEFAULT_LOGO_BASE64}" alt="${appName}" style="height: 50px; max-width: 150px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px; background-color: #ffffff;">
+              <h1 style="margin: 0 0 20px; color: #333; font-size: 24px; text-align: center;">Password Removed</h1>
+              <p style="margin: 0 0 15px; line-height: 1.6;">Hello,</p>
+              <p style="margin: 0 0 20px; line-height: 1.6;">The password has been removed from your account. You can now only sign in using OAuth.</p>
+
+              <div style="background-color: #e7f3ff; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Remaining Login Methods:</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;">${methodsList}</p>
+              </div>
+
+              <div style="background-color: #f8f9fa; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Security Details:</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>Date:</strong> ${formattedDate}</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${ipAddress}</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${userAgent}</p>
+              </div>
+
+              <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0; line-height: 1.6; font-size: 14px; color: #856404;">
+                  <strong>⚠️ Was this you?</strong><br>
+                  If you did not remove your password, your account may be compromised. Please review your account settings immediately and re-add a password.
+                </p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${settingsUrl}" style="display: inline-block; background-color: #0070f3; color: white; text-decoration: none; font-weight: bold; padding: 14px 28px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">Review Account Settings</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 30px; background-color: #f3f4f6; border-radius: 0 0 8px 8px; text-align: center; color: #666; font-size: 14px;">
+              <p style="margin: 0 0 10px;">Thanks,<br>The ${appName} Team</p>
+              <p style="margin: 0; font-size: 12px; color: #999;">© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  };
+}
+
+/**
+ * Generate a password changed notification email
+ * Used when a user successfully changes their password
+ */
+export function generatePasswordChangedEmail(
+  email: string,
+  ipAddress: string,
+  userAgent: string,
+  timestamp: Date
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
+  const settingsUrl = `${baseUrl}/settings`;
+  const appName = process.env.EMAIL_FROM_NAME || 'Plugged.in';
+  const formattedDate = timestamp.toLocaleString('en-US', {
+    dateStyle: 'full',
+    timeStyle: 'long',
+  });
+
+  return {
+    to: email,
+    subject: 'Password changed successfully',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Changed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; color: #333;">
+        <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <tr>
+            <td style="padding: 20px 0; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0; border-bottom: 2px solid #f0f0f0;">
+              <img src="${DEFAULT_LOGO_BASE64}" alt="${appName}" style="height: 50px; max-width: 150px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px; background-color: #ffffff;">
+              <h1 style="margin: 0 0 20px; color: #333; font-size: 24px; text-align: center;">Password Changed</h1>
+              <p style="margin: 0 0 15px; line-height: 1.6;">Hello,</p>
+              <p style="margin: 0 0 20px; line-height: 1.6;">Your password has been changed successfully.</p>
+
+              <div style="background-color: #f8f9fa; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Security Details:</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>Date:</strong> ${formattedDate}</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${ipAddress}</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${userAgent}</p>
+              </div>
+
+              <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0; line-height: 1.6; font-size: 14px; color: #856404;">
+                  <strong>⚠️ Was this you?</strong><br>
+                  If you did not change your password, your account may be compromised. Please reset your password immediately using the "Forgot Password" option on the login page.
+                </p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${settingsUrl}" style="display: inline-block; background-color: #0070f3; color: white; text-decoration: none; font-weight: bold; padding: 14px 28px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">Review Account Settings</a>
+              </div>
             </td>
           </tr>
           <tr>

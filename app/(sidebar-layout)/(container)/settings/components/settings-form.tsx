@@ -43,11 +43,13 @@ import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 
-import { type ConnectedAccount,removeConnectedAccount } from '../actions';
+import { type ConnectedAccount, removeConnectedAccount, removePassword, setPassword } from '../actions';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
 import { ProfileSocialSection } from './profile-social-section';
+import { RemovePasswordDialog } from './remove-password-dialog';
+import { LoginMethodsCard } from './login-methods-card';
 type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {
@@ -69,6 +71,14 @@ const passwordSchema = z.object({
   path: ['confirmPassword'],
 });
 
+const setPasswordSchema = z.object({
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
 export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -77,43 +87,11 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  
-  // Helper function to format relative time
-  const formatLastUsed = (date: Date | null) => {
-    if (!date) return null;
-    
-    const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
-    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    return 'Just now';
-  };
-  
-  // Find the most recently used account
-  const mostRecentAccount = connectedAccounts.reduce((latest, account) => {
-    if (!latest) return account;
-    if (!account.lastUsed) return latest;
-    if (!latest.lastUsed) return account;
-    return new Date(account.lastUsed) > new Date(latest.lastUsed) ? account : latest;
-  }, null as ConnectedAccount | null);
-  
-  // Helper to check if account is connected
-  const isAccountConnected = (provider: string) => {
-    return connectedAccounts.some(acc => acc.provider === provider);
-  };
-  
-  // Helper to get account info
-  const getAccountInfo = (provider: string) => {
-    return connectedAccounts.find(acc => acc.provider === provider);
-  };
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isRemovingAccount, setIsRemovingAccount] = useState<string | null>(null);
+  const [removePasswordDialogOpen, setRemovePasswordDialogOpen] = useState(false);
+  const [isRemovingPassword, setIsRemovingPassword] = useState(false);
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({ // Explicitly type useForm
     resolver: zodResolver(profileSchema),
@@ -127,6 +105,14 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
     resolver: zodResolver(passwordSchema),
     defaultValues: {
       currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+  });
+
+  const setPasswordForm = useForm({
+    resolver: zodResolver(setPasswordSchema),
+    defaultValues: {
       newPassword: '',
       confirmPassword: '',
     },
@@ -279,8 +265,8 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const handleRemoveAccount = async (provider: string) => {
     try {
       setIsRemovingAccount(provider);
-      const result = await removeConnectedAccount(user.id, provider);
-      
+      const result = await removeConnectedAccount(provider);
+
       if (result.success) {
         toast({
           title: t('common.success'),
@@ -302,6 +288,66 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       });
     } finally {
       setIsRemovingAccount(null);
+    }
+  };
+
+  const handleRemovePassword = async (confirmEmail: string) => {
+    try {
+      setIsRemovingPassword(true);
+      const result = await removePassword(confirmEmail);
+
+      if (result.success) {
+        toast({
+          title: t('common.success'),
+          description: t('settings.password.successMessages.removed'),
+        });
+        setRemovePasswordDialogOpen(false);
+        router.refresh();
+      } else {
+        toast({
+          title: t('common.error'),
+          description: result.error || t('settings.password.errors.removalFailed'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.password.errors.removalFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRemovingPassword(false);
+    }
+  };
+
+  const onSetPasswordSubmit = async (values: z.infer<typeof setPasswordSchema>) => {
+    try {
+      setIsSettingPassword(true);
+      const result = await setPassword(values.newPassword);
+
+      if (result.success) {
+        toast({
+          title: t('common.success'),
+          description: t('settings.password.successMessages.set'),
+        });
+        setPasswordForm.reset();
+        router.refresh();
+      } else {
+        toast({
+          title: t('common.error'),
+          description: result.error || t('settings.password.errors.setFailed'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.password.errors.setFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSettingPassword(false);
     }
   };
 
@@ -395,202 +441,175 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       </Card>
 
       {/* Social Profile Section - Pass user prop */}
-      <ProfileSocialSection user={user} /> 
+      <ProfileSocialSection user={user} />
 
-      {/* Connected Accounts */}
+      {/* Login Methods Card - Unified view of all login methods */}
+      <LoginMethodsCard
+        userEmail={user.email || ''}
+        hasPassword={!!user.password}
+        connectedAccounts={connectedAccounts.map((acc) => ({
+          id: acc.provider,
+          provider: acc.provider,
+          providerAccountId: acc.provider,
+        }))}
+        onDisconnect={handleRemoveAccount}
+        onConnect={(provider) => signIn(provider)}
+        canRemoveAccount={
+          connectedAccounts.length > 1 || (connectedAccounts.length === 1 && !!user.password)
+        }
+      />
+
+      {/* Password Section - Smart UI based on user state */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('settings.connectedAccounts.title', 'Connected Accounts')}</CardTitle>
+          <CardTitle>{t('settings.password.title')}</CardTitle>
           <CardDescription>
-            {t('settings.connectedAccounts.description', 'Manage your connected social accounts')}
+            {!user.password
+              ? t('settings.password.descriptionNoPassword')
+              : connectedAccounts.length > 0
+              ? t('settings.password.descriptionWithRemove')
+              : t('settings.password.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* GitHub */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <svg className="h-6 w-6" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-              </svg>
-              <div>
-                <div className="font-medium">GitHub</div>
-                <div className="text-sm text-muted-foreground">
-                  {isAccountConnected('github') 
-                    ? t('settings.connectedAccounts.github.connected', 'Connected to GitHub')
-                    : t('settings.connectedAccounts.github.connect', 'Connect your GitHub account')}
-                </div>
-              </div>
-            </div>
-            {isAccountConnected('github') ? (
-              <div className="flex items-center gap-2">
-                {mostRecentAccount?.provider === 'github' && mostRecentAccount.lastUsed && (
-                  <Badge variant="default" className="shrink-0 bg-green-600">
-                    Last used {formatLastUsed(mostRecentAccount.lastUsed)}
-                  </Badge>
-                )}
-                <Badge variant="secondary" className="shrink-0"> 
-                  {t('settings.connectedAccounts.connected', 'Connected')}
-                </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleRemoveAccount('github')}
-                  disabled={isRemovingAccount !== null}
+          {!user.password ? (
+            // No password set - Show "Set Password" form
+            <>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('settings.password.noPasswordSet')}
+              </p>
+              <Form {...setPasswordForm}>
+                <form
+                  onSubmit={setPasswordForm.handleSubmit(onSetPasswordSubmit)}
+                  className="space-y-4"
                 >
-                  {isRemovingAccount === 'github' ? t('common.removing', 'Removing...') : t('common.remove', 'Remove')}
-                </Button>
-              </div>
-            ) : (
-              <Button variant="outline" onClick={() => signIn('github')}>
-                {t('auth.social.github')}
-              </Button>
-            )}
-          </div>
-
-          {/* Google */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <svg className="h-6 w-6" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              <div>
-                <div className="font-medium">Google</div>
-                <div className="text-sm text-muted-foreground">
-                  {isAccountConnected('google') 
-                    ? t('settings.connectedAccounts.google.connected', 'Connected to Google')
-                    : t('settings.connectedAccounts.google.connect', 'Connect your Google account')}
-                </div>
-              </div>
-            </div>
-            {isAccountConnected('google') ? (
-              <div className="flex items-center gap-2">
-                {mostRecentAccount?.provider === 'google' && mostRecentAccount.lastUsed && (
-                  <Badge variant="default" className="shrink-0 bg-green-600">
-                    Last used {formatLastUsed(mostRecentAccount.lastUsed)}
-                  </Badge>
-                )}
-                <Badge variant="secondary" className="shrink-0">
-                  {t('settings.connectedAccounts.connected', 'Connected')}
-                </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleRemoveAccount('google')}
-                  disabled={isRemovingAccount !== null}
+                  <FormField
+                    control={setPasswordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('settings.password.new.label')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            {...field}
+                            placeholder={t('settings.password.new.placeholder')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={setPasswordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('settings.password.confirm.label')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            {...field}
+                            placeholder={t('settings.password.confirm.placeholder')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={isSettingPassword}>
+                    {isSettingPassword ? t('common.saving') : t('settings.password.setButton')}
+                  </Button>
+                </form>
+              </Form>
+            </>
+          ) : (
+            // Has password - Show "Change Password" form
+            <>
+              <Form {...passwordForm}>
+                <form
+                  onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+                  className="space-y-4"
                 >
-                  {isRemovingAccount === 'google' ? t('common.removing', 'Removing...') : t('common.remove', 'Remove')}
-                </Button>
-              </div>
-            ) : (
-              <Button variant="outline" onClick={() => signIn('google')}>
-                {t('auth.social.google')}
-              </Button>
-            )}
-          </div>
-
-          {/* Twitter */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <svg className="h-6 w-6" viewBox="0 0 24 24">
-                <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98A12.28 12.28 0 0 1 3.11 4.93c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.54 8.54 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z" fill="#1DA1F2" />
-              </svg>
-              <div>
-                <div className="font-medium">Twitter</div>
-                <div className="text-sm text-muted-foreground">
-                  {isAccountConnected('twitter') 
-                    ? t('settings.connectedAccounts.twitter.connected', 'Connected to Twitter')
-                    : t('settings.connectedAccounts.twitter.connect', 'Connect your Twitter account')}
-                </div>
-              </div>
-            </div>
-            {isAccountConnected('twitter') ? (
-              <div className="flex items-center gap-2">
-                {mostRecentAccount?.provider === 'twitter' && mostRecentAccount.lastUsed && (
-                  <Badge variant="default" className="shrink-0 bg-green-600">
-                    Last used {formatLastUsed(mostRecentAccount.lastUsed)}
-                  </Badge>
-                )}
-                <Badge variant="secondary" className="shrink-0">
-                  {t('settings.connectedAccounts.connected', 'Connected')}
-                </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleRemoveAccount('twitter')}
-                  disabled={isRemovingAccount !== null}
-                >
-                  {isRemovingAccount === 'twitter' ? t('common.removing', 'Removing...') : t('common.remove', 'Remove')}
-                </Button>
-              </div>
-            ) : (
-              <Button variant="outline" onClick={() => signIn('twitter')}>
-                {t('auth.social.twitter', 'Connect with Twitter')}
-              </Button>
-            )}
-          </div>
+                  <FormField
+                    control={passwordForm.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('settings.password.current.label')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            {...field}
+                            placeholder={t('settings.password.current.placeholder')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('settings.password.new.label')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            {...field}
+                            placeholder={t('settings.password.new.placeholder')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('settings.password.confirm.label')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            {...field}
+                            placeholder={t('settings.password.confirm.placeholder')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button type="submit">{t('settings.password.updateButton')}</Button>
+                    {/* Show remove button only if user has OAuth accounts */}
+                    {connectedAccounts.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => setRemovePasswordDialogOpen(true)}
+                      >
+                        {t('settings.password.removeButton')}
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              </Form>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Password Section - Only show for non-OAuth users */}
-      {!connectedAccounts.length && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('settings.password.title')}</CardTitle>
-            <CardDescription>
-              {t('settings.password.description')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...passwordForm}>
-              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                <FormField
-                  control={passwordForm.control}
-                  name="currentPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('settings.password.current.label')}</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} placeholder={t('settings.password.current.placeholder')} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={passwordForm.control}
-                  name="newPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('settings.password.new.label')}</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} placeholder={t('settings.password.new.placeholder')} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={passwordForm.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('settings.password.confirm.label')}</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} placeholder={t('settings.password.confirm.placeholder')} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit">{t('settings.password.updateButton')}</Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      )}
+      {/* Remove Password Dialog */}
+      <RemovePasswordDialog
+        open={removePasswordDialogOpen}
+        onOpenChange={setRemovePasswordDialogOpen}
+        userEmail={user.email || ''}
+        onConfirm={handleRemovePassword}
+        isLoading={isRemovingPassword}
+      />
 
       {/* Current Workspace Section */}
       <CurrentProfileSection />
