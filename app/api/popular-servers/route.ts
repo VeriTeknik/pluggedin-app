@@ -1,9 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { getServerActivityMetrics } from '@/lib/trending-service';
-import { McpServerSource } from '@/db/schema';
-import { ExtendedServer, registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
-import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import { db } from '@/db';
+import { McpServerSource,mcpServersTable } from '@/db/schema';
+import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
+import { calculateTrendingServers } from '@/lib/trending-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 900; // Cache for 15 minutes
@@ -20,63 +21,85 @@ interface PopularServerResponse {
   githubUrl?: string;
 }
 
-/**
- * Helper function to enrich a single server with local activity metrics
- */
-async function enrichServerWithActivity(server: ExtendedServer): Promise<PopularServerResponse> {
-  const activityMetrics = await getServerActivityMetrics(
-    server.id,
-    McpServerSource.REGISTRY,
-    'all'
-  );
-
-  // Use the higher of registry stats and locally tracked activity to avoid undercounting
-  const registryInstallCount = Number(server.installation_count ?? 0);
-  const activityInstallCount = Number(activityMetrics.install_count ?? 0);
-  const combinedInstallCount = Math.max(registryInstallCount, activityInstallCount);
-
-  const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
-
-  return {
-    id: server.id,
-    name: mcpIndex.name,
-    description: server.description || '',
-    installation_count: combinedInstallCount,
-    tool_call_count: activityMetrics.tool_call_count,
-    rating: server.rating || 0,
-    ratingCount: server.rating_count || 0,
-    github_stars: mcpIndex.github_stars || undefined,
-    githubUrl: mcpIndex.githubUrl || server.repository?.url || undefined,
-  };
-}
-
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get('limit') || '6')));
 
-    // Fetch servers from registry (sort by rating to get quality servers)
-    const response = await registryVPClient.getAllServersWithStats(
-      McpServerSource.REGISTRY,
-      { sort: 'rating_desc' },
-      100 // Fetch more to have options after filtering
+    // Use the same approach as trending servers - query local activity directly
+    // Get trending servers from the last 30 days to find popular servers
+    const trendingServers = await calculateTrendingServers(
+      null, // All sources
+      '30d', // 30 day period
+      50 // Fetch more to have options after filtering
     );
 
-    // Enrich each server with local activity metrics
-    // Use Promise.allSettled to handle individual failures gracefully
-    const enrichmentResults = await Promise.allSettled(
-      response.servers.map(enrichServerWithActivity)
+    // Enrich trending servers with metadata from registry
+    const enrichedServers = await Promise.all(
+      trendingServers.map(async (server) => {
+        let metadata: PopularServerResponse = {
+          id: server.server_id,
+          name: server.server_id, // Fallback name
+          description: '',
+          installation_count: server.install_count,
+          tool_call_count: server.tool_call_count,
+          rating: 0,
+          ratingCount: 0,
+        };
+
+        try {
+          if (server.source === McpServerSource.REGISTRY) {
+            // For registry servers, try to get from local database first
+            const mcpServer = await db.query.mcpServersTable.findFirst({
+              where: eq(mcpServersTable.external_id, server.server_id)
+            });
+
+            if (mcpServer) {
+              // Use local server data
+              metadata = {
+                ...metadata,
+                name: mcpServer.name,
+                description: mcpServer.description || '',
+                githubUrl: mcpServer.repository_url || undefined,
+              };
+            } else {
+              // Fallback to fetching from registry
+              try {
+                const registryServer = await registryVPClient.getServerWithStats(server.server_id);
+
+                if (registryServer) {
+                  // Extract display name from qualified name
+                  const displayName = registryServer.name?.split('/').pop()?.replace(/-/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ') || registryServer.name || 'Unknown';
+
+                  metadata = {
+                    ...metadata,
+                    name: displayName,
+                    description: registryServer.description || '',
+                    githubUrl: registryServer.repository?.url,
+                    rating: registryServer.rating || 0,
+                    ratingCount: registryServer.rating_count || 0,
+                  };
+                }
+              } catch (registryError) {
+                console.error(`Failed to fetch registry metadata for ${server.server_id}:`, registryError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch metadata for ${server.server_id}:`, error);
+        }
+
+        return metadata;
+      })
     );
 
-    // Filter out failed enrichments and extract successful results
-    const enrichedServers: PopularServerResponse[] = enrichmentResults
-      .filter((result): result is PromiseFulfilledResult<PopularServerResponse> => result.status === 'fulfilled')
-      .map(result => result.value);
-
-    // Sort by activity first, then by rating as fallback
+    // Sort by activity first (installs, then tool calls)
     const sortedServers = enrichedServers
       .sort((a, b) => {
-        // Primary sort: install count (if either has activity)
+        // Primary sort: install count
         if (b.installation_count !== a.installation_count) {
           return b.installation_count - a.installation_count;
         }
