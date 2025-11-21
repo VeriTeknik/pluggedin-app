@@ -39,6 +39,8 @@
     "password": {
       "title": "Password",
       "description": "Change your password",
+      "descriptionWithRemove": "Change or remove your password",
+      "descriptionNoPassword": "Set a password for email/password login",
       "current": {
         "label": "Current Password",
         "placeholder": "Enter current password"
@@ -52,8 +54,48 @@
         "placeholder": "Confirm new password"
       },
       "updateButton": "Change Password",
+      "removeButton": "Remove Password",
+      "setButton": "Set Password",
+      "noPasswordSet": "You currently sign in with OAuth. Setting a password allows you to also log in with email/password.",
       "success": "Password updated successfully",
-      "error": "Failed to update password"
+      "error": "Failed to update password",
+      "removeDialog": {
+        "title": "Remove Password?",
+        "description": "You will only be able to sign in using your connected OAuth accounts. This action cannot be undone.",
+        "confirmLabel": "Type your email to confirm",
+        "confirmPlaceholder": "Enter your email",
+        "warning": "Make sure you have at least one OAuth account connected before removing your password.",
+        "cancel": "Cancel",
+        "confirm": "Remove Password"
+      },
+      "errors": {
+        "onlyLoginMethod": "Cannot remove password. It's your only login method. Please connect an OAuth account first.",
+        "confirmEmailMismatch": "Email confirmation does not match.",
+        "removalFailed": "Failed to remove password.",
+        "setFailed": "Failed to set password.",
+        "alreadyExists": "Password already exists. Use the change password option instead."
+      },
+      "successMessages": {
+        "removed": "Password removed successfully. You can now only sign in with OAuth.",
+        "set": "Password set successfully. You can now sign in with email/password."
+      }
+    },
+    "loginMethods": {
+      "title": "Login Methods",
+      "description": "Manage how you sign in to your account",
+      "emailPassword": "Email & Password",
+      "active": "Active",
+      "inactive": "Inactive",
+      "notConfigured": "Not configured",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "disconnect": "Disconnect",
+      "connect": "Connect",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "twitter": "Twitter"
+      }
     },
     "account": {
       "title": "Delete Account",

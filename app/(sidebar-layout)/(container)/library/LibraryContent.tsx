@@ -224,6 +224,9 @@ export default function LibraryContent() {
   }, []);
 
   const handleViewVersions = useCallback((doc: Doc) => {
+    // Disable when document has no history yet
+    if (!doc || (doc.version ?? 0) <= 1) return;
+
     setVersionHistoryDoc(doc);
     setVersionHistoryOpen(true);
   }, []);
@@ -468,42 +471,48 @@ export default function LibraryContent() {
     }),
     columnHelper.display({
       id: 'actions',
-      cell: (info) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handlePreview(info.row.original)}
-            title="Preview"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleViewVersions(info.row.original)}
-            title="Version History"
-          >
-            <Clock className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDownload(info.row.original)}
-            title="Download"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDelete(info.row.original)}
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      ),
+      cell: (info) => {
+        const doc = info.row.original;
+        const hasVersions = (doc.version ?? 0) > 1;
+
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePreview(doc)}
+              title="Preview"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewVersions(doc)}
+              title={hasVersions ? 'Version History' : 'No versions yet'}
+              disabled={!hasVersions}
+            >
+              <Clock className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDownload(doc)}
+              title="Download"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(doc)}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        );
+      },
       header: t('page.tableHeaders.actions'),
     }),
   ], [t, handleDownload, handleDelete, handlePreview, handleViewVersions, formatFileSize, getMimeTypeIcon]);

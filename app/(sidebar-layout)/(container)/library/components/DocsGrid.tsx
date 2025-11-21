@@ -123,9 +123,11 @@ export function DocsGrid({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
+                        if ((doc.version ?? 0) <= 1) return;
                         onViewVersions(doc);
                       }}
                       className="cursor-pointer"
+                      disabled={(doc.version ?? 0) <= 1}
                     >
                       <Clock className="mr-2 h-4 w-4" />
                       {t('grid.versions')}

@@ -526,6 +526,13 @@
       "when": 1762755356569,
       "tag": "0074_gifted_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1763653337629,
+      "tag": "0075_burly_dakota_north",
+      "breakpoints": true
     }
   ]
 }

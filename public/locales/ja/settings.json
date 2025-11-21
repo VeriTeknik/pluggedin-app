@@ -39,6 +39,8 @@
     "password": {
       "title": "パスワード",
       "description": "パスワードを変更します",
+      "descriptionWithRemove": "パスワードを変更または削除します",
+      "descriptionNoPassword": "メール/パスワードログイン用のパスワードを設定します",
       "current": {
         "label": "現在のパスワード",
         "placeholder": "現在のパスワードを入力してください"
@@ -52,8 +54,48 @@
         "placeholder": "新しいパスワードを確認してください"
       },
       "updateButton": "パスワードを変更",
+      "removeButton": "パスワードを削除",
+      "setButton": "パスワードを設定",
+      "noPasswordSet": "現在OAuthでサインインしています。パスワードを設定すると、メール/パスワードでもログインできるようになります。",
       "success": "パスワードが正常に更新されました",
-      "error": "パスワードの更新に失敗しました"
+      "error": "パスワードの更新に失敗しました",
+      "removeDialog": {
+        "title": "パスワードを削除しますか？",
+        "description": "接続されたOAuthアカウントを使用してのみサインインできます。この操作は元に戻せません。",
+        "confirmLabel": "確認のためメールアドレスを入力してください",
+        "confirmPlaceholder": "メールアドレスを入力してください",
+        "warning": "パスワードを削除する前に、少なくとも1つのOAuthアカウントが接続されていることを確認してください。",
+        "cancel": "キャンセル",
+        "confirm": "パスワードを削除"
+      },
+      "errors": {
+        "onlyLoginMethod": "パスワードを削除できません。これは唯一のログイン方法です。まずOAuthアカウントを接続してください。",
+        "confirmEmailMismatch": "メールアドレスの確認が一致しません。",
+        "removalFailed": "パスワードの削除に失敗しました。",
+        "setFailed": "パスワードの設定に失敗しました。",
+        "alreadyExists": "パスワードは既に存在します。パスワード変更オプションを使用してください。"
+      },
+      "successMessages": {
+        "removed": "パスワードが正常に削除されました。OAuthでのみサインインできます。",
+        "set": "パスワードが正常に設定されました。メール/パスワードでサインインできます。"
+      }
+    },
+    "loginMethods": {
+      "title": "ログイン方法",
+      "description": "アカウントへのサインイン方法を管理します",
+      "emailPassword": "メールとパスワード",
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "notConfigured": "未設定",
+      "connected": "接続済み",
+      "notConnected": "未接続",
+      "disconnect": "切断",
+      "connect": "接続",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "twitter": "Twitter"
+      }
     },
     "account": {
       "title": "アカウントを削除",
