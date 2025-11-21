@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getServerActivityMetrics } from '@/lib/trending-service';
 import { McpServerSource } from '@/db/schema';
-import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
+import { ExtendedServer, registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 
 export const dynamic = 'force-dynamic';
@@ -23,12 +23,17 @@ interface PopularServerResponse {
 /**
  * Helper function to enrich a single server with local activity metrics
  */
-async function enrichServerWithActivity(server: any): Promise<PopularServerResponse> {
+async function enrichServerWithActivity(server: ExtendedServer): Promise<PopularServerResponse> {
   const activityMetrics = await getServerActivityMetrics(
     server.id,
     McpServerSource.REGISTRY,
     'all'
   );
+
+  // Use the higher of registry stats and locally tracked activity to avoid undercounting
+  const registryInstallCount = Number(server.installation_count ?? 0);
+  const activityInstallCount = Number(activityMetrics.install_count ?? 0);
+  const combinedInstallCount = Math.max(registryInstallCount, activityInstallCount);
 
   const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
 
@@ -36,7 +41,7 @@ async function enrichServerWithActivity(server: any): Promise<PopularServerRespo
     id: server.id,
     name: mcpIndex.name,
     description: server.description || '',
-    installation_count: activityMetrics.install_count,
+    installation_count: combinedInstallCount,
     tool_call_count: activityMetrics.tool_call_count,
     rating: server.rating || 0,
     ratingCount: server.rating_count || 0,
