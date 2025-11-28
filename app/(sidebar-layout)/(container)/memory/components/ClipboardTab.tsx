@@ -3,10 +3,12 @@
 import {
   Clock,
   Copy,
+  Edit,
   Eye,
   FileText,
   Image,
   MoreHorizontal,
+  Plus,
   Tag,
   Trash2,
 } from 'lucide-react';
@@ -21,6 +23,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -30,6 +33,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -39,6 +51,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { ClipboardEntry } from '../hooks/useClipboard';
 import { useClipboard } from '../hooks/useClipboard';
@@ -48,15 +61,34 @@ interface ClipboardTabProps {
   onRefresh: () => void;
 }
 
+type EntryFormData = {
+  name: string;
+  value: string;
+  contentType: string;
+  encoding: 'utf-8' | 'base64' | 'hex';
+  visibility: 'private' | 'workspace' | 'public';
+  ttlSeconds: number;
+};
+
 export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
   const { t } = useTranslation('memory');
-  const { deleteEntry } = useClipboard();
+  const { setEntry, deleteEntry } = useClipboard();
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedEntry, setSelectedEntry] = useState<ClipboardEntry | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
+  const [createEditOpen, setCreateEditOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<EntryFormData>({
+    name: '',
+    value: '',
+    contentType: 'text/plain',
+    encoding: 'utf-8',
+    visibility: 'private',
+    ttlSeconds: 86400,
+  });
 
   // Separate named and indexed entries
   const namedEntries = entries.filter(e => e.name !== null);
@@ -113,6 +145,55 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
     }
   };
 
+  const handleCreateNew = () => {
+    setSelectedEntry(null);
+    setFormData({
+      name: '',
+      value: '',
+      contentType: 'text/plain',
+      encoding: 'utf-8',
+      visibility: 'private',
+      ttlSeconds: 86400,
+    });
+    setCreateEditOpen(true);
+  };
+
+  const handleEdit = (entry: ClipboardEntry) => {
+    setSelectedEntry(entry);
+    setFormData({
+      name: entry.name || '',
+      value: entry.value,
+      contentType: entry.contentType,
+      encoding: entry.encoding as 'utf-8' | 'base64' | 'hex',
+      visibility: entry.visibility as 'private' | 'workspace' | 'public',
+      ttlSeconds: 86400, // Default to 24h for edits
+    });
+    setCreateEditOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.value.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await setEntry({
+        name: formData.name.trim(),
+        value: formData.value,
+        contentType: formData.contentType,
+        encoding: formData.encoding,
+        visibility: formData.visibility,
+        ttlSeconds: formData.ttlSeconds,
+      });
+      setCreateEditOpen(false);
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to save entry:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -156,13 +237,30 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
 
   if (entries.length === 0) {
     return (
-      <Card className="h-64 flex items-center justify-center">
-        <CardContent className="text-center">
-          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <CardTitle className="mb-2">{t('clipboard.empty.title')}</CardTitle>
-          <CardDescription>{t('clipboard.empty.description')}</CardDescription>
-        </CardContent>
-      </Card>
+      <>
+        <Card className="h-64 flex items-center justify-center">
+          <CardContent className="text-center">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <CardTitle className="mb-2">{t('clipboard.empty.title')}</CardTitle>
+            <CardDescription className="mb-4">{t('clipboard.empty.description')}</CardDescription>
+            <Button onClick={handleCreateNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('clipboard.createEntry')}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Create/Edit Dialog */}
+        <EntryFormDialog
+          open={createEditOpen}
+          onOpenChange={setCreateEditOpen}
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          isEdit={false}
+        />
+      </>
     );
   }
 
@@ -176,14 +274,20 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
             <TabsTrigger value="grid">{t('clipboard.viewMode.grid')}</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setClearAllDialogOpen(true)}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          {t('clipboard.clearAll')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleCreateNew}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('clipboard.createEntry')}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setClearAllDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {t('clipboard.clearAll')}
+          </Button>
+        </div>
       </div>
 
       {/* Named Entries Section */}
@@ -199,6 +303,7 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               showName
               onCopy={handleCopy}
               onPreview={handlePreview}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
               formatDate={formatDate}
@@ -212,6 +317,7 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               showName
               onCopy={handleCopy}
               onPreview={handlePreview}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
               getTimeRemaining={getTimeRemaining}
@@ -235,6 +341,7 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               showIdx
               onCopy={handleCopy}
               onPreview={handlePreview}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
               formatDate={formatDate}
@@ -248,6 +355,7 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               showIdx
               onCopy={handleCopy}
               onPreview={handlePreview}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
               getTimeRemaining={getTimeRemaining}
@@ -320,7 +428,182 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
         isLoading={isDeleting}
         variant="destructive"
       />
+
+      {/* Create/Edit Dialog */}
+      <EntryFormDialog
+        open={createEditOpen}
+        onOpenChange={setCreateEditOpen}
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        isEdit={selectedEntry !== null}
+      />
     </div>
+  );
+}
+
+interface EntryFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formData: EntryFormData;
+  setFormData: (data: EntryFormData) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isSubmitting: boolean;
+  isEdit: boolean;
+}
+
+function EntryFormDialog({
+  open,
+  onOpenChange,
+  formData,
+  setFormData,
+  onSubmit,
+  isSubmitting,
+  isEdit,
+}: EntryFormDialogProps) {
+  const { t } = useTranslation('memory');
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? t('clipboard.form.editTitle') : t('clipboard.form.createTitle')}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit ? t('clipboard.form.editDescription') : t('clipboard.form.createDescription')}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit}>
+          <div className="space-y-4">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name">{t('clipboard.form.name')} *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder={t('clipboard.form.namePlaceholder')}
+                required
+                disabled={isEdit}
+              />
+              <p className="text-sm text-muted-foreground">
+                {t('clipboard.form.nameHelp')}
+              </p>
+            </div>
+
+            {/* Value */}
+            <div className="space-y-2">
+              <Label htmlFor="value">{t('clipboard.form.value')} *</Label>
+              <Textarea
+                id="value"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                placeholder={t('clipboard.form.valuePlaceholder')}
+                rows={6}
+                required
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Content Type */}
+              <div className="space-y-2">
+                <Label htmlFor="contentType">{t('clipboard.form.contentType')}</Label>
+                <Select
+                  value={formData.contentType}
+                  onValueChange={(value) => setFormData({ ...formData, contentType: value })}
+                >
+                  <SelectTrigger id="contentType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text/plain">text/plain</SelectItem>
+                    <SelectItem value="application/json">application/json</SelectItem>
+                    <SelectItem value="text/markdown">text/markdown</SelectItem>
+                    <SelectItem value="text/html">text/html</SelectItem>
+                    <SelectItem value="image/png">image/png</SelectItem>
+                    <SelectItem value="image/jpeg">image/jpeg</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Encoding */}
+              <div className="space-y-2">
+                <Label htmlFor="encoding">{t('clipboard.form.encoding')}</Label>
+                <Select
+                  value={formData.encoding}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, encoding: value as 'utf-8' | 'base64' | 'hex' })
+                  }
+                >
+                  <SelectTrigger id="encoding">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="utf-8">UTF-8</SelectItem>
+                    <SelectItem value="base64">Base64</SelectItem>
+                    <SelectItem value="hex">Hex</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Visibility */}
+              <div className="space-y-2">
+                <Label htmlFor="visibility">{t('clipboard.form.visibility')}</Label>
+                <Select
+                  value={formData.visibility}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, visibility: value as 'private' | 'workspace' | 'public' })
+                  }
+                >
+                  <SelectTrigger id="visibility">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">{t('clipboard.form.visibilityPrivate')}</SelectItem>
+                    <SelectItem value="workspace">{t('clipboard.form.visibilityWorkspace')}</SelectItem>
+                    <SelectItem value="public">{t('clipboard.form.visibilityPublic')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* TTL */}
+              <div className="space-y-2">
+                <Label htmlFor="ttl">{t('clipboard.form.ttl')}</Label>
+                <Select
+                  value={formData.ttlSeconds.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, ttlSeconds: parseInt(value) })}
+                >
+                  <SelectTrigger id="ttl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="900">15 {t('clipboard.form.minutes')}</SelectItem>
+                    <SelectItem value="3600">1 {t('clipboard.form.hour')}</SelectItem>
+                    <SelectItem value="14400">4 {t('clipboard.form.hours')}</SelectItem>
+                    <SelectItem value="86400">24 {t('clipboard.form.hours')}</SelectItem>
+                    <SelectItem value="604800">7 {t('clipboard.form.days')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t('clipboard.form.cancel')}
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !formData.name.trim() || !formData.value.trim()}>
+              {isSubmitting ? t('clipboard.form.saving') : (isEdit ? t('clipboard.form.update') : t('clipboard.form.create'))}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -330,6 +613,7 @@ interface ClipboardTableProps {
   showIdx?: boolean;
   onCopy: (entry: ClipboardEntry) => void;
   onPreview: (entry: ClipboardEntry) => void;
+  onEdit: (entry: ClipboardEntry) => void;
   onDelete: (entry: ClipboardEntry) => void;
   formatBytes: (bytes: number) => string;
   formatDate: (date: string) => string;
@@ -344,6 +628,7 @@ function ClipboardTable({
   showIdx,
   onCopy,
   onPreview,
+  onEdit,
   onDelete,
   formatBytes,
   formatDate,
@@ -411,6 +696,12 @@ function ClipboardTable({
                       <Copy className="h-4 w-4 mr-2" />
                       {t('clipboard.actions.copy')}
                     </DropdownMenuItem>
+                    {showName && (
+                      <DropdownMenuItem onClick={() => onEdit(entry)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        {t('clipboard.actions.edit')}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={() => onDelete(entry)}
                       className="text-destructive"
@@ -435,6 +726,7 @@ interface ClipboardGridProps {
   showIdx?: boolean;
   onCopy: (entry: ClipboardEntry) => void;
   onPreview: (entry: ClipboardEntry) => void;
+  onEdit: (entry: ClipboardEntry) => void;
   onDelete: (entry: ClipboardEntry) => void;
   formatBytes: (bytes: number) => string;
   getTimeRemaining: (expiresAt: string | null) => string;
@@ -448,6 +740,7 @@ function ClipboardGrid({
   showIdx,
   onCopy,
   onPreview,
+  onEdit,
   onDelete,
   formatBytes,
   getTimeRemaining,
@@ -483,6 +776,12 @@ function ClipboardGrid({
                     <Copy className="h-4 w-4 mr-2" />
                     {t('clipboard.actions.copy')}
                   </DropdownMenuItem>
+                  {showName && (
+                    <DropdownMenuItem onClick={() => onEdit(entry)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      {t('clipboard.actions.edit')}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => onDelete(entry)}
                     className="text-destructive"
