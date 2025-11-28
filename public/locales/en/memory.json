@@ -24,6 +24,7 @@
       "title": "No clipboard entries",
       "description": "Use MCP tools like pluggedin_clipboard_set or pluggedin_clipboard_push to add entries."
     },
+    "createEntry": "Create Entry",
     "named": "Named Entries",
     "indexed": "Indexed Entries",
     "clearAll": "Clear All",
@@ -43,7 +44,34 @@
     "actions": {
       "preview": "Preview",
       "copy": "Copy",
+      "edit": "Edit",
       "delete": "Delete"
+    },
+    "form": {
+      "createTitle": "Create Clipboard Entry",
+      "editTitle": "Edit Clipboard Entry",
+      "createDescription": "Add a new entry to your clipboard memory.",
+      "editDescription": "Update the clipboard entry details.",
+      "name": "Name",
+      "namePlaceholder": "e.g., api_key, user_preferences",
+      "nameHelp": "Unique identifier for this entry",
+      "value": "Value",
+      "valuePlaceholder": "Enter the content...",
+      "contentType": "Content Type",
+      "encoding": "Encoding",
+      "visibility": "Visibility",
+      "visibilityPrivate": "Private (only you)",
+      "visibilityWorkspace": "Workspace (team members)",
+      "visibilityPublic": "Public (everyone)",
+      "ttl": "Expires In",
+      "minutes": "minutes",
+      "hour": "hour",
+      "hours": "hours",
+      "days": "days",
+      "cancel": "Cancel",
+      "create": "Create Entry",
+      "update": "Update Entry",
+      "saving": "Saving..."
     },
     "deleteDialog": {
       "title": "Delete Clipboard Entry",

@@ -24,6 +24,7 @@
       "title": "无剪贴板条目",
       "description": "使用MCP工具如pluggedin_clipboard_set或pluggedin_clipboard_push来添加条目。"
     },
+    "createEntry": "创建条目",
     "named": "命名条目",
     "indexed": "索引条目",
     "clearAll": "全部清除",
@@ -43,7 +44,34 @@
     "actions": {
       "preview": "预览",
       "copy": "复制",
+      "edit": "编辑",
       "delete": "删除"
+    },
+    "form": {
+      "createTitle": "创建剪贴板条目",
+      "editTitle": "编辑剪贴板条目",
+      "createDescription": "向您的剪贴板内存添加新条目。",
+      "editDescription": "更新剪贴板条目详情。",
+      "name": "名称",
+      "namePlaceholder": "例如：api_key、user_preferences",
+      "nameHelp": "此条目的唯一标识符",
+      "value": "值",
+      "valuePlaceholder": "输入内容...",
+      "contentType": "内容类型",
+      "encoding": "编码",
+      "visibility": "可见性",
+      "visibilityPrivate": "私有（仅您）",
+      "visibilityWorkspace": "工作区（团队成员）",
+      "visibilityPublic": "公开（所有人）",
+      "ttl": "过期时间",
+      "minutes": "分钟",
+      "hour": "小时",
+      "hours": "小时",
+      "days": "天",
+      "cancel": "取消",
+      "create": "创建条目",
+      "update": "更新条目",
+      "saving": "保存中..."
     },
     "deleteDialog": {
       "title": "删除剪贴板条目",

@@ -24,6 +24,7 @@
       "title": "कोई क्लिपबोर्ड प्रविष्टि नहीं",
       "description": "प्रविष्टियां जोड़ने के लिए pluggedin_clipboard_set या pluggedin_clipboard_push जैसे MCP टूल्स का उपयोग करें।"
     },
+    "createEntry": "प्रविष्टि बनाएं",
     "named": "नामित प्रविष्टियां",
     "indexed": "अनुक्रमित प्रविष्टियां",
     "clearAll": "सभी साफ करें",
@@ -43,7 +44,34 @@
     "actions": {
       "preview": "पूर्वावलोकन",
       "copy": "कॉपी",
+      "edit": "संपादित करें",
       "delete": "हटाएं"
+    },
+    "form": {
+      "createTitle": "क्लिपबोर्ड प्रविष्टि बनाएं",
+      "editTitle": "क्लिपबोर्ड प्रविष्टि संपादित करें",
+      "createDescription": "अपनी क्लिपबोर्ड मेमोरी में एक नई प्रविष्टि जोड़ें।",
+      "editDescription": "क्लिपबोर्ड प्रविष्टि विवरण अपडेट करें।",
+      "name": "नाम",
+      "namePlaceholder": "उदा., api_key, user_preferences",
+      "nameHelp": "इस प्रविष्टि के लिए विशिष्ट पहचानकर्ता",
+      "value": "मान",
+      "valuePlaceholder": "सामग्री दर्ज करें...",
+      "contentType": "सामग्री प्रकार",
+      "encoding": "एन्कोडिंग",
+      "visibility": "दृश्यता",
+      "visibilityPrivate": "निजी (केवल आप)",
+      "visibilityWorkspace": "कार्यस्थान (टीम सदस्य)",
+      "visibilityPublic": "सार्वजनिक (सभी)",
+      "ttl": "समाप्ति समय",
+      "minutes": "मिनट",
+      "hour": "घंटा",
+      "hours": "घंटे",
+      "days": "दिन",
+      "cancel": "रद्द करें",
+      "create": "प्रविष्टि बनाएं",
+      "update": "प्रविष्टि अपडेट करें",
+      "saving": "सहेजा जा रहा है..."
     },
     "deleteDialog": {
       "title": "क्लिपबोर्ड प्रविष्टि हटाएं",

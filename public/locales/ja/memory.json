@@ -24,6 +24,7 @@
       "title": "クリップボードエントリがありません",
       "description": "pluggedin_clipboard_setやplugged_clipboard_pushなどのMCPツールを使用してエントリを追加してください。"
     },
+    "createEntry": "エントリ作成",
     "named": "名前付きエントリ",
     "indexed": "インデックス付きエントリ",
     "clearAll": "すべてクリア",
@@ -43,7 +44,34 @@
     "actions": {
       "preview": "プレビュー",
       "copy": "コピー",
+      "edit": "編集",
       "delete": "削除"
+    },
+    "form": {
+      "createTitle": "クリップボードエントリを作成",
+      "editTitle": "クリップボードエントリを編集",
+      "createDescription": "クリップボードメモリに新しいエントリを追加します。",
+      "editDescription": "クリップボードエントリの詳細を更新します。",
+      "name": "名前",
+      "namePlaceholder": "例: api_key, user_preferences",
+      "nameHelp": "このエントリの一意の識別子",
+      "value": "値",
+      "valuePlaceholder": "コンテンツを入力...",
+      "contentType": "コンテンツタイプ",
+      "encoding": "エンコーディング",
+      "visibility": "公開範囲",
+      "visibilityPrivate": "プライベート（自分のみ）",
+      "visibilityWorkspace": "ワークスペース（チームメンバー）",
+      "visibilityPublic": "パブリック（全員）",
+      "ttl": "有効期限",
+      "minutes": "分",
+      "hour": "時間",
+      "hours": "時間",
+      "days": "日",
+      "cancel": "キャンセル",
+      "create": "エントリ作成",
+      "update": "エントリ更新",
+      "saving": "保存中..."
     },
     "deleteDialog": {
       "title": "クリップボードエントリを削除",

@@ -24,6 +24,7 @@
       "title": "Geen klemborditems",
       "description": "Gebruik MCP-tools zoals pluggedin_clipboard_set of pluggedin_clipboard_push om items toe te voegen."
     },
+    "createEntry": "Item Maken",
     "named": "Benoemde Items",
     "indexed": "Geïndexeerde Items",
     "clearAll": "Alles Wissen",
@@ -43,7 +44,34 @@
     "actions": {
       "preview": "Voorbeeld",
       "copy": "Kopiëren",
+      "edit": "Bewerken",
       "delete": "Verwijderen"
+    },
+    "form": {
+      "createTitle": "Klemborditem Maken",
+      "editTitle": "Klemborditem Bewerken",
+      "createDescription": "Voeg een nieuw item toe aan uw klembordgeheugen.",
+      "editDescription": "Update de klemborditemdetails.",
+      "name": "Naam",
+      "namePlaceholder": "bijv., api_key, user_preferences",
+      "nameHelp": "Unieke identificatie voor dit item",
+      "value": "Waarde",
+      "valuePlaceholder": "Voer de inhoud in...",
+      "contentType": "Inhoudstype",
+      "encoding": "Codering",
+      "visibility": "Zichtbaarheid",
+      "visibilityPrivate": "Privé (alleen u)",
+      "visibilityWorkspace": "Werkruimte (teamleden)",
+      "visibilityPublic": "Openbaar (iedereen)",
+      "ttl": "Vervalt Over",
+      "minutes": "minuten",
+      "hour": "uur",
+      "hours": "uur",
+      "days": "dagen",
+      "cancel": "Annuleren",
+      "create": "Item Maken",
+      "update": "Item Bijwerken",
+      "saving": "Opslaan..."
     },
     "deleteDialog": {
       "title": "Klemborditem Verwijderen",
