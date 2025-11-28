@@ -30,6 +30,7 @@ import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
+import enMemory from '../public/locales/en/memory.json';
 import enNotifications from '../public/locales/en/notifications.json';
 import enPlayground from '../public/locales/en/playground.json';
 import enRegistry from '../public/locales/en/registry.json';
@@ -54,6 +55,7 @@ export const namespaces = [
   'legal',
   'library',
   'mcpServers',
+  'memory',
   'notifications',
   'playground',
   'registry',
@@ -82,6 +84,7 @@ type Messages = {
   legal: typeof enLegal;
   library: typeof enLibrary;
   mcpServers: typeof enMcpServers;
+  memory: typeof enMemory;
   notifications: typeof enNotifications;
   playground: typeof enPlayground;
   registry: typeof enRegistry;
