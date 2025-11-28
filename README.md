@@ -190,7 +190,7 @@ Visit [plugged.in](https://plugged.in) for instant access - no installation requ
 - **Named Entries**: Store key-value pairs with semantic names (e.g., `customer_context`, `last_analysis`)
 - **Indexed Entries**: Array-like storage with auto-incrementing indices for ordered data
 - **Stack Operations**: Push/pop functionality for LIFO workflows and pipelines
-- **Rich Content Support**: Store text, JSON, images (base64), and any content type up to 256KB
+- **Rich Content Support**: Store text, JSON, images (base64), and any content type up to 2MB
 - **TTL Expiration**: Optional time-to-live for automatic cleanup of temporary data
 - **Visibility Controls**: Private, workspace, or public visibility per entry
 - **Model Attribution**: Track which AI model created each clipboard entry

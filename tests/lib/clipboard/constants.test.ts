@@ -14,9 +14,9 @@ import {
 
 describe('Clipboard Constants', () => {
   describe('MAX_CLIPBOARD_SIZE_BYTES', () => {
-    it('should be 256KB (262144 bytes)', () => {
-      expect(MAX_CLIPBOARD_SIZE_BYTES).toBe(262_144);
-      expect(MAX_CLIPBOARD_SIZE_BYTES).toBe(256 * 1024);
+    it('should be 2MB (2097152 bytes)', () => {
+      expect(MAX_CLIPBOARD_SIZE_BYTES).toBe(2_097_152);
+      expect(MAX_CLIPBOARD_SIZE_BYTES).toBe(2 * 1024 * 1024);
     });
   });
 
@@ -81,13 +81,13 @@ describe('validateClipboardSize', () => {
 
     expect(result).not.toBeNull();
     expect(result).toContain('exceeds maximum size');
-    expect(result).toContain('262144 bytes');
-    expect(result).toContain('256KB');
+    expect(result).toContain('2097152 bytes');
+    expect(result).toContain('2048KB');
   });
 
   it('should handle large content correctly', () => {
-    // Content that's 300KB (exceeds 256KB limit)
-    const largeContent = 'a'.repeat(300 * 1024);
+    // Content that's 3MB (exceeds 2MB limit)
+    const largeContent = 'a'.repeat(3 * 1024 * 1024);
     const result = validateClipboardSize(largeContent);
 
     expect(result).not.toBeNull();

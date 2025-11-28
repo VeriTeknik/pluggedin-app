@@ -77,6 +77,7 @@
       "dropzoneHint": "图片、PDF、JSON、文本文件（最大 {{maxSize}}）",
       "fileTooLarge": "文件太大。最大大小为 {{maxSize}}",
       "fileUploaded": "文件已上传（{{size}}）",
+      "fileReadError": "Failed to read file",
       "or": "或输入文本"
     },
     "deleteDialog": {

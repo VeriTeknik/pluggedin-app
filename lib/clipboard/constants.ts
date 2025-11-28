@@ -3,8 +3,9 @@
  * Centralized to avoid drift between API routes, server actions, and migrations
  */
 
-// Size limit: 256KB (encoded string size, not decoded payload)
-export const MAX_CLIPBOARD_SIZE_BYTES = 262_144;
+// Size limit: 2MB (encoded string size, not decoded payload)
+// Increased from 256KB to support larger payloads like base64-encoded images
+export const MAX_CLIPBOARD_SIZE_BYTES = 2_097_152;
 
 // Default TTL: 24 hours
 export const DEFAULT_CLIPBOARD_TTL_MS = 24 * 60 * 60 * 1000;

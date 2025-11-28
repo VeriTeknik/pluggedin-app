@@ -77,6 +77,7 @@
       "dropzoneHint": "Images, PDFs, JSON, text files up to {{maxSize}}",
       "fileTooLarge": "File is too large. Maximum size is {{maxSize}}",
       "fileUploaded": "File uploaded ({{size}})",
+      "fileReadError": "Failed to read file. Please try again.",
       "or": "or enter text"
     },
     "deleteDialog": {

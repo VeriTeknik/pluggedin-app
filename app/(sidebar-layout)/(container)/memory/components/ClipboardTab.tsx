@@ -477,14 +477,14 @@ function EntryFormDialog({
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
-  // Max file size: 256KB (to stay under the backend limit)
-  const MAX_FILE_SIZE = 256 * 1024;
+  // Max file size: 2MB (to stay under the backend limit)
+  const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
   const handleFileSelect = useCallback((file: File) => {
     if (file.size > MAX_FILE_SIZE) {
       toast({
         title: t('common.error'),
-        description: t('clipboard.form.fileTooLarge', { maxSize: '256KB' }),
+        description: t('clipboard.form.fileTooLarge', { maxSize: '2MB' }),
         variant: 'destructive',
       });
       return;
@@ -503,6 +503,13 @@ function EntryFormDialog({
         encoding: 'base64',
       });
       setUploadedFileName(file.name);
+    };
+    reader.onerror = () => {
+      toast({
+        title: t('common.error'),
+        description: t('clipboard.form.fileReadError'),
+        variant: 'destructive',
+      });
     };
     reader.readAsDataURL(file);
   }, [formData, setFormData, t, toast]);
@@ -614,7 +621,7 @@ function EntryFormDialog({
                     {t('clipboard.form.dropzoneText')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {t('clipboard.form.dropzoneHint', { maxSize: '256KB' })}
+                    {t('clipboard.form.dropzoneHint', { maxSize: '2MB' })}
                   </p>
                 </div>
               )}

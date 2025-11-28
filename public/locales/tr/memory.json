@@ -77,6 +77,7 @@
       "dropzoneHint": "Resimler, PDF, JSON, metin dosyaları (max {{maxSize}})",
       "fileTooLarge": "Dosya çok büyük. Maksimum boyut {{maxSize}}",
       "fileUploaded": "Dosya yüklendi ({{size}})",
+      "fileReadError": "Failed to read file",
       "or": "veya metin girin"
     },
     "deleteDialog": {
