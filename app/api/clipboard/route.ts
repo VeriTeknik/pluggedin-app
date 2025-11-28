@@ -1,16 +1,18 @@
-import { and, asc, desc, eq, isNotNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { clipboardsTable } from '@/db/schema';
-
-// Size limit: 256KB
-const MAX_SIZE_BYTES = 262144;
-
-// Default TTL: 24 hours
-const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
+import {
+  calculateClipboardSize,
+  validateClipboardSize,
+  calculateExpirationDate,
+  buildClipboardConditions,
+  toClipboardEntry,
+  toClipboardEntries,
+} from '@/lib/clipboard';
 
 // Query parameters schema for GET
 const getClipboardSchema = z.object({
@@ -58,8 +60,8 @@ export async function GET(request: NextRequest) {
 
     const { activeProfile } = apiKeyResult;
 
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams;
+    // Parse query parameters using destructuring
+    const { searchParams } = request.nextUrl;
     const params = {
       name: searchParams.get('name') || undefined,
       idx: searchParams.get('idx') || undefined,
@@ -70,40 +72,19 @@ export async function GET(request: NextRequest) {
 
     const validatedParams = getClipboardSchema.parse(params);
 
-    // Clean up expired entries first (async, non-blocking)
-    db.delete(clipboardsTable)
-      .where(
-        and(
-          eq(clipboardsTable.profile_uuid, activeProfile.uuid),
-          lt(clipboardsTable.expires_at, new Date())
-        )
-      )
-      .execute()
-      .catch(console.error);
-
-    // Build query conditions
-    const conditions = [eq(clipboardsTable.profile_uuid, activeProfile.uuid)];
-
-    // Get specific entry by name
-    if (validatedParams.name !== undefined) {
-      conditions.push(eq(clipboardsTable.name, validatedParams.name));
-    }
-
-    // Get specific entry by index
-    if (validatedParams.idx !== undefined) {
-      conditions.push(eq(clipboardsTable.idx, validatedParams.idx));
-    }
-
-    // Filter by content type
-    if (validatedParams.contentType) {
-      conditions.push(eq(clipboardsTable.content_type, validatedParams.contentType));
-    }
+    // Build query conditions using shared helper
+    const where = buildClipboardConditions({
+      profileUuid: activeProfile.uuid,
+      name: validatedParams.name,
+      idx: validatedParams.idx,
+      contentType: validatedParams.contentType,
+    });
 
     // Execute query
     const entries = await db
       .select()
       .from(clipboardsTable)
-      .where(and(...conditions))
+      .where(where)
       .orderBy(desc(clipboardsTable.created_at))
       .limit(validatedParams.limit)
       .offset(validatedParams.offset);
@@ -112,29 +93,12 @@ export async function GET(request: NextRequest) {
     const totalResult = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(clipboardsTable)
-      .where(and(...conditions));
+      .where(where);
 
     const total = totalResult[0]?.count ?? 0;
 
-    // Transform entries for response
-    const transformedEntries = entries.map((entry) => ({
-      uuid: entry.uuid,
-      name: entry.name,
-      idx: entry.idx,
-      value: entry.content_type.startsWith('image/')
-        ? entry.value.substring(0, 1000) // Thumbnail preview for images
-        : entry.value,
-      fullValue: entry.content_type.startsWith('image/') ? undefined : entry.value,
-      contentType: entry.content_type,
-      encoding: entry.encoding,
-      sizeBytes: entry.size_bytes,
-      visibility: entry.visibility,
-      createdByTool: entry.created_by_tool,
-      createdByModel: entry.created_by_model,
-      createdAt: entry.created_at,
-      updatedAt: entry.updated_at,
-      expiresAt: entry.expires_at,
-    }));
+    // Transform entries for response using shared helper
+    const transformedEntries = toClipboardEntries(entries, { thumbnailForImages: true });
 
     // If requesting single entry by name or idx, return just that entry
     if (validatedParams.name !== undefined || validatedParams.idx !== undefined) {
@@ -144,12 +108,9 @@ export async function GET(request: NextRequest) {
           { status: 404 }
         );
       }
+      // Return full value for single entry
       return NextResponse.json({
-        entry: {
-          ...transformedEntries[0],
-          value: entries[0].value, // Return full value for single entry
-          fullValue: undefined,
-        },
+        entry: toClipboardEntry(entries[0], { thumbnailForImages: false }),
       });
     }
 
@@ -190,20 +151,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedBody = setClipboardSchema.parse(body);
 
-    // Calculate size in bytes
-    const sizeBytes = Buffer.byteLength(validatedBody.value, 'utf-8');
-    if (sizeBytes > MAX_SIZE_BYTES) {
+    // Validate size using shared helper
+    const sizeError = validateClipboardSize(validatedBody.value);
+    if (sizeError) {
       return NextResponse.json(
-        { error: `Value exceeds maximum size of ${MAX_SIZE_BYTES} bytes (${Math.round(MAX_SIZE_BYTES / 1024)}KB)` },
+        { error: sizeError },
         { status: 400 }
       );
     }
 
-    // Calculate expiration
-    const ttlMs = validatedBody.ttlSeconds
-      ? validatedBody.ttlSeconds * 1000
-      : DEFAULT_TTL_MS;
-    const expiresAt = new Date(Date.now() + ttlMs);
+    const sizeBytes = calculateClipboardSize(validatedBody.value);
+    const expiresAt = calculateExpirationDate(validatedBody.ttlSeconds);
 
     const entryData = {
       profile_uuid: activeProfile.uuid,
@@ -270,18 +228,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      entry: {
-        uuid: result[0].uuid,
-        name: result[0].name,
-        idx: result[0].idx,
-        contentType: result[0].content_type,
-        encoding: result[0].encoding,
-        sizeBytes: result[0].size_bytes,
-        visibility: result[0].visibility,
-        createdAt: result[0].created_at,
-        updatedAt: result[0].updated_at,
-        expiresAt: result[0].expires_at,
-      },
+      entry: toClipboardEntry(result[0]),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -327,20 +274,16 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    // Build conditions for specific entry
-    const conditions = [eq(clipboardsTable.profile_uuid, activeProfile.uuid)];
-
-    if (validatedBody.name !== undefined) {
-      conditions.push(eq(clipboardsTable.name, validatedBody.name));
-    }
-
-    if (validatedBody.idx !== undefined) {
-      conditions.push(eq(clipboardsTable.idx, validatedBody.idx));
-    }
+    // Build conditions using shared helper
+    const where = buildClipboardConditions({
+      profileUuid: activeProfile.uuid,
+      name: validatedBody.name,
+      idx: validatedBody.idx,
+    });
 
     const result = await db
       .delete(clipboardsTable)
-      .where(and(...conditions))
+      .where(where)
       .returning({ uuid: clipboardsTable.uuid });
 
     if (result.length === 0) {

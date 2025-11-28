@@ -17,6 +17,9 @@ import {
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useToast } from '@/hooks/use-toast';
+import { isTextLikeEntry } from '@/lib/clipboard/client';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -97,9 +100,13 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
   const indexedEntries = entries.filter(e => e.idx !== null);
 
   const handleCopy = async (entry: ClipboardEntry) => {
+    // Only allow copying text-like entries to system clipboard
+    if (!isTextLikeEntry({ contentType: entry.contentType, encoding: entry.encoding })) {
+      console.warn('Cannot copy non-text entry to clipboard');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(entry.value);
-      // TODO: Add toast notification
     } catch (error) {
       console.error('Failed to copy:', error);
     }
@@ -465,6 +472,7 @@ function EntryFormDialog({
   isEdit,
 }: EntryFormDialogProps) {
   const { t } = useTranslation('memory');
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -474,7 +482,11 @@ function EntryFormDialog({
 
   const handleFileSelect = useCallback((file: File) => {
     if (file.size > MAX_FILE_SIZE) {
-      alert(t('clipboard.form.fileTooLarge', { maxSize: '256KB' }));
+      toast({
+        title: t('common.error'),
+        description: t('clipboard.form.fileTooLarge', { maxSize: '256KB' }),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -493,7 +505,7 @@ function EntryFormDialog({
       setUploadedFileName(file.name);
     };
     reader.readAsDataURL(file);
-  }, [formData, setFormData, t]);
+  }, [formData, setFormData, t, toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

@@ -185,6 +185,17 @@ Visit [plugged.in](https://plugged.in) for instant access - no installation requ
 - **Data Scoping**: Hub-level and workspace-level data isolation
 - **Current Hub Display**: Dashboard shows active hub for context awareness
 
+### 📋 Clipboard & Memory System
+
+- **Named Entries**: Store key-value pairs with semantic names (e.g., `customer_context`, `last_analysis`)
+- **Indexed Entries**: Array-like storage with auto-incrementing indices for ordered data
+- **Stack Operations**: Push/pop functionality for LIFO workflows and pipelines
+- **Rich Content Support**: Store text, JSON, images (base64), and any content type up to 256KB
+- **TTL Expiration**: Optional time-to-live for automatic cleanup of temporary data
+- **Visibility Controls**: Private, workspace, or public visibility per entry
+- **Model Attribution**: Track which AI model created each clipboard entry
+- **MCP Integration**: Access clipboard via 6 built-in MCP tools from any AI client
+
 ---
 
 ## 🏗️ Architecture

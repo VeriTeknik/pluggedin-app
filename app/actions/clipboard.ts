@@ -1,27 +1,23 @@
 'use server';
 
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { clipboardsTable, projectsTable } from '@/db/schema';
+import {
+  calculateClipboardSize,
+  validateClipboardSize,
+  calculateExpirationDate,
+  buildClipboardConditions,
+  toClipboardEntry,
+  toClipboardEntries,
+  type ClipboardEntry,
+} from '@/lib/clipboard';
 
 import { getProjectActiveProfile } from './profiles';
 
-export interface ClipboardEntry {
-  uuid: string;
-  name: string | null;
-  idx: number | null;
-  value: string;
-  contentType: string;
-  encoding: string;
-  sizeBytes: number;
-  visibility: string;
-  createdByTool: string | null;
-  createdByModel: string | null;
-  createdAt: string;
-  updatedAt: string;
-  expiresAt: string | null;
-}
+// Re-export ClipboardEntry type for consumers
+export type { ClipboardEntry };
 
 interface ClipboardResult {
   success: boolean;
@@ -70,31 +66,13 @@ export async function getClipboardEntries(
       return { success: false, error: 'No active profile found' };
     }
 
-    // Clean up expired entries first (async, non-blocking)
-    db.delete(clipboardsTable)
-      .where(
-        and(
-          eq(clipboardsTable.profile_uuid, profileUuid),
-          lt(clipboardsTable.expires_at, new Date())
-        )
-      )
-      .execute()
-      .catch(console.error);
-
-    // Build query conditions
-    const conditions = [eq(clipboardsTable.profile_uuid, profileUuid)];
-
-    if (options?.name !== undefined) {
-      conditions.push(eq(clipboardsTable.name, options.name));
-    }
-
-    if (options?.idx !== undefined) {
-      conditions.push(eq(clipboardsTable.idx, options.idx));
-    }
-
-    if (options?.contentType) {
-      conditions.push(eq(clipboardsTable.content_type, options.contentType));
-    }
+    // Build query conditions using shared helper
+    const where = buildClipboardConditions({
+      profileUuid,
+      name: options?.name,
+      idx: options?.idx,
+      contentType: options?.contentType,
+    });
 
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;
@@ -103,7 +81,7 @@ export async function getClipboardEntries(
     const entries = await db
       .select()
       .from(clipboardsTable)
-      .where(and(...conditions))
+      .where(where)
       .orderBy(desc(clipboardsTable.created_at))
       .limit(limit)
       .offset(offset);
@@ -112,26 +90,12 @@ export async function getClipboardEntries(
     const totalResult = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(clipboardsTable)
-      .where(and(...conditions));
+      .where(where);
 
     const total = totalResult[0]?.count ?? 0;
 
-    // Transform entries for response
-    const transformedEntries: ClipboardEntry[] = entries.map((entry) => ({
-      uuid: entry.uuid,
-      name: entry.name,
-      idx: entry.idx,
-      value: entry.value,
-      contentType: entry.content_type,
-      encoding: entry.encoding,
-      sizeBytes: entry.size_bytes,
-      visibility: entry.visibility,
-      createdByTool: entry.created_by_tool,
-      createdByModel: entry.created_by_model,
-      createdAt: entry.created_at.toISOString(),
-      updatedAt: entry.updated_at.toISOString(),
-      expiresAt: entry.expires_at?.toISOString() ?? null,
-    }));
+    // Transform entries for response using shared helper
+    const transformedEntries = toClipboardEntries(entries);
 
     // If requesting single entry by name or idx, return just that entry
     if (options?.name !== undefined || options?.idx !== undefined) {
@@ -151,11 +115,6 @@ export async function getClipboardEntries(
   }
 }
 
-// Size limit: 256KB
-const MAX_SIZE_BYTES = 262144;
-
-// Default TTL: 24 hours
-const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Set a clipboard entry (upsert for named, error if idx exists)
@@ -184,20 +143,14 @@ export async function setClipboardEntry(
       return { success: false, error: 'Either name or idx must be provided' };
     }
 
-    // Calculate size in bytes
-    const sizeBytes = Buffer.byteLength(options.value, 'utf-8');
-    if (sizeBytes > MAX_SIZE_BYTES) {
-      return {
-        success: false,
-        error: `Value exceeds maximum size of ${MAX_SIZE_BYTES} bytes (${Math.round(MAX_SIZE_BYTES / 1024)}KB)`,
-      };
+    // Validate size using shared helper
+    const sizeError = validateClipboardSize(options.value);
+    if (sizeError) {
+      return { success: false, error: sizeError };
     }
 
-    // Calculate expiration
-    const ttlMs = options.ttlSeconds
-      ? options.ttlSeconds * 1000
-      : DEFAULT_TTL_MS;
-    const expiresAt = new Date(Date.now() + ttlMs);
+    const sizeBytes = calculateClipboardSize(options.value);
+    const expiresAt = calculateExpirationDate(options.ttlSeconds);
 
     const entryData = {
       profile_uuid: profileUuid,
@@ -262,24 +215,9 @@ export async function setClipboardEntry(
         .returning();
     }
 
-    const entry = result[0];
     return {
       success: true,
-      entry: {
-        uuid: entry.uuid,
-        name: entry.name,
-        idx: entry.idx,
-        value: entry.value,
-        contentType: entry.content_type,
-        encoding: entry.encoding,
-        sizeBytes: entry.size_bytes,
-        visibility: entry.visibility,
-        createdByTool: entry.created_by_tool,
-        createdByModel: entry.created_by_model,
-        createdAt: entry.created_at.toISOString(),
-        updatedAt: entry.updated_at.toISOString(),
-        expiresAt: entry.expires_at?.toISOString() ?? null,
-      },
+      entry: toClipboardEntry(result[0]),
     };
   } catch (error) {
     console.error('Error setting clipboard entry:', error);
@@ -316,19 +254,16 @@ export async function deleteClipboardEntry(
       return { success: false, error: 'Either name, idx, or clearAll must be provided' };
     }
 
-    const conditions = [eq(clipboardsTable.profile_uuid, profileUuid)];
-
-    if (options.name !== undefined) {
-      conditions.push(eq(clipboardsTable.name, options.name));
-    }
-
-    if (options.idx !== undefined) {
-      conditions.push(eq(clipboardsTable.idx, options.idx));
-    }
+    // Build conditions using shared helper
+    const where = buildClipboardConditions({
+      profileUuid,
+      name: options.name,
+      idx: options.idx,
+    });
 
     const result = await db
       .delete(clipboardsTable)
-      .where(and(...conditions))
+      .where(where)
       .returning({ uuid: clipboardsTable.uuid });
 
     if (result.length === 0) {
