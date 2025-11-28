@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 
-import { deleteClipboardEntry, getClipboardEntries, type ClipboardEntry } from '@/app/actions/clipboard';
+import { deleteClipboardEntry, getClipboardEntries, setClipboardEntry, type ClipboardEntry } from '@/app/actions/clipboard';
 import { useSafeSession } from '@/hooks/use-safe-session';
 
 export type { ClipboardEntry } from '@/app/actions/clipboard';
@@ -34,6 +34,35 @@ export function useClipboard() {
   );
 
   const entries: ClipboardEntry[] = entriesResponse?.success ? entriesResponse.entries || [] : [];
+
+  const setEntry = useCallback(
+    async (options: {
+      name?: string;
+      idx?: number;
+      value: string;
+      contentType?: string;
+      encoding?: 'utf-8' | 'base64' | 'hex';
+      visibility?: 'private' | 'workspace' | 'public';
+      createdByTool?: string;
+      createdByModel?: string;
+      ttlSeconds?: number;
+    }) => {
+      if (!session?.user?.id) {
+        throw new Error('Not authenticated');
+      }
+
+      const result = await setClipboardEntry(session.user.id, options);
+
+      if (result.success) {
+        await mutate();
+      } else {
+        throw new Error(result.error || 'Failed to set clipboard entry');
+      }
+
+      return result.entry;
+    },
+    [session?.user?.id, mutate]
+  );
 
   const deleteEntry = useCallback(
     async (options: { name?: string; idx?: number; clearAll?: boolean }) => {
@@ -80,6 +109,7 @@ export function useClipboard() {
     error: error || (entriesResponse && !entriesResponse.success ? entriesResponse.error : null),
     stats,
     refresh: mutate,
+    setEntry,
     deleteEntry,
   };
 }

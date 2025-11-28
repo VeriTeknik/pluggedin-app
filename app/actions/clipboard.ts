@@ -151,6 +151,145 @@ export async function getClipboardEntries(
   }
 }
 
+// Size limit: 256KB
+const MAX_SIZE_BYTES = 262144;
+
+// Default TTL: 24 hours
+const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Set a clipboard entry (upsert for named, error if idx exists)
+ */
+export async function setClipboardEntry(
+  userId: string,
+  options: {
+    name?: string;
+    idx?: number;
+    value: string;
+    contentType?: string;
+    encoding?: 'utf-8' | 'base64' | 'hex';
+    visibility?: 'private' | 'workspace' | 'public';
+    createdByTool?: string;
+    createdByModel?: string;
+    ttlSeconds?: number;
+  }
+): Promise<ClipboardResult> {
+  try {
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    if (options.name === undefined && options.idx === undefined) {
+      return { success: false, error: 'Either name or idx must be provided' };
+    }
+
+    // Calculate size in bytes
+    const sizeBytes = Buffer.byteLength(options.value, 'utf-8');
+    if (sizeBytes > MAX_SIZE_BYTES) {
+      return {
+        success: false,
+        error: `Value exceeds maximum size of ${MAX_SIZE_BYTES} bytes (${Math.round(MAX_SIZE_BYTES / 1024)}KB)`,
+      };
+    }
+
+    // Calculate expiration
+    const ttlMs = options.ttlSeconds
+      ? options.ttlSeconds * 1000
+      : DEFAULT_TTL_MS;
+    const expiresAt = new Date(Date.now() + ttlMs);
+
+    const entryData = {
+      profile_uuid: profileUuid,
+      name: options.name ?? null,
+      idx: options.idx ?? null,
+      value: options.value,
+      content_type: options.contentType ?? 'text/plain',
+      encoding: options.encoding ?? 'utf-8',
+      size_bytes: sizeBytes,
+      visibility: options.visibility ?? 'private',
+      created_by_tool: options.createdByTool ?? null,
+      created_by_model: options.createdByModel ?? null,
+      expires_at: expiresAt,
+      updated_at: new Date(),
+    };
+
+    let result;
+
+    if (options.name !== undefined) {
+      // Named entry: upsert (update if exists, insert if not)
+      result = await db
+        .insert(clipboardsTable)
+        .values(entryData)
+        .onConflictDoUpdate({
+          target: [clipboardsTable.profile_uuid, clipboardsTable.name],
+          set: {
+            value: entryData.value,
+            content_type: entryData.content_type,
+            encoding: entryData.encoding,
+            size_bytes: entryData.size_bytes,
+            visibility: entryData.visibility,
+            created_by_tool: entryData.created_by_tool,
+            created_by_model: entryData.created_by_model,
+            expires_at: entryData.expires_at,
+            updated_at: new Date(),
+          },
+        })
+        .returning();
+    } else {
+      // Indexed entry: check if exists first
+      const existing = await db
+        .select({ uuid: clipboardsTable.uuid })
+        .from(clipboardsTable)
+        .where(
+          and(
+            eq(clipboardsTable.profile_uuid, profileUuid),
+            eq(clipboardsTable.idx, options.idx!)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        return {
+          success: false,
+          error: `Index ${options.idx} already exists. Use push for auto-increment or delete first.`,
+        };
+      }
+
+      result = await db
+        .insert(clipboardsTable)
+        .values(entryData)
+        .returning();
+    }
+
+    const entry = result[0];
+    return {
+      success: true,
+      entry: {
+        uuid: entry.uuid,
+        name: entry.name,
+        idx: entry.idx,
+        value: entry.value,
+        contentType: entry.content_type,
+        encoding: entry.encoding,
+        sizeBytes: entry.size_bytes,
+        visibility: entry.visibility,
+        createdByTool: entry.created_by_tool,
+        createdByModel: entry.created_by_model,
+        createdAt: entry.created_at.toISOString(),
+        updatedAt: entry.updated_at.toISOString(),
+        expiresAt: entry.expires_at?.toISOString() ?? null,
+      },
+    };
+  } catch (error) {
+    console.error('Error setting clipboard entry:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 /**
  * Delete clipboard entries
  */
