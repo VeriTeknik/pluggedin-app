@@ -71,7 +71,13 @@
       "cancel": "Annuleren",
       "create": "Item Maken",
       "update": "Item Bijwerken",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "uploadFile": "Bestand uploaden",
+      "dropzoneText": "Sleep een bestand hierheen of klik om te bladeren",
+      "dropzoneHint": "Afbeeldingen, PDF's, JSON, tekstbestanden (max {{maxSize}})",
+      "fileTooLarge": "Bestand is te groot. Maximum grootte is {{maxSize}}",
+      "fileUploaded": "Bestand geüpload ({{size}})",
+      "or": "of voer tekst in"
     },
     "deleteDialog": {
       "title": "Klemborditem Verwijderen",

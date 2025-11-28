@@ -71,7 +71,13 @@
       "cancel": "Cancel",
       "create": "Create Entry",
       "update": "Update Entry",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "uploadFile": "Upload file",
+      "dropzoneText": "Drop a file here or click to browse",
+      "dropzoneHint": "Images, PDFs, JSON, text files up to {{maxSize}}",
+      "fileTooLarge": "File is too large. Maximum size is {{maxSize}}",
+      "fileUploaded": "File uploaded ({{size}})",
+      "or": "or enter text"
     },
     "deleteDialog": {
       "title": "Delete Clipboard Entry",

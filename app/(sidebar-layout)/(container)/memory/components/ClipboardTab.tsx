@@ -11,8 +11,10 @@ import {
   Plus,
   Tag,
   Trash2,
+  Upload,
+  X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -463,9 +465,86 @@ function EntryFormDialog({
   isEdit,
 }: EntryFormDialogProps) {
   const { t } = useTranslation('memory');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+
+  // Max file size: 256KB (to stay under the backend limit)
+  const MAX_FILE_SIZE = 256 * 1024;
+
+  const handleFileSelect = useCallback((file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      alert(t('clipboard.form.fileTooLarge', { maxSize: '256KB' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      // Remove the data:mime;base64, prefix to get just the base64 content
+      const base64Content = result.split(',')[1];
+
+      setFormData({
+        ...formData,
+        value: base64Content,
+        contentType: file.type || 'application/octet-stream',
+        encoding: 'base64',
+      });
+      setUploadedFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  }, [formData, setFormData, t]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  }, [handleFileSelect]);
+
+  const clearUploadedFile = useCallback(() => {
+    setUploadedFileName(null);
+    setFormData({
+      ...formData,
+      value: '',
+      contentType: 'text/plain',
+      encoding: 'utf-8',
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [formData, setFormData]);
+
+  const isFileUpload = uploadedFileName !== null;
+  const isImagePreview = formData.contentType.startsWith('image/') && formData.encoding === 'base64';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) {
+        setUploadedFileName(null);
+      }
+      onOpenChange(newOpen);
+    }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
@@ -493,18 +572,103 @@ function EntryFormDialog({
               </p>
             </div>
 
-            {/* Value */}
+            {/* File Upload / Value */}
             <div className="space-y-2">
-              <Label htmlFor="value">{t('clipboard.form.value')} *</Label>
-              <Textarea
-                id="value"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                placeholder={t('clipboard.form.valuePlaceholder')}
-                rows={6}
-                required
-                className="font-mono text-sm"
-              />
+              <Label>{t('clipboard.form.value')} *</Label>
+
+              {/* File Upload Dropzone */}
+              {!isFileUpload && !isEdit && (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    isDragging
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                    accept="image/*,application/pdf,application/json,text/*"
+                    aria-label={t('clipboard.form.uploadFile')}
+                  />
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {t('clipboard.form.dropzoneText')}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('clipboard.form.dropzoneHint', { maxSize: '256KB' })}
+                  </p>
+                </div>
+              )}
+
+              {/* Uploaded File Preview */}
+              {isFileUpload && (
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {isImagePreview ? (
+                        <Image className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="text-sm font-medium">{uploadedFileName}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {formData.contentType}
+                      </Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearUploadedFile}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {isImagePreview && (
+                    <div className="mt-2 max-h-48 overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                      <img
+                        src={`data:${formData.contentType};base64,${formData.value}`}
+                        alt="Preview"
+                        className="max-h-48 max-w-full object-contain"
+                      />
+                    </div>
+                  )}
+                  {!isImagePreview && (
+                    <p className="text-xs text-muted-foreground">
+                      {t('clipboard.form.fileUploaded', { size: Math.round(formData.value.length * 0.75 / 1024) + 'KB' })}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Text Input (show if no file uploaded or in edit mode) */}
+              {(!isFileUpload || isEdit) && !isImagePreview && (
+                <>
+                  {!isEdit && !isFileUpload && (
+                    <div className="relative flex items-center my-2">
+                      <div className="flex-1 border-t border-muted-foreground/25" />
+                      <span className="px-3 text-xs text-muted-foreground">{t('clipboard.form.or')}</span>
+                      <div className="flex-1 border-t border-muted-foreground/25" />
+                    </div>
+                  )}
+                  <Textarea
+                    id="value"
+                    value={formData.value}
+                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                    placeholder={t('clipboard.form.valuePlaceholder')}
+                    rows={6}
+                    required={!isFileUpload}
+                    className="font-mono text-sm"
+                  />
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -514,6 +678,7 @@ function EntryFormDialog({
                 <Select
                   value={formData.contentType}
                   onValueChange={(value) => setFormData({ ...formData, contentType: value })}
+                  disabled={isFileUpload}
                 >
                   <SelectTrigger id="contentType">
                     <SelectValue />
@@ -525,6 +690,10 @@ function EntryFormDialog({
                     <SelectItem value="text/html">text/html</SelectItem>
                     <SelectItem value="image/png">image/png</SelectItem>
                     <SelectItem value="image/jpeg">image/jpeg</SelectItem>
+                    <SelectItem value="image/gif">image/gif</SelectItem>
+                    <SelectItem value="image/webp">image/webp</SelectItem>
+                    <SelectItem value="application/pdf">application/pdf</SelectItem>
+                    <SelectItem value="application/octet-stream">binary</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -537,6 +706,7 @@ function EntryFormDialog({
                   onValueChange={(value) =>
                     setFormData({ ...formData, encoding: value as 'utf-8' | 'base64' | 'hex' })
                   }
+                  disabled={isFileUpload}
                 >
                   <SelectTrigger id="encoding">
                     <SelectValue />

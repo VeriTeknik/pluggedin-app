@@ -71,7 +71,13 @@
       "cancel": "İptal",
       "create": "Girdi Oluştur",
       "update": "Girdiyi Güncelle",
-      "saving": "Kaydediliyor..."
+      "saving": "Kaydediliyor...",
+      "uploadFile": "Dosya yükle",
+      "dropzoneText": "Dosyayı buraya sürükleyin veya göz atmak için tıklayın",
+      "dropzoneHint": "Resimler, PDF, JSON, metin dosyaları (max {{maxSize}})",
+      "fileTooLarge": "Dosya çok büyük. Maksimum boyut {{maxSize}}",
+      "fileUploaded": "Dosya yüklendi ({{size}})",
+      "or": "veya metin girin"
     },
     "deleteDialog": {
       "title": "Pano Girdisini Sil",

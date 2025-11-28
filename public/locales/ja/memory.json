@@ -71,7 +71,13 @@
       "cancel": "キャンセル",
       "create": "エントリ作成",
       "update": "エントリ更新",
-      "saving": "保存中..."
+      "saving": "保存中...",
+      "uploadFile": "ファイルをアップロード",
+      "dropzoneText": "ここにファイルをドロップするか、クリックして参照",
+      "dropzoneHint": "画像、PDF、JSON、テキストファイル（最大 {{maxSize}}）",
+      "fileTooLarge": "ファイルが大きすぎます。最大サイズは {{maxSize}} です",
+      "fileUploaded": "ファイルがアップロードされました（{{size}}）",
+      "or": "またはテキストを入力"
     },
     "deleteDialog": {
       "title": "クリップボードエントリを削除",
