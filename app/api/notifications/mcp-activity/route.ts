@@ -110,6 +110,7 @@ export async function POST(request: Request) {
         'pluggedin_notifications',
         'pluggedin_proxy',
         'pluggedin_documents',
+        'pluggedin_clipboard',
         'Discovery System',
         'Discovery System (Cache)',
         'Discovery System (Background)',
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
         'Notification System',
         'Proxy System',
         'Document System',
+        'Clipboard System',
         'Custom Instructions'
       ];
       
