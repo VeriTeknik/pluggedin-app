@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bell,
   Blocks,
+  Brain,
   Code2,
   FileText,
   FlaskConical,
@@ -266,6 +267,15 @@ export default function SidebarLayout({
                       <Link href='/library'>
                         <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('memory.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/memory'>
+                        <Brain className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('memory.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

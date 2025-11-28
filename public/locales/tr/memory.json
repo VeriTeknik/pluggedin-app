@@ -1,0 +1,75 @@
+{
+  "title": "Bellek",
+  "description": "Yapay zeka ajanlarınız için pano verileri, uzun vadeli bellek, prosedürler ve yeni bağlamı yönetin.",
+  "refresh": "Yenile",
+  "comingSoon": "Yakında",
+  "stats": {
+    "clipboard": "Pano",
+    "entries": "girdi",
+    "storage": "Depolama",
+    "used": "kullanıldı",
+    "expiring": "Süresi Dolan",
+    "today": "bugün",
+    "types": "Türler",
+    "contentTypes": "içerik türü"
+  },
+  "tabs": {
+    "clipboard": "Pano",
+    "longterm": "Uzun Vadeli",
+    "procedures": "Prosedürler",
+    "fresh": "Taze"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "Pano girdisi yok",
+      "description": "Girdi eklemek için pluggedin_clipboard_set veya pluggedin_clipboard_push gibi MCP araçlarını kullanın."
+    },
+    "named": "İsimli Girdiler",
+    "indexed": "İndeksli Girdiler",
+    "clearAll": "Tümünü Temizle",
+    "viewMode": {
+      "table": "Tablo",
+      "grid": "Izgara"
+    },
+    "table": {
+      "name": "İsim",
+      "index": "İndeks",
+      "type": "Tür",
+      "value": "Değer",
+      "size": "Boyut",
+      "expires": "Süre Bitiş",
+      "actions": "İşlemler"
+    },
+    "actions": {
+      "preview": "Önizle",
+      "copy": "Kopyala",
+      "delete": "Sil"
+    },
+    "deleteDialog": {
+      "title": "Pano Girdisini Sil",
+      "description": "\"{{identifier}}\" girdisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "delete": "Sil",
+      "deleting": "Siliniyor...",
+      "cancel": "İptal"
+    },
+    "clearAllDialog": {
+      "title": "Tüm Pano Girdilerini Temizle",
+      "description": "{{count}} pano girdisinin tümünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "clear": "Tümünü Temizle",
+      "clearing": "Temizleniyor...",
+      "cancel": "İptal"
+    }
+  },
+  "longterm": {
+    "title": "Uzun Vadeli Bellek",
+    "description": "Oturumlar ve konuşmalar arasında kalıcı bellek."
+  },
+  "procedures": {
+    "title": "Prosedürler",
+    "description": "Geçmiş etkileşimlerden öğrenilen yeniden kullanılabilir iş akışları ve prosedürler."
+  },
+  "fresh": {
+    "title": "Taze Bağlam",
+    "description": "Mevcut konuşmalardan son bağlam ve çalışma belleği."
+  }
+}

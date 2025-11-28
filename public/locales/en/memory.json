@@ -1,0 +1,75 @@
+{
+  "title": "Memory",
+  "description": "Manage clipboard data, long-term memory, procedures, and fresh context for your AI agents.",
+  "refresh": "Refresh",
+  "comingSoon": "Soon",
+  "stats": {
+    "clipboard": "Clipboard",
+    "entries": "entries",
+    "storage": "Storage",
+    "used": "used",
+    "expiring": "Expiring",
+    "today": "today",
+    "types": "Types",
+    "contentTypes": "content types"
+  },
+  "tabs": {
+    "clipboard": "Clipboard",
+    "longterm": "Long-term",
+    "procedures": "Procedures",
+    "fresh": "Fresh"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "No clipboard entries",
+      "description": "Use MCP tools like pluggedin_clipboard_set or pluggedin_clipboard_push to add entries."
+    },
+    "named": "Named Entries",
+    "indexed": "Indexed Entries",
+    "clearAll": "Clear All",
+    "viewMode": {
+      "table": "Table",
+      "grid": "Grid"
+    },
+    "table": {
+      "name": "Name",
+      "index": "Index",
+      "type": "Type",
+      "value": "Value",
+      "size": "Size",
+      "expires": "Expires",
+      "actions": "Actions"
+    },
+    "actions": {
+      "preview": "Preview",
+      "copy": "Copy",
+      "delete": "Delete"
+    },
+    "deleteDialog": {
+      "title": "Delete Clipboard Entry",
+      "description": "Are you sure you want to delete \"{{identifier}}\"? This action cannot be undone.",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "cancel": "Cancel"
+    },
+    "clearAllDialog": {
+      "title": "Clear All Clipboard Entries",
+      "description": "Are you sure you want to delete all {{count}} clipboard entries? This action cannot be undone.",
+      "clear": "Clear All",
+      "clearing": "Clearing...",
+      "cancel": "Cancel"
+    }
+  },
+  "longterm": {
+    "title": "Long-term Memory",
+    "description": "Persistent memory that survives across sessions and conversations."
+  },
+  "procedures": {
+    "title": "Procedures",
+    "description": "Reusable workflows and procedures learned from past interactions."
+  },
+  "fresh": {
+    "title": "Fresh Context",
+    "description": "Recent context and working memory from current conversations."
+  }
+}

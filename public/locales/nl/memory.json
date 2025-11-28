@@ -1,0 +1,75 @@
+{
+  "title": "Geheugen",
+  "description": "Beheer klembordgegevens, langetermijngeheugen, procedures en verse context voor uw AI-agents.",
+  "refresh": "Vernieuwen",
+  "comingSoon": "Binnenkort",
+  "stats": {
+    "clipboard": "Klembord",
+    "entries": "items",
+    "storage": "Opslag",
+    "used": "gebruikt",
+    "expiring": "Vervalt",
+    "today": "vandaag",
+    "types": "Types",
+    "contentTypes": "inhoudstypen"
+  },
+  "tabs": {
+    "clipboard": "Klembord",
+    "longterm": "Langetermijn",
+    "procedures": "Procedures",
+    "fresh": "Vers"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "Geen klemborditems",
+      "description": "Gebruik MCP-tools zoals pluggedin_clipboard_set of pluggedin_clipboard_push om items toe te voegen."
+    },
+    "named": "Benoemde Items",
+    "indexed": "Geïndexeerde Items",
+    "clearAll": "Alles Wissen",
+    "viewMode": {
+      "table": "Tabel",
+      "grid": "Raster"
+    },
+    "table": {
+      "name": "Naam",
+      "index": "Index",
+      "type": "Type",
+      "value": "Waarde",
+      "size": "Grootte",
+      "expires": "Vervalt",
+      "actions": "Acties"
+    },
+    "actions": {
+      "preview": "Voorbeeld",
+      "copy": "Kopiëren",
+      "delete": "Verwijderen"
+    },
+    "deleteDialog": {
+      "title": "Klemborditem Verwijderen",
+      "description": "Weet u zeker dat u \"{{identifier}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "delete": "Verwijderen",
+      "deleting": "Verwijderen...",
+      "cancel": "Annuleren"
+    },
+    "clearAllDialog": {
+      "title": "Alle Klemborditems Wissen",
+      "description": "Weet u zeker dat u alle {{count}} klemborditems wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "clear": "Alles Wissen",
+      "clearing": "Wissen...",
+      "cancel": "Annuleren"
+    }
+  },
+  "longterm": {
+    "title": "Langetermijngeheugen",
+    "description": "Persistent geheugen dat sessies en gesprekken overleeft."
+  },
+  "procedures": {
+    "title": "Procedures",
+    "description": "Herbruikbare workflows en procedures geleerd uit eerdere interacties."
+  },
+  "fresh": {
+    "title": "Verse Context",
+    "description": "Recente context en werkgeheugen uit huidige gesprekken."
+  }
+}

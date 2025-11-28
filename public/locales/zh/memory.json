@@ -1,0 +1,75 @@
+{
+  "title": "记忆",
+  "description": "管理AI代理的剪贴板数据、长期记忆、程序和新鲜上下文。",
+  "refresh": "刷新",
+  "comingSoon": "即将推出",
+  "stats": {
+    "clipboard": "剪贴板",
+    "entries": "条目",
+    "storage": "存储",
+    "used": "已使用",
+    "expiring": "即将过期",
+    "today": "今天",
+    "types": "类型",
+    "contentTypes": "内容类型"
+  },
+  "tabs": {
+    "clipboard": "剪贴板",
+    "longterm": "长期",
+    "procedures": "程序",
+    "fresh": "新鲜"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "无剪贴板条目",
+      "description": "使用MCP工具如pluggedin_clipboard_set或pluggedin_clipboard_push来添加条目。"
+    },
+    "named": "命名条目",
+    "indexed": "索引条目",
+    "clearAll": "全部清除",
+    "viewMode": {
+      "table": "表格",
+      "grid": "网格"
+    },
+    "table": {
+      "name": "名称",
+      "index": "索引",
+      "type": "类型",
+      "value": "值",
+      "size": "大小",
+      "expires": "过期",
+      "actions": "操作"
+    },
+    "actions": {
+      "preview": "预览",
+      "copy": "复制",
+      "delete": "删除"
+    },
+    "deleteDialog": {
+      "title": "删除剪贴板条目",
+      "description": "您确定要删除\"{{identifier}}\"吗？此操作无法撤销。",
+      "delete": "删除",
+      "deleting": "删除中...",
+      "cancel": "取消"
+    },
+    "clearAllDialog": {
+      "title": "清除所有剪贴板条目",
+      "description": "您确定要删除所有{{count}}个剪贴板条目吗？此操作无法撤销。",
+      "clear": "全部清除",
+      "clearing": "清除中...",
+      "cancel": "取消"
+    }
+  },
+  "longterm": {
+    "title": "长期记忆",
+    "description": "跨会话和对话持久保存的记忆。"
+  },
+  "procedures": {
+    "title": "程序",
+    "description": "从过去交互中学习的可重用工作流程和程序。"
+  },
+  "fresh": {
+    "title": "新鲜上下文",
+    "description": "来自当前对话的最新上下文和工作记忆。"
+  }
+}
