@@ -133,6 +133,7 @@ export async function setClipboardEntry(
     visibility?: 'private' | 'workspace' | 'public';
     createdByTool?: string;
     createdByModel?: string;
+    source?: 'ui' | 'sdk' | 'mcp';
     ttlSeconds?: number;
   }
 ): Promise<ClipboardResult> {
@@ -173,6 +174,7 @@ export async function setClipboardEntry(
       visibility: options.visibility ?? 'private',
       created_by_tool: options.createdByTool ?? null,
       created_by_model: options.createdByModel ?? null,
+      source: options.source ?? 'ui',
       expires_at: expiresAt,
       updated_at: new Date(),
     };
@@ -194,6 +196,7 @@ export async function setClipboardEntry(
             visibility: entryData.visibility,
             created_by_tool: entryData.created_by_tool,
             created_by_model: entryData.created_by_model,
+            source: entryData.source,
             expires_at: entryData.expires_at,
             updated_at: new Date(),
           },

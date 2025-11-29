@@ -43,6 +43,7 @@ const setClipboardSchema = z.object({
   visibility: z.enum(['private', 'workspace', 'public']).optional().default('private'),
   createdByTool: z.string().max(255).optional(),
   createdByModel: z.string().max(255).optional(),
+  source: z.enum(['ui', 'sdk', 'mcp']).optional().default('ui'),
   ttlSeconds: z.number().int().positive().optional(),
 }).refine((data) => data.name !== undefined || data.idx !== undefined, {
   message: 'Either name or idx must be provided',
@@ -204,6 +205,7 @@ export async function POST(request: NextRequest) {
       visibility: validatedBody.visibility,
       created_by_tool: validatedBody.createdByTool ?? null,
       created_by_model: validatedBody.createdByModel ?? null,
+      source: validatedBody.source,
       expires_at: expiresAt,
       updated_at: new Date(),
     };
@@ -225,6 +227,7 @@ export async function POST(request: NextRequest) {
             visibility: entryData.visibility,
             created_by_tool: entryData.created_by_tool,
             created_by_model: entryData.created_by_model,
+            source: entryData.source,
             expires_at: entryData.expires_at,
             updated_at: new Date(),
           },

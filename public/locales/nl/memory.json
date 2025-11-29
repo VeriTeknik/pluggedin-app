@@ -96,7 +96,21 @@
     },
     "preview": {
       "unsafeImageType": "Kan afbeelding niet weergeven: Niet-ondersteund inhoudstype om veiligheidsredenen.",
-      "contentType": "Inhoudstype"
+      "contentType": "Inhoudstype",
+      "details": "Details",
+      "source": "Bron",
+      "sourceUi": "UI",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "Zichtbaarheid",
+      "encoding": "Codering",
+      "createdAt": "Aangemaakt",
+      "updatedAt": "Bijgewerkt",
+      "expiresAt": "Verloopt",
+      "createdBy": "Aangemaakt door",
+      "tool": "Tool",
+      "model": "Model",
+      "noExpiration": "Nooit"
     },
     "toast": {
       "copied": "Gekopieerd naar klembord",

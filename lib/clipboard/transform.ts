@@ -20,6 +20,7 @@ export interface ClipboardEntry {
   visibility: string;
   createdByTool: string | null;
   createdByModel: string | null;
+  source: string;
   createdAt: string;
   updatedAt: string;
   expiresAt: string | null;
@@ -55,6 +56,7 @@ export function toClipboardEntry(
     visibility: row.visibility,
     createdByTool: row.created_by_tool,
     createdByModel: row.created_by_model,
+    source: row.source,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     expiresAt: row.expires_at?.toISOString() ?? null,

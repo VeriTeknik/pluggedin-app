@@ -419,7 +419,7 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>
               {selectedEntry?.name || `Index ${selectedEntry?.idx}`}
@@ -428,31 +428,88 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               {selectedEntry?.contentType} - {selectedEntry && formatBytes(selectedEntry.sizeBytes)}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-auto max-h-[60vh]">
-            {selectedEntry && isSafeImageType(selectedEntry.contentType) ? (
-              <img
-                src={buildSafeImageDataUrl(selectedEntry.contentType, selectedEntry.encoding, selectedEntry.value) ?? ''}
-                alt="Clipboard content"
-                className="max-w-full h-auto"
-              />
-            ) : selectedEntry?.contentType.startsWith('image/') ? (
-              <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground">
-                <p>{t('clipboard.preview.unsafeImageType')}</p>
-                <p className="text-xs mt-1">{t('clipboard.preview.contentType')}: {selectedEntry.contentType}</p>
+          <div className="flex gap-4">
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto max-h-[60vh]">
+              {selectedEntry && isSafeImageType(selectedEntry.contentType) ? (
+                <img
+                  src={buildSafeImageDataUrl(selectedEntry.contentType, selectedEntry.encoding, selectedEntry.value) ?? ''}
+                  alt="Clipboard content"
+                  className="max-w-full h-auto"
+                />
+              ) : selectedEntry?.contentType.startsWith('image/') ? (
+                <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground">
+                  <p>{t('clipboard.preview.unsafeImageType')}</p>
+                  <p className="text-xs mt-1">{t('clipboard.preview.contentType')}: {selectedEntry.contentType}</p>
+                </div>
+              ) : (
+                <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap break-all h-full">
+                  {selectedEntry?.value}
+                </pre>
+              )}
+            </div>
+
+            {/* Info Pane - Right Side */}
+            <div className="w-64 shrink-0 border-l pl-4 space-y-3">
+              <h4 className="text-sm font-medium text-foreground">{t('clipboard.preview.details')}</h4>
+              <div className="space-y-3 text-sm">
+                {/* Source */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.source')}</div>
+                  <Badge variant={selectedEntry?.source === 'mcp' ? 'default' : selectedEntry?.source === 'sdk' ? 'secondary' : 'outline'}>
+                    {selectedEntry?.source === 'mcp' ? t('clipboard.preview.sourceMcp') :
+                     selectedEntry?.source === 'sdk' ? t('clipboard.preview.sourceSdk') :
+                     t('clipboard.preview.sourceUi')}
+                  </Badge>
+                </div>
+
+                {/* Visibility */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.visibility')}</div>
+                  <div className="capitalize">{selectedEntry?.visibility}</div>
+                </div>
+
+                {/* Encoding */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.encoding')}</div>
+                  <div className="font-mono text-xs">{selectedEntry?.encoding}</div>
+                </div>
+
+                {/* Created At */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.createdAt')}</div>
+                  <div className="text-xs">{selectedEntry?.createdAt ? new Date(selectedEntry.createdAt).toLocaleString() : '-'}</div>
+                </div>
+
+                {/* Updated At */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.updatedAt')}</div>
+                  <div className="text-xs">{selectedEntry?.updatedAt ? new Date(selectedEntry.updatedAt).toLocaleString() : '-'}</div>
+                </div>
+
+                {/* Expires At */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.expiresAt')}</div>
+                  <div className="text-xs">{selectedEntry?.expiresAt ? new Date(selectedEntry.expiresAt).toLocaleString() : t('clipboard.preview.noExpiration')}</div>
+                </div>
+
+                {/* Created By Tool */}
+                {selectedEntry?.createdByTool && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.tool')}</div>
+                    <Badge variant="outline" className="text-xs">{selectedEntry.createdByTool}</Badge>
+                  </div>
+                )}
+
+                {/* Created By Model */}
+                {selectedEntry?.createdByModel && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.model')}</div>
+                    <Badge variant="outline" className="text-xs">{selectedEntry.createdByModel}</Badge>
+                  </div>
+                )}
               </div>
-            ) : (
-              <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap break-all">
-                {selectedEntry?.value}
-              </pre>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
-            {selectedEntry?.createdByTool && (
-              <Badge variant="outline">{selectedEntry.createdByTool}</Badge>
-            )}
-            {selectedEntry?.createdByModel && (
-              <Badge variant="outline">{selectedEntry.createdByModel}</Badge>
-            )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

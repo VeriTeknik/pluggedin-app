@@ -1,0 +1,1 @@
+ALTER TABLE "clipboards" ADD COLUMN "source" varchar(20) DEFAULT 'ui' NOT NULL;

@@ -24,6 +24,7 @@ const pushClipboardSchema = z.object({
   visibility: z.enum(['private', 'workspace', 'public']).optional().default('private'),
   createdByTool: z.string().max(255).optional(),
   createdByModel: z.string().max(255).optional(),
+  source: z.enum(['ui', 'sdk', 'mcp']).optional().default('ui'),
   ttlSeconds: z.number().int().positive().optional(),
 });
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         const result = await db.execute(sql`
           INSERT INTO ${clipboardsTable} (
             profile_uuid, name, idx, value, content_type, encoding,
-            size_bytes, visibility, created_by_tool, created_by_model, expires_at
+            size_bytes, visibility, created_by_tool, created_by_model, source, expires_at
           )
           SELECT
             ${activeProfile.uuid}::uuid,
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
             ${validatedBody.visibility},
             ${validatedBody.createdByTool ?? null},
             ${validatedBody.createdByModel ?? null},
+            ${validatedBody.source},
             ${expiresAt}
           RETURNING *
         `);
@@ -110,6 +112,7 @@ export async function POST(request: NextRequest) {
             visibility: row.visibility as string,
             createdByTool: row.created_by_tool as string | null,
             createdByModel: row.created_by_model as string | null,
+            source: row.source as string,
             createdAt: row.created_at as Date,
             updatedAt: row.updated_at as Date,
             expiresAt: row.expires_at as Date | null,
