@@ -11,6 +11,7 @@ import {
   FileText,
   FlaskConical,
   Plus,
+  Server,
   Trash2,
   Unplug,
   Users,
@@ -213,6 +214,14 @@ export default function SidebarLayout({
                       <Link href='/analytics'>
                         <BarChart3 className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('dashboard.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="PAP Agents" className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/agents'>
+                        <Server className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">Agents</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
