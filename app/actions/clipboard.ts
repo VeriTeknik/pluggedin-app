@@ -67,11 +67,13 @@ export async function getClipboardEntries(
     }
 
     // Build query conditions using shared helper
+    // UI actions use 'all' scope to display entries with their visibility metadata
     const where = buildClipboardConditions({
       profileUuid,
       name: options?.name,
       idx: options?.idx,
       contentType: options?.contentType,
+      visibilityScope: 'all', // Show all user's own entries in UI
     });
 
     const limit = options?.limit ?? 50;
@@ -255,10 +257,12 @@ export async function deleteClipboardEntry(
     }
 
     // Build conditions using shared helper
+    // Delete uses 'all' scope so users can delete any of their own entries
     const where = buildClipboardConditions({
       profileUuid,
       name: options.name,
       idx: options.idx,
+      visibilityScope: 'all', // Allow deleting any own entry regardless of visibility
     });
 
     const result = await db

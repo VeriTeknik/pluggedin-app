@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { authenticateApiKey } from '@/app/api/auth';
@@ -12,6 +12,9 @@ const popLimiter = rateLimit(RATE_LIMITS.clipboardDelete);
 /**
  * POST /api/clipboard/pop
  * Pop the highest-indexed entry (LIFO behavior)
+ *
+ * Uses atomic DELETE...RETURNING with a subquery to prevent race conditions.
+ * If two concurrent requests pop, each gets a different entry (or one gets 404).
  */
 export async function POST(request: NextRequest) {
   // Apply rate limiting
@@ -26,48 +29,47 @@ export async function POST(request: NextRequest) {
 
     const { activeProfile } = apiKeyResult;
 
-    // Find the entry with the highest index
-    const entries = await db
-      .select()
-      .from(clipboardsTable)
-      .where(
-        and(
-          eq(clipboardsTable.profile_uuid, activeProfile.uuid),
-          isNotNull(clipboardsTable.idx)
-        )
+    // Atomic pop: DELETE the highest-indexed entry in a single operation
+    // The subquery finds the max idx, and we delete that specific row
+    // This prevents race conditions where two concurrent pops could read the same entry
+    const result = await db.execute(sql`
+      DELETE FROM ${clipboardsTable}
+      WHERE uuid = (
+        SELECT uuid FROM ${clipboardsTable}
+        WHERE profile_uuid = ${activeProfile.uuid}::uuid
+          AND idx IS NOT NULL
+        ORDER BY idx DESC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
       )
-      .orderBy(desc(clipboardsTable.idx))
-      .limit(1);
+      RETURNING *
+    `);
 
-    if (entries.length === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json(
         { error: 'No indexed entries to pop' },
         { status: 404 }
       );
     }
 
-    const entry = entries[0];
-
-    // Delete the entry
-    await db
-      .delete(clipboardsTable)
-      .where(eq(clipboardsTable.uuid, entry.uuid));
+    const row = result.rows[0] as Record<string, unknown>;
 
     return NextResponse.json({
       success: true,
       entry: {
-        uuid: entry.uuid,
-        idx: entry.idx,
-        value: entry.value,
-        contentType: entry.content_type,
-        encoding: entry.encoding,
-        sizeBytes: entry.size_bytes,
-        visibility: entry.visibility,
-        createdByTool: entry.created_by_tool,
-        createdByModel: entry.created_by_model,
-        createdAt: entry.created_at,
-        updatedAt: entry.updated_at,
-        expiresAt: entry.expires_at,
+        uuid: row.uuid as string,
+        name: row.name as string | null,
+        idx: row.idx as number | null,
+        value: row.value as string,
+        contentType: row.content_type as string,
+        encoding: row.encoding as string,
+        sizeBytes: row.size_bytes as number,
+        visibility: row.visibility as string,
+        createdByTool: row.created_by_tool as string | null,
+        createdByModel: row.created_by_model as string | null,
+        createdAt: row.created_at as Date,
+        updatedAt: row.updated_at as Date,
+        expiresAt: row.expires_at as Date | null,
       },
     });
   } catch (error) {

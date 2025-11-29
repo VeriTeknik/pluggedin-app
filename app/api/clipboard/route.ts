@@ -5,14 +5,14 @@ import { z } from 'zod';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { clipboardsTable } from '@/db/schema';
-import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
 import {
-  calculateClipboardSize,
-  validateClipboardSize,
-  calculateExpirationDate,
   buildClipboardConditions,
-  toClipboardEntry,
+  calculateClipboardSize,
+  calculateExpirationDate,
   toClipboardEntries,
+  toClipboardEntry,
+  validateClipboardSize,
 } from '@/lib/clipboard';
 
 // Rate limiters
@@ -86,11 +86,14 @@ export async function GET(request: NextRequest) {
     const validatedParams = getClipboardSchema.parse(params);
 
     // Build query conditions using shared helper
+    // API endpoints use 'all' scope for authenticated access to own data
+    // MCP tools should see all their own entries regardless of visibility setting
     const where = buildClipboardConditions({
       profileUuid: activeProfile.uuid,
       name: validatedParams.name,
       idx: validatedParams.idx,
       contentType: validatedParams.contentType,
+      visibilityScope: 'all', // Authenticated users can see all their own entries
     });
 
     // Execute query
@@ -296,10 +299,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Build conditions using shared helper
+    // Users can delete any of their own entries regardless of visibility
     const where = buildClipboardConditions({
       profileUuid: activeProfile.uuid,
       name: validatedBody.name,
       idx: validatedBody.idx,
+      visibilityScope: 'all', // Allow deleting any own entry
     });
 
     const result = await db
