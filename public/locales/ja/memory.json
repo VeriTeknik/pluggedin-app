@@ -1,0 +1,126 @@
+{
+  "title": "メモリ",
+  "description": "AIエージェントのクリップボードデータ、長期メモリ、手順、フレッシュコンテキストを管理します。",
+  "refresh": "更新",
+  "comingSoon": "近日公開",
+  "stats": {
+    "clipboard": "クリップボード",
+    "entries": "エントリ",
+    "storage": "ストレージ",
+    "used": "使用中",
+    "expiring": "期限切れ予定",
+    "today": "今日",
+    "types": "タイプ",
+    "contentTypes": "コンテンツタイプ"
+  },
+  "tabs": {
+    "clipboard": "クリップボード",
+    "longterm": "長期",
+    "procedures": "手順",
+    "fresh": "フレッシュ"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "クリップボードエントリがありません",
+      "description": "pluggedin_clipboard_setやplugged_clipboard_pushなどのMCPツールを使用してエントリを追加してください。"
+    },
+    "createEntry": "エントリ作成",
+    "named": "名前付きエントリ",
+    "indexed": "インデックス付きエントリ",
+    "clearAll": "すべてクリア",
+    "viewMode": {
+      "table": "テーブル",
+      "grid": "グリッド"
+    },
+    "table": {
+      "name": "名前",
+      "index": "インデックス",
+      "type": "タイプ",
+      "value": "値",
+      "size": "サイズ",
+      "expires": "有効期限",
+      "actions": "アクション"
+    },
+    "actions": {
+      "preview": "プレビュー",
+      "copy": "コピー",
+      "edit": "編集",
+      "delete": "削除"
+    },
+    "form": {
+      "createTitle": "クリップボードエントリを作成",
+      "editTitle": "クリップボードエントリを編集",
+      "createDescription": "クリップボードメモリに新しいエントリを追加します。",
+      "editDescription": "クリップボードエントリの詳細を更新します。",
+      "name": "名前",
+      "namePlaceholder": "例: api_key, user_preferences",
+      "nameHelp": "このエントリの一意の識別子",
+      "value": "値",
+      "valuePlaceholder": "コンテンツを入力...",
+      "contentType": "コンテンツタイプ",
+      "encoding": "エンコーディング",
+      "visibility": "公開範囲",
+      "visibilityPrivate": "プライベート（自分のみ）",
+      "visibilityWorkspace": "ワークスペース（チームメンバー）",
+      "visibilityPublic": "パブリック（全員）",
+      "ttl": "有効期限",
+      "minutes": "分",
+      "hour": "時間",
+      "hours": "時間",
+      "days": "日",
+      "cancel": "キャンセル",
+      "create": "エントリ作成",
+      "update": "エントリ更新",
+      "saving": "保存中...",
+      "uploadFile": "ファイルをアップロード",
+      "dropzoneText": "ここにファイルをドロップするか、クリックして参照",
+      "dropzoneHint": "画像、PDF、JSON、テキストファイル（最大 {{maxSize}}）",
+      "fileTooLarge": "ファイルが大きすぎます。最大サイズは {{maxSize}} です",
+      "fileUploaded": "ファイルがアップロードされました（{{size}}）",
+      "fileReadError": "Failed to read file",
+      "or": "またはテキストを入力"
+    },
+    "deleteDialog": {
+      "title": "クリップボードエントリを削除",
+      "description": "\"{{identifier}}\"を削除してもよろしいですか？この操作は元に戻せません。",
+      "delete": "削除",
+      "deleting": "削除中...",
+      "cancel": "キャンセル"
+    },
+    "clearAllDialog": {
+      "title": "すべてのクリップボードエントリをクリア",
+      "description": "{{count}}件のクリップボードエントリをすべて削除してもよろしいですか？この操作は元に戻せません。",
+      "clear": "すべてクリア",
+      "clearing": "クリア中...",
+      "cancel": "キャンセル"
+    },
+    "preview": {
+      "unsafeImageType": "画像をプレビューできません：セキュリティ上の理由でサポートされていないコンテンツタイプです。",
+      "contentType": "コンテンツタイプ"
+    },
+    "toast": {
+      "copied": "クリップボードにコピーしました",
+      "copyFailed": "クリップボードへのコピーに失敗しました",
+      "cannotCopyBinary": "バイナリコンテンツはシステムクリップボードにコピーできません",
+      "deleted": "エントリを削除しました",
+      "deleteFailed": "エントリの削除に失敗しました",
+      "clearedAll": "すべてのエントリをクリアしました",
+      "clearAllFailed": "すべてのエントリのクリアに失敗しました",
+      "created": "エントリを作成しました",
+      "updated": "エントリを更新しました",
+      "saveFailed": "エントリの保存に失敗しました"
+    }
+  },
+  "longterm": {
+    "title": "長期メモリ",
+    "description": "セッションや会話を超えて持続する永続的なメモリ。"
+  },
+  "procedures": {
+    "title": "手順",
+    "description": "過去のやり取りから学習した再利用可能なワークフローと手順。"
+  },
+  "fresh": {
+    "title": "フレッシュコンテキスト",
+    "description": "現在の会話からの最近のコンテキストとワーキングメモリ。"
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "title": "记忆",
+  "description": "管理AI代理的剪贴板数据、长期记忆、程序和新鲜上下文。",
+  "refresh": "刷新",
+  "comingSoon": "即将推出",
+  "stats": {
+    "clipboard": "剪贴板",
+    "entries": "条目",
+    "storage": "存储",
+    "used": "已使用",
+    "expiring": "即将过期",
+    "today": "今天",
+    "types": "类型",
+    "contentTypes": "内容类型"
+  },
+  "tabs": {
+    "clipboard": "剪贴板",
+    "longterm": "长期",
+    "procedures": "程序",
+    "fresh": "新鲜"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "无剪贴板条目",
+      "description": "使用MCP工具如pluggedin_clipboard_set或pluggedin_clipboard_push来添加条目。"
+    },
+    "createEntry": "创建条目",
+    "named": "命名条目",
+    "indexed": "索引条目",
+    "clearAll": "全部清除",
+    "viewMode": {
+      "table": "表格",
+      "grid": "网格"
+    },
+    "table": {
+      "name": "名称",
+      "index": "索引",
+      "type": "类型",
+      "value": "值",
+      "size": "大小",
+      "expires": "过期",
+      "actions": "操作"
+    },
+    "actions": {
+      "preview": "预览",
+      "copy": "复制",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "form": {
+      "createTitle": "创建剪贴板条目",
+      "editTitle": "编辑剪贴板条目",
+      "createDescription": "向您的剪贴板内存添加新条目。",
+      "editDescription": "更新剪贴板条目详情。",
+      "name": "名称",
+      "namePlaceholder": "例如：api_key、user_preferences",
+      "nameHelp": "此条目的唯一标识符",
+      "value": "值",
+      "valuePlaceholder": "输入内容...",
+      "contentType": "内容类型",
+      "encoding": "编码",
+      "visibility": "可见性",
+      "visibilityPrivate": "私有（仅您）",
+      "visibilityWorkspace": "工作区（团队成员）",
+      "visibilityPublic": "公开（所有人）",
+      "ttl": "过期时间",
+      "minutes": "分钟",
+      "hour": "小时",
+      "hours": "小时",
+      "days": "天",
+      "cancel": "取消",
+      "create": "创建条目",
+      "update": "更新条目",
+      "saving": "保存中...",
+      "uploadFile": "上传文件",
+      "dropzoneText": "将文件拖放到此处或点击浏览",
+      "dropzoneHint": "图片、PDF、JSON、文本文件（最大 {{maxSize}}）",
+      "fileTooLarge": "文件太大。最大大小为 {{maxSize}}",
+      "fileUploaded": "文件已上传（{{size}}）",
+      "fileReadError": "Failed to read file",
+      "or": "或输入文本"
+    },
+    "deleteDialog": {
+      "title": "删除剪贴板条目",
+      "description": "您确定要删除\"{{identifier}}\"吗？此操作无法撤销。",
+      "delete": "删除",
+      "deleting": "删除中...",
+      "cancel": "取消"
+    },
+    "clearAllDialog": {
+      "title": "清除所有剪贴板条目",
+      "description": "您确定要删除所有{{count}}个剪贴板条目吗？此操作无法撤销。",
+      "clear": "全部清除",
+      "clearing": "清除中...",
+      "cancel": "取消"
+    },
+    "preview": {
+      "unsafeImageType": "无法预览图片：出于安全原因不支持的内容类型。",
+      "contentType": "内容类型"
+    },
+    "toast": {
+      "copied": "已复制到剪贴板",
+      "copyFailed": "复制到剪贴板失败",
+      "cannotCopyBinary": "无法将二进制内容复制到系统剪贴板",
+      "deleted": "条目删除成功",
+      "deleteFailed": "删除条目失败",
+      "clearedAll": "所有条目已清除",
+      "clearAllFailed": "清除所有条目失败",
+      "created": "条目创建成功",
+      "updated": "条目更新成功",
+      "saveFailed": "保存条目失败"
+    }
+  },
+  "longterm": {
+    "title": "长期记忆",
+    "description": "跨会话和对话持久保存的记忆。"
+  },
+  "procedures": {
+    "title": "程序",
+    "description": "从过去交互中学习的可重用工作流程和程序。"
+  },
+  "fresh": {
+    "title": "新鲜上下文",
+    "description": "来自当前对话的最新上下文和工作记忆。"
+  }
+}

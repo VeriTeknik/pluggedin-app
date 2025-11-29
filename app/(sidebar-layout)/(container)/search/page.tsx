@@ -1,10 +1,8 @@
 'use client';
 
 import {
-  Box,
   Filter,
   Github,
-  Globe,
   Layers,
   Package,
   Plus,
@@ -20,8 +18,6 @@ import useSWR from 'swr';
 import { SmartServerWizard } from '@/app/(sidebar-layout)/(container)/mcp-servers/components/smart-server-wizard/SmartServerWizard';
 import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
 import { TrendingServers } from '@/components/trending-servers';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,

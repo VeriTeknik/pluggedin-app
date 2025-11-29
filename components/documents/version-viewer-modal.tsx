@@ -1,7 +1,6 @@
 'use client';
 
 import 'prismjs/themes/prism-tomorrow.css';
-import Prism from 'prismjs';
 // Import common languages after Prism
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
@@ -23,6 +22,7 @@ import 'prismjs/components/prism-shell-session';
 
 import { format } from 'date-fns';
 import { Bot, Check, Copy, Download, FileText, X } from 'lucide-react';
+import Prism from 'prismjs';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';

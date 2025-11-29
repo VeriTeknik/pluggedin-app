@@ -1,0 +1,126 @@
+{
+  "title": "Bellek",
+  "description": "Yapay zeka ajanlarınız için pano verileri, uzun vadeli bellek, prosedürler ve yeni bağlamı yönetin.",
+  "refresh": "Yenile",
+  "comingSoon": "Yakında",
+  "stats": {
+    "clipboard": "Pano",
+    "entries": "girdi",
+    "storage": "Depolama",
+    "used": "kullanıldı",
+    "expiring": "Süresi Dolan",
+    "today": "bugün",
+    "types": "Türler",
+    "contentTypes": "içerik türü"
+  },
+  "tabs": {
+    "clipboard": "Pano",
+    "longterm": "Uzun Vadeli",
+    "procedures": "Prosedürler",
+    "fresh": "Taze"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "Pano girdisi yok",
+      "description": "Girdi eklemek için pluggedin_clipboard_set veya pluggedin_clipboard_push gibi MCP araçlarını kullanın."
+    },
+    "createEntry": "Girdi Oluştur",
+    "named": "İsimli Girdiler",
+    "indexed": "İndeksli Girdiler",
+    "clearAll": "Tümünü Temizle",
+    "viewMode": {
+      "table": "Tablo",
+      "grid": "Izgara"
+    },
+    "table": {
+      "name": "İsim",
+      "index": "İndeks",
+      "type": "Tür",
+      "value": "Değer",
+      "size": "Boyut",
+      "expires": "Süre Bitiş",
+      "actions": "İşlemler"
+    },
+    "actions": {
+      "preview": "Önizle",
+      "copy": "Kopyala",
+      "edit": "Düzenle",
+      "delete": "Sil"
+    },
+    "form": {
+      "createTitle": "Pano Girdisi Oluştur",
+      "editTitle": "Pano Girdisini Düzenle",
+      "createDescription": "Pano belleğinize yeni bir girdi ekleyin.",
+      "editDescription": "Pano girdisi detaylarını güncelleyin.",
+      "name": "İsim",
+      "namePlaceholder": "örn., api_key, user_preferences",
+      "nameHelp": "Bu girdi için benzersiz tanımlayıcı",
+      "value": "Değer",
+      "valuePlaceholder": "İçeriği girin...",
+      "contentType": "İçerik Türü",
+      "encoding": "Kodlama",
+      "visibility": "Görünürlük",
+      "visibilityPrivate": "Özel (sadece siz)",
+      "visibilityWorkspace": "Çalışma Alanı (ekip üyeleri)",
+      "visibilityPublic": "Herkese Açık (herkes)",
+      "ttl": "Süre Dolumu",
+      "minutes": "dakika",
+      "hour": "saat",
+      "hours": "saat",
+      "days": "gün",
+      "cancel": "İptal",
+      "create": "Girdi Oluştur",
+      "update": "Girdiyi Güncelle",
+      "saving": "Kaydediliyor...",
+      "uploadFile": "Dosya yükle",
+      "dropzoneText": "Dosyayı buraya sürükleyin veya göz atmak için tıklayın",
+      "dropzoneHint": "Resimler, PDF, JSON, metin dosyaları (max {{maxSize}})",
+      "fileTooLarge": "Dosya çok büyük. Maksimum boyut {{maxSize}}",
+      "fileUploaded": "Dosya yüklendi ({{size}})",
+      "fileReadError": "Failed to read file",
+      "or": "veya metin girin"
+    },
+    "deleteDialog": {
+      "title": "Pano Girdisini Sil",
+      "description": "\"{{identifier}}\" girdisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "delete": "Sil",
+      "deleting": "Siliniyor...",
+      "cancel": "İptal"
+    },
+    "clearAllDialog": {
+      "title": "Tüm Pano Girdilerini Temizle",
+      "description": "{{count}} pano girdisinin tümünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "clear": "Tümünü Temizle",
+      "clearing": "Temizleniyor...",
+      "cancel": "İptal"
+    },
+    "preview": {
+      "unsafeImageType": "Resim önizlenemiyor: Güvenlik nedeniyle desteklenmeyen içerik türü.",
+      "contentType": "İçerik türü"
+    },
+    "toast": {
+      "copied": "Panoya kopyalandı",
+      "copyFailed": "Panoya kopyalama başarısız",
+      "cannotCopyBinary": "İkili içerik sistem panosuna kopyalanamaz",
+      "deleted": "Girdi başarıyla silindi",
+      "deleteFailed": "Girdi silinemedi",
+      "clearedAll": "Tüm girdiler temizlendi",
+      "clearAllFailed": "Tüm girdiler temizlenemedi",
+      "created": "Girdi başarıyla oluşturuldu",
+      "updated": "Girdi başarıyla güncellendi",
+      "saveFailed": "Girdi kaydedilemedi"
+    }
+  },
+  "longterm": {
+    "title": "Uzun Vadeli Bellek",
+    "description": "Oturumlar ve konuşmalar arasında kalıcı bellek."
+  },
+  "procedures": {
+    "title": "Prosedürler",
+    "description": "Geçmiş etkileşimlerden öğrenilen yeniden kullanılabilir iş akışları ve prosedürler."
+  },
+  "fresh": {
+    "title": "Taze Bağlam",
+    "description": "Mevcut konuşmalardan son bağlam ve çalışma belleği."
+  }
+}

@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bell,
   Blocks,
+  Brain,
   Code2,
   FileText,
   FlaskConical,
@@ -22,6 +23,9 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+// Local component imports
+import { Footer } from '@/components/footer';
+import { LandingNavbar } from '@/components/landing-navbar';
 // Internal imports (@/)
 import { Button } from '@/components/ui/button';
 import {
@@ -57,9 +61,6 @@ import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 import { Code } from '@/types/code';
 
-// Local component imports
-import { Footer } from '@/components/footer';
-import { LandingNavbar } from '@/components/landing-navbar';
 import { NotificationBell } from './notification-bell';
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
@@ -266,6 +267,20 @@ export default function SidebarLayout({
                       <Link href='/library'>
                         <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('memory.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/memory'>
+                        <Brain className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden flex items-center gap-2">
+                          {t('memory.title')}
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-primary text-primary-foreground">
+                            NEW
+                          </span>
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

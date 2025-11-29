@@ -16,6 +16,7 @@ import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
+import enMemory from '../public/locales/en/memory.json';
 import enNotifications from '../public/locales/en/notifications.json';
 import enPlayground from '../public/locales/en/playground.json';
 import enRegistry from '../public/locales/en/registry.json';
@@ -39,6 +40,7 @@ import hiLibrary from '../public/locales/hi/library.json';
 import hiLanding from '../public/locales/hi/landing.json';
 import hiLegal from '../public/locales/hi/legal.json';
 import hiMcpServers from '../public/locales/hi/mcpServers.json';
+import hiMemory from '../public/locales/hi/memory.json';
 import hiNotifications from '../public/locales/hi/notifications.json';
 import hiPlayground from '../public/locales/hi/playground.json';
 import hiRegistry from '../public/locales/hi/registry.json';
@@ -62,6 +64,7 @@ import jaLibrary from '../public/locales/ja/library.json';
 import jaLanding from '../public/locales/ja/landing.json';
 import jaLegal from '../public/locales/ja/legal.json';
 import jaMcpServers from '../public/locales/ja/mcpServers.json';
+import jaMemory from '../public/locales/ja/memory.json';
 import jaNotifications from '../public/locales/ja/notifications.json';
 import jaPlayground from '../public/locales/ja/playground.json';
 import jaRegistry from '../public/locales/ja/registry.json';
@@ -85,6 +88,7 @@ import nlLibrary from '../public/locales/nl/library.json';
 import nlLanding from '../public/locales/nl/landing.json';
 import nlLegal from '../public/locales/nl/legal.json';
 import nlMcpServers from '../public/locales/nl/mcpServers.json';
+import nlMemory from '../public/locales/nl/memory.json';
 import nlNotifications from '../public/locales/nl/notifications.json';
 import nlPlayground from '../public/locales/nl/playground.json';
 import nlRegistry from '../public/locales/nl/registry.json';
@@ -108,6 +112,7 @@ import trLibrary from '../public/locales/tr/library.json';
 import trLanding from '../public/locales/tr/landing.json';
 import trLegal from '../public/locales/tr/legal.json';
 import trMcpServers from '../public/locales/tr/mcpServers.json';
+import trMemory from '../public/locales/tr/memory.json';
 import trNotifications from '../public/locales/tr/notifications.json';
 import trPlayground from '../public/locales/tr/playground.json';
 import trRegistry from '../public/locales/tr/registry.json';
@@ -131,6 +136,7 @@ import zhLibrary from '../public/locales/zh/library.json';
 import zhLanding from '../public/locales/zh/landing.json';
 import zhLegal from '../public/locales/zh/legal.json';
 import zhMcpServers from '../public/locales/zh/mcpServers.json';
+import zhMemory from '../public/locales/zh/memory.json';
 import zhNotifications from '../public/locales/zh/notifications.json';
 import zhPlayground from '../public/locales/zh/playground.json';
 import zhRegistry from '../public/locales/zh/registry.json';
@@ -175,6 +181,7 @@ const resources = {
     landing: enLanding,
     legal: enLegal,
     mcpServers: enMcpServers,
+    memory: enMemory,
     notifications: enNotifications,
     playground: enPlayground,
     registry: enRegistry,
@@ -216,6 +223,7 @@ const resources = {
     landing: hiLanding,
     legal: hiLegal,
     mcpServers: hiMcpServers,
+    memory: hiMemory,
     notifications: hiNotifications,
     playground: hiPlayground,
     registry: hiRegistry,
@@ -257,6 +265,7 @@ const resources = {
     landing: jaLanding,
     legal: jaLegal,
     mcpServers: jaMcpServers,
+    memory: jaMemory,
     notifications: jaNotifications,
     playground: jaPlayground,
     registry: jaRegistry,
@@ -298,6 +307,7 @@ const resources = {
     landing: nlLanding,
     legal: nlLegal,
     mcpServers: nlMcpServers,
+    memory: nlMemory,
     notifications: nlNotifications,
     playground: nlPlayground,
     registry: nlRegistry,
@@ -339,6 +349,7 @@ const resources = {
     landing: trLanding,
     legal: trLegal,
     mcpServers: trMcpServers,
+    memory: trMemory,
     notifications: trNotifications,
     playground: trPlayground,
     registry: trRegistry,
@@ -380,6 +391,7 @@ const resources = {
     landing: zhLanding,
     legal: zhLegal,
     mcpServers: zhMcpServers,
+    memory: zhMemory,
     notifications: zhNotifications,
     playground: zhPlayground,
     registry: zhRegistry,

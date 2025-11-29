@@ -533,6 +533,20 @@
       "when": 1763653337629,
       "tag": "0075_burly_dakota_north",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1764339557408,
+      "tag": "0076_third_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1764374121935,
+      "tag": "0077_zippy_ink",
+      "breakpoints": true
     }
   ]
 }
