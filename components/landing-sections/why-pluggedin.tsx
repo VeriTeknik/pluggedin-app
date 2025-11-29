@@ -7,6 +7,7 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 import { cn } from '@/lib/utils';
 
 const containerVariants = {
@@ -37,10 +38,13 @@ export function LandingWhyPluggedin() {
     triggerOnce: true,
   });
 
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
+
   const metrics = [
     { icon: TrendingUp, value: 718, suffix: '%', label: 'Monthly Growth', color: 'text-glow-green' },
     { icon: Layers, value: 7268, suffix: '+', label: 'Verified Tools', color: 'text-electric-cyan' },
-    { icon: Users, value: 620, suffix: '+', label: 'Active Developers', color: 'text-neon-purple' },
+    { icon: Users, value: platformMetrics.totalUsers, suffix: '+', label: 'Active Developers', color: 'text-neon-purple' },
     { icon: Zap, value: 14000, suffix: '+', label: 'API Calls/Month', color: 'text-electric-cyan' },
   ];
 
@@ -102,7 +106,7 @@ export function LandingWhyPluggedin() {
               </span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Join 620+ developers who chose the fastest-growing AI platform
+              Join {platformMetrics.totalUsers}+ developers who chose the fastest-growing AI platform
             </p>
           </motion.div>
 
@@ -144,7 +148,7 @@ export function LandingWhyPluggedin() {
                       {t('whyPluggedin.solution.title')}
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      7,268+ verified tools with encrypted keys and 1,500+ MCP servers - all managed securely
+                      7,268+ verified tools with encrypted keys and {platformMetrics.totalServers}+ MCP servers - all managed securely
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                       <div className="flex items-start gap-2">
@@ -171,16 +175,10 @@ export function LandingWhyPluggedin() {
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-glow-green mt-0.5" />
                         <div>
-                          <span className="font-semibold">620+ Developers</span>
+                          <span className="font-semibold">{platformMetrics.totalUsers}+ Developers</span>
                           <p className="text-xs text-muted-foreground">Growing daily</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-3 bg-glow-green/5 border border-glow-green/20 rounded-lg">
-                      <p className="text-sm font-semibold text-glow-green mb-1">718% Monthly Growth</p>
-                      <p className="text-xs text-muted-foreground">
-                        From 0 to 14,000+ API calls in just 30 days
-                      </p>
                     </div>
                   </div>
                 </div>

@@ -45,6 +45,9 @@
   "library": {
     "title": "Kütüphane"
   },
+  "memory": {
+    "title": "Bellek"
+  },
   "dashboard": {
     "title": "Gösterge Paneli"
   },

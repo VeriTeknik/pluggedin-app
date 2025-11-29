@@ -6,19 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
+import { useMetrics } from '@/contexts/metrics-context';
 
 const certifications = [
   { icon: Shield, key: 'soc2' },
-  { icon: Lock, key: 'iso' },
+  { icon: Lock, key: 'pciDss' }, // Changed from 'iso' to 'pciDss'
   { icon: Award, key: 'gdpr' },
   { icon: CheckCircle2, key: 'hipaa' },
-];
-
-const stats = [
-  { value: 718, suffix: '%', label: 'Monthly Growth', decimals: 0 },
-  { value: 7268, suffix: '+', label: 'Verified Tools' },
-  { value: 1500, suffix: '+', label: 'MCP Servers' },
-  { value: 620, suffix: '+', label: 'Active Developers' },
 ];
 
 export function TrustIndicatorsSection() {
@@ -27,6 +21,17 @@ export function TrustIndicatorsSection() {
     threshold: 0.1,
     triggerOnce: true,
   });
+
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics } = useMetrics();
+
+  // Dynamic stats based on fetched metrics
+  const stats = [
+    { value: 718, suffix: '%', label: 'Monthly Growth', decimals: 0 },
+    { value: 7268, suffix: '+', label: 'Verified Tools' },
+    { value: metrics.totalServers, suffix: '+', label: 'MCP Servers' },
+    { value: metrics.totalUsers, suffix: '+', label: 'Active Developers' },
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -120,37 +125,6 @@ export function TrustIndicatorsSection() {
               </div>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* Growth Story */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.8, duration: 0.5 }}
-          className="mt-20 pt-10 border-t border-border/20"
-        >
-          <div className="text-center max-w-3xl mx-auto">
-            <h3 className="text-2xl font-bold mb-4">
-              {t('trust.growth.title')}
-            </h3>
-            <p className="text-muted-foreground mb-8">
-              {t('trust.growth.subtitle')}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-8">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-glow-green animate-pulse" />
-                <span className="text-sm">{t('trust.growth.stats.documents')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-electric-cyan animate-pulse" />
-                <span className="text-sm">{t('trust.growth.stats.servers')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-neon-purple animate-pulse" />
-                <span className="text-sm">{t('trust.growth.stats.projects')}</span>
-              </div>
-            </div>
-          </div>
         </motion.div>
 
       </div>

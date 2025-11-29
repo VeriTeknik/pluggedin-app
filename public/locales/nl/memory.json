@@ -1,0 +1,140 @@
+{
+  "title": "Geheugen",
+  "description": "Beheer klembordgegevens, langetermijngeheugen, procedures en verse context voor uw AI-agents.",
+  "refresh": "Vernieuwen",
+  "comingSoon": "Binnenkort",
+  "stats": {
+    "clipboard": "Klembord",
+    "entries": "items",
+    "storage": "Opslag",
+    "used": "gebruikt",
+    "expiring": "Vervalt",
+    "today": "vandaag",
+    "types": "Types",
+    "contentTypes": "inhoudstypen"
+  },
+  "tabs": {
+    "clipboard": "Klembord",
+    "longterm": "Langetermijn",
+    "procedures": "Procedures",
+    "fresh": "Vers"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "Geen klemborditems",
+      "description": "Gebruik MCP-tools zoals pluggedin_clipboard_set of pluggedin_clipboard_push om items toe te voegen."
+    },
+    "createEntry": "Item Maken",
+    "named": "Benoemde Items",
+    "indexed": "Geïndexeerde Items",
+    "clearAll": "Alles Wissen",
+    "viewMode": {
+      "table": "Tabel",
+      "grid": "Raster"
+    },
+    "table": {
+      "name": "Naam",
+      "index": "Index",
+      "type": "Type",
+      "value": "Waarde",
+      "size": "Grootte",
+      "expires": "Vervalt",
+      "actions": "Acties"
+    },
+    "actions": {
+      "preview": "Voorbeeld",
+      "copy": "Kopiëren",
+      "edit": "Bewerken",
+      "delete": "Verwijderen"
+    },
+    "form": {
+      "createTitle": "Klemborditem Maken",
+      "editTitle": "Klemborditem Bewerken",
+      "createDescription": "Voeg een nieuw item toe aan uw klembordgeheugen.",
+      "editDescription": "Update de klemborditemdetails.",
+      "name": "Naam",
+      "namePlaceholder": "bijv., api_key, user_preferences",
+      "nameHelp": "Unieke identificatie voor dit item",
+      "value": "Waarde",
+      "valuePlaceholder": "Voer de inhoud in...",
+      "contentType": "Inhoudstype",
+      "encoding": "Codering",
+      "visibility": "Zichtbaarheid",
+      "visibilityPrivate": "Privé (alleen u)",
+      "visibilityWorkspace": "Werkruimte (teamleden)",
+      "visibilityPublic": "Openbaar (iedereen)",
+      "ttl": "Vervalt Over",
+      "minutes": "minuten",
+      "hour": "uur",
+      "hours": "uur",
+      "days": "dagen",
+      "cancel": "Annuleren",
+      "create": "Item Maken",
+      "update": "Item Bijwerken",
+      "saving": "Opslaan...",
+      "uploadFile": "Bestand uploaden",
+      "dropzoneText": "Sleep een bestand hierheen of klik om te bladeren",
+      "dropzoneHint": "Afbeeldingen, PDF's, JSON, tekstbestanden (max {{maxSize}})",
+      "fileTooLarge": "Bestand is te groot. Maximum grootte is {{maxSize}}",
+      "fileUploaded": "Bestand geüpload ({{size}})",
+      "fileReadError": "Failed to read file",
+      "or": "of voer tekst in"
+    },
+    "deleteDialog": {
+      "title": "Klemborditem Verwijderen",
+      "description": "Weet u zeker dat u \"{{identifier}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "delete": "Verwijderen",
+      "deleting": "Verwijderen...",
+      "cancel": "Annuleren"
+    },
+    "clearAllDialog": {
+      "title": "Alle Klemborditems Wissen",
+      "description": "Weet u zeker dat u alle {{count}} klemborditems wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "clear": "Alles Wissen",
+      "clearing": "Wissen...",
+      "cancel": "Annuleren"
+    },
+    "preview": {
+      "unsafeImageType": "Kan afbeelding niet weergeven: Niet-ondersteund inhoudstype om veiligheidsredenen.",
+      "contentType": "Inhoudstype",
+      "details": "Details",
+      "source": "Bron",
+      "sourceUi": "UI",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "Zichtbaarheid",
+      "encoding": "Codering",
+      "createdAt": "Aangemaakt",
+      "updatedAt": "Bijgewerkt",
+      "expiresAt": "Verloopt",
+      "createdBy": "Aangemaakt door",
+      "tool": "Tool",
+      "model": "Model",
+      "noExpiration": "Nooit"
+    },
+    "toast": {
+      "copied": "Gekopieerd naar klembord",
+      "copyFailed": "Kopiëren naar klembord mislukt",
+      "cannotCopyBinary": "Binaire inhoud kan niet naar systeemklembord worden gekopieerd",
+      "deleted": "Item succesvol verwijderd",
+      "deleteFailed": "Verwijderen van item mislukt",
+      "clearedAll": "Alle items gewist",
+      "clearAllFailed": "Wissen van alle items mislukt",
+      "created": "Item succesvol aangemaakt",
+      "updated": "Item succesvol bijgewerkt",
+      "saveFailed": "Opslaan van item mislukt"
+    }
+  },
+  "longterm": {
+    "title": "Langetermijngeheugen",
+    "description": "Persistent geheugen dat sessies en gesprekken overleeft."
+  },
+  "procedures": {
+    "title": "Procedures",
+    "description": "Herbruikbare workflows en procedures geleerd uit eerdere interacties."
+  },
+  "fresh": {
+    "title": "Verse Context",
+    "description": "Recente context en werkgeheugen uit huidige gesprekken."
+  }
+}

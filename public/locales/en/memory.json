@@ -1,0 +1,140 @@
+{
+  "title": "Memory",
+  "description": "Manage clipboard data, long-term memory, procedures, and fresh context for your AI agents.",
+  "refresh": "Refresh",
+  "comingSoon": "Soon",
+  "stats": {
+    "clipboard": "Clipboard",
+    "entries": "entries",
+    "storage": "Storage",
+    "used": "used",
+    "expiring": "Expiring",
+    "today": "today",
+    "types": "Types",
+    "contentTypes": "content types"
+  },
+  "tabs": {
+    "clipboard": "Clipboard",
+    "longterm": "Long-term",
+    "procedures": "Procedures",
+    "fresh": "Fresh"
+  },
+  "clipboard": {
+    "empty": {
+      "title": "No clipboard entries",
+      "description": "Use MCP tools like pluggedin_clipboard_set or pluggedin_clipboard_push to add entries."
+    },
+    "createEntry": "Create Entry",
+    "named": "Named Entries",
+    "indexed": "Indexed Entries",
+    "clearAll": "Clear All",
+    "viewMode": {
+      "table": "Table",
+      "grid": "Grid"
+    },
+    "table": {
+      "name": "Name",
+      "index": "Index",
+      "type": "Type",
+      "value": "Value",
+      "size": "Size",
+      "expires": "Expires",
+      "actions": "Actions"
+    },
+    "actions": {
+      "preview": "Preview",
+      "copy": "Copy",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "form": {
+      "createTitle": "Create Clipboard Entry",
+      "editTitle": "Edit Clipboard Entry",
+      "createDescription": "Add a new entry to your clipboard memory.",
+      "editDescription": "Update the clipboard entry details.",
+      "name": "Name",
+      "namePlaceholder": "e.g., api_key, user_preferences",
+      "nameHelp": "Unique identifier for this entry",
+      "value": "Value",
+      "valuePlaceholder": "Enter the content...",
+      "contentType": "Content Type",
+      "encoding": "Encoding",
+      "visibility": "Visibility",
+      "visibilityPrivate": "Private (only you)",
+      "visibilityWorkspace": "Workspace (team members)",
+      "visibilityPublic": "Public (everyone)",
+      "ttl": "Expires In",
+      "minutes": "minutes",
+      "hour": "hour",
+      "hours": "hours",
+      "days": "days",
+      "cancel": "Cancel",
+      "create": "Create Entry",
+      "update": "Update Entry",
+      "saving": "Saving...",
+      "uploadFile": "Upload file",
+      "dropzoneText": "Drop a file here or click to browse",
+      "dropzoneHint": "Images, PDFs, JSON, text files up to {{maxSize}}",
+      "fileTooLarge": "File is too large. Maximum size is {{maxSize}}",
+      "fileUploaded": "File uploaded ({{size}})",
+      "fileReadError": "Failed to read file. Please try again.",
+      "or": "or enter text"
+    },
+    "deleteDialog": {
+      "title": "Delete Clipboard Entry",
+      "description": "Are you sure you want to delete \"{{identifier}}\"? This action cannot be undone.",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "cancel": "Cancel"
+    },
+    "clearAllDialog": {
+      "title": "Clear All Clipboard Entries",
+      "description": "Are you sure you want to delete all {{count}} clipboard entries? This action cannot be undone.",
+      "clear": "Clear All",
+      "clearing": "Clearing...",
+      "cancel": "Cancel"
+    },
+    "preview": {
+      "unsafeImageType": "Cannot preview image: Unsupported content type for security reasons.",
+      "contentType": "Content type",
+      "details": "Details",
+      "source": "Source",
+      "sourceUi": "UI",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "Visibility",
+      "encoding": "Encoding",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "expiresAt": "Expires",
+      "createdBy": "Created By",
+      "tool": "Tool",
+      "model": "Model",
+      "noExpiration": "Never"
+    },
+    "toast": {
+      "copied": "Copied to clipboard",
+      "copyFailed": "Failed to copy to clipboard",
+      "cannotCopyBinary": "Cannot copy binary content to system clipboard",
+      "deleted": "Entry deleted successfully",
+      "deleteFailed": "Failed to delete entry",
+      "clearedAll": "All entries cleared",
+      "clearAllFailed": "Failed to clear all entries",
+      "created": "Entry created successfully",
+      "updated": "Entry updated successfully",
+      "saveFailed": "Failed to save entry"
+    }
+  },
+  "longterm": {
+    "title": "Long-term Memory",
+    "description": "Persistent memory that survives across sessions and conversations."
+  },
+  "procedures": {
+    "title": "Procedures",
+    "description": "Reusable workflows and procedures learned from past interactions."
+  },
+  "fresh": {
+    "title": "Fresh Context",
+    "description": "Recent context and working memory from current conversations."
+  }
+}

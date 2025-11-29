@@ -8,6 +8,8 @@ import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
 import { validateCSRF } from '@/lib/csrf-protection';
+import { generatePasswordChangedEmail,sendEmail } from '@/lib/email';
+import log from '@/lib/logger';
 import { RateLimiters } from '@/lib/rate-limiter';
 
 /**
@@ -114,6 +116,24 @@ export async function POST(req: NextRequest) {
     const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
     await recordPasswordChange(session.user.id, ipAddress, userAgent);
+
+    // Send email notification (non-blocking - don't fail operation if email fails)
+    try {
+      const emailData = generatePasswordChangedEmail(
+        user.email,
+        ipAddress,
+        userAgent,
+        new Date()
+      );
+      await sendEmail(emailData);
+    } catch (error) {
+      // Log but don't fail the operation
+      log.error('Failed to send password changed notification email', {
+        userId: session.user.id,
+        email: user.email,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
 
     return NextResponse.json({ message: 'Password updated successfully' });
   } catch (error) {

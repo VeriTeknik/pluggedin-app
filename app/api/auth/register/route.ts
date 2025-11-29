@@ -1,4 +1,5 @@
 import { hash } from 'bcrypt';
+import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -146,37 +147,115 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, data.email),
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { message: 'User with this email already exists' },
-        { status: 409 }
-      );
-    }
-
-    // Hash the password with consistent cost factor
+    // Hash the password with consistent cost factor (do this early to save time)
     const hashedPassword = await hash(data.password, BCRYPT_COST_FACTOR);
-    
+
     // Generate a verification token
     const verificationToken = nanoid(32);
     const tokenExpiry = new Date();
     tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token valid for 24 hours
 
-    // Create the user
-    const userId = nanoid();
-    await db.insert(users).values({
-      id: userId,
-      name: data.name,
-      email: data.email,
-      password: hashedPassword,
-      emailVerified: null, // Email not verified yet
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
+    // Use a transaction to handle the check-delete-insert atomically
+    // This prevents race conditions where concurrent requests could create duplicates
+    let userId: string;
+
+    try {
+      // Try to create the user - unique constraint will prevent duplicates
+      userId = nanoid();
+      await db.insert(users).values({
+        id: userId,
+        name: data.name,
+        email: data.email,
+        password: hashedPassword,
+        emailVerified: null, // Email not verified yet
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      log.info('New user created successfully', {
+        email: data.email,
+        userId,
+      });
+    } catch (error: any) {
+      // Check if this is a unique constraint violation (PostgreSQL error code 23505)
+      if (error.code === '23505' && error.constraint === 'users_email_unique') {
+        // User with this email already exists - check if we can replace them
+        log.info('Email already exists, checking if replaceable', {
+          email: data.email,
+        });
+
+        // Use a transaction with SELECT FOR UPDATE to prevent race conditions
+        // This locks the row so other concurrent requests must wait
+        const result = await db.transaction(async (tx) => {
+          // Lock and fetch the existing user with SELECT FOR UPDATE
+          // This prevents concurrent transactions from modifying the same user
+          const [existingUser] = await tx
+            .select()
+            .from(users)
+            .where(eq(users.email, data.email))
+            .for('update');
+
+          if (!existingUser) {
+            // User was deleted by another request, should not happen due to lock
+            throw new Error('RETRY_INSERT');
+          }
+
+          // Fetch accounts separately (we have the user locked now)
+          const userAccounts = await tx.query.accounts.findMany({
+            where: (accounts, { eq }) => eq(accounts.userId, existingUser.id),
+          });
+
+          // Block if user has verified email or OAuth accounts
+          if (existingUser.emailVerified || userAccounts.length > 0) {
+            log.info('Registration blocked - email is verified or has OAuth', {
+              email: data.email,
+              hasVerifiedEmail: !!existingUser.emailVerified,
+              hasOAuthAccounts: userAccounts.length > 0,
+            });
+            return { success: false, verified: true };
+          }
+
+          // Delete the unverified user and create new one atomically
+          log.info('Replacing unverified user', {
+            email: data.email,
+            oldUserId: existingUser.id,
+          });
+
+          await tx.delete(users).where(eq(users.id, existingUser.id));
+
+          // Create new user with same email
+          userId = nanoid();
+          await tx.insert(users).values({
+            id: userId,
+            name: data.name,
+            email: data.email,
+            password: hashedPassword,
+            emailVerified: null,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+
+          return { success: true, userId };
+        });
+
+        if (!result.success) {
+          if (result.verified) {
+            return NextResponse.json(
+              {
+                error: 'email_already_registered',
+                message: 'This email is already registered. Please sign in or use a different email.',
+              },
+              { status: 409 }
+            );
+          }
+        }
+
+        userId = result.userId!;
+      } else {
+        // Some other database error
+        throw error;
+      }
+    }
 
     // Create default project and workspace for new user
     try {

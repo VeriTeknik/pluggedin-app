@@ -21,8 +21,7 @@ import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-shell-session';
 
 import { format } from 'date-fns';
-import { Bot,Check, Copy, Download, FileText, X } from 'lucide-react';
-// Import Prism first
+import { Bot, Check, Copy, Download, FileText, X } from 'lucide-react';
 import Prism from 'prismjs';
 import { useEffect, useState } from 'react';
 

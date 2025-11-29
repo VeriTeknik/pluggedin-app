@@ -9,25 +9,144 @@
     "collections": "集合",
     "playground": "演练场",
     "documentation": "文档",
-    "getStarted": "开始使用"
+    "getStarted": "连接"
   },
   "hero": {
+    "badge": "全球首个AI-CMS",
+    "headline": "知识、工具、记忆与智能体交汇之处",
+    "subheadline": "一个统一平台，编排您的所有AI交互。模型无关的基础设施，让您的AI真正属于您—在Claude、ChatGPT、Cursor和您使用的每个平台上持久存在。",
+    "tagline": "一个平台。您的所有AI。永久拥有。",
+    "cta": {
+      "primary": "连接",
+      "secondary": "了解工作原理"
+    },
+    "pillars": {
+      "knowledge": "知识",
+      "tools": "工具",
+      "memory": "记忆",
+      "agents": "智能体"
+    },
     "title": "AI 的十字路口",
     "subtitle": "通过统一平台连接、创建和扩展您的 AI 能力。构建和管理增强您 AI 工作流程的插件。",
-    "headline": "连接、共享和发现 MCP 服务器",
-    "subheadline": "Model Context Protocol 的社区中心、通用代理和 AI 知识平台",
     "analogy": "\"您的 AI 生态系统，统一且社交\"",
     "valueBanner": "您的 AI 生成数据。每个模型。每次交互。尽在您的掌控之中。",
     "openSource": "自豪地开源",
-    "cta": {
-      "getStarted": "加入社区",
-      "learnMore": "探索功能"
-    },
     "features": {
       "security": "Enterprise Security",
       "fast": "Lightning Fast",
       "scale": "Global Scale"
     }
+  },
+  "problemStatement": {
+    "title": "AI碎片化正在浪费您的时间、金钱和智慧",
+    "subtitle": "AI生产力的承诺是真实的。但现实是什么？您的AI能力分散在各个平台上，工具在每次会话后重置，什么都无法互相通信。",
+    "problems": {
+      "scattered": {
+        "title": "知识分散各处",
+        "description": "您的文档存储在Google Drive、Notion、Confluence和本地文件中。每个AI平台都要求您重新上传所有内容，或者根本无法访问它们。"
+      },
+      "reconfiguring": {
+        "title": "无尽的工具配置",
+        "description": "在Claude中花费数小时设置GitHub集成？现在为ChatGPT再做一次。再为Cursor做一次。每次尝试新的AI工具都要重复一遍。"
+      },
+      "noMemory": {
+        "title": "会话之间无记忆",
+        "description": "每次对话都从零开始。昨天建立的上下文？消失了。上周设置的偏好？被遗忘了。您不断地重新解释自己。"
+      },
+      "agentFailures": {
+        "title": "无声消失的智能体",
+        "description": "部署了自主智能体？希望它不会崩溃。您要到几个小时后才能知道。没有生命周期管理，没有监控，没有控制。"
+      },
+      "productionGap": {
+        "title": "概念验证地狱",
+        "description": "88%的AI项目从未进入生产环境。为什么？因为拼凑API、管理状态和确保安全性变成了一份全职工作。"
+      }
+    },
+    "quote": "我们花了几周时间为每个团队成员单独配置MCP服务器。Plugged.in将一切集中在一个地方——现在我们的团队每周节省15小时，我们的AI真正记住了我们的代码库。",
+    "quoteAuthor": "工程主管，B轮SaaS公司"
+  },
+  "fourPillars": {
+    "badge": "完整平台",
+    "title": "四大支柱。无限可能。",
+    "subtitle": "唯一结合MCP编排、RAG v2文档管理、持久记忆系统和自主智能体生命周期管理的统一平台。",
+    "knowledge": {
+      "title": "您AI的记忆银行",
+      "description": "上传一次文档，随处访问。我们的RAG v2引擎将您的机构知识转化为每个AI都可以利用的持久、可搜索的上下文。",
+      "features": {
+        "1": "具有完整模型归因和版本历史的AI生成文档",
+        "2": "整个库的亚秒级语义搜索",
+        "3": "多格式支持：带自动索引的Markdown、JSON、HTML、PDF"
+      },
+      "highlightLabel": "真实影响",
+      "highlight": "跨AI平台持久的代码审查记忆。您的调试会话成为随时间复合的机构知识。"
+    },
+    "tools": {
+      "title": "1500+工具，一个界面",
+      "description": "停止为每个AI平台配置相同的MCP服务器。连接一次，到处使用。从GitHub到Linear到自定义API——如果它有MCP服务器，就能工作。",
+      "features": {
+        "1": "具有自动GitHub验证和OAuth 2.1集成的智能服务器向导",
+        "2": "与典型MCP代理相比，令牌效率提高30-55%",
+        "3": "通用兼容性：Claude、Cursor、Cline、ChatGPT、LM Studio等"
+      },
+      "highlightLabel": "效率提升",
+      "highlight": "用一个统一代理替换100个单独的MCP配置。更新一次，到处应用。仅在设置上，您的团队每周就能节省数小时。"
+    },
+    "memory": {
+      "title": "记忆剪贴板",
+      "description": "AI工作流的持久剪贴板存储。使用命名键值对或带TTL过期的基于堆栈的索引存储。",
+      "features": {
+        "1": "具有upsert行为的命名条目和push/pop索引堆栈",
+        "2": "TTL过期、text/JSON/base64内容类型、配置文件隔离",
+        "3": "用于跨平台访问的MCP工具和SDK（JS、Python、Go）"
+      },
+      "highlightLabel": "生产就绪",
+      "highlight": "记忆剪贴板已在v2.20.0中上线。Focus Agent和高级记忆层即将推出。"
+    },
+    "agents": {
+      "title": "具有军事级治理的自主智能体",
+      "description": "世界上第一个全面的智能体生命周期管理协议。以企业要求的可靠性部署、监控和控制自主智能体。",
+      "features": {
+        "1": "具有基于DNS的智能体寻址的亚50毫秒控制平面延迟",
+        "2": "全面的生命周期管理：NEW → PROVISIONED → ACTIVE → DRAINING → TERMINATED",
+        "3": "在混沌测试下具有自动故障恢复的99.9%正常运行时间"
+      },
+      "highlightLabel": "学术创新",
+      "highlight": "PAP协议学术论文已准备好提交arXiv。通过协议级可靠性解决现实任务中人类和AI性能之间28%的差距。"
+    },
+    "cta": {
+      "text": "准备好统一您的AI基础设施了吗？",
+      "button": "今天免费开始"
+    }
+  },
+  "videoTutorials": {
+    "title": "实战演示",
+    "subtitle": "观看分步教程，在几分钟内开始使用plugged.in。从基本设置到高级功能。",
+    "quickSetup": {
+      "title": "快速设置",
+      "duration": "3分钟",
+      "description": "在3分钟内将MCP服务器连接到Claude Desktop、VS Code、Cursor和其他AI工具。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
+    },
+    "ragArchive": {
+      "title": "RAG和文档存档",
+      "duration": "5分钟",
+      "description": "了解如何将文件保存到知识库，并使用AI驱动的语义搜索在所有平台上查询它们。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
+    },
+    "notifications": {
+      "title": "任务通知",
+      "duration": "4分钟",
+      "description": "设置自动通知和任务跟踪，掌握AI工作流和智能体活动。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
+    },
+    "oauthServers": {
+      "title": "OAuth集成",
+      "duration": "6分钟",
+      "description": "通过OAuth连接Notion、Linear和GitHub等服务。一次认证，令牌在过期前自动刷新。无需手动管理令牌。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
+    },
+    "moreVideos": "更多教程可在我们的",
+    "docsLink": "文档中找到"
   },
   "whyPluggedin": {
     "title": "为什么选择 plugged.in？",
@@ -93,17 +212,17 @@
     "subtitle": "管理 MCP 服务器所需的一切",
     "sectionTitle": "完整的 AI 生态系统平台",
     "sectionSubtitle": "从数据所有权到社区协作 - 您需要的一切都在一个平台上。",
-    "communitySharing": {
-      "title": "社交平台和社区",
-      "description": "共享 MCP 服务器，关注开发者，接收通知，构建您的 AI 网络。公开档案、评分和协作发现。"
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1 自动轮换",
+      "description": "过期前15分钟自动刷新令牌。符合OAuth 2.1标准的令牌轮换。零服务中断，零手动操作。"
     },
-    "collectionManagement": {
-      "title": "智能集合与版本控制",
-      "description": "将服务器组织成版本化集合。公开或私下共享，跟踪安装，协作构建精选工具集。"
+    "mcpProxy": {
+      "title": "统一MCP代理",
+      "description": "所有MCP服务器的单一端点。内置AI演练场、通知系统和文档交换。支持STDIO、SSE和Streamable HTTP传输。"
     },
-    "workspaceOrganization": {
-      "title": "多工作区管理",
-      "description": "通过专用工作区隔离项目。在开发、测试和生产环境之间即时切换。"
+    "officialSdks": {
+      "title": "JavaScript、Python和Go SDK",
+      "description": "适用于JavaScript/TypeScript、Python和Go的全功能SDK。跨语言一致接口的文档管理、RAG查询和API访问。"
     },
     "advancedSearch": {
       "title": "智能发现引擎",
@@ -451,10 +570,10 @@
     "certifications": {
       "soc2": {
         "label": "SOC 2 Type II",
-        "description": "认证"
+        "description": "兼容"
       },
-      "iso": {
-        "label": "ISO 27001",
+      "pciDss": {
+        "label": "PCI-DSS",
         "description": "合规"
       },
       "gdpr": {
@@ -528,5 +647,57 @@
       "suffix": "+",
       "label": "AI 文档"
     }
+  },
+  "roadmap": {
+    "badge": "产品路线图",
+    "title": "Plugged.in 路线图",
+    "subtitle": "从统一AI控制平面到真实世界自主智能体",
+    "stage1": {
+      "date": "2025年3月",
+      "title": "起点：统一AI控制平面",
+      "description": "Plugged.in启动。第一个基础：知识、工具和记忆在一个控制平面下。模型上下文协议支持开始。"
+    },
+    "stage2": {
+      "date": "2025年6月19日",
+      "title": "Plugged.in App v2.1.0 — RAG进入生产",
+      "description": "完整的语义搜索。文档版本控制、元数据、嵌入。AI终于可以看到用户拥有的知识。这成为基于事实推理的支柱。"
+    },
+    "stage3": {
+      "date": "2025年10月下旬",
+      "title": "PAP — Plugged.in智能体协议（里程碑）",
+      "description": "PAP作为控制+遥测支柱发布。自主智能体现在拥有：生命周期管理、策略引擎、安全通道、终止开关、事件流和跨模型编排。PAP将Plugged.in从控制层转变为自主智能体平台。"
+    },
+    "stage4": {
+      "date": "2026年第一季度",
+      "title": "传感器 → 智能体 → 认知预测自动化",
+      "description": "Plugged.in扩展到物理世界。Raspberry Pi和轻量级传感器节点流式传输：压力、振动、热量、声学、电压和电流。云智能体学习、适应、预测和行动。结果：'工作的智能体。'实现全球智能体支持的劳动力。"
+    },
+    "outcome": {
+      "title": "认知预测自动化",
+      "line1": "分析真实世界数据、从模式中学习并在故障发生前采取行动的自主智能体。",
+      "line2": "这是数字智能与物理系统相遇的地方。"
+    },
+    "workforce": {
+      "title": "智能体支持的劳动力",
+      "line1": "数千名安装和配置传感器的技术人员。",
+      "line2": "扩展人而不是替代人的技术。"
+    },
+    "cta": {
+      "primary": "获取API密钥",
+      "secondary": "查看GitHub"
+    },
+    "status": {
+      "completed": "已完成",
+      "inProgress": "进行中",
+      "planned": "已计划",
+      "future": "未来"
+    }
+  },
+  "popularServers": {
+    "badge": "最受欢迎",
+    "title": "热门MCP服务器",
+    "subtitle": "发现我们社区中安装次数最多和评分最高的MCP服务器",
+    "viewDetails": "查看详情",
+    "exploreAll": "Explore All {{count}}+ Servers"
   }
 }

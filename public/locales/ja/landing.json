@@ -6,19 +6,27 @@
     "collections": "コレクション",
     "playground": "プレイグラウンド",
     "documentation": "ドキュメント",
-    "getStarted": "始める"
+    "getStarted": "接続"
   },
   "hero": {
+    "badge": "世界初のAI-CMS",
+    "headline": "知識、ツール、メモリ、エージェントが融合する場所",
+    "subheadline": "すべてのAIインタラクションを統合する一つのプラットフォーム。あなたのAIを真にあなたのものにするモデル不可知論的なインフラストラクチャ—Claude、ChatGPT、Cursorなど、使用するすべてのプラットフォームで永続的。",
+    "tagline": "一つのプラットフォーム。すべてのAI。永遠に。",
+    "cta": {
+      "primary": "接続",
+      "secondary": "仕組みを見る"
+    },
+    "pillars": {
+      "knowledge": "知識",
+      "tools": "ツール",
+      "memory": "メモリ",
+      "agents": "エージェント"
+    },
     "title": "AIの交差点",
     "subtitle": "統一されたプラットフォームでAI機能を接続、作成、拡張します。AIワークフローを強化するプラグインを構築および管理します。",
-    "headline": "MCPサーバーを接続、共有、発見",
-    "subheadline": "Model Context Protocol のためのコミュニティハブ、ユニバーサルプロキシ、AI知識プラットフォーム",
     "analogy": "\"AIエコシステムを統合し、ソーシャルに\"",
     "openSource": "誇りを持ってオープンソース",
-    "cta": {
-      "getStarted": "コミュニティに参加",
-      "learnMore": "機能を探索"
-    },
     "features": {
       "security": "Enterprise Security",
       "fast": "Lightning Fast",
@@ -30,17 +38,17 @@
     "subtitle": "MCPサーバーを管理するために必要なすべて",
     "sectionTitle": "完全なAIエコシステムプラットフォーム",
     "sectionSubtitle": "エンタープライズグレードの機能でAI機能を接続、共有、発見、拡張します。",
-    "communitySharing": {
-      "title": "ソーシャルプラットフォーム＆コミュニティ",
-      "description": "MCPサーバーを共有し、開発者をフォローし、通知を受け取り、AIネットワークを構築します。公開プロフィール、評価、協力的な発見機能。"
+    "oauthAutoRotation": {
+      "title": "OAuth 2.1自動ローテーション",
+      "description": "期限切れの15分前に自動トークン更新。OAuth 2.1準拠のトークンローテーション。サービス中断ゼロ、手動作業ゼロ。"
     },
-    "collectionManagement": {
-      "title": "バージョン管理付きスマートコレクション",
-      "description": "サーバーをバージョン管理されたコレクションに整理します。公開または非公開で共有し、インストールを追跡し、厳選されたツールセットで協力します。"
+    "mcpProxy": {
+      "title": "統一MCPプロキシ",
+      "description": "すべてのMCPサーバー用の単一エンドポイント。内蔵AIプレイグラウンド、通知システム、ドキュメント交換。STDIO、SSE、Streamable HTTPトランスポートをサポート。"
     },
-    "workspaceOrganization": {
-      "title": "マルチワークスペース管理",
-      "description": "専用ワークスペースでプロジェクトを分離します。開発、ステージング、本番環境間でコンテキストを瞬時に切り替えます。"
+    "officialSdks": {
+      "title": "JavaScript、Python、Go SDK",
+      "description": "JavaScript/TypeScript、Python、Go向けのフル機能SDK。言語間で一貫したインターフェースを備えたドキュメント管理、RAGクエリ、APIアクセス。"
     },
     "advancedSearch": {
       "title": "インテリジェント発見エンジン",
@@ -444,7 +452,7 @@
       },
       "memory": {
         "title": "メモリ",
-        "description": "近日公開"
+        "description": "クリップボードストレージ"
       },
       "tools": {
         "title": "ツール",
@@ -458,10 +466,10 @@
     "certifications": {
       "soc2": {
         "label": "SOC 2 Type II",
-        "description": "認定済み"
+        "description": "互換性あり"
       },
-      "iso": {
-        "label": "ISO 27001",
+      "pciDss": {
+        "label": "PCI-DSS",
         "description": "準拠"
       },
       "gdpr": {
@@ -535,5 +543,168 @@
       "suffix": "+",
       "label": "AIドキュメント"
     }
+  },
+  "problemStatement": {
+    "title": "AI の断片化があなたの時間、お金、知能を無駄にしています",
+    "subtitle": "AI生産性の約束は現実です。しかし現実は？あなたのAI機能はプラットフォーム全体に分散し、セッションごとにツールがリセットされ、何も連携しません。",
+    "problems": {
+      "scattered": {
+        "title": "知識が至る所に散在",
+        "description": "あなたのドキュメントはGoogle Drive、Notion、Confluence、ローカルファイルに存在します。各AIプラットフォームではすべてを再アップロードするか、まったくアクセスできません。"
+      },
+      "reconfiguring": {
+        "title": "終わりのないツール設定",
+        "description": "ClaudeでGitHub統合を設定するのに何時間も費やしましたか？次はChatGPTで同じことを。そしてCursorで。そして試す新しいAIツールごとに。"
+      },
+      "noMemory": {
+        "title": "セッション間でメモリなし",
+        "description": "すべての会話はゼロから始まります。昨日構築したコンテキストは？消えました。先週設定した設定は？忘れられました。常に自分自身を再説明しています。"
+      },
+      "agentFailures": {
+        "title": "静かに消えるエージェント",
+        "description": "自律エージェントをデプロイしましたか？クラッシュしないことを願います。数時間後までわかりません。ライフサイクル管理なし、監視なし、制御なし。"
+      },
+      "productionGap": {
+        "title": "概念実証の地獄",
+        "description": "AIプロジェクトの88%は本番環境に到達しません。なぜ？APIをつなぎ合わせ、状態を管理し、セキュリティを確保することがフルタイムの仕事になるからです。"
+      }
+    },
+    "quote": "各チームメンバーに個別にMCPサーバーを設定するのに数週間かけました。Plugged.inですべてを一箇所に—今では週15時間節約され、AIが実際にコードベースを覚えています。",
+    "quoteAuthor": "エンジニアリングリード、シリーズB SaaS企業"
+  },
+  "fourPillars": {
+    "badge": "完全なプラットフォーム",
+    "title": "4つの柱。無限の可能性。",
+    "subtitle": "MCPオーケストレーション、RAG v2ドキュメント管理、永続的メモリシステム、自律エージェントライフサイクル管理を組み合わせた唯一の統合プラットフォーム。",
+    "knowledge": {
+      "title": "AIのメモリバンク",
+      "description": "一度ドキュメントをアップロードすれば、どこでもアクセス。私たちのRAG v2エンジンは、組織の知識をすべてのAIが利用できる永続的で検索可能なコンテキストに変換します。",
+      "features": {
+        "1": "完全なモデル属性とバージョン履歴を持つAI生成ドキュメント",
+        "2": "ライブラリ全体にわたる1秒以下のセマンティック検索",
+        "3": "マルチフォーマットサポート：自動インデックス付きMarkdown、JSON、HTML、PDF"
+      },
+      "highlightLabel": "実世界への影響",
+      "highlight": "AIプラットフォーム全体で永続するコードレビューメモリ。デバッグセッションが時間とともに蓄積される組織知識になります。"
+    },
+    "tools": {
+      "title": "1,500以上のツール、1つのインターフェース",
+      "description": "すべてのAIプラットフォームで同じMCPサーバーを設定するのをやめましょう。一度接続すれば、どこでも使用可能。GitHubからLinearまで、カスタムAPIまで—MCPサーバーがあれば機能します。",
+      "features": {
+        "1": "自動GitHub検証とOAuth 2.1統合を備えたスマートサーバーウィザード",
+        "2": "通常のMCPプロキシと比較して30-55%のトークン効率改善",
+        "3": "ユニバーサル互換性：Claude、Cursor、Cline、ChatGPT、LM Studioなど"
+      },
+      "highlightLabel": "効率の向上",
+      "highlight": "100個の個別MCP設定を1つの統合プロキシに置き換えます。一度更新すれば、どこにでも適用。チームは設定だけで週に何時間も節約します。"
+    },
+    "memory": {
+      "title": "メモリクリップボード",
+      "description": "AIワークフローのための永続的なクリップボードストレージ。TTL有効期限付きの名前付きキー値ペアまたはスタックベースのインデックス付きストレージを使用します。",
+      "features": {
+        "1": "upsert動作の名前付きエントリとpush/popインデックス付きスタック",
+        "2": "TTL有効期限、text/JSON/base64コンテンツタイプ、プロファイル分離",
+        "3": "クロスプラットフォームアクセス用のMCPツールとSDK（JS、Python、Go）"
+      },
+      "highlightLabel": "本番環境対応",
+      "highlight": "メモリクリップボードはv2.20.0でライブです。Focus Agentと高度なメモリ層は近日公開予定。"
+    },
+    "agents": {
+      "title": "軍用グレードのガバナンスを備えた自律エージェント",
+      "description": "世界初の包括的なエージェントライフサイクル管理プロトコル。企業が要求する信頼性で自律エージェントをデプロイ、監視、制御します。",
+      "features": {
+        "1": "DNSベースのエージェントアドレッシングで50ms未満のコントロールプレーンレイテンシ",
+        "2": "包括的なライフサイクル管理：NEW → PROVISIONED → ACTIVE → DRAINING → TERMINATED",
+        "3": "カオステストで99.9%の稼働時間、自動障害回復"
+      },
+      "highlightLabel": "学術イノベーション",
+      "highlight": "PAPプロトコル学術論文がarXiv提出準備完了。プロトコルレベルの信頼性を通じて、現実的なタスクでの人間とAIのパフォーマンスの28%のギャップを解決します。"
+    },
+    "cta": {
+      "text": "AIインフラストラクチャを統一する準備はできていますか？",
+      "button": "今日から無料で始める"
+    }
+  },
+  "videoTutorials": {
+    "title": "実際の動作を見る",
+    "subtitle": "数分でplugged.inを開始するためのステップバイステップのチュートリアルをご覧ください。基本設定から高度な機能まで。",
+    "quickSetup": {
+      "title": "クイックセットアップ",
+      "duration": "3分",
+      "description": "Claude Desktop、VS Code、Cursor、その他のAIツールにMCPサーバーを3分以内で接続します。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw"
+    },
+    "ragArchive": {
+      "title": "RAGとドキュメントアーカイブ",
+      "duration": "5分",
+      "description": "ナレッジベースにファイルを保存し、すべてのプラットフォームでAI駆動のセマンティック検索を使用してクエリする方法を学びます。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=141"
+    },
+    "notifications": {
+      "title": "タスク通知",
+      "duration": "4分",
+      "description": "自動通知とタスク追跡を設定して、AIワークフローとエージェントアクティビティの最新情報を把握します。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=250"
+    },
+    "oauthServers": {
+      "title": "OAuth統合",
+      "duration": "6分",
+      "description": "Notion、Linear、GitHubなどのサービスをOAuthで接続。一度認証すればトークンは期限切れ前に自動更新されます。手動でのトークン管理は不要です。",
+      "videoUrl": "https://www.youtube.com/embed/WFe3rb6JtQw?start=276"
+    },
+    "moreVideos": "より多くのチュートリアルは私たちの",
+    "docsLink": "ドキュメント"
+  },
+  "roadmap": {
+    "badge": "製品ロードマップ",
+    "title": "Plugged.inロードマップ",
+    "subtitle": "統一されたAI制御プレーンから現実世界の自律エージェントへ",
+    "stage1": {
+      "date": "2025年3月",
+      "title": "始まり：統一AI制御プレーン",
+      "description": "Plugged.inが始動。最初の基盤：知識、ツール、メモリが1つの制御プレーンの下に。Model Context Protocolサポートが開始。"
+    },
+    "stage2": {
+      "date": "2025年6月19日",
+      "title": "Plugged.in App v2.1.0 — RAGが本番環境へ",
+      "description": "完全なセマンティック検索。ドキュメントバージョニング、メタデータ、埋め込み。AIがついにユーザー所有の知識を見られるようになる。これが根拠ある推論のバックボーンになる。"
+    },
+    "stage3": {
+      "date": "2025年10月下旬",
+      "title": "PAP — Plugged.inエージェントプロトコル（マイルストーン）",
+      "description": "PAPが制御+テレメトリーバックボーンとしてリリース。自律エージェントは今や持つ：ライフサイクル管理、ポリシーエンジン、セキュアチャネル、キルスイッチ、イベントストリーミング、クロスモデルオーケストレーション。PAPはPlugged.inを制御レイヤーから自律エージェントプラットフォームに変える。"
+    },
+    "stage4": {
+      "date": "2026年第1四半期",
+      "title": "センサー → エージェント → 認知予測自動化",
+      "description": "Plugged.inが物理世界に拡大。Raspberry Piと軽量センサーノードがストリーミング：圧力、振動、熱、音響、電圧と電流。クラウドエージェントは学習し、適応し、予測し、行動する。結果：'働くエージェント。'グローバルなエージェント対応労働力を可能にする。"
+    },
+    "outcome": {
+      "title": "認知予測自動化",
+      "line1": "現実世界のデータを分析し、パターンから学び、障害が発生する前に行動する自律エージェント。",
+      "line2": "ここがデジタルインテリジェンスと物理システムが出会う場所。"
+    },
+    "workforce": {
+      "title": "エージェント対応労働力",
+      "line1": "センサーを設置し構成する数千人の技術者。",
+      "line2": "人を置き換えるのではなく、スケールする技術。"
+    },
+    "cta": {
+      "primary": "APIキーを取得",
+      "secondary": "GitHubを表示"
+    },
+    "status": {
+      "completed": "完了",
+      "inProgress": "進行中",
+      "planned": "計画済み",
+      "future": "将来"
+    }
+  },
+  "popularServers": {
+    "badge": "最も人気",
+    "title": "トップMCPサーバー",
+    "subtitle": "コミュニティから最もインストールされ、高評価のMCPサーバーを発見",
+    "viewDetails": "詳細を見る",
+    "exploreAll": "Explore All {{count}}+ Servers"
   }
 }

@@ -526,6 +526,34 @@
       "when": 1762755356569,
       "tag": "0074_gifted_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1763653337629,
+      "tag": "0075_burly_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1764339557408,
+      "tag": "0076_third_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1764374121935,
+      "tag": "0077_zippy_ink",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1764420535911,
+      "tag": "0078_youthful_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

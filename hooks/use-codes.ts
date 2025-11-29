@@ -1,5 +1,7 @@
 import useSWR from 'swr';
 
+import { useAuth } from '@/hooks/use-auth';
+
 import {
   createCode,
   deleteCode,
@@ -8,7 +10,8 @@ import {
 } from '@/app/actions/code';
 
 export function useCodes() {
-  const { data: codes, mutate } = useSWR('code-files', getCodes);
+  const { isAuthenticated } = useAuth();
+  const { data: codes, mutate } = useSWR(isAuthenticated ? 'code-files' : null, getCodes);
 
   const handleCreateCode = async (fileName: string, code: string) => {
     const newCode = await createCode(fileName, code);

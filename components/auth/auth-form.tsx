@@ -250,9 +250,18 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
           const data = await response.json();
 
           if (!response.ok) {
+            // Handle specific error codes
+            let errorMessage = t('auth.register.errors.registrationFailed');
+
+            if (data.error === 'email_already_registered') {
+              errorMessage = t('auth.register.errors.email_already_registered');
+            } else if (data.message) {
+              errorMessage = data.message;
+            }
+
             toast({
               title: t('common.error'),
-              description: data.message || t('auth.register.errors.registrationFailed'),
+              description: errorMessage,
               variant: 'destructive',
             });
             return;

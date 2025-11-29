@@ -131,7 +131,7 @@ export const voteTypeEnum = pgEnum(
 export const users = pgTable('users', {
   id: text('id').notNull().primaryKey(),
   name: text('name'),
-  email: text('email').notNull(),
+  email: text('email').notNull().unique(),
   password: text('password'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   image: text('image'),
@@ -1123,6 +1123,69 @@ export const documentModelAttributionsRelations = relations(documentModelAttribu
   document: one(docsTable, {
     fields: [documentModelAttributionsTable.document_id],
     references: [docsTable.uuid],
+  }),
+}));
+
+// ===== Clipboard Storage Table =====
+
+export const clipboardsTable = pgTable(
+  'clipboards',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    // Named access: clipboard["customer_context"]
+    name: varchar('name', { length: 255 }),
+    // Indexed access: clipboard[0] - using "idx" to avoid reserved word conflicts
+    idx: integer('idx'),
+    // Content storage
+    value: text('value').notNull(),
+    content_type: varchar('content_type', { length: 256 }).notNull().default('text/plain'),
+    encoding: varchar('encoding', { length: 20 }).notNull().default('utf-8'),
+    size_bytes: integer('size_bytes').notNull(),
+    // Visibility: private, workspace, public
+    visibility: varchar('visibility', { length: 20 }).notNull().default('private'),
+    // Attribution
+    created_by_tool: varchar('created_by_tool', { length: 255 }),
+    created_by_model: varchar('created_by_model', { length: 255 }),
+    // Source: ui (web app), sdk (SDKs), mcp (MCP proxy tools)
+    source: varchar('source', { length: 20 }).notNull().default('ui'),
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true }),
+  },
+  (table) => ({
+    // Index on profile for filtering
+    clipboardsProfileUuidIdx: index('clipboards_profile_uuid_idx').on(table.profile_uuid),
+    // Index on expiration for cleanup job
+    clipboardsExpiresAtIdx: index('clipboards_expires_at_idx').on(table.expires_at),
+    // Index on content type for filtering
+    clipboardsContentTypeIdx: index('clipboards_content_type_idx').on(table.content_type),
+    // Composite index on visibility for filtering shared/public entries
+    clipboardsVisibilityIdx: index('clipboards_visibility_idx').on(table.profile_uuid, table.visibility),
+    // Unique constraint on (profile_uuid, name) for named entries
+    clipboardsProfileNameUniqueIdx: unique('clipboards_profile_name_unique_idx').on(
+      table.profile_uuid,
+      table.name
+    ),
+    // Unique constraint on (profile_uuid, idx) for indexed entries
+    clipboardsProfileIdxUniqueIdx: unique('clipboards_profile_idx_unique_idx').on(
+      table.profile_uuid,
+      table.idx
+    ),
+  })
+);
+
+export const clipboardsRelations = relations(clipboardsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [clipboardsTable.profile_uuid],
+    references: [profilesTable.uuid],
   }),
 }));
 

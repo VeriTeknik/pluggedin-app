@@ -3,7 +3,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServerOAuthTokensTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
+import { mcpServerOAuthConfigTable, mcpServerOAuthTokensTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
@@ -79,18 +79,29 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
     }
 
     // Check streamable_http_options_encrypted (priority 2: new OAuth storage)
+    // IMPORTANT: Only treat Authorization header as OAuth if server has OAuth config
     if (!isAuthenticated && server.streamable_http_options_encrypted) {
       try {
-        const decrypted = decryptServerData({ streamable_http_options_encrypted: server.streamable_http_options_encrypted });
-        if (decrypted.streamableHTTPOptions?.headers?.Authorization) {
-          isAuthenticated = true;
-          if (!lastAuthenticated) {
-            lastAuthenticated = new Date(); // Authenticated via encrypted OAuth token
-          }
-          if (!provider && server.url) {
-            provider = determineProviderFromUrl(server.url);
+        // First check if this server actually has OAuth configuration
+        const oauthConfig = await db.query.mcpServerOAuthConfigTable.findFirst({
+          where: eq(mcpServerOAuthConfigTable.server_uuid, serverUuid),
+        });
+
+        // Only mark as OAuth-authenticated if there's an OAuth config
+        // This prevents API-key-based servers from being treated as OAuth
+        if (oauthConfig) {
+          const decrypted = decryptServerData({ streamable_http_options_encrypted: server.streamable_http_options_encrypted });
+          if (decrypted.streamableHTTPOptions?.headers?.Authorization) {
+            isAuthenticated = true;
+            if (!lastAuthenticated) {
+              lastAuthenticated = new Date(); // Authenticated via encrypted OAuth token
+            }
+            if (!provider && server.url) {
+              provider = determineProviderFromUrl(server.url);
+            }
           }
         }
+        // If no OAuth config exists, the Authorization header is likely an API key, not OAuth
       } catch (e) {
         console.error('Failed to decrypt streamable_http_options:', e);
       }

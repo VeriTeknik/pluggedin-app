@@ -26,6 +26,7 @@ import { useInView } from 'react-intersection-observer';
 
 import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics-context';
 import { cn } from '@/lib/utils';
 
 // Define feature data structure
@@ -66,6 +67,12 @@ const knowledgeFeatures: Feature[] = [
 ];
 
 const memoryFeatures: Feature[] = [
+  {
+    icon: Database,
+    titleKey: 'features.memoryClipboard.title',
+    descriptionKey: 'features.memoryClipboard.description',
+    pillar: 'memory'
+  },
   {
     icon: Clock,
     titleKey: 'features.crossModelMemory.title',
@@ -228,10 +235,13 @@ export function LandingFeaturesOverview() {
     triggerOnce: true,
   });
 
+  // Get metrics from shared context (cached, fetched once)
+  const { metrics: platformMetrics } = useMetrics();
+
   const stats = [
     { icon: Layers, value: 7268, suffix: '+', label: 'Verified Tools' },
-    { icon: Rocket, value: 1500, suffix: '+', label: 'MCP Servers' },
-    { icon: Users, value: 620, suffix: '+', label: 'Active Developers' },
+    { icon: Rocket, value: platformMetrics.totalServers, suffix: '+', label: 'MCP Servers' },
+    { icon: Users, value: platformMetrics.totalUsers, suffix: '+', label: 'Active Developers' },
     { icon: Zap, value: 99.9, suffix: '%', label: 'Uptime SLA', decimals: 1 },
   ];
 
@@ -282,7 +292,7 @@ export function LandingFeaturesOverview() {
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Join 620+ developers leveraging our comprehensive AI infrastructure
+            Join {platformMetrics.totalUsers}+ developers leveraging our comprehensive AI infrastructure
           </p>
         </div>
 

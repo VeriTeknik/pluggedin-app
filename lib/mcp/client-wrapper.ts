@@ -726,21 +726,57 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       }
     } else if (serverConfig.type === McpServerType.SSE && !isMcpRemoteServer) {
       // Log deprecation warning
-      
+
       if (!serverConfig.url) {
         return null;
       }
-      
+
       // Validate URL for security (allow localhost in development)
       const urlValidation = validateMcpUrl(serverConfig.url, {
-        allowLocalhost: process.env.NODE_ENV === 'development' || 
+        allowLocalhost: process.env.NODE_ENV === 'development' ||
                        process.env.ALLOW_LOCAL_MCP_SERVERS === 'true'
       });
       if (!urlValidation.valid) {
         throw new Error(`MCP Server URL validation failed for ${serverConfig.name}: ${urlValidation.error}`);
       }
-      
-      transport = new SSEClientTransport(urlValidation.parsedUrl!);
+
+      // Extract streamable HTTP options for OAuth support
+      let streamableOptions: any = {};
+
+      // Priority 1: Decrypted streamableHTTPOptions from dedicated column
+      if (serverConfig.streamableHTTPOptions) {
+        streamableOptions = serverConfig.streamableHTTPOptions;
+      }
+      // Priority 2: Legacy env.__streamableHTTPOptions (backward compatibility)
+      else if (serverConfig.env?.__streamableHTTPOptions) {
+        try {
+          const parsed = JSON.parse(serverConfig.env.__streamableHTTPOptions);
+          if (parsed && typeof parsed === 'object') {
+            streamableOptions = parsed;
+          }
+        } catch (e) {
+          console.error('[OAuth/SSE] Failed to parse legacy streamableHTTPOptions:', e);
+          streamableOptions = {};
+        }
+      }
+
+      // Create SSEClientTransport with OAuth headers if available
+      const transportOptions: any = { url: urlValidation.parsedUrl! };
+
+      if (streamableOptions?.headers && typeof streamableOptions.headers === 'object') {
+        const headerValidation = validateHeaders(streamableOptions.headers);
+        if (headerValidation.valid) {
+          transportOptions.requestInit = {
+            headers: headerValidation.sanitizedHeaders,
+            cache: 'no-store' as RequestCache,
+            next: { revalidate: 0 }
+          };
+        } else {
+          console.warn('[OAuth/SSE] Invalid headers, skipping:', headerValidation.error);
+        }
+      }
+
+      transport = new SSEClientTransport(transportOptions.url, transportOptions.requestInit);
     } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP && !isMcpRemoteServer) {
       if (!serverConfig.url) {
         return null;
@@ -764,10 +800,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         // Priority 1: Decrypted streamableHTTPOptions from dedicated column
         if (serverConfig.streamableHTTPOptions) {
           streamableOptions = serverConfig.streamableHTTPOptions;
-          console.log('[OAuth] Using streamableHTTPOptions from decrypted dedicated column');
-          if (streamableOptions?.headers?.Authorization) {
-            console.log('[OAuth] Authorization header found and will be used for requests');
-          }
         }
         // Priority 2: Legacy env.__streamableHTTPOptions (backward compatibility)
         else if (serverConfig.env?.__streamableHTTPOptions) {
@@ -776,7 +808,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             // Validate the parsed options have expected structure
             if (parsed && typeof parsed === 'object') {
               streamableOptions = parsed;
-              console.log('[OAuth] Using streamableHTTPOptions from legacy env field');
             } else {
               streamableOptions = {};
             }
@@ -784,11 +815,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             console.error('[OAuth] Failed to parse legacy streamableHTTPOptions:', e);
             streamableOptions = {};
           }
-        }
-
-        // Log if no OAuth headers found
-        if (!streamableOptions?.headers?.Authorization) {
-          console.log('[OAuth] No Authorization header found in streamableHTTPOptions');
         }
         
         // Create StreamableHTTPClientTransport with options
@@ -873,7 +899,10 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
 
     const client = new Client(
       { name: clientName, version: clientVersion },
-      { capabilities: { tools: {}, resources: {}, prompts: {} } } // Assume all capabilities initially
+      // Empty capabilities object - MCP SDK v1.22.0+ handles capability
+      // negotiation during connection. Client capabilities are optional
+      // and will be populated based on server response.
+      { capabilities: {} }
     );
 
     return { client, transport };

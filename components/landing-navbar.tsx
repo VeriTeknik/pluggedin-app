@@ -3,6 +3,7 @@
 import { Menu, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,11 +16,9 @@ import { useKeyPress } from '@/hooks/useKeyPress';
 
 // Navigation links
 const navLinks: Array<{ href: string; labelKey: string; external?: boolean }> = [
-  { href: '#why-pluggedin', labelKey: 'navigation.whyPluggedin' },
   { href: '#features', labelKey: 'navigation.features' },
   { href: '#ai-models', labelKey: 'navigation.aiModels' },
   { href: '#pricing', labelKey: 'navigation.pricing' },
-  { href: '#community', labelKey: 'navigation.community' },
   { href: 'https://docs.plugged.in', labelKey: 'navigation.documentation', external: true },
 ];
 
@@ -29,6 +28,7 @@ export function LandingNavbar() {
   const { t } = useTranslation('landing');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
@@ -70,7 +70,7 @@ export function LandingNavbar() {
               ) : (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={pathname !== '/' && link.href.startsWith('#') ? `/${link.href}` : link.href}
                   className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {t(link.labelKey)}
@@ -87,8 +87,8 @@ export function LandingNavbar() {
 
           {/* Mobile Navigation Toggle */}
           <div className="md:hidden flex items-center">
-             <ThemeToggle />
-             <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="ml-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="ml-2">
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               <span className="sr-only">Toggle Menu</span>
             </Button>

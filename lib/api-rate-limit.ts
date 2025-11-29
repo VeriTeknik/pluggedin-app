@@ -119,5 +119,21 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000, // 1 minute
     max: 200,
     message: 'Too many document list requests. Please slow down.'
+  },
+  // Clipboard rate limits
+  clipboardRead: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+    message: 'Too many clipboard read requests. Please slow down.'
+  },
+  clipboardWrite: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 60,
+    message: 'Too many clipboard write requests. Please slow down.'
+  },
+  clipboardDelete: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 30,
+    message: 'Too many clipboard delete requests. Please slow down.'
   }
 };

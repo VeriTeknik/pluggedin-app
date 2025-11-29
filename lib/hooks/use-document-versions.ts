@@ -31,7 +31,17 @@ const fetcher = async (url: string) => {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch versions');
+    const error: any = new Error('Failed to fetch versions');
+    error.status = response.status;
+
+    try {
+      const data = await response.json();
+      error.detail = data?.error || data?.message;
+    } catch {
+      // Ignore JSON parse errors and fall back to the generic message
+    }
+
+    throw error;
   }
 
   return response.json();

@@ -39,6 +39,8 @@
     "password": {
       "title": "Şifre",
       "description": "Şifrenizi değiştirin",
+      "descriptionWithRemove": "Şifrenizi değiştirin veya kaldırın",
+      "descriptionNoPassword": "E-posta/şifre girişi için bir şifre belirleyin",
       "current": {
         "label": "Mevcut Şifre",
         "placeholder": "Mevcut şifrenizi girin"
@@ -52,8 +54,48 @@
         "placeholder": "Yeni şifrenizi tekrar girin"
       },
       "updateButton": "Şifreyi Değiştir",
+      "removeButton": "Şifreyi Kaldır",
+      "setButton": "Şifre Belirle",
+      "noPasswordSet": "Şu anda OAuth ile giriş yapıyorsunuz. Şifre belirlemeniz e-posta/şifre ile de giriş yapabilmenizi sağlar.",
       "success": "Şifre başarıyla güncellendi",
-      "error": "Şifre güncellenirken hata oluştu"
+      "error": "Şifre güncellenirken hata oluştu",
+      "removeDialog": {
+        "title": "Şifre Kaldırılsın mı?",
+        "description": "Sadece bağlı OAuth hesaplarınızla giriş yapabileceksiniz. Bu işlem geri alınamaz.",
+        "confirmLabel": "Onaylamak için e-postanızı yazın",
+        "confirmPlaceholder": "E-postanızı girin",
+        "warning": "Şifrenizi kaldırmadan önce en az bir OAuth hesabınızın bağlı olduğundan emin olun.",
+        "cancel": "İptal",
+        "confirm": "Şifreyi Kaldır"
+      },
+      "errors": {
+        "onlyLoginMethod": "Şifre kaldırılamaz. Bu tek giriş yönteminiz. Lütfen önce bir OAuth hesabı bağlayın.",
+        "confirmEmailMismatch": "E-posta onayı eşleşmiyor.",
+        "removalFailed": "Şifre kaldırılamadı.",
+        "setFailed": "Şifre belirlenemedi.",
+        "alreadyExists": "Şifre zaten mevcut. Şifre değiştir seçeneğini kullanın."
+      },
+      "successMessages": {
+        "removed": "Şifre başarıyla kaldırıldı. Artık sadece OAuth ile giriş yapabilirsiniz.",
+        "set": "Şifre başarıyla belirlendi. Artık e-posta/şifre ile giriş yapabilirsiniz."
+      }
+    },
+    "loginMethods": {
+      "title": "Giriş Yöntemleri",
+      "description": "Hesabınıza nasıl giriş yaptığınızı yönetin",
+      "emailPassword": "E-posta & Şifre",
+      "active": "Aktif",
+      "inactive": "Pasif",
+      "notConfigured": "Yapılandırılmamış",
+      "connected": "Bağlı",
+      "notConnected": "Bağlı değil",
+      "disconnect": "Bağlantıyı Kes",
+      "connect": "Bağlan",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "twitter": "Twitter"
+      }
     },
     "account": {
       "title": "Hesabı Sil",
