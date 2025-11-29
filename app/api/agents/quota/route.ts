@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { agentsTable, AgentState } from '@/db/schema';
 
-import { authenticateApiKey } from '../auth';
+import { authenticate } from '../auth';
 
 /**
  * @swagger
@@ -68,7 +68,7 @@ import { authenticateApiKey } from '../auth';
  */
 export async function GET(request: Request) {
   try {
-    const auth = await authenticateApiKey(request);
+    const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
     // Get total agent count for profile

@@ -9,7 +9,7 @@ import {
   agentMetricsTable,
 } from '@/db/schema';
 
-import { authenticateApiKey } from '../../../auth';
+import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 /**
@@ -91,7 +91,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const auth = await authenticateApiKey(request);
+    const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
     const agentId = params.id;

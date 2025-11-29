@@ -8,7 +8,7 @@ import {
   AgentState,
 } from '@/db/schema';
 
-import { authenticateApiKey } from '../auth';
+import { authenticate } from '../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 /**
@@ -57,7 +57,7 @@ import { kubernetesService } from '@/lib/services/kubernetes-service';
  */
 export async function GET(request: Request) {
   try {
-    const auth = await authenticateApiKey(request);
+    const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
     const agents = await db
@@ -164,7 +164,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const auth = await authenticateApiKey(request);
+    const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
     const body = await request.json();
