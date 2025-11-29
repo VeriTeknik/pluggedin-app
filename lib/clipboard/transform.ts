@@ -15,6 +15,9 @@ export type ClipboardRow = InferSelectModel<typeof clipboardsTable>;
 export const CLIPBOARD_SOURCES = ['ui', 'sdk', 'mcp'] as const;
 export type ClipboardSource = typeof CLIPBOARD_SOURCES[number];
 
+/** Default source for backward compatibility with older data */
+export const DEFAULT_CLIPBOARD_SOURCE: ClipboardSource = 'ui';
+
 /**
  * Clipboard visibility types
  */
@@ -74,7 +77,7 @@ export function toClipboardEntry(
     visibility: row.visibility,
     createdByTool: row.created_by_tool,
     createdByModel: row.created_by_model,
-    source: row.source,
+    source: row.source ?? DEFAULT_CLIPBOARD_SOURCE,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     expiresAt: row.expires_at?.toISOString() ?? null,

@@ -25,6 +25,7 @@ export {
   CLIPBOARD_SOURCES,
   CLIPBOARD_VISIBILITIES,
   CLIPBOARD_ENCODINGS,
+  DEFAULT_CLIPBOARD_SOURCE,
   type ClipboardRow,
   type ClipboardEntry,
   type ClipboardSource,
