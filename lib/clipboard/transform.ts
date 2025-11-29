@@ -9,18 +9,36 @@ import { clipboardsTable } from '@/db/schema';
 
 export type ClipboardRow = InferSelectModel<typeof clipboardsTable>;
 
+/**
+ * Clipboard source types - shared across API, schema, and UI
+ */
+export const CLIPBOARD_SOURCES = ['ui', 'sdk', 'mcp'] as const;
+export type ClipboardSource = typeof CLIPBOARD_SOURCES[number];
+
+/**
+ * Clipboard visibility types
+ */
+export const CLIPBOARD_VISIBILITIES = ['private', 'workspace', 'public'] as const;
+export type ClipboardVisibility = typeof CLIPBOARD_VISIBILITIES[number];
+
+/**
+ * Clipboard encoding types
+ */
+export const CLIPBOARD_ENCODINGS = ['utf-8', 'base64', 'hex'] as const;
+export type ClipboardEncoding = typeof CLIPBOARD_ENCODINGS[number];
+
 export interface ClipboardEntry {
   uuid: string;
   name: string | null;
   idx: number | null;
   value: string;
   contentType: string;
-  encoding: string;
+  encoding: ClipboardEncoding;
   sizeBytes: number;
-  visibility: string;
+  visibility: ClipboardVisibility;
   createdByTool: string | null;
   createdByModel: string | null;
-  source: string;
+  source: ClipboardSource;
   createdAt: string;
   updatedAt: string;
   expiresAt: string | null;

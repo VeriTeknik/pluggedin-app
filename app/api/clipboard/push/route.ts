@@ -9,6 +9,9 @@ import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
 import {
   calculateClipboardSize,
   calculateExpirationDate,
+  CLIPBOARD_ENCODINGS,
+  CLIPBOARD_SOURCES,
+  CLIPBOARD_VISIBILITIES,
   validateClipboardSize,
   validateContentEncoding,
 } from '@/lib/clipboard';
@@ -20,11 +23,11 @@ const pushLimiter = rateLimit(RATE_LIMITS.clipboardWrite);
 const pushClipboardSchema = z.object({
   value: z.string(),
   contentType: z.string().max(256).optional().default('text/plain'),
-  encoding: z.enum(['utf-8', 'base64', 'hex']).optional().default('utf-8'),
-  visibility: z.enum(['private', 'workspace', 'public']).optional().default('private'),
+  encoding: z.enum(CLIPBOARD_ENCODINGS).optional().default('utf-8'),
+  visibility: z.enum(CLIPBOARD_VISIBILITIES).optional().default('private'),
   createdByTool: z.string().max(255).optional(),
   createdByModel: z.string().max(255).optional(),
-  source: z.enum(['ui', 'sdk', 'mcp']).optional().default('ui'),
+  source: z.enum(CLIPBOARD_SOURCES).optional().default('ui'),
   ttlSeconds: z.number().int().positive().optional(),
 });
 

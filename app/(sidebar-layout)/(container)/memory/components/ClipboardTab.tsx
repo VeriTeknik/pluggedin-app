@@ -55,7 +55,13 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { buildSafeImageDataUrl,isSafeImageType, isTextLikeEntry } from '@/lib/clipboard/client';
+import {
+  buildSafeImageDataUrl,
+  formatClipboardDate,
+  getSourceDisplayConfig,
+  isSafeImageType,
+  isTextLikeEntry,
+} from '@/lib/clipboard/client';
 
 import type { ClipboardEntry } from '../hooks/useClipboard';
 import { useClipboard } from '../hooks/useClipboard';
@@ -253,11 +259,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleString();
-  };
-
   const getTimeRemaining = (expiresAt: string | null): string => {
     if (!expiresAt) return 'Never';
     const now = new Date();
@@ -357,7 +358,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
-              formatDate={formatDate}
               getTimeRemaining={getTimeRemaining}
               getContentTypeIcon={getContentTypeIcon}
               truncateValue={truncateValue}
@@ -395,7 +395,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
-              formatDate={formatDate}
               getTimeRemaining={getTimeRemaining}
               getContentTypeIcon={getContentTypeIcon}
               truncateValue={truncateValue}
@@ -403,7 +402,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
           ) : (
             <ClipboardGrid
               entries={indexedEntries}
-              showIdx
               onCopy={handleCopy}
               onPreview={handlePreview}
               onEdit={handleEdit}
@@ -453,15 +451,18 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
             <div className="w-64 shrink-0 border-l pl-4 space-y-3">
               <h4 className="text-sm font-medium text-foreground">{t('clipboard.preview.details')}</h4>
               <div className="space-y-3 text-sm">
-                {/* Source */}
-                <div>
-                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.source')}</div>
-                  <Badge variant={selectedEntry?.source === 'mcp' ? 'default' : selectedEntry?.source === 'sdk' ? 'secondary' : 'outline'}>
-                    {selectedEntry?.source === 'mcp' ? t('clipboard.preview.sourceMcp') :
-                     selectedEntry?.source === 'sdk' ? t('clipboard.preview.sourceSdk') :
-                     t('clipboard.preview.sourceUi')}
-                  </Badge>
-                </div>
+                {/* Source - using helper for badge config */}
+                {(() => {
+                  const sourceConfig = getSourceDisplayConfig(selectedEntry?.source);
+                  return (
+                    <div>
+                      <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.source')}</div>
+                      <Badge variant={sourceConfig.variant}>
+                        {t(sourceConfig.labelKey)}
+                      </Badge>
+                    </div>
+                  );
+                })()}
 
                 {/* Visibility */}
                 <div>
@@ -475,22 +476,24 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
                   <div className="font-mono text-xs">{selectedEntry?.encoding}</div>
                 </div>
 
-                {/* Created At */}
+                {/* Created At - using centralized date formatter */}
                 <div>
                   <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.createdAt')}</div>
-                  <div className="text-xs">{selectedEntry?.createdAt ? new Date(selectedEntry.createdAt).toLocaleString() : '-'}</div>
+                  <div className="text-xs">{formatClipboardDate(selectedEntry?.createdAt)}</div>
                 </div>
 
                 {/* Updated At */}
                 <div>
                   <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.updatedAt')}</div>
-                  <div className="text-xs">{selectedEntry?.updatedAt ? new Date(selectedEntry.updatedAt).toLocaleString() : '-'}</div>
+                  <div className="text-xs">{formatClipboardDate(selectedEntry?.updatedAt)}</div>
                 </div>
 
                 {/* Expires At */}
                 <div>
                   <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.expiresAt')}</div>
-                  <div className="text-xs">{selectedEntry?.expiresAt ? new Date(selectedEntry.expiresAt).toLocaleString() : t('clipboard.preview.noExpiration')}</div>
+                  <div className="text-xs">
+                    {selectedEntry?.expiresAt ? formatClipboardDate(selectedEntry.expiresAt) : t('clipboard.preview.noExpiration')}
+                  </div>
                 </div>
 
                 {/* Created By Tool */}
@@ -910,7 +913,6 @@ interface ClipboardTableProps {
   onEdit: (entry: ClipboardEntry) => void;
   onDelete: (entry: ClipboardEntry) => void;
   formatBytes: (bytes: number) => string;
-  formatDate: (date: string) => string;
   getTimeRemaining: (expiresAt: string | null) => string;
   getContentTypeIcon: (contentType: string) => React.ReactNode;
   truncateValue: (value: string, maxLength?: number) => string;
@@ -925,7 +927,6 @@ function ClipboardTable({
   onEdit,
   onDelete,
   formatBytes,
-  formatDate,
   getTimeRemaining,
   getContentTypeIcon,
   truncateValue,
@@ -1033,7 +1034,6 @@ function ClipboardTable({
 interface ClipboardGridProps {
   entries: ClipboardEntry[];
   showName?: boolean;
-  showIdx?: boolean;
   onCopy: (entry: ClipboardEntry) => void;
   onPreview: (entry: ClipboardEntry) => void;
   onEdit: (entry: ClipboardEntry) => void;
@@ -1047,7 +1047,6 @@ interface ClipboardGridProps {
 function ClipboardGrid({
   entries,
   showName,
-  showIdx,
   onCopy,
   onPreview,
   onEdit,
