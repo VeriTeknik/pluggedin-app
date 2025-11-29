@@ -53,13 +53,16 @@ const HEX_REGEX = /^[0-9A-Fa-f]*$/;
 /**
  * Validate that content matches its declared encoding
  * Returns error message if invalid, null if valid
+ *
+ * Security: Validates both format AND decodability to prevent
+ * storing malformed data that could cause issues downstream
  */
 export function validateContentEncoding(
   value: string,
   encoding: 'utf-8' | 'base64' | 'hex'
 ): string | null {
   switch (encoding) {
-    case 'base64':
+    case 'base64': {
       // Check basic format (must be valid base64 characters)
       if (!BASE64_REGEX.test(value)) {
         return 'Invalid base64 encoding: contains invalid characters';
@@ -68,8 +71,24 @@ export function validateContentEncoding(
       if (value.length > 0 && value.length % 4 !== 0) {
         return 'Invalid base64 encoding: incorrect padding';
       }
+      // Actually attempt to decode to catch subtle encoding issues
+      // (e.g., invalid padding that passes regex, corrupted data)
+      try {
+        const decoded = Buffer.from(value, 'base64');
+        // Re-encode and compare to detect non-canonical base64
+        const reencoded = decoded.toString('base64');
+        // Remove padding for comparison (some inputs may have different padding)
+        const normalizedValue = value.replace(/=+$/, '');
+        const normalizedReencoded = reencoded.replace(/=+$/, '');
+        if (normalizedValue !== normalizedReencoded) {
+          return 'Invalid base64 encoding: non-canonical or corrupted data';
+        }
+      } catch {
+        return 'Invalid base64 encoding: failed to decode';
+      }
       break;
-    case 'hex':
+    }
+    case 'hex': {
       if (!HEX_REGEX.test(value)) {
         return 'Invalid hex encoding: contains non-hexadecimal characters';
       }
@@ -77,9 +96,17 @@ export function validateContentEncoding(
       if (value.length % 2 !== 0) {
         return 'Invalid hex encoding: odd number of characters';
       }
+      // Verify actual decoding works
+      try {
+        Buffer.from(value, 'hex');
+      } catch {
+        return 'Invalid hex encoding: failed to decode';
+      }
       break;
+    }
     case 'utf-8':
       // UTF-8 string content - no special validation needed
+      // JavaScript strings are already valid UTF-16, which can represent all UTF-8
       break;
   }
   return null;

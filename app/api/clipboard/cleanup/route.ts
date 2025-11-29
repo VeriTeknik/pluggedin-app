@@ -1,4 +1,4 @@
-import { lt, sql } from 'drizzle-orm';
+import { and, isNotNull, lt, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
@@ -79,10 +79,16 @@ export async function GET(request: NextRequest) {
     if (authError) return authError;
 
     // Get count of expired entries pending cleanup
+    // Note: Must check isNotNull to match cleanup logic - entries with NULL expires_at never expire
     const expiredResult = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(clipboardsTable)
-      .where(lt(clipboardsTable.expires_at, new Date()));
+      .where(
+        and(
+          isNotNull(clipboardsTable.expires_at),
+          lt(clipboardsTable.expires_at, new Date())
+        )
+      );
 
     // Get total entries count
     const totalResult = await db
