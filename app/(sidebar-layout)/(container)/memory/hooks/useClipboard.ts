@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 
-import { deleteClipboardEntry, getClipboardEntries, setClipboardEntry, type ClipboardEntry } from '@/app/actions/clipboard';
+import { type ClipboardEntry,deleteClipboardEntry, getClipboardEntries, setClipboardEntry } from '@/app/actions/clipboard';
 import { useSafeSession } from '@/hooks/use-safe-session';
 
 export type { ClipboardEntry } from '@/app/actions/clipboard';

@@ -8,9 +8,9 @@ import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
 import { validateCSRF } from '@/lib/csrf-protection';
-import { RateLimiters } from '@/lib/rate-limiter';
-import { sendEmail, generatePasswordChangedEmail } from '@/lib/email';
+import { generatePasswordChangedEmail,sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
+import { RateLimiters } from '@/lib/rate-limiter';
 
 /**
  * Bcrypt Cost Factor Configuration

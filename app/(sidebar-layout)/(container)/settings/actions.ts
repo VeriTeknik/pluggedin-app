@@ -1,15 +1,15 @@
 'use server';
 
+import { hash } from 'bcrypt';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { hash } from 'bcrypt';
 
 import { db } from '@/db';
 import { accounts, userEmailPreferencesTable, users } from '@/db/schema';
-import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
 import { getAuthSession } from '@/lib/auth';
+import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
+import { generatePasswordRemovedEmail,generatePasswordSetEmail, sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
-import { sendEmail, generatePasswordSetEmail, generatePasswordRemovedEmail } from '@/lib/email';
 
 /**
  * Bcrypt Cost Factor Configuration

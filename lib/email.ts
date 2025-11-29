@@ -1,11 +1,10 @@
 import nodemailer from 'nodemailer';
 
 import {
-  wrapEmailLayout,
+  createActionButton,
   createSecurityInfoBox,
   createWarningBox,
-  createActionButton,
-  createProviderList,
+  wrapEmailLayout,
 } from './email-layout';
 
 type EmailOptions = {

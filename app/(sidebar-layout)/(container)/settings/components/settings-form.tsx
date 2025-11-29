@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -47,9 +46,9 @@ import { type ConnectedAccount, removeConnectedAccount, removePassword, setPassw
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
+import { LoginMethodsCard } from './login-methods-card';
 import { ProfileSocialSection } from './profile-social-section';
 import { RemovePasswordDialog } from './remove-password-dialog';
-import { LoginMethodsCard } from './login-methods-card';
 type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {

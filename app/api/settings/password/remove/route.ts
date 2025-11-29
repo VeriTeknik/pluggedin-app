@@ -1,17 +1,17 @@
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { authOptions } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema';
+import { createErrorResponse } from '@/lib/api-errors';
+import { authOptions } from '@/lib/auth';
 import { recordPasswordChange } from '@/lib/auth-security';
 import { validateCSRF } from '@/lib/csrf-protection';
+import { generatePasswordRemovedEmail,sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
-import { createErrorResponse } from '@/lib/api-errors';
 import { RateLimiters } from '@/lib/rate-limiter';
-import { sendEmail, generatePasswordRemovedEmail } from '@/lib/email';
 
 const removePasswordSchema = z.object({
   confirmEmail: z.string().email(),
