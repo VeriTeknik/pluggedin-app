@@ -9,6 +9,7 @@ export {
   calculateClipboardSize,
   validateClipboardSize,
   calculateExpirationDate,
+  validateContentEncoding,
 } from './constants';
 
 export {

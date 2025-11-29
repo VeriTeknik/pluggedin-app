@@ -79,23 +79,32 @@ export function buildClipboardConditions({
 
 /**
  * Clean up expired clipboard entries for a profile
- * Non-blocking, logs errors but doesn't throw
+ * Non-blocking, logs detailed error information for observability
  *
  * Note: Entries with NULL expires_at are preserved (they never expire)
+ * @returns Promise resolving to number of deleted entries, or -1 on error
  */
-export function cleanupExpiredClipboards(profileUuid: string): Promise<void> {
-  return db
-    .delete(clipboardsTable)
-    .where(
-      and(
-        eq(clipboardsTable.profile_uuid, profileUuid),
-        isNotNull(clipboardsTable.expires_at),
-        lt(clipboardsTable.expires_at, new Date())
+export async function cleanupExpiredClipboards(profileUuid: string): Promise<number> {
+  try {
+    const result = await db
+      .delete(clipboardsTable)
+      .where(
+        and(
+          eq(clipboardsTable.profile_uuid, profileUuid),
+          isNotNull(clipboardsTable.expires_at),
+          lt(clipboardsTable.expires_at, new Date())
+        )
       )
-    )
-    .execute()
-    .then(() => {})
-    .catch(console.error);
+      .returning({ uuid: clipboardsTable.uuid });
+
+    return result.length;
+  } catch (error) {
+    console.error('Failed to clean up expired clipboards for profile:', {
+      profileUuid,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return -1; // Indicate error without throwing
+  }
 }
 
 /**

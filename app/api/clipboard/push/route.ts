@@ -10,6 +10,7 @@ import {
   calculateClipboardSize,
   calculateExpirationDate,
   validateClipboardSize,
+  validateContentEncoding,
 } from '@/lib/clipboard';
 
 // Rate limiter for push (write) operations
@@ -50,6 +51,12 @@ export async function POST(request: NextRequest) {
     const sizeError = validateClipboardSize(validatedBody.value);
     if (sizeError) {
       return NextResponse.json({ error: sizeError }, { status: 400 });
+    }
+
+    // Validate content matches declared encoding
+    const encodingError = validateContentEncoding(validatedBody.value, validatedBody.encoding);
+    if (encodingError) {
+      return NextResponse.json({ error: encodingError }, { status: 400 });
     }
 
     const sizeBytes = calculateClipboardSize(validatedBody.value);

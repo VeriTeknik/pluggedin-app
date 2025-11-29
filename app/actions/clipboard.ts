@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { clipboardsTable, projectsTable } from '@/db/schema';
@@ -12,6 +12,7 @@ import {
   toClipboardEntries,
   toClipboardEntry,
   validateClipboardSize,
+  validateContentEncoding,
 } from '@/lib/clipboard';
 
 import { getProjectActiveProfile } from './profiles';
@@ -151,6 +152,13 @@ export async function setClipboardEntry(
       return { success: false, error: sizeError };
     }
 
+    // Validate content matches declared encoding
+    const encoding = options.encoding ?? 'utf-8';
+    const encodingError = validateContentEncoding(options.value, encoding);
+    if (encodingError) {
+      return { success: false, error: encodingError };
+    }
+
     const sizeBytes = calculateClipboardSize(options.value);
     const expiresAt = calculateExpirationDate(options.ttlSeconds);
 
@@ -192,29 +200,23 @@ export async function setClipboardEntry(
         })
         .returning();
     } else {
-      // Indexed entry: check if exists first
-      const existing = await db
-        .select({ uuid: clipboardsTable.uuid })
-        .from(clipboardsTable)
-        .where(
-          and(
-            eq(clipboardsTable.profile_uuid, profileUuid),
-            eq(clipboardsTable.idx, options.idx!)
-          )
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        return {
-          success: false,
-          error: `Index ${options.idx} already exists. Use push for auto-increment or delete first.`,
-        };
-      }
-
+      // Indexed entry: use atomic insert with conflict handling
+      // This prevents race conditions where two concurrent requests could both pass a check-then-insert
       result = await db
         .insert(clipboardsTable)
         .values(entryData)
+        .onConflictDoNothing({
+          target: [clipboardsTable.profile_uuid, clipboardsTable.idx],
+        })
         .returning();
+
+      // If no rows returned, the index already exists
+      if (result.length === 0) {
+        return {
+          success: false,
+          error: 'Conflict with existing entry. Use push for auto-increment or delete first.',
+        };
+      }
     }
 
     return {

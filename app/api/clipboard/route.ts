@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -13,6 +13,7 @@ import {
   toClipboardEntries,
   toClipboardEntry,
   validateClipboardSize,
+  validateContentEncoding,
 } from '@/lib/clipboard';
 
 // Rate limiters
@@ -180,6 +181,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate content matches declared encoding
+    const encodingError = validateContentEncoding(validatedBody.value, validatedBody.encoding);
+    if (encodingError) {
+      return NextResponse.json(
+        { error: encodingError },
+        { status: 400 }
+      );
+    }
+
     const sizeBytes = calculateClipboardSize(validatedBody.value);
     const expiresAt = calculateExpirationDate(validatedBody.ttlSeconds);
 
@@ -221,29 +231,23 @@ export async function POST(request: NextRequest) {
         })
         .returning();
     } else {
-      // Indexed entry: check if exists first
-      const existing = await db
-        .select({ uuid: clipboardsTable.uuid })
-        .from(clipboardsTable)
-        .where(
-          and(
-            eq(clipboardsTable.profile_uuid, activeProfile.uuid),
-            eq(clipboardsTable.idx, validatedBody.idx!)
-          )
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        return NextResponse.json(
-          { error: `Index ${validatedBody.idx} already exists. Use push for auto-increment or delete first.` },
-          { status: 409 }
-        );
-      }
-
+      // Indexed entry: use atomic insert with conflict handling
+      // This prevents race conditions where two concurrent requests could both pass a check-then-insert
       result = await db
         .insert(clipboardsTable)
         .values(entryData)
+        .onConflictDoNothing({
+          target: [clipboardsTable.profile_uuid, clipboardsTable.idx],
+        })
         .returning();
+
+      // If no rows returned, the index already exists
+      if (result.length === 0) {
+        return NextResponse.json(
+          { error: 'Conflict with existing entry. Use push for auto-increment or delete first.' },
+          { status: 409 }
+        );
+      }
     }
 
     return NextResponse.json({
