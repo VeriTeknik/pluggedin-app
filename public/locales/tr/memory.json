@@ -96,7 +96,21 @@
     },
     "preview": {
       "unsafeImageType": "Resim önizlenemiyor: Güvenlik nedeniyle desteklenmeyen içerik türü.",
-      "contentType": "İçerik türü"
+      "contentType": "İçerik türü",
+      "details": "Detaylar",
+      "source": "Kaynak",
+      "sourceUi": "Arayüz",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "Görünürlük",
+      "encoding": "Kodlama",
+      "createdAt": "Oluşturulma",
+      "updatedAt": "Güncelleme",
+      "expiresAt": "Sona Erme",
+      "createdBy": "Oluşturan",
+      "tool": "Araç",
+      "model": "Model",
+      "noExpiration": "Asla"
     },
     "toast": {
       "copied": "Panoya kopyalandı",

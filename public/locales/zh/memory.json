@@ -96,7 +96,21 @@
     },
     "preview": {
       "unsafeImageType": "无法预览图片：出于安全原因不支持的内容类型。",
-      "contentType": "内容类型"
+      "contentType": "内容类型",
+      "details": "详情",
+      "source": "来源",
+      "sourceUi": "界面",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "可见性",
+      "encoding": "编码",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "expiresAt": "过期时间",
+      "createdBy": "创建者",
+      "tool": "工具",
+      "model": "模型",
+      "noExpiration": "永不过期"
     },
     "toast": {
       "copied": "已复制到剪贴板",

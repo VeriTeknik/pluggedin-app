@@ -96,7 +96,21 @@
     },
     "preview": {
       "unsafeImageType": "छवि पूर्वावलोकन नहीं हो सकता: सुरक्षा कारणों से असमर्थित सामग्री प्रकार।",
-      "contentType": "सामग्री प्रकार"
+      "contentType": "सामग्री प्रकार",
+      "details": "विवरण",
+      "source": "स्रोत",
+      "sourceUi": "UI",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "दृश्यता",
+      "encoding": "एन्कोडिंग",
+      "createdAt": "बनाया गया",
+      "updatedAt": "अपडेट किया गया",
+      "expiresAt": "समाप्ति",
+      "createdBy": "द्वारा निर्मित",
+      "tool": "उपकरण",
+      "model": "मॉडल",
+      "noExpiration": "कभी नहीं"
     },
     "toast": {
       "copied": "क्लिपबोर्ड पर कॉपी किया गया",

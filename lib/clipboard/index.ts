@@ -22,10 +22,26 @@ export {
 export {
   toClipboardEntry,
   toClipboardEntries,
+  CLIPBOARD_SOURCES,
+  CLIPBOARD_VISIBILITIES,
+  CLIPBOARD_ENCODINGS,
+  DEFAULT_CLIPBOARD_SOURCE,
   type ClipboardRow,
   type ClipboardEntry,
+  type ClipboardSource,
+  type ClipboardVisibility,
+  type ClipboardEncoding,
   type TransformOptions,
 } from './transform';
 
-// Client-safe utility for checking text-like entries
-export { isTextLikeEntry, isSafeImageType, buildSafeImageDataUrl } from './client';
+// Client-safe utilities
+export {
+  isTextLikeEntry,
+  isSafeImageType,
+  buildSafeImageDataUrl,
+  getSourceDisplayConfig,
+  formatClipboardDate,
+  CLIPBOARD_SOURCE_DISPLAY,
+  type BadgeVariant,
+  type SourceDisplayConfig,
+} from './client';

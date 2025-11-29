@@ -78,3 +78,56 @@ export function isTextLikeEntry(entry: { contentType: string; encoding?: string 
 
   return false;
 }
+
+/**
+ * Clipboard source display configuration
+ * Maps source values to their display properties (label key, badge variant)
+ */
+export type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive';
+
+export interface SourceDisplayConfig {
+  labelKey: string;
+  variant: BadgeVariant;
+}
+
+export const CLIPBOARD_SOURCE_DISPLAY: Record<string, SourceDisplayConfig> = {
+  mcp: { labelKey: 'clipboard.preview.sourceMcp', variant: 'default' },
+  sdk: { labelKey: 'clipboard.preview.sourceSdk', variant: 'secondary' },
+  ui: { labelKey: 'clipboard.preview.sourceUi', variant: 'outline' },
+};
+
+/**
+ * Get display configuration for a clipboard source
+ * Returns default UI config if source is not recognized
+ */
+export function getSourceDisplayConfig(source: string | undefined): SourceDisplayConfig {
+  if (!source || !(source in CLIPBOARD_SOURCE_DISPLAY)) {
+    return CLIPBOARD_SOURCE_DISPLAY.ui;
+  }
+  return CLIPBOARD_SOURCE_DISPLAY[source];
+}
+
+/**
+ * Format a date string or Date object for display
+ * Uses browser's locale for formatting
+ *
+ * @param date - ISO date string or Date object
+ * @param options - Intl.DateTimeFormat options
+ * @returns Formatted date string or fallback value
+ */
+export function formatClipboardDate(
+  date: string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }
+): string {
+  if (!date) return '-';
+
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleString(undefined, options);
+  } catch {
+    return '-';
+  }
+}

@@ -55,7 +55,13 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { buildSafeImageDataUrl,isSafeImageType, isTextLikeEntry } from '@/lib/clipboard/client';
+import {
+  buildSafeImageDataUrl,
+  formatClipboardDate,
+  getSourceDisplayConfig,
+  isSafeImageType,
+  isTextLikeEntry,
+} from '@/lib/clipboard/client';
 
 import type { ClipboardEntry } from '../hooks/useClipboard';
 import { useClipboard } from '../hooks/useClipboard';
@@ -253,11 +259,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleString();
-  };
-
   const getTimeRemaining = (expiresAt: string | null): string => {
     if (!expiresAt) return 'Never';
     const now = new Date();
@@ -357,7 +358,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
-              formatDate={formatDate}
               getTimeRemaining={getTimeRemaining}
               getContentTypeIcon={getContentTypeIcon}
               truncateValue={truncateValue}
@@ -395,7 +395,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               onEdit={handleEdit}
               onDelete={handleDelete}
               formatBytes={formatBytes}
-              formatDate={formatDate}
               getTimeRemaining={getTimeRemaining}
               getContentTypeIcon={getContentTypeIcon}
               truncateValue={truncateValue}
@@ -403,7 +402,6 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
           ) : (
             <ClipboardGrid
               entries={indexedEntries}
-              showIdx
               onCopy={handleCopy}
               onPreview={handlePreview}
               onEdit={handleEdit}
@@ -419,7 +417,7 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>
               {selectedEntry?.name || `Index ${selectedEntry?.idx}`}
@@ -428,31 +426,93 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
               {selectedEntry?.contentType} - {selectedEntry && formatBytes(selectedEntry.sizeBytes)}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-auto max-h-[60vh]">
-            {selectedEntry && isSafeImageType(selectedEntry.contentType) ? (
-              <img
-                src={buildSafeImageDataUrl(selectedEntry.contentType, selectedEntry.encoding, selectedEntry.value) ?? ''}
-                alt="Clipboard content"
-                className="max-w-full h-auto"
-              />
-            ) : selectedEntry?.contentType.startsWith('image/') ? (
-              <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground">
-                <p>{t('clipboard.preview.unsafeImageType')}</p>
-                <p className="text-xs mt-1">{t('clipboard.preview.contentType')}: {selectedEntry.contentType}</p>
+          <div className="flex gap-4">
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto max-h-[60vh]">
+              {selectedEntry && isSafeImageType(selectedEntry.contentType) ? (
+                <img
+                  src={buildSafeImageDataUrl(selectedEntry.contentType, selectedEntry.encoding, selectedEntry.value) ?? ''}
+                  alt="Clipboard content"
+                  className="max-w-full h-auto"
+                />
+              ) : selectedEntry?.contentType.startsWith('image/') ? (
+                <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground">
+                  <p>{t('clipboard.preview.unsafeImageType')}</p>
+                  <p className="text-xs mt-1">{t('clipboard.preview.contentType')}: {selectedEntry.contentType}</p>
+                </div>
+              ) : (
+                <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap break-all h-full">
+                  {selectedEntry?.value}
+                </pre>
+              )}
+            </div>
+
+            {/* Info Pane - Right Side */}
+            <div className="w-64 shrink-0 border-l pl-4 space-y-3">
+              <h4 className="text-sm font-medium text-foreground">{t('clipboard.preview.details')}</h4>
+              <div className="space-y-3 text-sm">
+                {/* Source - using helper for badge config */}
+                {(() => {
+                  const sourceConfig = getSourceDisplayConfig(selectedEntry?.source);
+                  return (
+                    <div>
+                      <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.source')}</div>
+                      <Badge variant={sourceConfig.variant}>
+                        {t(sourceConfig.labelKey)}
+                      </Badge>
+                    </div>
+                  );
+                })()}
+
+                {/* Visibility */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.visibility')}</div>
+                  <div className="capitalize">{selectedEntry?.visibility}</div>
+                </div>
+
+                {/* Encoding */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.encoding')}</div>
+                  <div className="font-mono text-xs">{selectedEntry?.encoding}</div>
+                </div>
+
+                {/* Created At - using centralized date formatter */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.createdAt')}</div>
+                  <div className="text-xs">{formatClipboardDate(selectedEntry?.createdAt)}</div>
+                </div>
+
+                {/* Updated At */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.updatedAt')}</div>
+                  <div className="text-xs">{formatClipboardDate(selectedEntry?.updatedAt)}</div>
+                </div>
+
+                {/* Expires At */}
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.expiresAt')}</div>
+                  <div className="text-xs">
+                    {selectedEntry?.expiresAt ? formatClipboardDate(selectedEntry.expiresAt) : t('clipboard.preview.noExpiration')}
+                  </div>
+                </div>
+
+                {/* Created By Tool */}
+                {selectedEntry?.createdByTool && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.tool')}</div>
+                    <Badge variant="outline" className="text-xs">{selectedEntry.createdByTool}</Badge>
+                  </div>
+                )}
+
+                {/* Created By Model */}
+                {selectedEntry?.createdByModel && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">{t('clipboard.preview.model')}</div>
+                    <Badge variant="outline" className="text-xs">{selectedEntry.createdByModel}</Badge>
+                  </div>
+                )}
               </div>
-            ) : (
-              <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap break-all">
-                {selectedEntry?.value}
-              </pre>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
-            {selectedEntry?.createdByTool && (
-              <Badge variant="outline">{selectedEntry.createdByTool}</Badge>
-            )}
-            {selectedEntry?.createdByModel && (
-              <Badge variant="outline">{selectedEntry.createdByModel}</Badge>
-            )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -853,7 +913,6 @@ interface ClipboardTableProps {
   onEdit: (entry: ClipboardEntry) => void;
   onDelete: (entry: ClipboardEntry) => void;
   formatBytes: (bytes: number) => string;
-  formatDate: (date: string) => string;
   getTimeRemaining: (expiresAt: string | null) => string;
   getContentTypeIcon: (contentType: string) => React.ReactNode;
   truncateValue: (value: string, maxLength?: number) => string;
@@ -868,7 +927,6 @@ function ClipboardTable({
   onEdit,
   onDelete,
   formatBytes,
-  formatDate,
   getTimeRemaining,
   getContentTypeIcon,
   truncateValue,
@@ -976,7 +1034,6 @@ function ClipboardTable({
 interface ClipboardGridProps {
   entries: ClipboardEntry[];
   showName?: boolean;
-  showIdx?: boolean;
   onCopy: (entry: ClipboardEntry) => void;
   onPreview: (entry: ClipboardEntry) => void;
   onEdit: (entry: ClipboardEntry) => void;
@@ -990,7 +1047,6 @@ interface ClipboardGridProps {
 function ClipboardGrid({
   entries,
   showName,
-  showIdx,
   onCopy,
   onPreview,
   onEdit,

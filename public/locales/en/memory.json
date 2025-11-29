@@ -96,7 +96,21 @@
     },
     "preview": {
       "unsafeImageType": "Cannot preview image: Unsupported content type for security reasons.",
-      "contentType": "Content type"
+      "contentType": "Content type",
+      "details": "Details",
+      "source": "Source",
+      "sourceUi": "UI",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "Visibility",
+      "encoding": "Encoding",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "expiresAt": "Expires",
+      "createdBy": "Created By",
+      "tool": "Tool",
+      "model": "Model",
+      "noExpiration": "Never"
     },
     "toast": {
       "copied": "Copied to clipboard",

@@ -96,7 +96,21 @@
     },
     "preview": {
       "unsafeImageType": "画像をプレビューできません：セキュリティ上の理由でサポートされていないコンテンツタイプです。",
-      "contentType": "コンテンツタイプ"
+      "contentType": "コンテンツタイプ",
+      "details": "詳細",
+      "source": "ソース",
+      "sourceUi": "UI",
+      "sourceSdk": "SDK",
+      "sourceMcp": "MCP",
+      "visibility": "可視性",
+      "encoding": "エンコーディング",
+      "createdAt": "作成日時",
+      "updatedAt": "更新日時",
+      "expiresAt": "有効期限",
+      "createdBy": "作成者",
+      "tool": "ツール",
+      "model": "モデル",
+      "noExpiration": "無期限"
     },
     "toast": {
       "copied": "クリップボードにコピーしました",

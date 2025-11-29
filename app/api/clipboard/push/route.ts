@@ -9,6 +9,9 @@ import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
 import {
   calculateClipboardSize,
   calculateExpirationDate,
+  CLIPBOARD_ENCODINGS,
+  CLIPBOARD_SOURCES,
+  CLIPBOARD_VISIBILITIES,
   validateClipboardSize,
   validateContentEncoding,
 } from '@/lib/clipboard';
@@ -20,10 +23,11 @@ const pushLimiter = rateLimit(RATE_LIMITS.clipboardWrite);
 const pushClipboardSchema = z.object({
   value: z.string(),
   contentType: z.string().max(256).optional().default('text/plain'),
-  encoding: z.enum(['utf-8', 'base64', 'hex']).optional().default('utf-8'),
-  visibility: z.enum(['private', 'workspace', 'public']).optional().default('private'),
+  encoding: z.enum(CLIPBOARD_ENCODINGS).optional().default('utf-8'),
+  visibility: z.enum(CLIPBOARD_VISIBILITIES).optional().default('private'),
   createdByTool: z.string().max(255).optional(),
   createdByModel: z.string().max(255).optional(),
+  source: z.enum(CLIPBOARD_SOURCES).optional().default('ui'),
   ttlSeconds: z.number().int().positive().optional(),
 });
 
@@ -74,7 +78,7 @@ export async function POST(request: NextRequest) {
         const result = await db.execute(sql`
           INSERT INTO ${clipboardsTable} (
             profile_uuid, name, idx, value, content_type, encoding,
-            size_bytes, visibility, created_by_tool, created_by_model, expires_at
+            size_bytes, visibility, created_by_tool, created_by_model, source, expires_at
           )
           SELECT
             ${activeProfile.uuid}::uuid,
@@ -87,6 +91,7 @@ export async function POST(request: NextRequest) {
             ${validatedBody.visibility},
             ${validatedBody.createdByTool ?? null},
             ${validatedBody.createdByModel ?? null},
+            ${validatedBody.source},
             ${expiresAt}
           RETURNING *
         `);
@@ -110,6 +115,7 @@ export async function POST(request: NextRequest) {
             visibility: row.visibility as string,
             createdByTool: row.created_by_tool as string | null,
             createdByModel: row.created_by_model as string | null,
+            source: row.source as string,
             createdAt: row.created_at as Date,
             updatedAt: row.updated_at as Date,
             expiresAt: row.expires_at as Date | null,

@@ -1148,6 +1148,8 @@ export const clipboardsTable = pgTable(
     // Attribution
     created_by_tool: varchar('created_by_tool', { length: 255 }),
     created_by_model: varchar('created_by_model', { length: 255 }),
+    // Source: ui (web app), sdk (SDKs), mcp (MCP proxy tools)
+    source: varchar('source', { length: 20 }).notNull().default('ui'),
     // Timestamps
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
