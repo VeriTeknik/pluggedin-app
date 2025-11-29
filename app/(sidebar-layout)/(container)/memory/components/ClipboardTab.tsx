@@ -75,7 +75,7 @@ type EntryFormData = {
 };
 
 export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
-  const { t } = useTranslation('memory');
+  const { t } = useTranslation(['memory', 'common']);
   const { toast } = useToast();
   const { setEntry, deleteEntry } = useClipboard();
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -518,7 +518,7 @@ function EntryFormDialog({
   isSubmitting,
   isEdit,
 }: EntryFormDialogProps) {
-  const { t } = useTranslation('memory');
+  const { t } = useTranslation(['memory', 'common']);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -873,7 +873,7 @@ function ClipboardTable({
   getContentTypeIcon,
   truncateValue,
 }: ClipboardTableProps) {
-  const { t } = useTranslation('memory');
+  const { t } = useTranslation(['memory', 'common']);
 
   return (
     <div className="rounded-md border">
@@ -1000,7 +1000,7 @@ function ClipboardGrid({
   getContentTypeIcon,
   truncateValue,
 }: ClipboardGridProps) {
-  const { t } = useTranslation('memory');
+  const { t } = useTranslation(['memory', 'common']);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
