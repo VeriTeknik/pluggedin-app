@@ -45,6 +45,9 @@
   "library": {
     "title": "Bibliotheek"
   },
+  "memory": {
+    "title": "Geheugen"
+  },
   "dashboard": {
     "title": "Dashboard"
   },

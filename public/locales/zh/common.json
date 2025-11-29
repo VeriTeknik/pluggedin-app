@@ -45,6 +45,9 @@
   "library": {
     "title": "资料库"
   },
+  "memory": {
+    "title": "内存"
+  },
   "dashboard": {
     "title": "仪表板"
   },

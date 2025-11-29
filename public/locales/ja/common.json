@@ -45,6 +45,9 @@
   "library": {
     "title": "ライブラリ"
   },
+  "memory": {
+    "title": "メモリ"
+  },
   "dashboard": {
     "title": "ダッシュボード"
   },
