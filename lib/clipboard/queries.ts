@@ -3,7 +3,7 @@
  * Centralized condition building for consistent behavior between routes and actions
  */
 
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, isNotNull, lt } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { clipboardsTable } from '@/db/schema';
@@ -43,6 +43,8 @@ export function buildClipboardConditions({
 /**
  * Clean up expired clipboard entries for a profile
  * Non-blocking, logs errors but doesn't throw
+ *
+ * Note: Entries with NULL expires_at are preserved (they never expire)
  */
 export function cleanupExpiredClipboards(profileUuid: string): Promise<void> {
   return db
@@ -50,6 +52,7 @@ export function cleanupExpiredClipboards(profileUuid: string): Promise<void> {
     .where(
       and(
         eq(clipboardsTable.profile_uuid, profileUuid),
+        isNotNull(clipboardsTable.expires_at),
         lt(clipboardsTable.expires_at, new Date())
       )
     )
@@ -61,11 +64,20 @@ export function cleanupExpiredClipboards(profileUuid: string): Promise<void> {
 /**
  * Clean up all expired clipboard entries globally
  * Used by the cron cleanup job
+ *
+ * Note: Entries with NULL expires_at are preserved (they never expire)
+ * The isNotNull check makes the SQL explicit rather than relying on
+ * NULL comparison semantics (NULL < date returns NULL/unknown, not false)
  */
 export async function cleanupAllExpiredClipboards(): Promise<number> {
   const result = await db
     .delete(clipboardsTable)
-    .where(lt(clipboardsTable.expires_at, new Date()))
+    .where(
+      and(
+        isNotNull(clipboardsTable.expires_at),
+        lt(clipboardsTable.expires_at, new Date())
+      )
+    )
     .returning({ uuid: clipboardsTable.uuid });
 
   return result.length;

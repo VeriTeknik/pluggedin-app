@@ -93,6 +93,22 @@
       "clear": "全部清除",
       "clearing": "清除中...",
       "cancel": "取消"
+    },
+    "preview": {
+      "unsafeImageType": "无法预览图片：出于安全原因不支持的内容类型。",
+      "contentType": "内容类型"
+    },
+    "toast": {
+      "copied": "已复制到剪贴板",
+      "copyFailed": "复制到剪贴板失败",
+      "cannotCopyBinary": "无法将二进制内容复制到系统剪贴板",
+      "deleted": "条目删除成功",
+      "deleteFailed": "删除条目失败",
+      "clearedAll": "所有条目已清除",
+      "clearAllFailed": "清除所有条目失败",
+      "created": "条目创建成功",
+      "updated": "条目更新成功",
+      "saveFailed": "保存条目失败"
     }
   },
   "longterm": {

@@ -93,6 +93,22 @@
       "clear": "Tümünü Temizle",
       "clearing": "Temizleniyor...",
       "cancel": "İptal"
+    },
+    "preview": {
+      "unsafeImageType": "Resim önizlenemiyor: Güvenlik nedeniyle desteklenmeyen içerik türü.",
+      "contentType": "İçerik türü"
+    },
+    "toast": {
+      "copied": "Panoya kopyalandı",
+      "copyFailed": "Panoya kopyalama başarısız",
+      "cannotCopyBinary": "İkili içerik sistem panosuna kopyalanamaz",
+      "deleted": "Girdi başarıyla silindi",
+      "deleteFailed": "Girdi silinemedi",
+      "clearedAll": "Tüm girdiler temizlendi",
+      "clearAllFailed": "Tüm girdiler temizlenemedi",
+      "created": "Girdi başarıyla oluşturuldu",
+      "updated": "Girdi başarıyla güncellendi",
+      "saveFailed": "Girdi kaydedilemedi"
     }
   },
   "longterm": {

@@ -1,16 +1,19 @@
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { clipboardsTable } from '@/db/schema';
+import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
 import {
   calculateClipboardSize,
-  validateClipboardSize,
   calculateExpirationDate,
-  toClipboardEntry,
+  validateClipboardSize,
 } from '@/lib/clipboard';
+
+// Rate limiter for push (write) operations
+const pushLimiter = rateLimit(RATE_LIMITS.clipboardWrite);
 
 // Request body schema for push
 const pushClipboardSchema = z.object({
@@ -28,6 +31,10 @@ const pushClipboardSchema = z.object({
  * Push a new entry to the indexed clipboard (auto-increment index)
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await pushLimiter(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {
@@ -48,47 +55,70 @@ export async function POST(request: NextRequest) {
     const sizeBytes = calculateClipboardSize(validatedBody.value);
     const expiresAt = calculateExpirationDate(validatedBody.ttlSeconds);
 
-    // Retry logic to handle race conditions with concurrent pushes
-    const maxRetries = 3;
+    // Use atomic INSERT with subquery to avoid race conditions
+    // The subquery calculates next index at INSERT time, within the same transaction
+    const maxRetries = 5;
+    let lastError: Error | null = null;
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Get the next index (max idx + 1, or 0 if no entries)
-        const maxIdxResult = await db
-          .select({ maxIdx: sql<number>`COALESCE(MAX(${clipboardsTable.idx}), -1)` })
-          .from(clipboardsTable)
-          .where(eq(clipboardsTable.profile_uuid, activeProfile.uuid));
+        // Atomic insert with inline subquery for next index
+        // This runs in a single statement, avoiding the read-then-write race
+        const result = await db.execute(sql`
+          INSERT INTO ${clipboardsTable} (
+            profile_uuid, name, idx, value, content_type, encoding,
+            size_bytes, visibility, created_by_tool, created_by_model, expires_at
+          )
+          SELECT
+            ${activeProfile.uuid}::uuid,
+            NULL,
+            COALESCE((SELECT MAX(idx) FROM ${clipboardsTable} WHERE profile_uuid = ${activeProfile.uuid}::uuid), -1) + 1,
+            ${validatedBody.value},
+            ${validatedBody.contentType},
+            ${validatedBody.encoding},
+            ${sizeBytes},
+            ${validatedBody.visibility},
+            ${validatedBody.createdByTool ?? null},
+            ${validatedBody.createdByModel ?? null},
+            ${expiresAt}
+          RETURNING *
+        `);
 
-        const nextIdx = (maxIdxResult[0]?.maxIdx ?? -1) + 1;
+        const row = result.rows[0] as Record<string, unknown>;
+        if (!row) {
+          throw new Error('Insert failed to return row');
+        }
 
-        // Insert new entry
-        const result = await db
-          .insert(clipboardsTable)
-          .values({
-            profile_uuid: activeProfile.uuid,
-            name: null,
-            idx: nextIdx,
-            value: validatedBody.value,
-            content_type: validatedBody.contentType,
-            encoding: validatedBody.encoding,
-            size_bytes: sizeBytes,
-            visibility: validatedBody.visibility,
-            created_by_tool: validatedBody.createdByTool ?? null,
-            created_by_model: validatedBody.createdByModel ?? null,
-            expires_at: expiresAt,
-          })
-          .returning();
-
+        // Transform the raw row to ClipboardEntry
         return NextResponse.json({
           success: true,
-          entry: toClipboardEntry(result[0]),
+          entry: {
+            uuid: row.uuid as string,
+            name: row.name as string | null,
+            idx: row.idx as number | null,
+            value: row.value as string,
+            contentType: row.content_type as string,
+            encoding: row.encoding as string,
+            sizeBytes: row.size_bytes as number,
+            visibility: row.visibility as string,
+            createdByTool: row.created_by_tool as string | null,
+            createdByModel: row.created_by_model as string | null,
+            createdAt: row.created_at as Date,
+            updatedAt: row.updated_at as Date,
+            expiresAt: row.expires_at as Date | null,
+          },
         });
       } catch (error) {
-        // Check for unique constraint violation (race condition)
-        const errorMessage = error instanceof Error ? error.message : '';
-        if (errorMessage.includes('unique') || errorMessage.includes('duplicate')) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMessage = lastError.message.toLowerCase();
+
+        // Check for unique constraint violation (concurrent push)
+        if (errorMessage.includes('unique') || errorMessage.includes('duplicate') || errorMessage.includes('23505')) {
           if (attempt < maxRetries - 1) {
-            // Retry with exponential backoff
-            await new Promise(resolve => setTimeout(resolve, 10 * (attempt + 1)));
+            // Exponential backoff with jitter to reduce contention
+            const baseDelay = 10 * Math.pow(2, attempt);
+            const jitter = Math.random() * baseDelay * 0.5;
+            await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
             continue;
           }
         }
@@ -96,8 +126,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Should not reach here, but TypeScript needs a return
-    return NextResponse.json({ error: 'Failed after retries' }, { status: 500 });
+    // All retries exhausted
+    console.error('Push failed after retries:', lastError);
+    return NextResponse.json(
+      { error: 'Failed to push after concurrent conflicts. Please retry.' },
+      { status: 409 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

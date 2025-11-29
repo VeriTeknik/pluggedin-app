@@ -93,6 +93,22 @@
       "clear": "Alles Wissen",
       "clearing": "Wissen...",
       "cancel": "Annuleren"
+    },
+    "preview": {
+      "unsafeImageType": "Kan afbeelding niet weergeven: Niet-ondersteund inhoudstype om veiligheidsredenen.",
+      "contentType": "Inhoudstype"
+    },
+    "toast": {
+      "copied": "Gekopieerd naar klembord",
+      "copyFailed": "Kopiëren naar klembord mislukt",
+      "cannotCopyBinary": "Binaire inhoud kan niet naar systeemklembord worden gekopieerd",
+      "deleted": "Item succesvol verwijderd",
+      "deleteFailed": "Verwijderen van item mislukt",
+      "clearedAll": "Alle items gewist",
+      "clearAllFailed": "Wissen van alle items mislukt",
+      "created": "Item succesvol aangemaakt",
+      "updated": "Item succesvol bijgewerkt",
+      "saveFailed": "Opslaan van item mislukt"
     }
   },
   "longterm": {

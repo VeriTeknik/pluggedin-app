@@ -1164,6 +1164,8 @@ export const clipboardsTable = pgTable(
     clipboardsExpiresAtIdx: index('clipboards_expires_at_idx').on(table.expires_at),
     // Index on content type for filtering
     clipboardsContentTypeIdx: index('clipboards_content_type_idx').on(table.content_type),
+    // Composite index on visibility for filtering shared/public entries
+    clipboardsVisibilityIdx: index('clipboards_visibility_idx').on(table.profile_uuid, table.visibility),
     // Unique constraint on (profile_uuid, name) for named entries
     clipboardsProfileNameUniqueIdx: unique('clipboards_profile_name_unique_idx').on(
       table.profile_uuid,

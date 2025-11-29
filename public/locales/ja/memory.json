@@ -93,6 +93,22 @@
       "clear": "すべてクリア",
       "clearing": "クリア中...",
       "cancel": "キャンセル"
+    },
+    "preview": {
+      "unsafeImageType": "画像をプレビューできません：セキュリティ上の理由でサポートされていないコンテンツタイプです。",
+      "contentType": "コンテンツタイプ"
+    },
+    "toast": {
+      "copied": "クリップボードにコピーしました",
+      "copyFailed": "クリップボードへのコピーに失敗しました",
+      "cannotCopyBinary": "バイナリコンテンツはシステムクリップボードにコピーできません",
+      "deleted": "エントリを削除しました",
+      "deleteFailed": "エントリの削除に失敗しました",
+      "clearedAll": "すべてのエントリをクリアしました",
+      "clearAllFailed": "すべてのエントリのクリアに失敗しました",
+      "created": "エントリを作成しました",
+      "updated": "エントリを更新しました",
+      "saveFailed": "エントリの保存に失敗しました"
     }
   },
   "longterm": {

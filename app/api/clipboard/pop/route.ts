@@ -4,12 +4,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { clipboardsTable } from '@/db/schema';
+import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
+
+// Pop is destructive, use delete rate limit
+const popLimiter = rateLimit(RATE_LIMITS.clipboardDelete);
 
 /**
  * POST /api/clipboard/pop
  * Pop the highest-indexed entry (LIFO behavior)
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await popLimiter(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {

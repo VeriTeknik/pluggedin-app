@@ -5,13 +5,13 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { clipboardsTable, projectsTable } from '@/db/schema';
 import {
-  calculateClipboardSize,
-  validateClipboardSize,
-  calculateExpirationDate,
   buildClipboardConditions,
-  toClipboardEntry,
-  toClipboardEntries,
+  calculateClipboardSize,
+  calculateExpirationDate,
   type ClipboardEntry,
+  toClipboardEntries,
+  toClipboardEntry,
+  validateClipboardSize,
 } from '@/lib/clipboard';
 
 import { getProjectActiveProfile } from './profiles';
@@ -281,7 +281,8 @@ export async function deleteClipboardEntry(
 }
 
 /**
- * Get clipboard stats
+ * Get clipboard stats using SQL aggregation to avoid N+1 queries
+ * This is more efficient than fetching all entries and processing in JS
  */
 export async function getClipboardStats(userId: string): Promise<{
   success: boolean;
@@ -299,32 +300,30 @@ export async function getClipboardStats(userId: string): Promise<{
       return { success: false, error: 'No active profile found' };
     }
 
-    const entries = await db
+    const now = new Date();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    // Use SQL aggregation instead of fetching all entries
+    // This is much more efficient for large datasets
+    const result = await db
       .select({
-        sizeBytes: clipboardsTable.size_bytes,
-        expiresAt: clipboardsTable.expires_at,
-        contentType: clipboardsTable.content_type,
+        total: sql<number>`count(*)::int`,
+        totalSize: sql<number>`coalesce(sum(${clipboardsTable.size_bytes}), 0)::int`,
+        expiringToday: sql<number>`count(*) filter (where ${clipboardsTable.expires_at} >= ${now} and ${clipboardsTable.expires_at} <= ${endOfDay})::int`,
+        contentTypes: sql<number>`count(distinct ${clipboardsTable.content_type})::int`,
       })
       .from(clipboardsTable)
       .where(eq(clipboardsTable.profile_uuid, profileUuid));
 
-    const now = new Date();
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-
-    const expiringToday = entries.filter((entry) => {
-      if (!entry.expiresAt) return false;
-      return entry.expiresAt <= endOfDay && entry.expiresAt >= now;
-    }).length;
-
-    const uniqueContentTypes = new Set(entries.map((e) => e.contentType));
+    const stats = result[0];
 
     return {
       success: true,
       stats: {
-        total: entries.length,
-        totalSize: entries.reduce((acc, entry) => acc + entry.sizeBytes, 0),
-        expiringToday,
-        contentTypes: uniqueContentTypes.size,
+        total: stats?.total ?? 0,
+        totalSize: stats?.totalSize ?? 0,
+        expiringToday: stats?.expiringToday ?? 0,
+        contentTypes: stats?.contentTypes ?? 0,
       },
     };
   } catch (error) {

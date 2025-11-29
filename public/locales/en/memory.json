@@ -93,6 +93,22 @@
       "clear": "Clear All",
       "clearing": "Clearing...",
       "cancel": "Cancel"
+    },
+    "preview": {
+      "unsafeImageType": "Cannot preview image: Unsupported content type for security reasons.",
+      "contentType": "Content type"
+    },
+    "toast": {
+      "copied": "Copied to clipboard",
+      "copyFailed": "Failed to copy to clipboard",
+      "cannotCopyBinary": "Cannot copy binary content to system clipboard",
+      "deleted": "Entry deleted successfully",
+      "deleteFailed": "Failed to delete entry",
+      "clearedAll": "All entries cleared",
+      "clearAllFailed": "Failed to clear all entries",
+      "created": "Entry created successfully",
+      "updated": "Entry updated successfully",
+      "saveFailed": "Failed to save entry"
     }
   },
   "longterm": {

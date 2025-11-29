@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { clipboardsTable } from '@/db/schema';
+import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 import {
   calculateClipboardSize,
   validateClipboardSize,
@@ -14,12 +15,20 @@ import {
   toClipboardEntries,
 } from '@/lib/clipboard';
 
+// Rate limiters
+const readLimiter = rateLimit(RATE_LIMITS.clipboardRead);
+const writeLimiter = rateLimit(RATE_LIMITS.clipboardWrite);
+const deleteLimiter = rateLimit(RATE_LIMITS.clipboardDelete);
+
+// Maximum limit cap to prevent abuse
+const MAX_LIMIT = 1000;
+
 // Query parameters schema for GET
 const getClipboardSchema = z.object({
   name: z.string().optional(),
   idx: z.coerce.number().int().optional(),
   contentType: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional().default(50),
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
@@ -52,6 +61,10 @@ const deleteClipboardSchema = z.object({
  * List all clipboard entries or get by name/index
  */
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await readLimiter(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {
@@ -140,6 +153,10 @@ export async function GET(request: NextRequest) {
  * Set a clipboard entry (upsert for named, error if idx exists)
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await writeLimiter(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {
@@ -250,6 +267,10 @@ export async function POST(request: NextRequest) {
  * Delete clipboard entry by name/index or clear all
  */
 export async function DELETE(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await deleteLimiter(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {

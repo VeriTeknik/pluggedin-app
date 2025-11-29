@@ -21,8 +21,10 @@ export {
 export {
   toClipboardEntry,
   toClipboardEntries,
-  isTextLikeEntry,
   type ClipboardRow,
   type ClipboardEntry,
   type TransformOptions,
 } from './transform';
+
+// Client-safe utility for checking text-like entries
+export { isTextLikeEntry, isSafeImageType, buildSafeImageDataUrl } from './client';

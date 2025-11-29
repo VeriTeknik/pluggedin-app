@@ -17,9 +17,6 @@ import {
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useToast } from '@/hooks/use-toast';
-import { isTextLikeEntry } from '@/lib/clipboard/client';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,8 +52,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { buildSafeImageDataUrl,isSafeImageType, isTextLikeEntry } from '@/lib/clipboard/client';
 
 import type { ClipboardEntry } from '../hooks/useClipboard';
 import { useClipboard } from '../hooks/useClipboard';
@@ -77,6 +76,7 @@ type EntryFormData = {
 
 export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
   const { t } = useTranslation('memory');
+  const { toast } = useToast();
   const { setEntry, deleteEntry } = useClipboard();
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedEntry, setSelectedEntry] = useState<ClipboardEntry | null>(null);
@@ -102,13 +102,26 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
   const handleCopy = async (entry: ClipboardEntry) => {
     // Only allow copying text-like entries to system clipboard
     if (!isTextLikeEntry({ contentType: entry.contentType, encoding: entry.encoding })) {
-      console.warn('Cannot copy non-text entry to clipboard');
+      toast({
+        title: t('common.warning'),
+        description: t('clipboard.toast.cannotCopyBinary'),
+        variant: 'destructive',
+      });
       return;
     }
     try {
       await navigator.clipboard.writeText(entry.value);
+      toast({
+        title: t('common.success'),
+        description: t('clipboard.toast.copied'),
+      });
     } catch (error) {
       console.error('Failed to copy:', error);
+      toast({
+        title: t('common.error'),
+        description: t('clipboard.toast.copyFailed'),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -134,8 +147,17 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
       setDeleteDialogOpen(false);
       setSelectedEntry(null);
       onRefresh();
+      toast({
+        title: t('common.success'),
+        description: t('clipboard.toast.deleted'),
+      });
     } catch (error) {
       console.error('Delete failed:', error);
+      toast({
+        title: t('common.error'),
+        description: t('clipboard.toast.deleteFailed'),
+        variant: 'destructive',
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -147,8 +169,17 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
       await deleteEntry({ clearAll: true });
       setClearAllDialogOpen(false);
       onRefresh();
+      toast({
+        title: t('common.success'),
+        description: t('clipboard.toast.clearedAll'),
+      });
     } catch (error) {
       console.error('Clear all failed:', error);
+      toast({
+        title: t('common.error'),
+        description: t('clipboard.toast.clearAllFailed'),
+        variant: 'destructive',
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -196,8 +227,19 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
       });
       setCreateEditOpen(false);
       onRefresh();
+      toast({
+        title: t('common.success'),
+        description: selectedEntry
+          ? t('clipboard.toast.updated')
+          : t('clipboard.toast.created'),
+      });
     } catch (error) {
       console.error('Failed to save entry:', error);
+      toast({
+        title: t('common.error'),
+        description: t('clipboard.toast.saveFailed'),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -387,12 +429,17 @@ export function ClipboardTab({ entries, onRefresh }: ClipboardTabProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-auto max-h-[60vh]">
-            {selectedEntry?.contentType.startsWith('image/') ? (
+            {selectedEntry && isSafeImageType(selectedEntry.contentType) ? (
               <img
-                src={`data:${selectedEntry.contentType};${selectedEntry.encoding},${selectedEntry.value}`}
+                src={buildSafeImageDataUrl(selectedEntry.contentType, selectedEntry.encoding, selectedEntry.value) ?? ''}
                 alt="Clipboard content"
                 className="max-w-full h-auto"
               />
+            ) : selectedEntry?.contentType.startsWith('image/') ? (
+              <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground">
+                <p>{t('clipboard.preview.unsafeImageType')}</p>
+                <p className="text-xs mt-1">{t('clipboard.preview.contentType')}: {selectedEntry.contentType}</p>
+              </div>
             ) : (
               <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap break-all">
                 {selectedEntry?.value}
@@ -555,7 +602,8 @@ function EntryFormDialog({
   }, [formData, setFormData]);
 
   const isFileUpload = uploadedFileName !== null;
-  const isImagePreview = formData.contentType.startsWith('image/') && formData.encoding === 'base64';
+  // Only show image preview for safe, whitelisted image types to prevent XSS
+  const isImagePreview = isSafeImageType(formData.contentType) && formData.encoding === 'base64';
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
@@ -653,7 +701,7 @@ function EntryFormDialog({
                   {isImagePreview && (
                     <div className="mt-2 max-h-48 overflow-hidden rounded-md bg-muted flex items-center justify-center">
                       <img
-                        src={`data:${formData.contentType};base64,${formData.value}`}
+                        src={buildSafeImageDataUrl(formData.contentType, 'base64', formData.value) ?? ''}
                         alt="Preview"
                         className="max-h-48 max-w-full object-contain"
                       />
@@ -845,10 +893,26 @@ function ClipboardTable({
           {entries.map((entry) => (
             <TableRow key={entry.uuid}>
               {showName && (
-                <TableCell className="font-medium">{entry.name}</TableCell>
+                <TableCell className="font-medium">
+                  <button
+                    type="button"
+                    onClick={() => onPreview(entry)}
+                    className="hover:underline hover:text-primary cursor-pointer text-left"
+                  >
+                    {entry.name}
+                  </button>
+                </TableCell>
               )}
               {showIdx && (
-                <TableCell className="font-mono">{entry.idx}</TableCell>
+                <TableCell className="font-mono">
+                  <button
+                    type="button"
+                    onClick={() => onPreview(entry)}
+                    className="hover:underline hover:text-primary cursor-pointer"
+                  >
+                    {entry.idx}
+                  </button>
+                </TableCell>
               )}
               <TableCell>
                 <div className="flex items-center gap-2">
@@ -947,7 +1011,13 @@ function ClipboardGrid({
               <div className="flex items-center gap-2">
                 {getContentTypeIcon(entry.contentType)}
                 <CardTitle className="text-sm">
-                  {showName ? entry.name : `#${entry.idx}`}
+                  <button
+                    type="button"
+                    onClick={() => onPreview(entry)}
+                    className="hover:underline hover:text-primary cursor-pointer text-left"
+                  >
+                    {showName ? entry.name : `#${entry.idx}`}
+                  </button>
                 </CardTitle>
               </div>
               <DropdownMenu>
@@ -986,10 +1056,20 @@ function ClipboardGrid({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted rounded-md p-2 mb-2 max-h-24 overflow-hidden">
-              {entry.contentType.startsWith('image/') ? (
-                <div className="text-sm text-muted-foreground italic">
-                  [Image data]
+            <div
+              className="bg-muted rounded-md p-2 mb-2 max-h-24 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+              onClick={() => onPreview(entry)}
+            >
+              {isSafeImageType(entry.contentType) && entry.encoding === 'base64' ? (
+                <img
+                  src={buildSafeImageDataUrl(entry.contentType, entry.encoding, entry.value) ?? ''}
+                  alt={entry.name || `Index ${entry.idx}`}
+                  className="max-h-20 max-w-full object-contain mx-auto"
+                />
+              ) : entry.contentType.startsWith('image/') ? (
+                <div className="text-sm text-muted-foreground italic text-center py-4">
+                  <Image className="h-8 w-8 mx-auto mb-1 opacity-50" />
+                  [Image]
                 </div>
               ) : (
                 <pre className="text-xs font-mono whitespace-pre-wrap break-all">
