@@ -36,7 +36,8 @@ const pillars = [
     borderColor: 'border-purple-500/20',
     hoverBorder: 'hover:border-purple-500/50',
     iconColor: 'text-purple-500',
-    badge: 'Coming Soon',
+    badge: 'v2.20.0',
+    badgeColor: 'bg-purple-500',
   },
   {
     key: 'agents',
@@ -151,25 +152,14 @@ export function FourPillarsSection() {
                 </ul>
 
                 {/* Use Case / Highlight */}
-                {pillar.key !== 'memory' && (
-                  <div className={`mt-auto pt-6 border-t ${pillar.borderColor}`}>
-                    <p className="text-sm font-medium mb-2 ${pillar.iconColor}">
-                      {t(`fourPillars.${pillar.key}.highlightLabel`)}
-                    </p>
-                    <p className="text-sm text-muted-foreground leading-relaxed italic">
-                      "{t(`fourPillars.${pillar.key}.highlight`)}"
-                    </p>
-                  </div>
-                )}
-
-                {/* Memory: Coming Soon Message */}
-                {pillar.key === 'memory' && (
-                  <div className={`mt-auto pt-6 border-t ${pillar.borderColor}`}>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {t('fourPillars.memory.comingSoon')}
-                    </p>
-                  </div>
-                )}
+                <div className={`mt-auto pt-6 border-t ${pillar.borderColor}`}>
+                  <p className="text-sm font-medium mb-2 ${pillar.iconColor}">
+                    {t(`fourPillars.${pillar.key}.highlightLabel`)}
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed italic">
+                    "{t(`fourPillars.${pillar.key}.highlight`)}"
+                  </p>
+                </div>
               </div>
             </motion.div>
           ))}

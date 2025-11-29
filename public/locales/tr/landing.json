@@ -92,14 +92,15 @@
       "highlight": "100 ayrı MCP yapılandırmasını tek birleşik proxy ile değiştirin. Bir kez güncelleyin, her yere uygulayın. Ekibiniz sadece kurulumda haftada saatler kazanır."
     },
     "memory": {
-      "title": "Asla Unutmayan Bağlam",
-      "description": "AI platformları ve oturumlar arasında hareket eden kalıcı konuşma bağlamı. AI'nız tercihleri, geçmiş kararları ve devam eden projeleri hatırlayacak—artık kendinizi yeniden açıklamanıza gerek yok.",
+      "title": "Bellek Panosu",
+      "description": "AI iş akışları için kalıcı pano depolaması. Adlandırılmış anahtar-değer çiftleri veya TTL süreli yığın tabanlı indeksli depolama kullanın.",
       "features": {
-        "1": "Tüm geçmiş konuşmalarda semantik bellek araması",
-        "2": "Proje tabanlı bağlam ile çok çalışma alanı izolasyonu",
-        "3": "Platformlar arası senkronizasyon: Claude'un öğrendiğini ChatGPT de bilir"
+        "1": "Upsert davranışlı adlandırılmış girişler ve push/pop ile indeksli yığın",
+        "2": "TTL süresi, text/JSON/base64 içerik türleri, profil izolasyonu",
+        "3": "Platformlar arası erişim için MCP araçları ve SDK'lar (JS, Python, Go)"
       },
-      "comingSoon": "Bellek katmanı 2026 Q1'de başlatılıyor. Erken erişim için bekleme listesine katılın."
+      "highlightLabel": "Üretime Hazır",
+      "highlight": "Bellek Panosu v2.20.0'da yayında. Focus Agent ve gelişmiş bellek katmanları yakında."
     },
     "agents": {
       "title": "Askeri Düzey Yönetişim ile Otonom Ajanlar",

@@ -68,6 +68,12 @@ const knowledgeFeatures: Feature[] = [
 
 const memoryFeatures: Feature[] = [
   {
+    icon: Database,
+    titleKey: 'features.memoryClipboard.title',
+    descriptionKey: 'features.memoryClipboard.description',
+    pillar: 'memory'
+  },
+  {
     icon: Clock,
     titleKey: 'features.crossModelMemory.title',
     descriptionKey: 'features.crossModelMemory.description',

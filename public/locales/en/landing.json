@@ -82,14 +82,15 @@
       "highlight": "Replace 100 individual MCP configurations with one unified proxy. Update once, apply everywhere. Your team saves hours per week on setup alone."
     },
     "memory": {
-      "title": "Context That Never Forgets",
-      "description": "Persistent conversation context that travels across AI platforms and sessions. Your AI will remember preferences, past decisions, and ongoing projects—no more re-explaining yourself.",
+      "title": "Memory Clipboard",
+      "description": "Persistent clipboard storage for AI workflows. Store named key-value pairs or use stack-based indexed storage with TTL expiration, multiple content types, and cross-platform access.",
       "features": {
-        "1": "Semantic memory search across all past conversations",
-        "2": "Multi-workspace isolation with project-based context",
-        "3": "Cross-platform synchronization: what Claude learns, ChatGPT knows"
+        "1": "Named entries with upsert behavior and indexed stack with push/pop",
+        "2": "TTL expiration, text/JSON/base64 content types, profile isolation",
+        "3": "MCP tools and SDKs (JS, Python, Go) for cross-platform access"
       },
-      "comingSoon": "Memory layer launching Q1 2026. Join the waitlist to get early access."
+      "highlightLabel": "Production Ready",
+      "highlight": "Memory Clipboard is live in v2.20.0. Focus Agent and advanced memory tiers coming soon."
     },
     "agents": {
       "title": "Autonomous Agents with Military-Grade Governance",
@@ -148,7 +149,7 @@
       "title": "Complete Your AI",
       "description": "plugged.in provides the trinity your AI needs:",
       "benefit1": "📚 Knowledge: Upload documents and let AI access your specific context",
-      "benefit2": "🧠 Memory: Coming soon - persistent context across all conversations",
+      "benefit2": "🧠 Memory: Persistent clipboard storage for AI workflows (v2.20.0)",
       "benefit3": "🔧 Tools: Connect any MCP server to give AI real-world capabilities",
       "benefit4": "🔄 Universal: Works with Claude, GPT-4, Gemini, and all major models"
     },
@@ -188,8 +189,8 @@
       "description": "All models can use the same MCP tools to take actions."
     },
     "feature3": {
-      "title": "Persistent Memory (Coming)",
-      "description": "Soon - conversations with any model will build on shared memory."
+      "title": "Memory Clipboard",
+      "description": "Persistent clipboard storage for AI workflows. Store and retrieve data across sessions and platforms."
     },
     "cta": {
       "title": "Ready to test with multiple models?",
@@ -208,7 +209,7 @@
       },
       "memory": {
         "title": "🧠 Memory",
-        "subtitle": "Coming Soon"
+        "subtitle": "Clipboard storage for AI workflows"
       },
       "tools": {
         "title": "🔧 Tools",
@@ -226,6 +227,10 @@
     "aiAssetManagement": {
       "title": "AI Asset Management",
       "description": "Your prompts, configurations, and context become reusable assets. Build a library of what works for your specific needs."
+    },
+    "memoryClipboard": {
+      "title": "Memory Clipboard",
+      "description": "Persistent key-value and stack storage for AI workflows. Store named entries or push/pop indexed values with TTL expiration."
     },
     "crossModelMemory": {
       "title": "Cross-Model Memory",

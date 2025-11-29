@@ -495,7 +495,7 @@
       },
       "memory": {
         "title": "Geheugen",
-        "description": "Binnenkort"
+        "description": "Klembordopslag"
       },
       "tools": {
         "title": "Tools",
@@ -642,14 +642,15 @@
       "highlight": "Vervang 100 individuele MCP-configuraties door één uniforme proxy. Update één keer, pas overal toe. Uw team bespaart alleen al aan setup uren per week."
     },
     "memory": {
-      "title": "Context die nooit vergeet",
-      "description": "Persistente gesprekscontext die reist over AI-platforms en sessies. Uw AI onthoudt voorkeuren, eerdere beslissingen en lopende projecten—geen heruitleg meer nodig.",
+      "title": "Geheugenklembord",
+      "description": "Persistente klembordopslag voor AI-workflows. Gebruik benoemde sleutel-waarde paren of stack-gebaseerde geïndexeerde opslag met TTL-vervaldatum.",
       "features": {
-        "1": "Semantisch geheugen zoeken over alle eerdere gesprekken",
-        "2": "Multi-workspace isolatie met project-gebaseerde context",
-        "3": "Cross-platform synchronisatie: wat Claude leert, weet ChatGPT"
+        "1": "Benoemde entries met upsert-gedrag en push/pop geïndexeerde stack",
+        "2": "TTL-vervaldatum, text/JSON/base64 content types, profielisolatie",
+        "3": "MCP-tools en SDK's (JS, Python, Go) voor cross-platform toegang"
       },
-      "comingSoon": "Geheugenlaag lanceert Q1 2026. Sluit u aan bij de wachtlijst voor vroege toegang."
+      "highlightLabel": "Productie-klaar",
+      "highlight": "Geheugenklembord is live in v2.20.0. Focus Agent en geavanceerde geheugenlagen komen binnenkort."
     },
     "agents": {
       "title": "Autonome agents met militaire governance",
