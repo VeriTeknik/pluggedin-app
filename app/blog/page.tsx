@@ -23,7 +23,7 @@ export default async function BlogPage() {
   const posts = result.success && result.data ? result.data : [];
 
   return (
-    <div className="min-h-screen">
+    <>
       {/* Hero Section */}
       <div className="bg-gradient-to-b from-muted/50 to-background py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">
@@ -110,7 +110,7 @@ export default async function BlogPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
