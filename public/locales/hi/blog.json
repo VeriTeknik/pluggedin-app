@@ -1,0 +1,104 @@
+{
+  "blog": {
+    "title": "ब्लॉग",
+    "readMore": "और पढ़ें",
+    "backToList": "ब्लॉग पर वापस जाएं",
+    "latestPosts": "ब्लॉग से नवीनतम",
+    "noPosts": "कोई ब्लॉग पोस्ट नहीं मिला",
+    "readingTime": "{{minutes}} मिनट पढ़ना",
+    "views": "{{count}} बार देखा गया",
+    "publishedOn": "{{date}} को प्रकाशित",
+    "updatedOn": "{{date}} को अपडेट किया गया",
+    "categories": {
+      "announcement": "घोषणा",
+      "technical": "तकनीकी",
+      "product": "उत्पाद",
+      "tutorial": "ट्यूटोरियल",
+      "case-study": "केस स्टडी"
+    },
+    "status": {
+      "draft": "ड्राफ्ट",
+      "published": "प्रकाशित",
+      "archived": "संग्रहीत"
+    },
+    "admin": {
+      "title": "ब्लॉग प्रबंधन",
+      "createPost": "नई पोस्ट बनाएं",
+      "editPost": "पोस्ट संपादित करें",
+      "deletePost": "पोस्ट हटाएं",
+      "confirmDelete": "क्या आप वाकई इस ब्लॉग पोस्ट को हटाना चाहते हैं?",
+      "form": {
+        "slug": "URL स्लग",
+        "slugPlaceholder": "unique-url-slug",
+        "slugHelp": "URL में उपयोग किया जाता है: plugged.in/blog/{{slug}}",
+        "status": "स्थिति",
+        "category": "श्रेणी",
+        "tags": "टैग",
+        "tagsPlaceholder": "टैग जोड़ें (Enter दबाएं)",
+        "featured": "होमपेज पर फीचर करें",
+        "headerImage": "शीर्षक छवि",
+        "headerImageAlt": "शीर्षक छवि वैकल्पिक पाठ",
+        "uploadImage": "छवि अपलोड करें",
+        "changeImage": "छवि बदलें",
+        "removeImage": "छवि हटाएं",
+        "metaTitle": "SEO मेटा शीर्षक",
+        "metaDescription": "SEO मेटा विवरण",
+        "ogImage": "Open Graph छवि URL",
+        "translations": "अनुवाद",
+        "selectLanguage": "भाषा चुनें",
+        "title": "शीर्षक",
+        "titlePlaceholder": "ब्लॉग पोस्ट शीर्षक",
+        "excerpt": "अंश",
+        "excerptPlaceholder": "पोस्ट का संक्षिप्त सारांश",
+        "content": "सामग्री",
+        "contentPlaceholder": "अपनी ब्लॉग पोस्ट Markdown में लिखें...",
+        "readingTime": "पढ़ने का समय (मिनट)",
+        "readingTimeAuto": "सामग्री से स्वतः गणना की गई"
+      },
+      "validation": {
+        "slugRequired": "URL स्लग आवश्यक है",
+        "slugInvalid": "स्लग में केवल छोटे अक्षर, संख्या और हाइफ़न हो सकते हैं",
+        "statusRequired": "स्थिति आवश्यक है",
+        "categoryRequired": "श्रेणी आवश्यक है",
+        "titleRequired": "{{language}} के लिए शीर्षक आवश्यक है",
+        "excerptRequired": "{{language}} के लिए अंश आवश्यक है",
+        "contentRequired": "{{language}} के लिए सामग्री आवश्यक है",
+        "imageMaxSize": "छवि 5MB से कम होनी चाहिए"
+      },
+      "actions": {
+        "save": "पोस्ट सहेजें",
+        "saving": "सहेजा जा रहा है...",
+        "publish": "प्रकाशित करें",
+        "unpublish": "अप्रकाशित करें",
+        "archive": "संग्रहित करें",
+        "preview": "पूर्वावलोकन",
+        "viewLive": "लाइव देखें"
+      },
+      "messages": {
+        "saveSuccess": "ब्लॉग पोस्ट सफलतापूर्वक सहेजी गई",
+        "saveError": "ब्लॉग पोस्ट सहेजने में विफल",
+        "deleteSuccess": "ब्लॉग पोस्ट सफलतापूर्वक हटा दी गई",
+        "deleteError": "ब्लॉग पोस्ट हटाने में विफल",
+        "publishSuccess": "ब्लॉग पोस्ट सफलतापूर्वक प्रकाशित",
+        "unpublishSuccess": "ब्लॉग पोस्ट अप्रकाशित",
+        "archiveSuccess": "ब्लॉग पोस्ट संग्रहीत"
+      },
+      "list": {
+        "allPosts": "सभी पोस्ट",
+        "filterByStatus": "स्थिति के अनुसार फ़िल्टर करें",
+        "filterByCategory": "श्रेणी के अनुसार फ़िल्टर करें",
+        "searchPlaceholder": "पोस्ट खोजें...",
+        "noResults": "आपके मानदंडों से मेल खाने वाली कोई पोस्ट नहीं मिली",
+        "columns": {
+          "title": "शीर्षक",
+          "category": "श्रेणी",
+          "status": "स्थिति",
+          "author": "लेखक",
+          "published": "प्रकाशित",
+          "views": "दृश्य",
+          "actions": "क्रियाएं"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "blog": {
+    "title": "ブログ",
+    "readMore": "続きを読む",
+    "backToList": "ブログに戻る",
+    "latestPosts": "ブログの最新記事",
+    "noPosts": "ブログ記事が見つかりません",
+    "readingTime": "{{minutes}}分で読めます",
+    "views": "{{count}}回閲覧",
+    "publishedOn": "{{date}}に公開",
+    "updatedOn": "{{date}}に更新",
+    "categories": {
+      "announcement": "お知らせ",
+      "technical": "技術",
+      "product": "製品",
+      "tutorial": "チュートリアル",
+      "case-study": "ケーススタディ"
+    },
+    "status": {
+      "draft": "下書き",
+      "published": "公開済み",
+      "archived": "アーカイブ済み"
+    },
+    "admin": {
+      "title": "ブログ管理",
+      "createPost": "新規記事を作成",
+      "editPost": "記事を編集",
+      "deletePost": "記事を削除",
+      "confirmDelete": "このブログ記事を削除してもよろしいですか？",
+      "form": {
+        "slug": "URLスラッグ",
+        "slugPlaceholder": "unique-url-slug",
+        "slugHelp": "URLで使用されます：plugged.in/blog/{{slug}}",
+        "status": "ステータス",
+        "category": "カテゴリー",
+        "tags": "タグ",
+        "tagsPlaceholder": "タグを追加（Enterキーを押す）",
+        "featured": "ホームページで注目",
+        "headerImage": "ヘッダー画像",
+        "headerImageAlt": "ヘッダー画像の代替テキスト",
+        "uploadImage": "画像をアップロード",
+        "changeImage": "画像を変更",
+        "removeImage": "画像を削除",
+        "metaTitle": "SEOメタタイトル",
+        "metaDescription": "SEOメタディスクリプション",
+        "ogImage": "Open Graph画像URL",
+        "translations": "翻訳",
+        "selectLanguage": "言語を選択",
+        "title": "タイトル",
+        "titlePlaceholder": "ブログ記事のタイトル",
+        "excerpt": "抜粋",
+        "excerptPlaceholder": "記事の簡単な要約",
+        "content": "コンテンツ",
+        "contentPlaceholder": "Markdownでブログ記事を書く...",
+        "readingTime": "読書時間（分）",
+        "readingTimeAuto": "コンテンツから自動計算"
+      },
+      "validation": {
+        "slugRequired": "URLスラッグは必須です",
+        "slugInvalid": "スラッグには小文字、数字、ハイフンのみ使用できます",
+        "statusRequired": "ステータスは必須です",
+        "categoryRequired": "カテゴリーは必須です",
+        "titleRequired": "{{language}}のタイトルは必須です",
+        "excerptRequired": "{{language}}の抜粋は必須です",
+        "contentRequired": "{{language}}のコンテンツは必須です",
+        "imageMaxSize": "画像は5MB未満である必要があります"
+      },
+      "actions": {
+        "save": "記事を保存",
+        "saving": "保存中...",
+        "publish": "公開",
+        "unpublish": "非公開にする",
+        "archive": "アーカイブ",
+        "preview": "プレビュー",
+        "viewLive": "ライブ表示"
+      },
+      "messages": {
+        "saveSuccess": "ブログ記事が正常に保存されました",
+        "saveError": "ブログ記事の保存に失敗しました",
+        "deleteSuccess": "ブログ記事が正常に削除されました",
+        "deleteError": "ブログ記事の削除に失敗しました",
+        "publishSuccess": "ブログ記事が正常に公開されました",
+        "unpublishSuccess": "ブログ記事が非公開になりました",
+        "archiveSuccess": "ブログ記事がアーカイブされました"
+      },
+      "list": {
+        "allPosts": "すべての記事",
+        "filterByStatus": "ステータスでフィルター",
+        "filterByCategory": "カテゴリーでフィルター",
+        "searchPlaceholder": "記事を検索...",
+        "noResults": "条件に一致する記事が見つかりません",
+        "columns": {
+          "title": "タイトル",
+          "category": "カテゴリー",
+          "status": "ステータス",
+          "author": "著者",
+          "published": "公開日",
+          "views": "閲覧数",
+          "actions": "アクション"
+        }
+      }
+    }
+  }
+}
