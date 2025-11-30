@@ -12,6 +12,22 @@ import {
 import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
+// Convert BigInt and Date values for JSON serialization
+const serializeForJson = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return Number(obj);
+  if (obj instanceof Date) return obj.toISOString();
+  if (Array.isArray(obj)) return obj.map(serializeForJson);
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      result[key] = serializeForJson(obj[key]);
+    }
+    return result;
+  }
+  return obj;
+};
+
 /**
  * @swagger
  * /api/agents/{id}/export:
@@ -214,7 +230,7 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(exportData);
+    return NextResponse.json(serializeForJson(exportData));
   } catch (error) {
     console.error('Error exporting agent:', error);
     return NextResponse.json(

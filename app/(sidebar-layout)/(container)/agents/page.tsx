@@ -26,6 +26,65 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
+// Reserved agent names that cannot be used (must match backend)
+const RESERVED_AGENT_NAMES = new Set([
+  'api', 'app', 'www', 'web', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'ssh', 'dns',
+  'ns', 'ns1', 'ns2', 'ns3', 'mx', 'mx1', 'mx2', 'vpn', 'proxy', 'gateway', 'gw',
+  'admin', 'administrator', 'root', 'system', 'sysadmin', 'webmaster', 'postmaster',
+  'hostmaster', 'support', 'help', 'info', 'contact', 'sales', 'billing',
+  'kubernetes', 'k8s', 'kube', 'cluster', 'node', 'pod', 'service', 'ingress',
+  'traefik', 'nginx', 'envoy', 'istio', 'linkerd',
+  'pap', 'station', 'satellite', 'control', 'control-plane', 'registry',
+  'hub', 'gateway', 'proxy', 'mcp', 'hooks', 'telemetry', 'metrics', 'heartbeat',
+  'pluggedin', 'plugged', 'is', 'a', 'focus', 'memory', 'demo', 'test', 'staging',
+  'production', 'prod', 'dev', 'development', 'sandbox', 'preview',
+  'localhost', 'local', 'internal', 'private', 'public', 'static', 'assets', 'cdn',
+  'status', 'health', 'healthz', 'ready', 'readyz', 'live', 'livez',
+  'auth', 'login', 'logout', 'signup', 'register', 'oauth', 'sso', 'callback',
+  'default', 'null', 'undefined', 'void', 'none', 'empty', 'blank',
+]);
+
+// Validate agent name and return error message if invalid
+function validateAgentName(name: string): string | null {
+  const normalized = name.toLowerCase().trim();
+
+  if (!normalized) {
+    return null; // Empty is okay, will be caught by disabled button
+  }
+
+  if (normalized.length < 2) {
+    return 'Name must be at least 2 characters';
+  }
+
+  if (normalized.length > 63) {
+    return 'Name must be 63 characters or less';
+  }
+
+  const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+  if (!dnsNameRegex.test(normalized)) {
+    if (/[A-Z]/.test(name)) {
+      return 'Name will be converted to lowercase';
+    }
+    if (/^-/.test(normalized) || /-$/.test(normalized)) {
+      return 'Name cannot start or end with a hyphen';
+    }
+    if (/[^a-z0-9-]/.test(normalized)) {
+      return 'Only lowercase letters, numbers, and hyphens allowed';
+    }
+    return 'Invalid name format';
+  }
+
+  if (normalized.includes('--')) {
+    return 'Name cannot contain consecutive hyphens';
+  }
+
+  if (RESERVED_AGENT_NAMES.has(normalized)) {
+    return `'${normalized}' is a reserved name`;
+  }
+
+  return null;
+}
+
 interface Agent {
   uuid: string;
   name: string;
@@ -272,12 +331,24 @@ export default function AgentsPage() {
                 id="name"
                 placeholder="my-agent"
                 value={newAgentName}
-                onChange={(e) => setNewAgentName(e.target.value)}
-                pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?"
+                onChange={(e) => setNewAgentName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                maxLength={63}
+                className={validateAgentName(newAgentName) ? 'border-destructive' : ''}
               />
-              <p className="text-xs text-muted-foreground">
-                Lowercase letters, numbers, and hyphens only
-              </p>
+              {validateAgentName(newAgentName) ? (
+                <p className="text-xs text-destructive">
+                  {validateAgentName(newAgentName)}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Lowercase letters, numbers, and hyphens only (2-63 chars)
+                </p>
+              )}
+              {newAgentName && !validateAgentName(newAgentName) && (
+                <div className="text-xs bg-muted p-2 rounded font-mono">
+                  DNS: {newAgentName.toLowerCase().trim()}.is.plugged.in
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -290,7 +361,7 @@ export default function AgentsPage() {
             </Button>
             <Button
               onClick={handleCreateAgent}
-              disabled={!newAgentName || isCreating}
+              disabled={!newAgentName || !!validateAgentName(newAgentName) || isCreating}
             >
               {isCreating ? 'Creating...' : 'Create Agent'}
             </Button>

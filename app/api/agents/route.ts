@@ -11,6 +11,46 @@ import {
 import { authenticate } from '../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
+// Convert BigInt and Date values for JSON serialization
+const serializeForJson = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return Number(obj);
+  if (obj instanceof Date) return obj.toISOString();
+  if (Array.isArray(obj)) return obj.map(serializeForJson);
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      result[key] = serializeForJson(obj[key]);
+    }
+    return result;
+  }
+  return obj;
+};
+
+// Reserved agent names that cannot be used
+const RESERVED_AGENT_NAMES = new Set([
+  // System/Infrastructure names
+  'api', 'app', 'www', 'web', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'ssh', 'dns',
+  'ns', 'ns1', 'ns2', 'ns3', 'mx', 'mx1', 'mx2', 'vpn', 'proxy', 'gateway', 'gw',
+  'admin', 'administrator', 'root', 'system', 'sysadmin', 'webmaster', 'postmaster',
+  'hostmaster', 'support', 'help', 'info', 'contact', 'sales', 'billing',
+  // Kubernetes/Cloud names
+  'kubernetes', 'k8s', 'kube', 'cluster', 'node', 'pod', 'service', 'ingress',
+  'traefik', 'nginx', 'envoy', 'istio', 'linkerd',
+  // PAP specific names
+  'pap', 'station', 'satellite', 'control', 'control-plane', 'registry',
+  'hub', 'gateway', 'proxy', 'mcp', 'hooks', 'telemetry', 'metrics', 'heartbeat',
+  // Plugged.in product names
+  'pluggedin', 'plugged', 'is', 'a', 'focus', 'memory', 'demo', 'test', 'staging',
+  'production', 'prod', 'dev', 'development', 'sandbox', 'preview',
+  // Common reserved names
+  'localhost', 'local', 'internal', 'private', 'public', 'static', 'assets', 'cdn',
+  'status', 'health', 'healthz', 'ready', 'readyz', 'live', 'livez',
+  'auth', 'login', 'logout', 'signup', 'register', 'oauth', 'sso', 'callback',
+  // Wildcards/catch-alls
+  'default', 'null', 'undefined', 'void', 'none', 'empty', 'blank',
+]);
+
 /**
  * @swagger
  * /api/agents:
@@ -79,7 +119,7 @@ export async function GET(request: Request) {
       .where(eq(agentsTable.profile_uuid, auth.activeProfile.uuid))
       .orderBy(desc(agentsTable.created_at));
 
-    return NextResponse.json(agents);
+    return NextResponse.json(serializeForJson(agents));
   } catch (error) {
     console.error('Error fetching agents:', error);
     return NextResponse.json(
@@ -178,33 +218,57 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate DNS-safe name (lowercase alphanumeric and hyphens only)
-    const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-    if (!dnsNameRegex.test(name)) {
+    // Normalize name to lowercase
+    const normalizedName = name.toLowerCase().trim();
+
+    // Validate name length (DNS label max is 63 chars, min is 1)
+    if (normalizedName.length < 2 || normalizedName.length > 63) {
       return NextResponse.json(
-        { error: 'Name must be DNS-safe: lowercase alphanumeric and hyphens only' },
+        { error: 'Name must be between 2 and 63 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Validate DNS-safe name (lowercase alphanumeric and hyphens only)
+    // Must start and end with alphanumeric, can have hyphens in between
+    const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+    if (!dnsNameRegex.test(normalizedName)) {
+      return NextResponse.json(
+        { error: 'Name must be DNS-safe: lowercase letters, numbers, and hyphens only. Must start and end with a letter or number.' },
+        { status: 400 }
+      );
+    }
+
+    // Check for consecutive hyphens (not allowed in DNS)
+    if (normalizedName.includes('--')) {
+      return NextResponse.json(
+        { error: 'Name cannot contain consecutive hyphens' },
+        { status: 400 }
+      );
+    }
+
+    // Check reserved names
+    if (RESERVED_AGENT_NAMES.has(normalizedName)) {
+      return NextResponse.json(
+        { error: `Name '${normalizedName}' is reserved and cannot be used` },
         { status: 400 }
       );
     }
 
     // Generate DNS name: {name}.is.plugged.in
-    const dnsName = `${name}.is.plugged.in`;
+    const dnsName = `${normalizedName}.is.plugged.in`;
 
-    // Check if agent with this name already exists
-    const existing = await db
+    // Check if agent with this DNS name already exists GLOBALLY (across all profiles)
+    // DNS names must be unique across the entire system
+    const existingGlobal = await db
       .select()
       .from(agentsTable)
-      .where(
-        and(
-          eq(agentsTable.name, name),
-          eq(agentsTable.profile_uuid, auth.activeProfile.uuid)
-        )
-      )
+      .where(eq(agentsTable.dns_name, dnsName))
       .limit(1);
 
-    if (existing.length > 0) {
+    if (existingGlobal.length > 0) {
       return NextResponse.json(
-        { error: 'Agent with this name already exists' },
+        { error: `DNS name '${dnsName}' is already registered` },
         { status: 409 }
       );
     }
@@ -213,12 +277,12 @@ export async function POST(request: Request) {
     const [newAgent] = await db
       .insert(agentsTable)
       .values({
-        name,
+        name: normalizedName,
         dns_name: dnsName,
         profile_uuid: auth.activeProfile.uuid,
         state: AgentState.NEW,
         kubernetes_namespace: 'agents',
-        kubernetes_deployment: name,
+        kubernetes_deployment: normalizedName,
         metadata: {
           description,
           image,
@@ -241,7 +305,7 @@ export async function POST(request: Request) {
 
     // Deploy to Kubernetes
     const deploymentResult = await kubernetesService.deployAgent({
-      name,
+      name: normalizedName,
       dnsName,
       namespace: 'agents',
       image,
@@ -271,7 +335,7 @@ export async function POST(request: Request) {
         to_state: AgentState.PROVISIONED,
         metadata: {
           triggered_by: 'system',
-          kubernetes_deployment: name,
+          kubernetes_deployment: normalizedName,
         },
       });
     } else {
@@ -288,10 +352,10 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({
+    return NextResponse.json(serializeForJson({
       agent: newAgent,
       deployment: deploymentResult,
-    });
+    }));
   } catch (error) {
     console.error('Error creating agent:', error);
     return NextResponse.json(
