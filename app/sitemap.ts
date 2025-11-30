@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/db';
-import { blogPostsTable } from '@/db/schema';
+import { blogPostsTable, BlogPostStatus } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -9,7 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Fetch published blog posts
   const blogPosts = await db.query.blogPostsTable.findMany({
-    where: eq(blogPostsTable.status, 'published'),
+    where: eq(blogPostsTable.status, BlogPostStatus.PUBLISHED),
     columns: {
       slug: true,
       updated_at: true,

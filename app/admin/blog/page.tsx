@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { BlogPostsList } from './components/blog-posts-list';
+import { BlogPostsListServer } from './components/blog-posts-list-server';
 
 export const metadata = {
   title: 'Blog Management | Admin',
@@ -28,7 +28,7 @@ export default function AdminBlogPage() {
       </div>
 
       <Suspense fallback={<div>Loading...</div>}>
-        <BlogPostsList />
+        <BlogPostsListServer />
       </Suspense>
     </div>
   );

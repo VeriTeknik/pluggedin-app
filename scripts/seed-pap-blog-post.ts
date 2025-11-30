@@ -6,7 +6,7 @@
 import { db } from '../db';
 import { blogPostsTable, blogPostTranslationsTable, users } from '../db/schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 let PAP_POST_UUID = uuidv4();
 
@@ -62,14 +62,23 @@ async function seedPAPBlogPost() {
       console.log('✅ Created blog post');
     }
 
-    // English translation
-    await db.insert(blogPostTranslationsTable).values({
-      uuid: uuidv4(),
-      blog_post_uuid: PAP_POST_UUID,
-      language: 'en',
-      title: 'Introducing PAP: The Plugged.in Agent Protocol Ecosystem Specification',
-      excerpt: 'A comprehensive framework for autonomous agent lifecycle management, bringing structure, security, and interoperability to the agent ecosystem.',
-      content: `# Introducing PAP: The Plugged.in Agent Protocol
+    // Check if English translation already exists
+    const existingEnTranslation = await db.query.blogPostTranslationsTable.findFirst({
+      where: and(
+        eq(blogPostTranslationsTable.blog_post_uuid, PAP_POST_UUID),
+        eq(blogPostTranslationsTable.language, 'en')
+      ),
+    });
+
+    if (!existingEnTranslation) {
+      // English translation
+      await db.insert(blogPostTranslationsTable).values({
+        uuid: uuidv4(),
+        blog_post_uuid: PAP_POST_UUID,
+        language: 'en',
+        title: 'Introducing PAP: The Plugged.in Agent Protocol Ecosystem Specification',
+        excerpt: 'A comprehensive framework for autonomous agent lifecycle management, bringing structure, security, and interoperability to the agent ecosystem.',
+        content: `# Introducing PAP: The Plugged.in Agent Protocol
 
 We're excited to announce the **Plugged.in Agent Protocol (PAP)** v1.0 Stable Candidate - a comprehensive framework designed to revolutionize how autonomous agents are managed, deployed, and orchestrated in production environments.
 
@@ -215,10 +224,23 @@ The specification is ready. The platform is coming. The future of autonomous age
 **Ready to explore PAP?** Visit our [documentation](https://docs.plugged.in) or check out the [GitHub repository](https://github.com/veriteknik/PAP).
 
 Have questions? Join the conversation in our [community discussions](https://github.com/veriteknik/PAP/discussions).`,
+      });
+      console.log('✅ Created English translation');
+    } else {
+      console.log('⚠️  English translation already exists, skipping');
+    }
+
+    // Check if Turkish translation already exists
+    const existingTrTranslation = await db.query.blogPostTranslationsTable.findFirst({
+      where: and(
+        eq(blogPostTranslationsTable.blog_post_uuid, PAP_POST_UUID),
+        eq(blogPostTranslationsTable.language, 'tr')
+      ),
     });
 
-    // Turkish translation
-    await db.insert(blogPostTranslationsTable).values({
+    if (!existingTrTranslation) {
+      // Turkish translation
+      await db.insert(blogPostTranslationsTable).values({
       uuid: uuidv4(),
       blog_post_uuid: PAP_POST_UUID,
       language: 'tr',
@@ -256,7 +278,11 @@ PAP bu zorlukları çift profilli bir mimari ile ele alıyor:
 - Çerçeve-agnostik entegrasyon (LangChain, CrewAI, vb.)
 
 [İçerik devam ediyor...]`,
-    });
+      });
+      console.log('✅ Created Turkish translation');
+    } else {
+      console.log('⚠️  Turkish translation already exists, skipping');
+    }
 
     // Add minimal translations for other languages
     const otherLanguages = [
@@ -267,18 +293,30 @@ PAP bu zorlukları çift profilli bir mimari ile ele alıyor:
     ];
 
     for (const { lang, title, excerpt } of otherLanguages) {
-      await db.insert(blogPostTranslationsTable).values({
-        uuid: uuidv4(),
-        blog_post_uuid: PAP_POST_UUID,
-        language: lang,
-        title,
-        excerpt,
-        content: `# ${title}\n\n${excerpt}\n\n[Content available in English]`,
+      // Check if translation already exists
+      const existingTranslation = await db.query.blogPostTranslationsTable.findFirst({
+        where: and(
+          eq(blogPostTranslationsTable.blog_post_uuid, PAP_POST_UUID),
+          eq(blogPostTranslationsTable.language, lang)
+        ),
       });
+
+      if (!existingTranslation) {
+        await db.insert(blogPostTranslationsTable).values({
+          uuid: uuidv4(),
+          blog_post_uuid: PAP_POST_UUID,
+          language: lang,
+          title,
+          excerpt,
+          content: `# ${title}\n\n${excerpt}\n\n[Content available in English]`,
+        });
+        console.log(`✅ Created ${lang} translation`);
+      } else {
+        console.log(`⚠️  ${lang} translation already exists, skipping`);
+      }
     }
 
-    console.log('✅ Created all translations');
-    console.log(`\n🎉 Successfully seeded PAP blog post!`);
+    console.log('\n🎉 Successfully seeded PAP blog post!');
     console.log(`📝 Post UUID: ${PAP_POST_UUID}`);
     console.log(`🔗 View at: http://localhost:12005/blog/introducing-pap-agent-ecosystem`);
 

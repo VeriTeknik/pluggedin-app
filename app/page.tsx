@@ -64,7 +64,7 @@ const PopularServersSection = dynamic(
 );
 
 const LatestBlogPostsSection = dynamic(
-  () => import('@/components/landing-sections/latest-blog-posts').then(mod => ({ default: mod.LatestBlogPostsSection })),
+  () => import('@/components/landing-sections/latest-blog-posts-server').then(mod => ({ default: mod.LatestBlogPostsSection })),
   {
     loading: () => <SectionLoader height="600px" />,
     ssr: true

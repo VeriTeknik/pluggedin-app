@@ -6,7 +6,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { writeFile, unlink } from 'fs/promises';
+import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { revalidatePath } from 'next/cache';
 
@@ -182,11 +182,23 @@ export async function updateBlogPost(data: z.infer<typeof updateBlogPostSchema>)
       }
     }
 
-    // Update blog post
+    // Update blog post - map camelCase to snake_case
     const updateData: any = {
-      ...validated.post,
+      slug: validated.post.slug,
+      status: validated.post.status,
+      category: validated.post.category,
       updated_at: new Date(),
     };
+
+    // Only include optional fields if they're defined
+    if (validated.post.tags !== undefined) updateData.tags = validated.post.tags;
+    if (validated.post.headerImageUrl !== undefined) updateData.header_image_url = validated.post.headerImageUrl;
+    if (validated.post.headerImageAlt !== undefined) updateData.header_image_alt = validated.post.headerImageAlt;
+    if (validated.post.metaTitle !== undefined) updateData.meta_title = validated.post.metaTitle;
+    if (validated.post.metaDescription !== undefined) updateData.meta_description = validated.post.metaDescription;
+    if (validated.post.ogImageUrl !== undefined) updateData.og_image_url = validated.post.ogImageUrl;
+    if (validated.post.readingTimeMinutes !== undefined) updateData.reading_time_minutes = validated.post.readingTimeMinutes;
+    if (validated.post.isFeatured !== undefined) updateData.is_featured = validated.post.isFeatured;
 
     // Set published_at when publishing for the first time
     if (validated.post.status === 'published' && !existingPost.published_at) {
@@ -276,7 +288,9 @@ export async function deleteBlogPost(uuid: string) {
     // Delete image file if exists
     if (blogPost.header_image_url) {
       try {
-        const imagePath = join(process.cwd(), 'public', blogPost.header_image_url);
+        // Strip leading slash to avoid path resolution issues
+        const relPath = blogPost.header_image_url.replace(/^\//, '');
+        const imagePath = join(process.cwd(), 'public', relPath);
         await unlink(imagePath);
       } catch (error) {
         console.error('Error deleting image:', error);
@@ -337,10 +351,14 @@ export async function uploadBlogImage(formData: FormData) {
     const extension = file.name.split('.').pop();
     const filename = `blog-${timestamp}.${extension}`;
 
+    // Ensure blog-images directory exists
+    const blogImagesDir = join(process.cwd(), 'public', 'blog-images');
+    await mkdir(blogImagesDir, { recursive: true });
+
     // Save file
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const path = join(process.cwd(), 'public', 'blog-images', filename);
+    const path = join(blogImagesDir, filename);
     await writeFile(path, buffer);
 
     const imageUrl = `/blog-images/${filename}`;
