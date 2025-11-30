@@ -143,6 +143,8 @@ export interface DeploymentStatus {
   ready: boolean;
   replicas: number;
   readyReplicas: number;
+  availableReplicas: number;
+  updatedReplicas: number;
   unavailableReplicas?: number;
   conditions?: Array<{
     type: string;
@@ -242,7 +244,8 @@ metadata:
     pap-agent: "true"
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: traefik
   tls:
@@ -390,7 +393,8 @@ spec:
           },
           annotations: {
             'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
-            'traefik.ingress.kubernetes.io/router.entrypoints': 'websecure',
+            'traefik.ingress.kubernetes.io/router.entrypoints': 'web,websecure',
+            'traefik.ingress.kubernetes.io/router.tls': 'true',
           },
         },
         spec: {
@@ -460,6 +464,8 @@ spec:
         ready: (status.readyReplicas || 0) === (status.replicas || 0),
         replicas: status.replicas || 0,
         readyReplicas: status.readyReplicas || 0,
+        availableReplicas: status.availableReplicas || 0,
+        updatedReplicas: status.updatedReplicas || 0,
         unavailableReplicas: status.unavailableReplicas,
         conditions: status.conditions || [],
       };

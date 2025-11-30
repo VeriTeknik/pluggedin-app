@@ -113,9 +113,13 @@ function formatUptime(seconds: number): string {
 }
 
 // Calculate time ago
-function timeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
+function timeAgo(timestamp: string | null | undefined): string {
+  if (!timestamp) return 'Never';
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return 'Invalid Date';
+  const diff = Date.now() - date.getTime();
   const seconds = Math.floor(diff / 1000);
+  if (seconds < 0) return 'Just now';
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -123,6 +127,14 @@ function timeAgo(timestamp: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+// Format date safely
+function formatDate(timestamp: string | null | undefined): string {
+  if (!timestamp) return 'N/A';
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return 'Invalid Date';
+  return date.toLocaleString();
 }
 
 export default function AgentDetailPage() {
@@ -365,24 +377,24 @@ export default function AgentDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Created</p>
-                  <p className="text-sm">{new Date(agent.created_at).toLocaleString()}</p>
+                  <p className="text-sm">{formatDate(agent.created_at)}</p>
                 </div>
                 {agent.provisioned_at && (
                   <div>
                     <p className="text-sm text-muted-foreground">Provisioned</p>
-                    <p className="text-sm">{new Date(agent.provisioned_at).toLocaleString()}</p>
+                    <p className="text-sm">{formatDate(agent.provisioned_at)}</p>
                   </div>
                 )}
                 {agent.activated_at && (
                   <div>
                     <p className="text-sm text-muted-foreground">Activated</p>
-                    <p className="text-sm">{new Date(agent.activated_at).toLocaleString()}</p>
+                    <p className="text-sm">{formatDate(agent.activated_at)}</p>
                   </div>
                 )}
                 {agent.last_heartbeat_at && (
                   <div>
                     <p className="text-sm text-muted-foreground">Last Heartbeat</p>
-                    <p className="text-sm">{new Date(agent.last_heartbeat_at).toLocaleString()}</p>
+                    <p className="text-sm">{formatDate(agent.last_heartbeat_at)}</p>
                   </div>
                 )}
               </div>

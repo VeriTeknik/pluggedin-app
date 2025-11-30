@@ -126,22 +126,23 @@ export async function GET(
       );
     }
 
-    // Convert BigInt values to numbers for JSON serialization
-    const serializeBigInt = (obj: any): any => {
+    // Convert BigInt and Date values for JSON serialization
+    const serializeForJson = (obj: any): any => {
       if (obj === null || obj === undefined) return obj;
       if (typeof obj === 'bigint') return Number(obj);
-      if (Array.isArray(obj)) return obj.map(serializeBigInt);
+      if (obj instanceof Date) return obj.toISOString();
+      if (Array.isArray(obj)) return obj.map(serializeForJson);
       if (typeof obj === 'object') {
         const result: any = {};
         for (const key in obj) {
-          result[key] = serializeBigInt(obj[key]);
+          result[key] = serializeForJson(obj[key]);
         }
         return result;
       }
       return obj;
     };
 
-    return NextResponse.json(serializeBigInt({
+    return NextResponse.json(serializeForJson({
       agent,
       recentHeartbeats,
       recentMetrics,
