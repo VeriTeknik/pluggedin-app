@@ -1,8 +1,8 @@
 'use client';
 
-import { Activity, Plus, Server, Trash2 } from 'lucide-react';
+import { Activity, Archive, Plus, Server, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,17 @@ const fetcher = async (url: string) => {
 export default function AgentsPage() {
   const { data: agents, error, isLoading, mutate } = useSWR<Agent[]>('/api/agents', fetcher);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  // Filter out terminated and killed agents
+  const activeAgents = useMemo(() => {
+    if (!agents) return [];
+    return agents.filter(agent => !['TERMINATED', 'KILLED'].includes(agent.state));
+  }, [agents]);
+
+  const archivedCount = useMemo(() => {
+    if (!agents) return 0;
+    return agents.filter(agent => ['TERMINATED', 'KILLED'].includes(agent.state)).length;
+  }, [agents]);
   const [newAgentName, setNewAgentName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [deleteAgentId, setDeleteAgentId] = useState<string | null>(null);
@@ -156,18 +167,30 @@ export default function AgentsPage() {
             Manage your autonomous agents with lifecycle control
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Agent
-        </Button>
+        <div className="flex gap-2">
+          {archivedCount > 0 && (
+            <Button variant="outline" asChild>
+              <Link href="/agents/archive">
+                <Archive className="mr-2 h-4 w-4" />
+                Archive ({archivedCount})
+              </Link>
+            </Button>
+          )}
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Agent
+          </Button>
+        </div>
       </div>
 
-      {!agents || agents.length === 0 ? (
+      {activeAgents.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>No Agents Yet</CardTitle>
+            <CardTitle>No Active Agents</CardTitle>
             <CardDescription>
-              Create your first PAP agent to get started with autonomous operations.
+              {archivedCount > 0
+                ? `You have ${archivedCount} archived agent(s). Create a new agent to get started.`
+                : 'Create your first PAP agent to get started with autonomous operations.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -179,7 +202,7 @@ export default function AgentsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {agents.map((agent) => (
+          {activeAgents.map((agent) => (
             <Card key={agent.uuid} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
