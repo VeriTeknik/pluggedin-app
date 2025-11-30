@@ -2,41 +2,119 @@
  * Kubernetes Service for PAP Agent Management
  *
  * Handles deployment, monitoring, and lifecycle management of PAP agents
- * in the K3s cluster on is.plugged.in via Rancher API
+ * in the K3s cluster on is.plugged.in via direct Kubernetes API
+ *
+ * Uses Service Account token for authentication (no Rancher dependency)
  */
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import * as https from 'https';
+import * as http from 'http';
 
 const execAsync = promisify(exec);
 
-// Rancher API configuration
-const RANCHER_URL = process.env.RANCHER_URL || 'https://rancher.is.plugged.in';
+// Kubernetes API configuration
+// Can use either direct K8s API with Service Account token, or Rancher API as fallback
+const K8S_API_URL = process.env.K8S_API_URL || 'https://127.0.0.1:6443';
+const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
+
+// Rancher API configuration (fallback/alternative)
+const RANCHER_URL = process.env.RANCHER_URL || '';
 const RANCHER_ACCESS_KEY = process.env.RANCHER_ACCESS_KEY || '';
 const RANCHER_SECRET_KEY = process.env.RANCHER_SECRET_KEY || '';
 const RANCHER_CLUSTER_ID = process.env.RANCHER_CLUSTER_ID || 'local';
 
-// Create basic auth header for Rancher API
-const authHeader = 'Basic ' + Buffer.from(`${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}`).toString('base64');
+// Determine which auth method to use
+const useServiceAccount = !!K8S_SERVICE_ACCOUNT_TOKEN;
+const useRancher = !useServiceAccount && !!RANCHER_ACCESS_KEY && !!RANCHER_SECRET_KEY;
 
-// Helper function to make Rancher API requests
-async function rancherRequest(path: string, options: RequestInit = {}): Promise<any> {
-  const url = `${RANCHER_URL}${path}`;
-  const response = await fetch(url, {
-    ...options,
+// Create auth headers
+const k8sAuthHeader = K8S_SERVICE_ACCOUNT_TOKEN ? `Bearer ${K8S_SERVICE_ACCOUNT_TOKEN}` : '';
+const rancherAuthHeader = RANCHER_ACCESS_KEY ? 'Basic ' + Buffer.from(`${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}`).toString('base64') : '';
+
+// Helper function to make HTTPS request with self-signed cert support
+function httpsRequest(
+  url: string,
+  options: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }
+): Promise<{ status: number; statusText: string; body: string }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const isHttps = parsedUrl.protocol === 'https:';
+
+    const requestOptions: https.RequestOptions = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      rejectUnauthorized: false, // Allow self-signed certificates
+    };
+
+    const httpModule = isHttps ? https : http;
+
+    const req = httpModule.request(requestOptions, (res) => {
+      let body = '';
+      res.on('data', (chunk) => (body += chunk));
+      res.on('end', () => {
+        resolve({
+          status: res.statusCode || 0,
+          statusText: res.statusMessage || '',
+          body,
+        });
+      });
+    });
+
+    req.on('error', reject);
+
+    if (options.body) {
+      req.write(options.body);
+    }
+
+    req.end();
+  });
+}
+
+// Helper function to make Kubernetes API requests
+async function k8sRequest(path: string, options: { method?: string; body?: string } = {}): Promise<any> {
+  let url: string;
+  let authHeader: string;
+
+  if (useServiceAccount) {
+    // Direct Kubernetes API with Service Account token
+    url = `${K8S_API_URL}${path}`;
+    authHeader = k8sAuthHeader;
+  } else if (useRancher) {
+    // Rancher API (legacy fallback)
+    url = `${RANCHER_URL}/k8s/clusters/${RANCHER_CLUSTER_ID}${path}`;
+    authHeader = rancherAuthHeader;
+  } else {
+    throw new Error('No Kubernetes authentication configured. Set K8S_SERVICE_ACCOUNT_TOKEN or RANCHER_ACCESS_KEY/RANCHER_SECRET_KEY');
+  }
+
+  const response = await httpsRequest(url, {
+    method: options.method || 'GET',
     headers: {
       'Authorization': authHeader,
       'Content-Type': 'application/json',
-      ...options.headers,
     },
+    body: options.body,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Rancher API error: ${response.status} ${response.statusText} - ${errorText}`);
+  if (response.status >= 400) {
+    throw new Error(`Kubernetes API error: ${response.status} ${response.statusText} - ${response.body}`);
   }
 
-  return response.json();
+  // Handle 204 No Content (for DELETE operations)
+  if (response.status === 204 || !response.body) {
+    return { success: true };
+  }
+
+  return JSON.parse(response.body);
 }
 
 export interface AgentDeploymentConfig {
@@ -190,8 +268,6 @@ spec:
         memoryLimit: '1Gi',
       };
 
-      const basePath = `/k8s/clusters/${RANCHER_CLUSTER_ID}`;
-
       // Create Deployment
       const deployment = {
         apiVersion: 'apps/v1',
@@ -251,7 +327,7 @@ spec:
         },
       };
 
-      await rancherRequest(`${basePath}/apis/apps/v1/namespaces/${namespace}/deployments`, {
+      await k8sRequest(`/apis/apps/v1/namespaces/${namespace}/deployments`, {
         method: 'POST',
         body: JSON.stringify(deployment),
       });
@@ -284,7 +360,7 @@ spec:
         },
       };
 
-      await rancherRequest(`${basePath}/v1/namespaces/${namespace}/services`, {
+      await k8sRequest(`/api/v1/namespaces/${namespace}/services`, {
         method: 'POST',
         body: JSON.stringify(service),
       });
@@ -335,7 +411,7 @@ spec:
         },
       };
 
-      await rancherRequest(`${basePath}/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
+      await k8sRequest(`/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
         method: 'POST',
         body: JSON.stringify(ingress),
       });
@@ -361,10 +437,9 @@ spec:
   async getDeploymentStatus(name: string, namespace?: string): Promise<DeploymentStatus | null> {
     try {
       const ns = namespace || this.defaultNamespace;
-      const basePath = `/k8s/clusters/${RANCHER_CLUSTER_ID}`;
 
-      const deployment = await rancherRequest(
-        `${basePath}/apis/apps/v1/namespaces/${ns}/deployments/${name}`
+      const deployment = await k8sRequest(
+        `/apis/apps/v1/namespaces/${ns}/deployments/${name}`
       );
 
       const status = deployment.status || {};
@@ -401,11 +476,10 @@ spec:
   async deleteAgent(name: string, namespace?: string): Promise<{ success: boolean; message: string }> {
     try {
       const ns = namespace || this.defaultNamespace;
-      const basePath = `/k8s/clusters/${RANCHER_CLUSTER_ID}`;
 
       // Delete deployment
       try {
-        await rancherRequest(`${basePath}/apis/apps/v1/namespaces/${ns}/deployments/${name}`, {
+        await k8sRequest(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, {
           method: 'DELETE',
         });
       } catch (error) {
@@ -414,7 +488,7 @@ spec:
 
       // Delete service
       try {
-        await rancherRequest(`${basePath}/v1/namespaces/${ns}/services/${name}`, {
+        await k8sRequest(`/api/v1/namespaces/${ns}/services/${name}`, {
           method: 'DELETE',
         });
       } catch (error) {
@@ -423,7 +497,7 @@ spec:
 
       // Delete ingress
       try {
-        await rancherRequest(`${basePath}/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, {
+        await k8sRequest(`/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, {
           method: 'DELETE',
         });
       } catch (error) {
@@ -432,7 +506,7 @@ spec:
 
       // Delete TLS secret
       try {
-        await rancherRequest(`${basePath}/v1/namespaces/${ns}/secrets/${name}-tls`, {
+        await k8sRequest(`/api/v1/namespaces/${ns}/secrets/${name}-tls`, {
           method: 'DELETE',
         });
       } catch (error) {
