@@ -65,13 +65,13 @@ import { kubernetesService } from '@/lib/services/kubernetes-service';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const agentId = params.id;
+    const { id: agentId } = await params;
 
     // Fetch agent
     const agents = await db
@@ -126,13 +126,28 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({
+    // Convert BigInt values to numbers for JSON serialization
+    const serializeBigInt = (obj: any): any => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'bigint') return Number(obj);
+      if (Array.isArray(obj)) return obj.map(serializeBigInt);
+      if (typeof obj === 'object') {
+        const result: any = {};
+        for (const key in obj) {
+          result[key] = serializeBigInt(obj[key]);
+        }
+        return result;
+      }
+      return obj;
+    };
+
+    return NextResponse.json(serializeBigInt({
       agent,
       recentHeartbeats,
       recentMetrics,
       lifecycleEvents,
       kubernetesStatus,
-    });
+    }));
   } catch (error) {
     console.error('Error fetching agent:', error);
     return NextResponse.json(
@@ -186,13 +201,13 @@ export async function GET(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const agentId = params.id;
+    const { id: agentId } = await params;
 
     // Fetch agent
     const agents = await db

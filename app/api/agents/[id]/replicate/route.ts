@@ -96,13 +96,13 @@ import { kubernetesService } from '@/lib/services/kubernetes-service';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const sourceAgentId = params.id;
+    const { id: sourceAgentId } = await params;
 
     // Parse request body
     const body = await request.json();

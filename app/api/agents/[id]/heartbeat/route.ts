@@ -64,13 +64,13 @@ import { authenticate } from '../../../auth';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const agentId = params.id;
+    const { id: agentId } = await params;
 
     // Parse request body
     const body = await request.json();
