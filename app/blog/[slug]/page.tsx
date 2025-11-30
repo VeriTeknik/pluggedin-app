@@ -68,7 +68,7 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   return (
-    <article className="min-h-screen">
+    <article>
       {/* Header */}
       <div className="bg-gradient-to-b from-muted/50 to-background py-8 md:py-12">
         <div className="container mx-auto px-4 max-w-4xl">
