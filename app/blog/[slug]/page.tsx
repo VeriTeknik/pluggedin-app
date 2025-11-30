@@ -9,11 +9,12 @@ import { BlogContent } from './blog-content';
 import { getBlogPostBySlug } from '../actions';
 
 type Props = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const result = await getBlogPostBySlug(params.slug);
+  const { slug } = await params;
+  const result = await getBlogPostBySlug(slug);
 
   if (!result.success || !result.data) {
     return {
@@ -52,7 +53,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const revalidate = 3600; // Revalidate every hour
 
 export default async function BlogPostPage({ params }: Props) {
-  const result = await getBlogPostBySlug(params.slug);
+  const { slug } = await params;
+  const result = await getBlogPostBySlug(slug);
 
   if (!result.success || !result.data) {
     notFound();

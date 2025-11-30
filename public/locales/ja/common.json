@@ -35,7 +35,9 @@
     "deleting": "削除中...",
     "pluggedinLogo": "plugged.in ロゴ",
     "install": "インストール",
-    "installing": "インストール中..."
+    "installing": "インストール中...",
+    "back": "戻る",
+    "viewAll": "すべて表示"
   },
   "actions": {
     "goHome": "ホームに戻る",

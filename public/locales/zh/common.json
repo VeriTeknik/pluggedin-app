@@ -35,7 +35,9 @@
     "deleting": "删除中...",
     "pluggedinLogo": "plugged.in 标志",
     "install": "安装",
-    "installing": "正在安装..."
+    "installing": "正在安装...",
+    "back": "返回",
+    "viewAll": "查看全部"
   },
   "actions": {
     "goHome": "返回首页",

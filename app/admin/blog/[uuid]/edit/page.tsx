@@ -7,8 +7,9 @@ export const metadata = {
   description: 'Edit blog post',
 };
 
-export default async function EditBlogPostPage({ params }: { params: { uuid: string } }) {
-  const result = await getBlogPostByUuid(params.uuid);
+export default async function EditBlogPostPage({ params }: { params: Promise<{ uuid: string }> }) {
+  const { uuid } = await params;
+  const result = await getBlogPostByUuid(uuid);
 
   if (!result.success || !result.data) {
     notFound();

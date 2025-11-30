@@ -37,7 +37,8 @@
     "pluggedinLogo": "plugged.in Logo",
     "install": "Install",
     "installing": "Installing...",
-    "back": "Back"
+    "back": "Back",
+    "viewAll": "View All"
   },
   "actions": {
     "goHome": "Go Home",
