@@ -80,7 +80,10 @@ function httpsRequest(
 }
 
 // Helper function to make Kubernetes API requests
-async function k8sRequest(path: string, options: { method?: string; body?: string } = {}): Promise<any> {
+async function k8sRequest(
+  path: string,
+  options: { method?: string; body?: string; contentType?: string } = {}
+): Promise<any> {
   let url: string;
   let authHeader: string;
 
@@ -96,11 +99,17 @@ async function k8sRequest(path: string, options: { method?: string; body?: strin
     throw new Error('No Kubernetes authentication configured. Set K8S_SERVICE_ACCOUNT_TOKEN or RANCHER_ACCESS_KEY/RANCHER_SECRET_KEY');
   }
 
+  // Use strategic-merge-patch for PATCH operations by default
+  let contentType = options.contentType || 'application/json';
+  if (options.method === 'PATCH' && !options.contentType) {
+    contentType = 'application/strategic-merge-patch+json';
+  }
+
   const response = await httpsRequest(url, {
     method: options.method || 'GET',
     headers: {
       'Authorization': authHeader,
-      'Content-Type': 'application/json',
+      'Content-Type': contentType,
     },
     body: options.body,
   });
@@ -558,7 +567,17 @@ spec:
   async scaleAgent(name: string, replicas: number, namespace?: string): Promise<{ success: boolean; message: string }> {
     try {
       const ns = namespace || this.defaultNamespace;
-      await execAsync(`kubectl scale deployment ${name} -n ${ns} --replicas=${replicas}`);
+
+      // Use PATCH to update the replicas
+      await k8sRequest(
+        `/apis/apps/v1/namespaces/${ns}/deployments/${name}/scale`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            spec: { replicas },
+          }),
+        }
+      );
 
       return {
         success: true,
@@ -569,6 +588,56 @@ spec:
       return {
         success: false,
         message: `Failed to scale agent: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
+   * Restart a deployment using the Kubernetes rollout restart mechanism
+   * This adds a restart annotation which triggers a rolling restart
+   */
+  async restartDeployment(name: string, namespace?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const ns = namespace || this.defaultNamespace;
+
+      // Get current deployment
+      const deployment = await k8sRequest(
+        `/apis/apps/v1/namespaces/${ns}/deployments/${name}`
+      );
+
+      // Add restart annotation (Kubernetes way to trigger rolling restart)
+      const now = new Date().toISOString();
+      const annotations = deployment.spec?.template?.metadata?.annotations || {};
+      annotations['kubectl.kubernetes.io/restartedAt'] = now;
+
+      // Patch the deployment with the restart annotation
+      const patch = {
+        spec: {
+          template: {
+            metadata: {
+              annotations,
+            },
+          },
+        },
+      };
+
+      await k8sRequest(
+        `/apis/apps/v1/namespaces/${ns}/deployments/${name}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        }
+      );
+
+      return {
+        success: true,
+        message: `Deployment ${name} restart initiated at ${now}`,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        message: `Failed to restart deployment: ${errorMessage}`,
       };
     }
   }

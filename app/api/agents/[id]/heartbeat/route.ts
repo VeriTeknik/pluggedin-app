@@ -5,6 +5,7 @@ import { db } from '@/db';
 import {
   agentsTable,
   agentHeartbeatsTable,
+  agentLifecycleEventsTable,
   AgentState,
 } from '@/db/schema';
 
@@ -135,32 +136,71 @@ export async function POST(
     }
 
     const agent = agents[0];
+    const now = new Date();
+    let stateTransition = null;
 
     // Record heartbeat
     await db.insert(agentHeartbeatsTable).values({
       agent_uuid: agentId,
       mode,
       uptime_seconds,
-      timestamp: new Date(),
+      timestamp: now,
     });
 
-    // Update agent's last_heartbeat timestamp
-    await db
-      .update(agentsTable)
-      .set({
+    // PROVISIONED → ACTIVE transition on first heartbeat (PAP-RFC-001 §7.2)
+    if (agent.state === AgentState.PROVISIONED) {
+      await db
+        .update(agentsTable)
+        .set({
+          state: AgentState.ACTIVE,
+          activated_at: now,
+          last_heartbeat_at: now,
+          metadata: {
+            ...(agent.metadata as Record<string, unknown> || {}),
+            last_heartbeat: now.toISOString(),
+            last_heartbeat_mode: mode,
+          },
+        })
+        .where(eq(agentsTable.uuid, agentId));
+
+      // Log lifecycle event for state transition
+      await db.insert(agentLifecycleEventsTable).values({
+        agent_uuid: agentId,
+        event_type: 'ACTIVATED',
+        from_state: AgentState.PROVISIONED,
+        to_state: AgentState.ACTIVE,
         metadata: {
-          ...(agent.metadata as Record<string, unknown> || {}),
-          last_heartbeat: new Date().toISOString(),
-          last_heartbeat_mode: mode,
+          triggered_by: 'heartbeat',
+          first_heartbeat_mode: mode,
+          uptime_seconds,
         },
-      })
-      .where(eq(agentsTable.uuid, agentId));
+      });
+
+      stateTransition = {
+        from: AgentState.PROVISIONED,
+        to: AgentState.ACTIVE,
+      };
+    } else {
+      // Just update last_heartbeat timestamp and metadata
+      await db
+        .update(agentsTable)
+        .set({
+          last_heartbeat_at: now,
+          metadata: {
+            ...(agent.metadata as Record<string, unknown> || {}),
+            last_heartbeat: now.toISOString(),
+            last_heartbeat_mode: mode,
+          },
+        })
+        .where(eq(agentsTable.uuid, agentId));
+    }
 
     return NextResponse.json({
-      message: 'Heartbeat recorded',
+      message: stateTransition ? 'Heartbeat recorded, agent activated' : 'Heartbeat recorded',
       agent_uuid: agentId,
       mode,
       uptime_seconds,
+      state_transition: stateTransition,
     });
   } catch (error) {
     console.error('Error recording heartbeat:', error);
