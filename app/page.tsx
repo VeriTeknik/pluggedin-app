@@ -63,6 +63,14 @@ const PopularServersSection = dynamic(
   }
 );
 
+const LatestBlogPostsSection = dynamic(
+  () => import('@/components/landing-sections/latest-blog-posts').then(mod => ({ default: mod.LatestBlogPostsSection })),
+  {
+    loading: () => <SectionLoader height="600px" />,
+    ssr: true
+  }
+);
+
 // Dynamically imported sections with code splitting
 const LandingOpenSourceSection = dynamic(
   () => import('@/components/landing-sections/opensource').then(mod => ({ default: mod.LandingOpenSourceSection })),
@@ -225,6 +233,13 @@ export default function Home() {
         <Suspense fallback={<SectionLoader height="800px" />}>
           <ErrorBoundary sectionName="Roadmap">
             <RoadmapSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Latest Blog Posts Section */}
+        <Suspense fallback={<SectionLoader height="600px" />}>
+          <ErrorBoundary sectionName="Blog">
+            <LatestBlogPostsSection />
           </ErrorBoundary>
         </Suspense>
 
