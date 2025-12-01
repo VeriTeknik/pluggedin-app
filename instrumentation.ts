@@ -9,7 +9,8 @@ export async function register() {
     // Ensure uploads directory exists at startup to avoid race conditions
     const { existsSync, mkdirSync, realpathSync } = await import('fs');
     const { join } = await import('path');
-    const uploadsDir = join(process.cwd(), 'uploads');
+    // Use UPLOADS_DIR env var if set, otherwise fallback to process.cwd()/uploads
+    const uploadsDir = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
 
     try {
       if (!existsSync(uploadsDir)) {
