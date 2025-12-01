@@ -668,12 +668,21 @@ spec:
 
       // Get logs from the pod using Kubernetes API
       // The logs endpoint returns plain text, so we use rawResponse: true
-      const logs = await k8sRequest(
-        `/api/v1/namespaces/${ns}/pods/${podName}/log?tailLines=${tailLines}&timestamps=true`,
-        { rawResponse: true }
-      );
-
-      return logs;
+      try {
+        const logs = await k8sRequest(
+          `/api/v1/namespaces/${ns}/pods/${podName}/log?tailLines=${tailLines}&timestamps=true`,
+          { rawResponse: true }
+        );
+        return logs;
+      } catch (logError) {
+        // Handle case where container is waiting to start (ImagePullBackOff, etc.)
+        const errorMsg = logError instanceof Error ? logError.message : '';
+        if (errorMsg.includes('waiting to start') || errorMsg.includes('400 Bad Request')) {
+          console.warn(`Container not ready for logs: ${podName}`);
+          return null;
+        }
+        throw logError;
+      }
     } catch (error) {
       console.error('Error getting agent logs:', error);
       return null;
