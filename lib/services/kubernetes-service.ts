@@ -7,12 +7,8 @@
  * Uses Service Account token for authentication (no Rancher dependency)
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as https from 'https';
 import * as http from 'http';
-
-const execAsync = promisify(exec);
 
 // Kubernetes API configuration
 // Can use either direct K8s API with Service Account token, or Rancher API as fallback
@@ -82,7 +78,7 @@ function httpsRequest(
 // Helper function to make Kubernetes API requests
 async function k8sRequest(
   path: string,
-  options: { method?: string; body?: string; contentType?: string } = {}
+  options: { method?: string; body?: string; contentType?: string; rawResponse?: boolean } = {}
 ): Promise<any> {
   let url: string;
   let authHeader: string;
@@ -121,6 +117,11 @@ async function k8sRequest(
   // Handle 204 No Content (for DELETE operations)
   if (response.status === 204 || !response.body) {
     return { success: true };
+  }
+
+  // Return raw response for logs endpoint (plain text)
+  if (options.rawResponse) {
+    return response.body;
   }
 
   return JSON.parse(response.body);
@@ -488,12 +489,12 @@ spec:
   }
 
   /**
-   * Check if an agent deployment exists
+   * Check if an agent deployment exists via Kubernetes API
    */
   async deploymentExists(name: string, namespace?: string): Promise<boolean> {
     try {
       const ns = namespace || this.defaultNamespace;
-      await execAsync(`kubectl get deployment ${name} -n ${ns}`);
+      await k8sRequest(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`);
       return true;
     } catch {
       return false;
@@ -557,16 +558,15 @@ spec:
   }
 
   /**
-   * List all PAP agent deployments
+   * List all PAP agent deployments via Kubernetes API
    */
   async listAgents(namespace?: string): Promise<Array<{ name: string; ready: boolean }>> {
     try {
       const ns = namespace || this.defaultNamespace;
-      const { stdout } = await execAsync(
-        `kubectl get deployments -n ${ns} -l pap-agent=true -o json`
+      const result = await k8sRequest(
+        `/apis/apps/v1/namespaces/${ns}/deployments?labelSelector=pap-agent=true`
       );
 
-      const result = JSON.parse(stdout);
       const deployments = result.items || [];
 
       return deployments.map((deployment: any) => ({
@@ -661,15 +661,40 @@ spec:
   }
 
   /**
-   * Get logs from an agent pod
+   * Get logs from an agent pod via Kubernetes API
    */
   async getAgentLogs(name: string, namespace?: string, tailLines: number = 100): Promise<string | null> {
     try {
       const ns = namespace || this.defaultNamespace;
-      const { stdout } = await execAsync(
-        `kubectl logs deployment/${name} -n ${ns} --tail=${tailLines} --timestamps`
+
+      // First get pods for this deployment
+      const pods = await k8sRequest(
+        `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
       );
-      return stdout;
+
+      if (!pods.items || pods.items.length === 0) {
+        console.warn(`No pods found for deployment ${name}`);
+        return null;
+      }
+
+      // Find a running pod (prefer running pods)
+      const runningPod = pods.items.find((pod: any) => pod.status?.phase === 'Running');
+      const targetPod = runningPod || pods.items[0];
+      const podName = targetPod.metadata?.name;
+
+      if (!podName) {
+        console.warn(`Could not determine pod name for deployment ${name}`);
+        return null;
+      }
+
+      // Get logs from the pod using Kubernetes API
+      // The logs endpoint returns plain text, so we use rawResponse: true
+      const logs = await k8sRequest(
+        `/api/v1/namespaces/${ns}/pods/${podName}/log?tailLines=${tailLines}&timestamps=true`,
+        { rawResponse: true }
+      );
+
+      return logs;
     } catch (error) {
       console.error('Error getting agent logs:', error);
       return null;
@@ -813,7 +838,7 @@ spec:
   }
 
   /**
-   * Upgrade an agent with new image and/or resources using rolling update
+   * Upgrade an agent with new image and/or resources using rolling update via Kubernetes API
    */
   async upgradeAgent(config: {
     name: string;
@@ -836,86 +861,71 @@ spec:
     try {
       const ns = config.namespace || this.defaultNamespace;
 
-      // Update deployment image
-      await execAsync(
-        `kubectl set image deployment/${config.name} -n ${ns} agent=${config.image}`
-      );
-
-      // Update resources if provided
-      if (config.resources) {
-        const resourcesArgs = [];
-        if (config.resources.cpu_request || config.resources.memory_request) {
-          const requests = [
-            config.resources.cpu_request ? `cpu=${config.resources.cpu_request}` : '',
-            config.resources.memory_request ? `memory=${config.resources.memory_request}` : '',
-          ]
-            .filter(Boolean)
-            .join(',');
-          if (requests) resourcesArgs.push(`--requests=${requests}`);
-        }
-        if (config.resources.cpu_limit || config.resources.memory_limit) {
-          const limits = [
-            config.resources.cpu_limit ? `cpu=${config.resources.cpu_limit}` : '',
-            config.resources.memory_limit ? `memory=${config.resources.memory_limit}` : '',
-          ]
-            .filter(Boolean)
-            .join(',');
-          if (limits) resourcesArgs.push(`--limits=${limits}`);
-        }
-
-        if (resourcesArgs.length > 0) {
-          await execAsync(
-            `kubectl set resources deployment/${config.name} -n ${ns} -c=agent ${resourcesArgs.join(' ')}`
-          );
-        }
-      }
-
-      // Update strategy if provided
-      if (config.strategy?.type === 'RollingUpdate' && config.strategy.rollingUpdate) {
-        const { maxSurge, maxUnavailable } = config.strategy.rollingUpdate;
-        const patchJson = {
-          spec: {
-            strategy: {
-              type: 'RollingUpdate',
-              rollingUpdate: {
-                ...(maxSurge !== undefined && { maxSurge }),
-                ...(maxUnavailable !== undefined && { maxUnavailable }),
-              },
+      // Build the patch object
+      const patch: any = {
+        spec: {
+          template: {
+            spec: {
+              containers: [{
+                name: 'agent',
+                image: config.image,
+              }],
             },
           },
-        };
-        await execAsync(
-          `kubectl patch deployment ${config.name} -n ${ns} -p '${JSON.stringify(patchJson)}'`
-        );
+        },
+      };
+
+      // Add resources if provided
+      if (config.resources) {
+        const resources: any = {};
+        if (config.resources.cpu_request || config.resources.memory_request) {
+          resources.requests = {};
+          if (config.resources.cpu_request) resources.requests.cpu = config.resources.cpu_request;
+          if (config.resources.memory_request) resources.requests.memory = config.resources.memory_request;
+        }
+        if (config.resources.cpu_limit || config.resources.memory_limit) {
+          resources.limits = {};
+          if (config.resources.cpu_limit) resources.limits.cpu = config.resources.cpu_limit;
+          if (config.resources.memory_limit) resources.limits.memory = config.resources.memory_limit;
+        }
+        if (Object.keys(resources).length > 0) {
+          patch.spec.template.spec.containers[0].resources = resources;
+        }
       }
 
-      // Wait for rollout to complete (with timeout)
-      await execAsync(
-        `kubectl rollout status deployment/${config.name} -n ${ns} --timeout=300s`
+      // Add strategy if provided
+      if (config.strategy?.type === 'RollingUpdate' && config.strategy.rollingUpdate) {
+        const { maxSurge, maxUnavailable } = config.strategy.rollingUpdate;
+        patch.spec.strategy = {
+          type: 'RollingUpdate',
+          rollingUpdate: {
+            ...(maxSurge !== undefined && { maxSurge }),
+            ...(maxUnavailable !== undefined && { maxUnavailable }),
+          },
+        };
+      }
+
+      // Apply the patch
+      await k8sRequest(
+        `/apis/apps/v1/namespaces/${ns}/deployments/${config.name}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        }
       );
 
+      // Note: We can't easily wait for rollout via API like kubectl does
+      // The caller should poll getDeploymentStatus to check progress
       return {
         success: true,
-        message: `Agent ${config.name} upgraded successfully to ${config.image}`,
+        message: `Agent ${config.name} upgrade initiated to ${config.image}`,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      // Attempt rollback on failure
-      try {
-        const ns = config.namespace || this.defaultNamespace;
-        await execAsync(`kubectl rollout undo deployment/${config.name} -n ${ns}`);
-
-        return {
-          success: false,
-          message: `Upgrade failed: ${errorMessage}. Rolled back to previous version.`,
-        };
-      } catch (rollbackError) {
-        return {
-          success: false,
-          message: `Upgrade failed: ${errorMessage}. Rollback also failed: ${rollbackError}`,
-        };
-      }
+      return {
+        success: false,
+        message: `Upgrade failed: ${errorMessage}`,
+      };
     }
   }
 }
