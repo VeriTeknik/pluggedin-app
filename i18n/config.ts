@@ -20,6 +20,7 @@ export const isRTL = (locale: string): boolean => {
 // Import chunk types
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
+import enBlog from '../public/locales/en/blog.json';
 import enCollections from '../public/locales/en/collections.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
@@ -45,6 +46,7 @@ import enWhatsNew from '../public/locales/en/whatsNew.json';
 export const namespaces = [
   'apiKeys',
   'auth',
+  'blog',
   'collections',
   'common',
   'discover',
@@ -74,6 +76,7 @@ type Namespace = typeof namespaces[number];
 type Messages = {
   apiKeys: typeof enApiKeys;
   auth: typeof enAuth;
+  blog: typeof enBlog;
   collections: typeof enCollections;
   common: typeof enCommon;
   discover: typeof enDiscover;

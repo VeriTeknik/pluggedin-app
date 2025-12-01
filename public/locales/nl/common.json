@@ -35,7 +35,9 @@
     "deleting": "Verwijderen...",
     "pluggedinLogo": "plugged.in Logo",
     "install": "Installeren",
-    "installing": "Installeren..."
+    "installing": "Installeren...",
+    "back": "Terug",
+    "viewAll": "Bekijk Alles"
   },
   "actions": {
     "goHome": "Naar startpagina",

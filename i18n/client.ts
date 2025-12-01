@@ -6,6 +6,7 @@ import { initReactI18next } from 'react-i18next';
 import enAnalytics from '../public/locales/en/analytics.json';
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
+import enBlog from '../public/locales/en/blog.json';
 import enCollections from '../public/locales/en/collections.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
@@ -30,6 +31,7 @@ import enWhatsNew from '../public/locales/en/whatsNew.json';
 import hiAnalytics from '../public/locales/hi/analytics.json';
 import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
+import hiBlog from '../public/locales/hi/blog.json';
 import hiCollections from '../public/locales/hi/collections.json';
 import hiCommon from '../public/locales/hi/common.json';
 import hiDiscover from '../public/locales/hi/discover.json';
@@ -54,6 +56,7 @@ import hiWhatsNew from '../public/locales/hi/whatsNew.json';
 import jaAnalytics from '../public/locales/ja/analytics.json';
 import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
+import jaBlog from '../public/locales/ja/blog.json';
 import jaCollections from '../public/locales/ja/collections.json';
 import jaCommon from '../public/locales/ja/common.json';
 import jaDiscover from '../public/locales/ja/discover.json';
@@ -78,6 +81,7 @@ import jaWhatsNew from '../public/locales/ja/whatsNew.json';
 import nlAnalytics from '../public/locales/nl/analytics.json';
 import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
+import nlBlog from '../public/locales/nl/blog.json';
 import nlCollections from '../public/locales/nl/collections.json';
 import nlCommon from '../public/locales/nl/common.json';
 import nlDiscover from '../public/locales/nl/discover.json';
@@ -102,6 +106,7 @@ import nlWhatsNew from '../public/locales/nl/whatsNew.json';
 import trAnalytics from '../public/locales/tr/analytics.json';
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
+import trBlog from '../public/locales/tr/blog.json';
 import trCollections from '../public/locales/tr/collections.json';
 import trCommon from '../public/locales/tr/common.json';
 import trDiscover from '../public/locales/tr/discover.json';
@@ -126,6 +131,7 @@ import trWhatsNew from '../public/locales/tr/whatsNew.json';
 import zhAnalytics from '../public/locales/zh/analytics.json';
 import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
+import zhBlog from '../public/locales/zh/blog.json';
 import zhCollections from '../public/locales/zh/collections.json';
 import zhCommon from '../public/locales/zh/common.json';
 import zhDiscover from '../public/locales/zh/discover.json';
@@ -171,6 +177,7 @@ const resources = {
     analytics: enAnalytics,
     apiKeys: enApiKeys,
     auth: enAuth,
+    blog: enBlog,
     collections: enCollections,
     common: enCommon,
     discover: enDiscover,
@@ -213,6 +220,7 @@ const resources = {
     analytics: hiAnalytics,
     apiKeys: hiApiKeys,
     auth: hiAuth,
+    blog: hiBlog,
     collections: hiCollections,
     common: hiCommon,
     discover: hiDiscover,
@@ -255,6 +263,7 @@ const resources = {
     analytics: jaAnalytics,
     apiKeys: jaApiKeys,
     auth: jaAuth,
+    blog: jaBlog,
     collections: jaCollections,
     common: jaCommon,
     discover: jaDiscover,
@@ -297,6 +306,7 @@ const resources = {
     analytics: nlAnalytics,
     apiKeys: nlApiKeys,
     auth: nlAuth,
+    blog: nlBlog,
     collections: nlCollections,
     common: nlCommon,
     discover: nlDiscover,
@@ -339,6 +349,7 @@ const resources = {
     analytics: trAnalytics,
     apiKeys: trApiKeys,
     auth: trAuth,
+    blog: trBlog,
     collections: trCollections,
     common: trCommon,
     discover: trDiscover,
@@ -381,6 +392,7 @@ const resources = {
     analytics: zhAnalytics,
     apiKeys: zhApiKeys,
     auth: zhAuth,
+    blog: zhBlog,
     collections: zhCollections,
     common: zhCommon,
     discover: zhDiscover,

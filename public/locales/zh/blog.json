@@ -1,0 +1,104 @@
+{
+  "blog": {
+    "title": "博客",
+    "readMore": "阅读更多",
+    "backToList": "返回博客",
+    "latestPosts": "最新博客文章",
+    "noPosts": "未找到博客文章",
+    "readingTime": "{{minutes}} 分钟阅读",
+    "views": "{{count}} 次浏览",
+    "publishedOn": "发布于 {{date}}",
+    "updatedOn": "更新于 {{date}}",
+    "categories": {
+      "announcement": "公告",
+      "technical": "技术",
+      "product": "产品",
+      "tutorial": "教程",
+      "case-study": "案例研究"
+    },
+    "status": {
+      "draft": "草稿",
+      "published": "已发布",
+      "archived": "已归档"
+    },
+    "admin": {
+      "title": "博客管理",
+      "createPost": "创建新文章",
+      "editPost": "编辑文章",
+      "deletePost": "删除文章",
+      "confirmDelete": "确定要删除此博客文章吗？",
+      "form": {
+        "slug": "URL 缩略名",
+        "slugPlaceholder": "unique-url-slug",
+        "slugHelp": "用于 URL：plugged.in/blog/{{slug}}",
+        "status": "状态",
+        "category": "类别",
+        "tags": "标签",
+        "tagsPlaceholder": "添加标签（按回车键）",
+        "featured": "在主页推荐",
+        "headerImage": "标题图片",
+        "headerImageAlt": "标题图片替代文本",
+        "uploadImage": "上传图片",
+        "changeImage": "更改图片",
+        "removeImage": "移除图片",
+        "metaTitle": "SEO 元标题",
+        "metaDescription": "SEO 元描述",
+        "ogImage": "Open Graph 图片 URL",
+        "translations": "翻译",
+        "selectLanguage": "选择语言",
+        "title": "标题",
+        "titlePlaceholder": "博客文章标题",
+        "excerpt": "摘要",
+        "excerptPlaceholder": "文章的简短摘要",
+        "content": "内容",
+        "contentPlaceholder": "使用 Markdown 编写您的博客文章...",
+        "readingTime": "阅读时间（分钟）",
+        "readingTimeAuto": "根据内容自动计算"
+      },
+      "validation": {
+        "slugRequired": "URL 缩略名为必填项",
+        "slugInvalid": "缩略名只能包含小写字母、数字和连字符",
+        "statusRequired": "状态为必填项",
+        "categoryRequired": "类别为必填项",
+        "titleRequired": "{{language}} 的标题为必填项",
+        "excerptRequired": "{{language}} 的摘要为必填项",
+        "contentRequired": "{{language}} 的内容为必填项",
+        "imageMaxSize": "图片必须小于 5MB"
+      },
+      "actions": {
+        "save": "保存文章",
+        "saving": "保存中...",
+        "publish": "发布",
+        "unpublish": "取消发布",
+        "archive": "归档",
+        "preview": "预览",
+        "viewLive": "查看实时"
+      },
+      "messages": {
+        "saveSuccess": "博客文章保存成功",
+        "saveError": "博客文章保存失败",
+        "deleteSuccess": "博客文章删除成功",
+        "deleteError": "博客文章删除失败",
+        "publishSuccess": "博客文章发布成功",
+        "unpublishSuccess": "博客文章已取消发布",
+        "archiveSuccess": "博客文章已归档"
+      },
+      "list": {
+        "allPosts": "所有文章",
+        "filterByStatus": "按状态筛选",
+        "filterByCategory": "按类别筛选",
+        "searchPlaceholder": "搜索文章...",
+        "noResults": "未找到符合条件的文章",
+        "columns": {
+          "title": "标题",
+          "category": "类别",
+          "status": "状态",
+          "author": "作者",
+          "published": "发布时间",
+          "views": "浏览量",
+          "actions": "操作"
+        }
+      }
+    }
+  }
+}

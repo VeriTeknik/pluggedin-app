@@ -1,8 +1,8 @@
-'use client';
-
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { Suspense } from 'react';
-import { useTranslation } from 'react-i18next';
+
+// Force dynamic rendering because this page uses server components with data fetching
+export const dynamic = 'force-dynamic';
 
 import { Footer } from '@/components/footer';
 import { LandingNavbar } from '@/components/landing-navbar';
@@ -23,7 +23,7 @@ const SectionLoader = ({ height = '400px' }: { height?: string }) => (
 );
 
 // New v3 sections
-const ProblemStatementSection = dynamic(
+const ProblemStatementSection = dynamicImport(
   () => import('@/components/landing-sections/problem-statement').then(mod => ({ default: mod.ProblemStatementSection })),
   {
     loading: () => <SectionLoader />,
@@ -31,7 +31,7 @@ const ProblemStatementSection = dynamic(
   }
 );
 
-const FourPillarsSection = dynamic(
+const FourPillarsSection = dynamicImport(
   () => import('@/components/landing-sections/four-pillars').then(mod => ({ default: mod.FourPillarsSection })),
   {
     loading: () => <SectionLoader height="800px" />,
@@ -39,7 +39,7 @@ const FourPillarsSection = dynamic(
   }
 );
 
-const VideoTutorialsSection = dynamic(
+const VideoTutorialsSection = dynamicImport(
   () => import('@/components/landing-sections/video-tutorials').then(mod => ({ default: mod.VideoTutorialsSection })),
   {
     loading: () => <SectionLoader height="600px" />,
@@ -47,7 +47,7 @@ const VideoTutorialsSection = dynamic(
   }
 );
 
-const RoadmapSection = dynamic(
+const RoadmapSection = dynamicImport(
   () => import('@/components/landing-sections/roadmap').then(mod => ({ default: mod.RoadmapSection })),
   {
     loading: () => <SectionLoader height="800px" />,
@@ -55,7 +55,7 @@ const RoadmapSection = dynamic(
   }
 );
 
-const PopularServersSection = dynamic(
+const PopularServersSection = dynamicImport(
   () => import('@/components/landing-sections/popular-servers').then(mod => ({ default: mod.PopularServersSection })),
   {
     loading: () => <SectionLoader height="600px" />,
@@ -63,8 +63,16 @@ const PopularServersSection = dynamic(
   }
 );
 
+const LatestBlogPostsSection = dynamicImport(
+  () => import('@/components/landing-sections/latest-blog-posts-server').then(mod => ({ default: mod.LatestBlogPostsSection })),
+  {
+    loading: () => <SectionLoader height="600px" />,
+    ssr: true
+  }
+);
+
 // Dynamically imported sections with code splitting
-const LandingOpenSourceSection = dynamic(
+const LandingOpenSourceSection = dynamicImport(
   () => import('@/components/landing-sections/opensource').then(mod => ({ default: mod.LandingOpenSourceSection })),
   {
     loading: () => <SectionLoader />,
@@ -72,7 +80,7 @@ const LandingOpenSourceSection = dynamic(
   }
 );
 
-const LandingWhyPluggedin = dynamic(
+const LandingWhyPluggedin = dynamicImport(
   () => import('@/components/landing-sections/why-pluggedin').then(mod => ({ default: mod.LandingWhyPluggedin })),
   {
     loading: () => <SectionLoader />,
@@ -80,7 +88,7 @@ const LandingWhyPluggedin = dynamic(
   }
 );
 
-const LandingFeaturesOverview = dynamic(
+const LandingFeaturesOverview = dynamicImport(
   () => import('@/components/landing-sections/features-overview').then(mod => ({ default: mod.LandingFeaturesOverview })),
   {
     loading: () => <SectionLoader />,
@@ -88,7 +96,7 @@ const LandingFeaturesOverview = dynamic(
   }
 );
 
-const LandingAiModelsSection = dynamic(
+const LandingAiModelsSection = dynamicImport(
   () => import('@/components/landing-sections/ai-models').then(mod => ({ default: mod.LandingAiModelsSection })),
   {
     loading: () => <SectionLoader height="500px" />,
@@ -96,7 +104,7 @@ const LandingAiModelsSection = dynamic(
   }
 );
 
-const LandingPricingSection = dynamic(
+const LandingPricingSection = dynamicImport(
   () => import('@/components/landing-sections/pricing').then(mod => ({ default: mod.LandingPricingSection })),
   {
     loading: () => <SectionLoader height="600px" />,
@@ -104,31 +112,28 @@ const LandingPricingSection = dynamic(
   }
 );
 
-const LandingCollectionManagement = dynamic(
+const LandingCollectionManagement = dynamicImport(
   () => import('@/components/landing-sections/collection-management').then(mod => ({ default: mod.LandingCollectionManagement })),
   {
     loading: () => <SectionLoader />,
-    ssr: false
   }
 );
 
-const LandingSearchFunctionality = dynamic(
+const LandingSearchFunctionality = dynamicImport(
   () => import('@/components/landing-sections/search-functionality').then(mod => ({ default: mod.LandingSearchFunctionality })),
   {
     loading: () => <SectionLoader />,
-    ssr: false
   }
 );
 
-const LandingMcpPlayground = dynamic(
+const LandingMcpPlayground = dynamicImport(
   () => import('@/components/landing-sections/mcp-playground').then(mod => ({ default: mod.LandingMcpPlayground })),
   {
     loading: () => <SectionLoader height="500px" />,
-    ssr: false
   }
 );
 
-const LandingSecuritySection = dynamic(
+const LandingSecuritySection = dynamicImport(
   () => import('@/components/landing-sections/security').then(mod => ({ default: mod.LandingSecuritySection })),
   {
     loading: () => <SectionLoader />,
@@ -136,7 +141,7 @@ const LandingSecuritySection = dynamic(
   }
 );
 
-const LandingDevelopersSection = dynamic(
+const LandingDevelopersSection = dynamicImport(
   () => import('@/components/landing-sections/developers').then(mod => ({ default: mod.LandingDevelopersSection })),
   {
     loading: () => <SectionLoader />,
@@ -144,7 +149,7 @@ const LandingDevelopersSection = dynamic(
   }
 );
 
-const LandingGettingStartedSection = dynamic(
+const LandingGettingStartedSection = dynamicImport(
   () => import('@/components/landing-sections/getting-started').then(mod => ({ default: mod.LandingGettingStartedSection })),
   {
     loading: () => <SectionLoader />,
@@ -152,7 +157,7 @@ const LandingGettingStartedSection = dynamic(
   }
 );
 
-const LandingCta = dynamic(
+const LandingCta = dynamicImport(
   () => import('@/components/landing-sections/cta').then(mod => ({ default: mod.LandingCta })),
   {
     loading: () => <SectionLoader height="200px" />,
@@ -160,26 +165,12 @@ const LandingCta = dynamic(
   }
 );
 
-// const LandingTestimonials = dynamic(
+// const LandingTestimonials = dynamicImport(
 //   () => import('@/components/landing-sections/testimonials').then(mod => ({ default: mod.LandingTestimonials })),
 //   { loading: () => <SectionLoader /> }
 // );
 
 export default function Home() {
-  const { ready } = useTranslation();
-
-  // Loading state while i18n is initializing
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading translations...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <MetricsProvider>
       <div className="flex flex-col min-h-screen">
@@ -225,6 +216,13 @@ export default function Home() {
         <Suspense fallback={<SectionLoader height="800px" />}>
           <ErrorBoundary sectionName="Roadmap">
             <RoadmapSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Latest Blog Posts Section */}
+        <Suspense fallback={<SectionLoader height="600px" />}>
+          <ErrorBoundary sectionName="Blog">
+            <LatestBlogPostsSection />
           </ErrorBoundary>
         </Suspense>
 
