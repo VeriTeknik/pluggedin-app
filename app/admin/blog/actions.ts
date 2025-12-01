@@ -111,10 +111,20 @@ export async function createBlogPost(data: z.infer<typeof createBlogPostSchema>)
       })
       .returning();
 
+    // Calculate reading time from English translation (or first translation)
+    const primaryTranslation = validated.translations.find(t => t.language === 'en') || validated.translations[0];
+    const readingTime = primaryTranslation ? calculateReadingTime(primaryTranslation.content) : null;
+
+    // Update reading time if calculated
+    if (readingTime) {
+      await db
+        .update(blogPostsTable)
+        .set({ reading_time_minutes: readingTime })
+        .where(eq(blogPostsTable.uuid, blogPost.uuid));
+    }
+
     // Create translations
     for (const translation of validated.translations) {
-      const readingTime = calculateReadingTime(translation.content);
-
       await db.insert(blogPostTranslationsTable).values({
         blog_post_uuid: blogPost.uuid,
         language: translation.language,
@@ -122,14 +132,6 @@ export async function createBlogPost(data: z.infer<typeof createBlogPostSchema>)
         excerpt: translation.excerpt,
         content: translation.content,
       });
-
-      // Update reading time on first translation
-      if (!blogPost.reading_time_minutes) {
-        await db
-          .update(blogPostsTable)
-          .set({ reading_time_minutes: readingTime })
-          .where(eq(blogPostsTable.uuid, blogPost.uuid));
-      }
     }
 
     revalidatePath('/blog');
@@ -217,9 +219,11 @@ export async function updateBlogPost(data: z.infer<typeof updateBlogPostSchema>)
 
     // Update translations if provided
     if (validated.translations) {
-      for (const translation of validated.translations) {
-        const readingTime = calculateReadingTime(translation.content);
+      // Calculate reading time from English translation (or first translation) once
+      const primaryTranslation = validated.translations.find(t => t.language === 'en') || validated.translations[0];
+      const readingTime = primaryTranslation ? calculateReadingTime(primaryTranslation.content) : null;
 
+      for (const translation of validated.translations) {
         if (translation.uuid) {
           // Update existing translation
           await db
@@ -241,8 +245,10 @@ export async function updateBlogPost(data: z.infer<typeof updateBlogPostSchema>)
             content: translation.content,
           });
         }
+      }
 
-        // Update reading time
+      // Update reading time once after all translations
+      if (readingTime) {
         await db
           .update(blogPostsTable)
           .set({ reading_time_minutes: readingTime })
@@ -338,7 +344,7 @@ export async function uploadBlogImage(formData: FormData) {
       };
     }
 
-    // Validate file type
+    // Validate file type (MIME type)
     if (!file.type.startsWith('image/')) {
       return {
         success: false,
@@ -346,9 +352,19 @@ export async function uploadBlogImage(formData: FormData) {
       };
     }
 
+    // Validate file extension (security: prevent malicious file uploads)
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
+    if (!extension || !allowedExtensions.includes(extension)) {
+      return {
+        success: false,
+        error: `Invalid file extension. Allowed: ${allowedExtensions.join(', ')}`,
+      };
+    }
+
     // Generate unique filename
     const timestamp = Date.now();
-    const extension = file.name.split('.').pop();
     const filename = `blog-${timestamp}.${extension}`;
 
     // Ensure blog-images directory exists

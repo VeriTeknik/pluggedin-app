@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { locales, localeNames } from '@/i18n/config';
@@ -60,6 +61,7 @@ export function BlogContent({ post }: BlogContentProps) {
       <div className="prose prose-lg dark:prose-invert max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeSanitize]}
           components={{
             // Customize heading IDs for anchor links
             h1: ({ children, ...props }) => (
