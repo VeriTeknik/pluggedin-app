@@ -10,24 +10,12 @@
 import * as https from 'https';
 import * as http from 'http';
 
-// Kubernetes API configuration
-// Can use either direct K8s API with Service Account token, or Rancher API as fallback
+// Kubernetes API configuration (direct API with Service Account token)
 const K8S_API_URL = process.env.K8S_API_URL || 'https://127.0.0.1:6443';
 const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
 
-// Rancher API configuration (fallback/alternative)
-const RANCHER_URL = process.env.RANCHER_URL || '';
-const RANCHER_ACCESS_KEY = process.env.RANCHER_ACCESS_KEY || '';
-const RANCHER_SECRET_KEY = process.env.RANCHER_SECRET_KEY || '';
-const RANCHER_CLUSTER_ID = process.env.RANCHER_CLUSTER_ID || 'local';
-
-// Determine which auth method to use
-const useServiceAccount = !!K8S_SERVICE_ACCOUNT_TOKEN;
-const useRancher = !useServiceAccount && !!RANCHER_ACCESS_KEY && !!RANCHER_SECRET_KEY;
-
-// Create auth headers
+// Auth header for Kubernetes API
 const k8sAuthHeader = K8S_SERVICE_ACCOUNT_TOKEN ? `Bearer ${K8S_SERVICE_ACCOUNT_TOKEN}` : '';
-const rancherAuthHeader = RANCHER_ACCESS_KEY ? 'Basic ' + Buffer.from(`${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}`).toString('base64') : '';
 
 // Helper function to make HTTPS request with self-signed cert support
 function httpsRequest(
@@ -80,20 +68,11 @@ async function k8sRequest(
   path: string,
   options: { method?: string; body?: string; contentType?: string; rawResponse?: boolean } = {}
 ): Promise<any> {
-  let url: string;
-  let authHeader: string;
-
-  if (useServiceAccount) {
-    // Direct Kubernetes API with Service Account token
-    url = `${K8S_API_URL}${path}`;
-    authHeader = k8sAuthHeader;
-  } else if (useRancher) {
-    // Rancher API (legacy fallback)
-    url = `${RANCHER_URL}/k8s/clusters/${RANCHER_CLUSTER_ID}${path}`;
-    authHeader = rancherAuthHeader;
-  } else {
-    throw new Error('No Kubernetes authentication configured. Set K8S_SERVICE_ACCOUNT_TOKEN or RANCHER_ACCESS_KEY/RANCHER_SECRET_KEY');
+  if (!K8S_SERVICE_ACCOUNT_TOKEN) {
+    throw new Error('No Kubernetes authentication configured. Set K8S_SERVICE_ACCOUNT_TOKEN environment variable.');
   }
+
+  const url = `${K8S_API_URL}${path}`;
 
   // Use strategic-merge-patch for PATCH operations by default
   let contentType = options.contentType || 'application/json';
@@ -104,7 +83,7 @@ async function k8sRequest(
   const response = await httpsRequest(url, {
     method: options.method || 'GET',
     headers: {
-      'Authorization': authHeader,
+      'Authorization': k8sAuthHeader,
       'Content-Type': contentType,
     },
     body: options.body,
