@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Archive, Plus, Server, Trash2 } from 'lucide-react';
+import { Activity, Archive, Globe, Lock, Plus, Server, ShoppingBag, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
@@ -90,9 +90,18 @@ interface Agent {
   name: string;
   dns_name: string;
   state: string;
+  access_level: 'PRIVATE' | 'PUBLIC';
+  template_uuid?: string;
+  heartbeat_mode?: string;
+  deployment_status?: string;
   created_at: string;
   last_heartbeat_at?: string;
-  metadata?: any;
+  metadata?: {
+    template_name?: string;
+    template_version?: string;
+    description?: string;
+    [key: string]: any;
+  };
 }
 
 const fetcher = async (url: string) => {
@@ -227,6 +236,12 @@ export default function AgentsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/agents/marketplace">
+              <ShoppingBag className="mr-2 h-4 w-4" />
+              Marketplace
+            </Link>
+          </Button>
           {archivedCount > 0 && (
             <Button variant="outline" asChild>
               <Link href="/agents/archive">
@@ -248,14 +263,20 @@ export default function AgentsPage() {
             <CardTitle>No Active Agents</CardTitle>
             <CardDescription>
               {archivedCount > 0
-                ? `You have ${archivedCount} archived agent(s). Create a new agent to get started.`
-                : 'Create your first PAP agent to get started with autonomous operations.'}
+                ? `You have ${archivedCount} archived agent(s). Deploy from the marketplace or create a custom agent.`
+                : 'Deploy an agent from the marketplace or create a custom agent to get started.'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <CardContent className="flex gap-2">
+            <Button asChild>
+              <Link href="/agents/marketplace">
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Browse Marketplace
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Your First Agent
+              Create Custom Agent
             </Button>
           </CardContent>
         </Card>
@@ -279,6 +300,28 @@ export default function AgentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
+                  {agent.metadata?.template_name && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Template:</span>
+                      <span className="text-xs font-mono">{agent.metadata.template_name}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Access:</span>
+                    <span className="flex items-center gap-1">
+                      {agent.access_level === 'PUBLIC' ? (
+                        <>
+                          <Globe className="h-3 w-3 text-green-500" />
+                          <span className="text-green-600">Public</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-3 w-3 text-gray-500" />
+                          <span>Private</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Created:</span>
                     <span>{new Date(agent.created_at).toLocaleDateString()}</span>
