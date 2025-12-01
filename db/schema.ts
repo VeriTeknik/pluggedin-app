@@ -2272,19 +2272,123 @@ export const heartbeatModeEnum = pgEnum(
   enumToPgEnum(HeartbeatMode)
 );
 
-// Main agents table
+// PAP Access Level Enum - Agent visibility
+export enum AccessLevel {
+  PRIVATE = 'PRIVATE',     // Only hub API key can access
+  PUBLIC = 'PUBLIC',       // Anyone with URL (link sharing)
+}
+export const accessLevelEnum = pgEnum(
+  'access_level',
+  enumToPgEnum(AccessLevel)
+);
+
+// PAP Deployment Status Enum
+export enum DeploymentStatus {
+  PENDING = 'PENDING',       // Waiting to be deployed
+  DEPLOYING = 'DEPLOYING',   // Deployment in progress
+  RUNNING = 'RUNNING',       // Successfully deployed and running
+  FAILED = 'FAILED',         // Deployment failed
+  STOPPED = 'STOPPED',       // Manually stopped
+}
+export const deploymentStatusEnum = pgEnum(
+  'deployment_status',
+  enumToPgEnum(DeploymentStatus)
+);
+
+// ============================================================================
+// Agent Marketplace Tables
+// ============================================================================
+
+// Agent Templates - Marketplace catalog
+export const agentTemplatesTable = pgTable(
+  'agent_templates',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Identity (namespace/name pattern like npm/docker)
+    namespace: text('namespace').notNull(),        // 'veriteknik'
+    name: text('name').notNull(),                  // 'compass'
+    version: text('version').notNull(),            // '1.0.0'
+
+    // Display
+    display_name: text('display_name').notNull(),  // 'Compass - AI Jury'
+    description: text('description'),              // Short description
+    long_description: text('long_description'),    // Markdown content
+    icon_url: text('icon_url'),
+    banner_url: text('banner_url'),
+
+    // Technical
+    docker_image: text('docker_image').notNull(),  // 'ghcr.io/veriteknik/compass-agent:v1.0.0'
+    container_port: integer('container_port').default(3000),
+    health_endpoint: text('health_endpoint').default('/health'),
+    env_schema: jsonb('env_schema').$type<{
+      required?: string[];
+      optional?: string[];
+      defaults?: Record<string, string>;
+    }>(),
+
+    // Metadata
+    tags: text('tags').array(),                    // ['ai', 'research', 'consensus']
+    category: text('category'),                    // 'research', 'productivity', etc.
+
+    // Publishing
+    is_public: boolean('is_public').default(false),
+    is_verified: boolean('is_verified').default(false),
+    is_featured: boolean('is_featured').default(false),
+    publisher_id: text('publisher_id'),            // User ID of publisher
+    repository_url: text('repository_url'),        // GitHub repo URL
+    documentation_url: text('documentation_url'),
+
+    // Stats
+    install_count: integer('install_count').default(0),
+
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    namespaceNameVersionUnique: unique('agent_templates_namespace_name_version_unique').on(
+      table.namespace,
+      table.name,
+      table.version
+    ),
+    namespaceIdx: index('agent_templates_namespace_idx').on(table.namespace),
+    categoryIdx: index('agent_templates_category_idx').on(table.category),
+    isPublicIdx: index('agent_templates_is_public_idx').on(table.is_public),
+  })
+);
+
+// Main agents table (agent instances deployed by users)
 export const agentsTable = pgTable(
   'agents',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
-    name: text('name').notNull().unique(), // DNS-safe name (e.g., 'focus', 'memory')
-    dns_name: text('dns_name').notNull().unique(), // Full DNS: {name}.{cluster}.a.plugged.in
+    name: text('name').notNull().unique(), // DNS-safe subdomain (e.g., 'oracle', 'my-compass')
+    dns_name: text('dns_name').notNull().unique(), // Full DNS: {name}.is.plugged.in
     profile_uuid: uuid('profile_uuid')
       .notNull()
       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+
+    // Marketplace - Link to template (optional for custom agents)
+    template_uuid: uuid('template_uuid')
+      .references(() => agentTemplatesTable.uuid, { onDelete: 'set null' }),
+
+    // Access control
+    access_level: accessLevelEnum('access_level').notNull().default('PRIVATE'),
+
+    // PAP State
     state: agentStateEnum('state').notNull().default('NEW'),
+    heartbeat_mode: heartbeatModeEnum('heartbeat_mode').notNull().default('IDLE'),
+    deployment_status: deploymentStatusEnum('deployment_status').notNull().default('PENDING'),
+
+    // Kubernetes
     kubernetes_namespace: text('kubernetes_namespace').default('agents'),
     kubernetes_deployment: text('kubernetes_deployment'), // Deployment name in K8s
+
+    // Timestamps
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -2292,22 +2396,28 @@ export const agentsTable = pgTable(
     activated_at: timestamp('activated_at', { withTimezone: true }),
     terminated_at: timestamp('terminated_at', { withTimezone: true }),
     last_heartbeat_at: timestamp('last_heartbeat_at', { withTimezone: true }),
+
+    // Metadata
     metadata: jsonb('metadata').$type<{
       description?: string;
-      image?: string; // Container image
+      image?: string; // Container image (overrides template if set)
       resources?: {
         cpu_request?: string;
         memory_request?: string;
         cpu_limit?: string;
         memory_limit?: string;
       };
+      env_overrides?: Record<string, string>; // Custom env vars
       [key: string]: any;
     }>(),
   },
   (table) => ({
     profileUuidIdx: index('agents_profile_uuid_idx').on(table.profile_uuid),
+    templateUuidIdx: index('agents_template_uuid_idx').on(table.template_uuid),
     stateIdx: index('agents_state_idx').on(table.state),
     dnsNameIdx: index('agents_dns_name_idx').on(table.dns_name),
+    accessLevelIdx: index('agents_access_level_idx').on(table.access_level),
+    deploymentStatusIdx: index('agents_deployment_status_idx').on(table.deployment_status),
   })
 );
 
@@ -2407,11 +2517,20 @@ export const agentModelsTable = pgTable(
   })
 );
 
-// Relations for agents
+// Relations for agent templates
+export const agentTemplatesRelations = relations(agentTemplatesTable, ({ many }) => ({
+  instances: many(agentsTable),
+}));
+
+// Relations for agents (instances)
 export const agentsRelations = relations(agentsTable, ({ one, many }) => ({
   profile: one(profilesTable, {
     fields: [agentsTable.profile_uuid],
     references: [profilesTable.uuid],
+  }),
+  template: one(agentTemplatesTable, {
+    fields: [agentsTable.template_uuid],
+    references: [agentTemplatesTable.uuid],
   }),
   heartbeats: many(agentHeartbeatsTable),
   metrics: many(agentMetricsTable),
