@@ -1,11 +1,13 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
   agentsTable,
+  agentTemplatesTable,
   agentLifecycleEventsTable,
   AgentState,
+  AccessLevel,
 } from '@/db/schema';
 
 import { authenticate } from '../auth';
@@ -106,6 +108,10 @@ export async function GET(request: Request) {
         name: agentsTable.name,
         dns_name: agentsTable.dns_name,
         state: agentsTable.state,
+        access_level: agentsTable.access_level,
+        template_uuid: agentsTable.template_uuid,
+        heartbeat_mode: agentsTable.heartbeat_mode,
+        deployment_status: agentsTable.deployment_status,
         kubernetes_namespace: agentsTable.kubernetes_namespace,
         kubernetes_deployment: agentsTable.kubernetes_deployment,
         created_at: agentsTable.created_at,
@@ -134,7 +140,13 @@ export async function GET(request: Request) {
  * /api/agents:
  *   post:
  *     summary: Create a new PAP agent
- *     description: Creates a new PAP agent and deploys it to Kubernetes. Requires API key authentication. The agent will be deployed to the is.plugged.in cluster with automatic TLS certificates.
+ *     description: |
+ *       Creates a new PAP agent and deploys it to Kubernetes.
+ *       Supports two modes:
+ *       1. **From Template**: Provide `template_uuid` to deploy from a marketplace template
+ *       2. **Custom**: Provide `image` and other settings directly
+ *
+ *       The agent will be deployed to the is.plugged.in cluster with automatic TLS certificates.
  *     tags:
  *       - PAP Agents
  *     security:
@@ -151,6 +163,14 @@ export async function GET(request: Request) {
  *               name:
  *                 type: string
  *                 description: DNS-safe agent name (e.g., 'focus', 'memory'). Must be unique.
+ *               template_uuid:
+ *                 type: string
+ *                 format: uuid
+ *                 description: UUID of a marketplace template to deploy from.
+ *               access_level:
+ *                 type: string
+ *                 enum: [PRIVATE, PUBLIC]
+ *                 description: Access level (default PRIVATE). PUBLIC enables link sharing.
  *               description:
  *                 type: string
  *                 nullable: true
@@ -158,7 +178,7 @@ export async function GET(request: Request) {
  *               image:
  *                 type: string
  *                 nullable: true
- *                 description: Container image to use. Defaults to nginx-unprivileged for testing.
+ *                 description: Container image to use. If template_uuid provided, overrides template default.
  *               resources:
  *                 type: object
  *                 nullable: true
@@ -175,6 +195,9 @@ export async function GET(request: Request) {
  *                   memory_limit:
  *                     type: string
  *                     description: Memory limit (e.g., '1Gi')
+ *               env_overrides:
+ *                 type: object
+ *                 description: Environment variable overrides (merged with template defaults)
  *     responses:
  *       200:
  *         description: Successfully created the agent and initiated Kubernetes deployment.
@@ -186,6 +209,9 @@ export async function GET(request: Request) {
  *                 agent:
  *                   type: object
  *                   description: The created agent record
+ *                 template:
+ *                   type: object
+ *                   description: Template details (if deployed from template)
  *                 deployment:
  *                   type: object
  *                   properties:
@@ -197,6 +223,8 @@ export async function GET(request: Request) {
  *         description: Bad Request - Missing required fields or validation failed.
  *       401:
  *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *       404:
+ *         description: Not Found - Template not found.
  *       409:
  *         description: Conflict - Agent with this name already exists.
  *       500:
@@ -208,7 +236,36 @@ export async function POST(request: Request) {
     if (auth.error) return auth.error;
 
     const body = await request.json();
-    const { name, description, image, resources } = body;
+    const { name, template_uuid, access_level, description, image, resources, env_overrides } = body;
+
+    // Load template if provided
+    let template = null;
+    if (template_uuid) {
+      const templates = await db
+        .select()
+        .from(agentTemplatesTable)
+        .where(eq(agentTemplatesTable.uuid, template_uuid))
+        .limit(1);
+
+      if (templates.length === 0) {
+        return NextResponse.json(
+          { error: 'Template not found' },
+          { status: 404 }
+        );
+      }
+      template = templates[0];
+    }
+
+    // Validate access_level if provided
+    if (access_level !== undefined) {
+      const validAccessLevels = Object.values(AccessLevel);
+      if (!validAccessLevels.includes(access_level)) {
+        return NextResponse.json(
+          { error: `Invalid access_level. Must be one of: ${validAccessLevels.join(', ')}` },
+          { status: 400 }
+        );
+      }
+    }
 
     // Validate required fields
     if (!name) {
@@ -273,6 +330,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // Resolve image: explicit > template > default
+    const resolvedImage = image || template?.docker_image || undefined;
+
     // Create agent in database with NEW state
     const [newAgent] = await db
       .insert(agentsTable)
@@ -280,16 +340,33 @@ export async function POST(request: Request) {
         name: normalizedName,
         dns_name: dnsName,
         profile_uuid: auth.activeProfile.uuid,
+        template_uuid: template?.uuid || null,
+        access_level: access_level || AccessLevel.PRIVATE,
         state: AgentState.NEW,
         kubernetes_namespace: 'agents',
         kubernetes_deployment: normalizedName,
         metadata: {
-          description,
-          image,
+          description: description || template?.description,
+          image: resolvedImage,
+          container_port: template?.container_port || 3000,
+          health_endpoint: template?.health_endpoint || '/health',
           resources,
+          env_overrides,
+          template_name: template ? `${template.namespace}/${template.name}` : undefined,
+          template_version: template?.version,
         },
       })
       .returning();
+
+    // Increment template install count
+    if (template) {
+      await db
+        .update(agentTemplatesTable)
+        .set({
+          install_count: sql`${agentTemplatesTable.install_count} + 1`,
+        })
+        .where(eq(agentTemplatesTable.uuid, template.uuid));
+    }
 
     // Log lifecycle event
     await db.insert(agentLifecycleEventsTable).values({
@@ -300,6 +377,8 @@ export async function POST(request: Request) {
       metadata: {
         triggered_by: auth.project.user_id,
         profile_uuid: auth.activeProfile.uuid,
+        template_uuid: template?.uuid,
+        template_name: template ? `${template.namespace}/${template.name}` : undefined,
       },
     });
 
@@ -308,7 +387,7 @@ export async function POST(request: Request) {
       name: normalizedName,
       dnsName,
       namespace: 'agents',
-      image,
+      image: resolvedImage,
       resources: resources ? {
         cpuRequest: resources.cpu_request,
         memoryRequest: resources.memory_request,
@@ -354,6 +433,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json(serializeForJson({
       agent: newAgent,
+      template: template ? {
+        uuid: template.uuid,
+        namespace: template.namespace,
+        name: template.name,
+        version: template.version,
+        display_name: template.display_name,
+      } : null,
       deployment: deploymentResult,
     }));
   } catch (error) {

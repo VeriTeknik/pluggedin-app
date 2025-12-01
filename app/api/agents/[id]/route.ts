@@ -4,10 +4,12 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import {
   agentsTable,
+  agentTemplatesTable,
   agentLifecycleEventsTable,
   agentHeartbeatsTable,
   agentMetricsTable,
   AgentState,
+  AccessLevel,
 } from '@/db/schema';
 
 import { authenticate } from '../../auth';
@@ -269,6 +271,179 @@ export async function DELETE(
     console.error('Error deleting agent:', error);
     return NextResponse.json(
       { error: 'Failed to delete agent' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * @swagger
+ * /api/agents/{id}:
+ *   patch:
+ *     summary: Update a PAP agent
+ *     description: |
+ *       Updates agent properties like access level, metadata, etc.
+ *       Use this to enable/disable link sharing (public access).
+ *     tags:
+ *       - PAP Agents
+ *     security:
+ *       - apiKey: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The UUID of the agent to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               access_level:
+ *                 type: string
+ *                 enum: [PRIVATE, PUBLIC]
+ *                 description: Access control level (PUBLIC enables link sharing)
+ *               metadata:
+ *                 type: object
+ *                 description: Additional metadata to merge
+ *     responses:
+ *       200:
+ *         description: Successfully updated the agent.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 agent:
+ *                   type: object
+ *       400:
+ *         description: Bad Request - Invalid access level or parameters.
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key.
+ *       404:
+ *         description: Not Found - Agent does not exist or does not belong to the profile.
+ *       500:
+ *         description: Internal Server Error - Failed to update agent.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await authenticate(request);
+    if (auth.error) return auth.error;
+
+    const { id: agentId } = await params;
+    const body = await request.json();
+    const { access_level, metadata: newMetadata } = body;
+
+    // Fetch agent
+    const agents = await db
+      .select()
+      .from(agentsTable)
+      .where(
+        and(
+          eq(agentsTable.uuid, agentId),
+          eq(agentsTable.profile_uuid, auth.activeProfile.uuid)
+        )
+      )
+      .limit(1);
+
+    if (agents.length === 0) {
+      return NextResponse.json(
+        { error: 'Agent not found' },
+        { status: 404 }
+      );
+    }
+
+    const agent = agents[0];
+
+    // Build update object
+    const updateData: {
+      access_level?: typeof AccessLevel[keyof typeof AccessLevel];
+      metadata?: Record<string, unknown>;
+    } = {};
+
+    // Validate and set access_level if provided
+    if (access_level !== undefined) {
+      const validAccessLevels = Object.values(AccessLevel);
+      if (!validAccessLevels.includes(access_level)) {
+        return NextResponse.json(
+          { error: `Invalid access_level. Must be one of: ${validAccessLevels.join(', ')}` },
+          { status: 400 }
+        );
+      }
+      updateData.access_level = access_level;
+    }
+
+    // Merge metadata if provided
+    if (newMetadata !== undefined) {
+      updateData.metadata = {
+        ...(agent.metadata as Record<string, unknown> || {}),
+        ...newMetadata,
+      };
+    }
+
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
+
+    // Update agent
+    const [updatedAgent] = await db
+      .update(agentsTable)
+      .set(updateData)
+      .where(eq(agentsTable.uuid, agentId))
+      .returning();
+
+    // Log lifecycle event for access level change
+    if (access_level !== undefined && access_level !== agent.access_level) {
+      await db.insert(agentLifecycleEventsTable).values({
+        agent_uuid: agentId,
+        event_type: 'ACCESS_LEVEL_CHANGED',
+        from_state: agent.state,
+        to_state: agent.state,
+        metadata: {
+          triggered_by: auth.project.user_id,
+          previous_access_level: agent.access_level,
+          new_access_level: access_level,
+        },
+      });
+    }
+
+    // Serialize for JSON response
+    const serializeForJson = (obj: any): any => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'bigint') return Number(obj);
+      if (obj instanceof Date) return obj.toISOString();
+      if (Array.isArray(obj)) return obj.map(serializeForJson);
+      if (typeof obj === 'object') {
+        const result: any = {};
+        for (const key in obj) {
+          result[key] = serializeForJson(obj[key]);
+        }
+        return result;
+      }
+      return obj;
+    };
+
+    return NextResponse.json({
+      message: 'Agent updated successfully',
+      agent: serializeForJson(updatedAgent),
+    });
+  } catch (error) {
+    console.error('Error updating agent:', error);
+    return NextResponse.json(
+      { error: 'Failed to update agent' },
       { status: 500 }
     );
   }
