@@ -1,9 +1,9 @@
 'use client';
 
-import { Activity, AlertTriangle, ArrowLeft, Clock, Cpu, Download, HardDrive, Heart, Play, RefreshCw, RotateCw, Server, Trash2 } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, RefreshCw, RotateCw, Server, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +74,52 @@ interface KubernetesStatus {
   availableReplicas: number;
   updatedReplicas: number;
   conditions: any[];
+}
+
+interface PodEvent {
+  type: string;
+  reason: string;
+  message: string;
+  count: number;
+  firstTimestamp: string;
+  lastTimestamp: string;
+  source: string;
+}
+
+interface PodStatus {
+  name: string;
+  phase: string;
+  ready: boolean;
+  restarts: number;
+  containerStatuses: Array<{
+    name: string;
+    ready: boolean;
+    state: string;
+    stateReason?: string;
+    stateMessage?: string;
+    restartCount: number;
+  }>;
+  startTime?: string;
+  podIP?: string;
+  nodeName?: string;
+}
+
+interface LogLine {
+  timestamp: string | null;
+  message: string;
+}
+
+interface EventsResponse {
+  events: PodEvent[];
+  pods: PodStatus[];
+  deploymentStatus: KubernetesStatus | null;
+}
+
+interface LogsResponse {
+  logs: string;
+  lines: LogLine[];
+  tailLines: number;
+  error?: string;
 }
 
 interface AgentDetailResponse {
@@ -154,7 +200,21 @@ export default function AgentDetailPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const { toast } = useToast();
+
+  // Fetch logs and events only when on the logs tab
+  const { data: eventsData, mutate: mutateEvents } = useSWR<EventsResponse>(
+    activeTab === 'logs' ? `/api/agents/${id}/events` : null,
+    fetcher,
+    { refreshInterval: 5000 }
+  );
+
+  const { data: logsData, mutate: mutateLogs } = useSWR<LogsResponse>(
+    activeTab === 'logs' ? `/api/agents/${id}/logs?tail=200` : null,
+    fetcher,
+    { refreshInterval: 5000 }
+  );
 
   const agent = data?.agent;
   const recentHeartbeats = data?.recentHeartbeats || [];
@@ -349,10 +409,14 @@ export default function AgentDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="telemetry">Telemetry</TabsTrigger>
+          <TabsTrigger value="logs">
+            <Terminal className="mr-2 h-4 w-4" />
+            Logs & Events
+          </TabsTrigger>
           <TabsTrigger value="deployment">Deployment</TabsTrigger>
         </TabsList>
 
@@ -587,6 +651,176 @@ export default function AgentDetailPage() {
                       <span className="text-sm text-muted-foreground">
                         {timeAgo(event.timestamp)}
                       </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Logs & Events Tab */}
+        <TabsContent value="logs" className="space-y-4">
+          {/* Pod Status */}
+          {eventsData?.pods && eventsData.pods.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Server className="h-5 w-5" />
+                  Pod Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {eventsData.pods.map((pod) => (
+                    <div key={pod.name} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {pod.ready ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-500" />
+                          )}
+                          <span className="font-mono text-sm">{pod.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={pod.phase === 'Running' ? 'default' : 'secondary'}>
+                            {pod.phase}
+                          </Badge>
+                          {pod.restarts > 0 && (
+                            <Badge variant="outline">
+                              {pod.restarts} restart{pod.restarts > 1 ? 's' : ''}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
+                        {pod.podIP && (
+                          <div>
+                            <span className="font-medium">IP:</span> {pod.podIP}
+                          </div>
+                        )}
+                        {pod.nodeName && (
+                          <div>
+                            <span className="font-medium">Node:</span> {pod.nodeName}
+                          </div>
+                        )}
+                        {pod.startTime && (
+                          <div>
+                            <span className="font-medium">Started:</span> {timeAgo(pod.startTime)}
+                          </div>
+                        )}
+                      </div>
+                      {/* Container statuses */}
+                      {pod.containerStatuses.map((cs) => (
+                        <div key={cs.name} className="mt-2 pl-4 border-l-2 border-muted">
+                          <div className="flex items-center gap-2 text-sm">
+                            {cs.ready ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            )}
+                            <span className="font-mono">{cs.name}</span>
+                            <Badge variant="outline" className="text-xs">{cs.state}</Badge>
+                          </div>
+                          {cs.stateReason && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {cs.stateReason}: {cs.stateMessage}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Kubernetes Events */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Kubernetes Events
+              </CardTitle>
+              <CardDescription>
+                Deployment and pod events from the cluster
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!eventsData?.events || eventsData.events.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No events found</p>
+              ) : (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {eventsData.events.map((event, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        event.type === 'Warning' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-muted'
+                      }`}
+                    >
+                      {event.type === 'Warning' ? (
+                        <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={event.type === 'Warning' ? 'outline' : 'secondary'} className="text-xs">
+                            {event.reason}
+                          </Badge>
+                          {event.count > 1 && (
+                            <span className="text-xs text-muted-foreground">
+                              ×{event.count}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {timeAgo(event.lastTimestamp)}
+                          </span>
+                        </div>
+                        <p className="text-sm break-words">{event.message}</p>
+                        {event.source && (
+                          <p className="text-xs text-muted-foreground mt-1">{event.source}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Container Logs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Container Logs
+              </CardTitle>
+              <CardDescription>
+                {logsData?.tailLines ? `Last ${logsData.tailLines} lines` : 'Live container output'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {logsData?.error ? (
+                <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
+                  {logsData.error}
+                </div>
+              ) : !logsData?.lines || logsData.lines.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
+                  No logs available. The container may still be starting...
+                </div>
+              ) : (
+                <div className="bg-zinc-950 text-zinc-100 p-4 rounded-lg font-mono text-xs max-h-[500px] overflow-y-auto">
+                  {logsData.lines.map((line, idx) => (
+                    <div key={idx} className="flex gap-2 hover:bg-zinc-900 py-0.5">
+                      {line.timestamp && (
+                        <span className="text-zinc-500 flex-shrink-0 select-none">
+                          {new Date(line.timestamp).toLocaleTimeString()}
+                        </span>
+                      )}
+                      <span className="break-all whitespace-pre-wrap">{line.message}</span>
                     </div>
                   ))}
                 </div>

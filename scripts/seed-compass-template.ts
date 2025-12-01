@@ -72,7 +72,8 @@ Compass is fully PAP-RFC-001 compliant:
   is_public: true,
   is_verified: true,
   is_featured: true,
-  repository_url: 'https://github.com/VeriTeknik/PAP/tree/main/compass-agent',
+  // TODO: Update repository URL once repo is pushed to GitHub
+  repository_url: 'https://github.com/pluggedin-app/compass-agent',
   documentation_url: 'https://docs.plugged.in/agents/compass',
 };
 

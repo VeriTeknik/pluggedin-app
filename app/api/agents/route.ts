@@ -382,18 +382,52 @@ export async function POST(request: Request) {
       },
     });
 
+    // Build environment variables for the agent
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hub.plugged.in';
+    const agentEnv: Record<string, string> = {
+      // PAP Protocol required env vars
+      PAP_STATION_URL: `${baseUrl}/api/pap`,
+      PAP_AGENT_ID: newAgent.uuid,
+      PAP_AGENT_DNS: dnsName,
+      // Plugged.in API access (for Model Router)
+      PLUGGEDIN_API_URL: `${baseUrl}/api`,
+      // Agent identity
+      AGENT_NAME: normalizedName,
+      AGENT_DNS_NAME: dnsName,
+      // Port configuration
+      PORT: String(template?.container_port || 3000),
+    };
+
+    // Merge template defaults
+    if (template?.env_schema?.defaults) {
+      for (const [key, value] of Object.entries(template.env_schema.defaults)) {
+        if (!agentEnv[key]) {
+          agentEnv[key] = String(value);
+        }
+      }
+    }
+
+    // Merge user env_overrides
+    if (env_overrides) {
+      for (const [key, value] of Object.entries(env_overrides)) {
+        agentEnv[key] = String(value);
+      }
+    }
+
     // Deploy to Kubernetes
     const deploymentResult = await kubernetesService.deployAgent({
       name: normalizedName,
       dnsName,
       namespace: 'agents',
       image: resolvedImage,
+      containerPort: template?.container_port || 3000,
       resources: resources ? {
         cpuRequest: resources.cpu_request,
         memoryRequest: resources.memory_request,
         cpuLimit: resources.cpu_limit,
         memoryLimit: resources.memory_limit,
       } : undefined,
+      env: agentEnv,
     });
 
     // Update agent state based on deployment result

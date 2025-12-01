@@ -1,7 +1,24 @@
 'use client';
 
-import { Activity, Archive, Globe, Lock, Plus, Server, ShoppingBag, Trash2 } from 'lucide-react';
+import {
+  Activity,
+  Archive,
+  BadgeCheck,
+  Box,
+  Download,
+  Filter,
+  Globe,
+  Lock,
+  Plus,
+  Search,
+  Server,
+  ShoppingBag,
+  Star,
+  Tag,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 
@@ -11,6 +28,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -24,6 +42,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 // Reserved agent names that cannot be used (must match backend)
@@ -104,15 +130,76 @@ interface Agent {
   };
 }
 
+interface AgentTemplate {
+  uuid: string;
+  namespace: string;
+  name: string;
+  version: string;
+  display_name: string;
+  description: string;
+  icon_url?: string;
+  banner_url?: string;
+  category?: string;
+  tags?: string[];
+  is_verified: boolean;
+  is_featured: boolean;
+  install_count: number;
+  repository_url?: string;
+  documentation_url?: string;
+  created_at: string;
+}
+
+interface TemplatesResponse {
+  templates: AgentTemplate[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 const fetcher = async (url: string) => {
   const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to fetch agents');
+  if (!response.ok) throw new Error('Failed to fetch');
   return response.json();
 };
 
+const CATEGORIES = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'research', label: 'Research' },
+  { value: 'productivity', label: 'Productivity' },
+  { value: 'development', label: 'Development' },
+  { value: 'communication', label: 'Communication' },
+  { value: 'automation', label: 'Automation' },
+];
+
 export default function AgentsPage() {
-  const { data: agents, error, isLoading, mutate } = useSWR<Agent[]>('/api/agents', fetcher);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'agents';
+
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const { toast } = useToast();
+
+  // Agents data
+  const { data: agents, error: agentsError, isLoading: agentsLoading, mutate: mutateAgents } = useSWR<Agent[]>('/api/agents', fetcher);
+
+  // Marketplace data
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || 'all');
+  const [showFeatured, setShowFeatured] = useState(searchParams.get('featured') === 'true');
+
+  const queryUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('search', searchQuery);
+    if (category && category !== 'all') params.set('category', category);
+    if (showFeatured) params.set('featured', 'true');
+    params.set('limit', '50');
+    return `/api/agents/templates?${params.toString()}`;
+  }, [searchQuery, category, showFeatured]);
+
+  const { data: templatesData, error: templatesError, isLoading: templatesLoading } = useSWR<TemplatesResponse>(
+    activeTab === 'marketplace' ? queryUrl : null,
+    fetcher
+  );
 
   // Filter out terminated and killed agents
   const activeAgents = useMemo(() => {
@@ -124,11 +211,20 @@ export default function AgentsPage() {
     if (!agents) return 0;
     return agents.filter(agent => ['TERMINATED', 'KILLED'].includes(agent.state)).length;
   }, [agents]);
+
+  // Create agent dialog state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [deleteAgentId, setDeleteAgentId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.replace(`/agents?${params.toString()}`, { scroll: false });
+  };
 
   const handleCreateAgent = async () => {
     try {
@@ -144,7 +240,7 @@ export default function AgentsPage() {
         throw new Error(error.error || 'Failed to create agent');
       }
 
-      await mutate();
+      await mutateAgents();
       setIsCreateDialogOpen(false);
       setNewAgentName('');
       toast({
@@ -171,7 +267,7 @@ export default function AgentsPage() {
 
       if (!response.ok) throw new Error('Failed to delete agent');
 
-      await mutate();
+      await mutateAgents();
       setDeleteAgentId(null);
       toast({
         title: 'Agent Deleted',
@@ -186,6 +282,16 @@ export default function AgentsPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleMarketplaceSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    params.set('tab', 'marketplace');
+    if (searchQuery) params.set('search', searchQuery);
+    if (category && category !== 'all') params.set('category', category);
+    if (showFeatured) params.set('featured', 'true');
+    router.push(`/agents?${params.toString()}`);
   };
 
   const getStateBadgeVariant = (state: string) => {
@@ -210,24 +316,9 @@ export default function AgentsPage() {
     return <Server className="h-4 w-4 text-gray-400" />;
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading agents...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-500">Failed to load agents</div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">PAP Agents</h1>
@@ -236,12 +327,6 @@ export default function AgentsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/agents/marketplace">
-              <ShoppingBag className="mr-2 h-4 w-4" />
-              Marketplace
-            </Link>
-          </Button>
           {archivedCount > 0 && (
             <Button variant="outline" asChild>
               <Link href="/agents/archive">
@@ -257,106 +342,200 @@ export default function AgentsPage() {
         </div>
       </div>
 
-      {activeAgents.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Active Agents</CardTitle>
-            <CardDescription>
-              {archivedCount > 0
-                ? `You have ${archivedCount} archived agent(s). Deploy from the marketplace or create a custom agent.`
-                : 'Deploy an agent from the marketplace or create a custom agent to get started.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-2">
-            <Button asChild>
-              <Link href="/agents/marketplace">
-                <ShoppingBag className="mr-2 h-4 w-4" />
-                Browse Marketplace
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Custom Agent
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {activeAgents.map((agent) => (
-            <Card key={agent.uuid} className="hover:shadow-lg transition-shadow">
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="agents" className="flex items-center gap-2">
+            <Server className="h-4 w-4" />
+            My Agents
+            {activeAgents.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{activeAgents.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="marketplace" className="flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4" />
+            Marketplace
+          </TabsTrigger>
+        </TabsList>
+
+        {/* My Agents Tab */}
+        <TabsContent value="agents">
+          {agentsLoading ? (
+            <div className="text-center py-12">Loading agents...</div>
+          ) : agentsError ? (
+            <div className="text-center py-12 text-red-500">Failed to load agents</div>
+          ) : activeAgents.length === 0 ? (
+            <Card>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getStateIcon(agent.state)}
-                    <CardTitle className="text-lg">{agent.name}</CardTitle>
-                  </div>
-                  <Badge variant={getStateBadgeVariant(agent.state)}>
-                    {agent.state}
-                  </Badge>
-                </div>
-                <CardDescription className="font-mono text-xs">
-                  {agent.dns_name}
+                <CardTitle>No Active Agents</CardTitle>
+                <CardDescription>
+                  {archivedCount > 0
+                    ? `You have ${archivedCount} archived agent(s). Deploy from the marketplace or create a custom agent.`
+                    : 'Deploy an agent from the marketplace or create a custom agent to get started.'}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  {agent.metadata?.template_name && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Template:</span>
-                      <span className="text-xs font-mono">{agent.metadata.template_name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Access:</span>
-                    <span className="flex items-center gap-1">
-                      {agent.access_level === 'PUBLIC' ? (
-                        <>
-                          <Globe className="h-3 w-3 text-green-500" />
-                          <span className="text-green-600">Public</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="h-3 w-3 text-gray-500" />
-                          <span>Private</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Created:</span>
-                    <span>{new Date(agent.created_at).toLocaleDateString()}</span>
-                  </div>
-                  {agent.last_heartbeat_at && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Heartbeat:</span>
-                      <span>{new Date(agent.last_heartbeat_at).toLocaleTimeString()}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    asChild
-                  >
-                    <Link href={`/agents/${agent.uuid}`}>
-                      View Details
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeleteAgentId(agent.uuid)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              <CardContent className="flex gap-2">
+                <Button onClick={() => handleTabChange('marketplace')}>
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Browse Marketplace
+                </Button>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Custom Agent
+                </Button>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeAgents.map((agent) => (
+                <Card key={agent.uuid} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        {getStateIcon(agent.state)}
+                        <CardTitle className="text-lg">{agent.name}</CardTitle>
+                      </div>
+                      <Badge variant={getStateBadgeVariant(agent.state)}>
+                        {agent.state}
+                      </Badge>
+                    </div>
+                    <CardDescription className="font-mono text-xs">
+                      {agent.dns_name}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {agent.metadata?.template_name && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Template:</span>
+                          <span className="text-xs font-mono">{agent.metadata.template_name}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Access:</span>
+                        <span className="flex items-center gap-1">
+                          {agent.access_level === 'PUBLIC' ? (
+                            <>
+                              <Globe className="h-3 w-3 text-green-500" />
+                              <span className="text-green-600">Public</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="h-3 w-3 text-gray-500" />
+                              <span>Private</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Created:</span>
+                        <span>{new Date(agent.created_at).toLocaleDateString()}</span>
+                      </div>
+                      {agent.last_heartbeat_at && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Last Heartbeat:</span>
+                          <span>{new Date(agent.last_heartbeat_at).toLocaleTimeString()}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        asChild
+                      >
+                        <Link href={`/agents/${agent.uuid}`}>
+                          View Details
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteAgentId(agent.uuid)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Marketplace Tab */}
+        <TabsContent value="marketplace">
+          {/* Search and Filters */}
+          <form onSubmit={handleMarketplaceSearch} className="flex gap-4 flex-wrap mb-6">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search agents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant={showFeatured ? 'default' : 'outline'}
+              onClick={() => setShowFeatured(!showFeatured)}
+            >
+              <Star className="mr-2 h-4 w-4" />
+              Featured
+            </Button>
+            <Button type="submit">Search</Button>
+          </form>
+
+          {/* Results */}
+          {templatesLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-pulse">Loading templates...</div>
+            </div>
+          ) : templatesError ? (
+            <div className="text-center py-12 text-red-500">
+              Failed to load templates. Please try again.
+            </div>
+          ) : templatesData?.templates.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Box className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Templates Found</h3>
+                <p className="text-muted-foreground">
+                  {searchQuery
+                    ? `No results for "${searchQuery}". Try different search terms.`
+                    : 'No templates available yet. Check back later!'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="text-sm text-muted-foreground mb-4">
+                Showing {templatesData?.templates.length} of {templatesData?.total} templates
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {templatesData?.templates.map((template) => (
+                  <TemplateCard key={template.uuid} template={template} />
+                ))}
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Create Agent Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -440,5 +619,75 @@ export default function AgentsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function TemplateCard({ template }: { template: AgentTemplate }) {
+  return (
+    <Card className="hover:shadow-lg transition-shadow flex flex-col">
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          {template.icon_url ? (
+            <img
+              src={template.icon_url}
+              alt={template.display_name}
+              className="w-12 h-12 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+              <Box className="h-6 w-6 text-muted-foreground" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg truncate">
+                {template.display_name}
+              </CardTitle>
+              {template.is_verified && (
+                <BadgeCheck className="h-4 w-4 text-blue-500 flex-shrink-0" />
+              )}
+            </div>
+            <CardDescription className="text-xs font-mono">
+              {template.namespace}/{template.name}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1">
+        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+          {template.description}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {template.is_featured && (
+            <Badge variant="default" className="text-xs">
+              <Star className="mr-1 h-3 w-3" />
+              Featured
+            </Badge>
+          )}
+          {template.category && (
+            <Badge variant="outline" className="text-xs">
+              {template.category}
+            </Badge>
+          )}
+          {template.tags?.slice(0, 2).map((tag) => (
+            <Badge key={tag} variant="secondary" className="text-xs">
+              <Tag className="mr-1 h-3 w-3" />
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between items-center border-t pt-4">
+        <div className="flex items-center text-sm text-muted-foreground">
+          <Download className="mr-1 h-4 w-4" />
+          {template.install_count} installs
+        </div>
+        <Button asChild>
+          <Link href={`/agents/marketplace/${template.namespace}/${template.name}`}>
+            View Details
+          </Link>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }

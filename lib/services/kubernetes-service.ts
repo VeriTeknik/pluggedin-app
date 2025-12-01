@@ -131,12 +131,14 @@ export interface AgentDeploymentConfig {
   dnsName: string; // Full DNS: {name}.{cluster}.a.plugged.in
   namespace?: string; // Kubernetes namespace (default: 'agents')
   image?: string; // Container image (default: nginx-unprivileged for testing)
+  containerPort?: number; // Container port (default: 8080)
   resources?: {
     cpuRequest?: string; // e.g., '100m'
     memoryRequest?: string; // e.g., '256Mi'
     cpuLimit?: string; // e.g., '1000m'
     memoryLimit?: string; // e.g., '1Gi'
   };
+  env?: Record<string, string>; // Environment variables to inject
 }
 
 export interface DeploymentStatus {
@@ -273,12 +275,21 @@ spec:
     try {
       const namespace = config.namespace || this.defaultNamespace;
       const image = config.image || this.defaultImage;
+      const containerPort = config.containerPort || 8080;
       const resources = config.resources || {
         cpuRequest: '100m',
         memoryRequest: '256Mi',
         cpuLimit: '1000m',
         memoryLimit: '1Gi',
       };
+
+      // Build environment variables array
+      const envVars: Array<{ name: string; value: string }> = [];
+      if (config.env) {
+        for (const [key, value] of Object.entries(config.env)) {
+          envVars.push({ name: key, value: String(value) });
+        }
+      }
 
       // Create Deployment
       const deployment = {
@@ -319,7 +330,8 @@ spec:
                 {
                   name: 'agent',
                   image,
-                  ports: [{ containerPort: 8080, name: 'http' }],
+                  ports: [{ containerPort, name: 'http' }],
+                  env: envVars.length > 0 ? envVars : undefined,
                   resources: {
                     requests: {
                       cpu: resources.cpuRequest,
@@ -366,7 +378,7 @@ spec:
           ports: [
             {
               port: 80,
-              targetPort: 8080,
+              targetPort: containerPort,
               protocol: 'TCP',
               name: 'http',
             },
@@ -661,6 +673,142 @@ spec:
     } catch (error) {
       console.error('Error getting agent logs:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get pod events for an agent deployment
+   */
+  async getAgentEvents(name: string, namespace?: string): Promise<Array<{
+    type: string;
+    reason: string;
+    message: string;
+    count: number;
+    firstTimestamp: string;
+    lastTimestamp: string;
+    source: string;
+  }>> {
+    try {
+      const ns = namespace || this.defaultNamespace;
+
+      // Get pods for this deployment
+      const pods = await k8sRequest(
+        `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
+      );
+
+      const podNames = pods.items?.map((pod: any) => pod.metadata.name) || [];
+      const allEvents: any[] = [];
+
+      // Get events for deployment
+      const deploymentEvents = await k8sRequest(
+        `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${name},involvedObject.kind=Deployment`
+      );
+      allEvents.push(...(deploymentEvents.items || []));
+
+      // Get events for each pod
+      for (const podName of podNames) {
+        try {
+          const podEvents = await k8sRequest(
+            `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${podName},involvedObject.kind=Pod`
+          );
+          allEvents.push(...(podEvents.items || []));
+        } catch (error) {
+          // Pod might have been deleted
+          console.warn(`Could not get events for pod ${podName}:`, error);
+        }
+      }
+
+      // Sort by lastTimestamp descending
+      allEvents.sort((a, b) => {
+        const timeA = new Date(a.lastTimestamp || a.eventTime || 0).getTime();
+        const timeB = new Date(b.lastTimestamp || b.eventTime || 0).getTime();
+        return timeB - timeA;
+      });
+
+      return allEvents.map(event => ({
+        type: event.type || 'Normal',
+        reason: event.reason || 'Unknown',
+        message: event.message || '',
+        count: event.count || 1,
+        firstTimestamp: event.firstTimestamp || event.eventTime || '',
+        lastTimestamp: event.lastTimestamp || event.eventTime || '',
+        source: `${event.source?.component || ''}${event.source?.host ? ` on ${event.source.host}` : ''}`,
+      }));
+    } catch (error) {
+      console.error('Error getting agent events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get pod status details for an agent
+   */
+  async getAgentPodStatus(name: string, namespace?: string): Promise<Array<{
+    name: string;
+    phase: string;
+    ready: boolean;
+    restarts: number;
+    containerStatuses: Array<{
+      name: string;
+      ready: boolean;
+      state: string;
+      stateReason?: string;
+      stateMessage?: string;
+      restartCount: number;
+    }>;
+    startTime?: string;
+    podIP?: string;
+    nodeName?: string;
+  }>> {
+    try {
+      const ns = namespace || this.defaultNamespace;
+
+      const pods = await k8sRequest(
+        `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
+      );
+
+      return (pods.items || []).map((pod: any) => {
+        const containerStatuses = (pod.status?.containerStatuses || []).map((cs: any) => {
+          let state = 'Unknown';
+          let stateReason: string | undefined;
+          let stateMessage: string | undefined;
+
+          if (cs.state?.running) {
+            state = 'Running';
+          } else if (cs.state?.waiting) {
+            state = 'Waiting';
+            stateReason = cs.state.waiting.reason;
+            stateMessage = cs.state.waiting.message;
+          } else if (cs.state?.terminated) {
+            state = 'Terminated';
+            stateReason = cs.state.terminated.reason;
+            stateMessage = cs.state.terminated.message;
+          }
+
+          return {
+            name: cs.name,
+            ready: cs.ready || false,
+            state,
+            stateReason,
+            stateMessage,
+            restartCount: cs.restartCount || 0,
+          };
+        });
+
+        return {
+          name: pod.metadata?.name || 'unknown',
+          phase: pod.status?.phase || 'Unknown',
+          ready: containerStatuses.every((cs: any) => cs.ready),
+          restarts: containerStatuses.reduce((sum: number, cs: any) => sum + cs.restartCount, 0),
+          containerStatuses,
+          startTime: pod.status?.startTime,
+          podIP: pod.status?.podIP,
+          nodeName: pod.spec?.nodeName,
+        };
+      });
+    } catch (error) {
+      console.error('Error getting agent pod status:', error);
+      return [];
     }
   }
 
