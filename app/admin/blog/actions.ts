@@ -10,12 +10,27 @@ import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { revalidatePath } from 'next/cache';
 
+// Constants
+const WORDS_PER_MINUTE = 200; // Average reading speed
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'] as const;
+
 // Validation schemas
 const blogPostSchema = z.object({
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
+  slug: z.string()
+    .min(3, 'Slug must be at least 3 characters')
+    .max(100, 'Slug must be less than 100 characters')
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must start and end with alphanumeric characters, with single hyphens as separators'),
   status: z.enum(['draft', 'published', 'archived']),
   category: z.enum(['announcement', 'technical', 'product', 'tutorial', 'case-study']),
-  tags: z.array(z.string()).default([]),
+  tags: z.array(
+    z.string()
+      .min(1, 'Tag cannot be empty')
+      .max(50, 'Tag must be less than 50 characters')
+      .regex(/^[a-zA-Z0-9\s-]+$/, 'Tags can only contain letters, numbers, spaces, and hyphens')
+      .transform(tag => tag.trim())
+  ).default([]),
   headerImageUrl: z.string().optional(),
   headerImageAlt: z.string().optional(),
   metaTitle: z.string().optional(),
@@ -66,9 +81,8 @@ async function checkAdminAccess() {
 
 // Helper function to calculate reading time
 function calculateReadingTime(content: string): number {
-  const wordsPerMinute = 200;
   const words = content.split(/\s+/).length;
-  return Math.ceil(words / wordsPerMinute);
+  return Math.ceil(words / WORDS_PER_MINUTE);
 }
 
 /**
@@ -91,55 +105,52 @@ export async function createBlogPost(data: z.infer<typeof createBlogPostSchema>)
       };
     }
 
-    // Create blog post
-    const [blogPost] = await db
-      .insert(blogPostsTable)
-      .values({
-        author_id: user.id,
-        slug: validated.post.slug,
-        status: validated.post.status,
-        category: validated.post.category,
-        tags: validated.post.tags,
-        header_image_url: validated.post.headerImageUrl,
-        header_image_alt: validated.post.headerImageAlt,
-        meta_title: validated.post.metaTitle,
-        meta_description: validated.post.metaDescription,
-        og_image_url: validated.post.ogImageUrl,
-        reading_time_minutes: validated.post.readingTimeMinutes,
-        is_featured: validated.post.isFeatured,
-        published_at: validated.post.status === 'published' ? new Date() : null,
-      })
-      .returning();
-
     // Calculate reading time from English translation (or first translation)
     const primaryTranslation = validated.translations.find(t => t.language === 'en') || validated.translations[0];
     const readingTime = primaryTranslation ? calculateReadingTime(primaryTranslation.content) : null;
 
-    // Update reading time if calculated
-    if (readingTime) {
-      await db
-        .update(blogPostsTable)
-        .set({ reading_time_minutes: readingTime })
-        .where(eq(blogPostsTable.uuid, blogPost.uuid));
-    }
+    // Use transaction to ensure atomicity
+    const result = await db.transaction(async (tx) => {
+      // Create blog post
+      const [blogPost] = await tx
+        .insert(blogPostsTable)
+        .values({
+          author_id: user.id,
+          slug: validated.post.slug,
+          status: validated.post.status,
+          category: validated.post.category,
+          tags: validated.post.tags,
+          header_image_url: validated.post.headerImageUrl,
+          header_image_alt: validated.post.headerImageAlt,
+          meta_title: validated.post.metaTitle,
+          meta_description: validated.post.metaDescription,
+          og_image_url: validated.post.ogImageUrl,
+          reading_time_minutes: readingTime,
+          is_featured: validated.post.isFeatured,
+          published_at: validated.post.status === 'published' ? new Date() : null,
+        })
+        .returning();
 
-    // Create translations
-    for (const translation of validated.translations) {
-      await db.insert(blogPostTranslationsTable).values({
-        blog_post_uuid: blogPost.uuid,
-        language: translation.language,
-        title: translation.title,
-        excerpt: translation.excerpt,
-        content: translation.content,
-      });
-    }
+      // Create translations
+      for (const translation of validated.translations) {
+        await tx.insert(blogPostTranslationsTable).values({
+          blog_post_uuid: blogPost.uuid,
+          language: translation.language,
+          title: translation.title,
+          excerpt: translation.excerpt,
+          content: translation.content,
+        });
+      }
+
+      return blogPost;
+    });
 
     revalidatePath('/blog');
     revalidatePath('/admin/blog');
 
     return {
       success: true,
-      data: { uuid: blogPost.uuid },
+      data: { uuid: result.uuid },
     };
   } catch (error) {
     console.error('Error creating blog post:', error);
@@ -184,77 +195,81 @@ export async function updateBlogPost(data: z.infer<typeof updateBlogPostSchema>)
       }
     }
 
-    // Update blog post - map camelCase to snake_case
-    const updateData: any = {
-      slug: validated.post.slug,
-      status: validated.post.status,
-      category: validated.post.category,
-      updated_at: new Date(),
-    };
+    // Calculate reading time from English translation if provided
+    const readingTime = validated.translations
+      ? (() => {
+          const primaryTranslation = validated.translations.find(t => t.language === 'en') || validated.translations[0];
+          return primaryTranslation ? calculateReadingTime(primaryTranslation.content) : null;
+        })()
+      : null;
 
-    // Only include optional fields if they're defined
-    if (validated.post.tags !== undefined) updateData.tags = validated.post.tags;
-    if (validated.post.headerImageUrl !== undefined) updateData.header_image_url = validated.post.headerImageUrl;
-    if (validated.post.headerImageAlt !== undefined) updateData.header_image_alt = validated.post.headerImageAlt;
-    if (validated.post.metaTitle !== undefined) updateData.meta_title = validated.post.metaTitle;
-    if (validated.post.metaDescription !== undefined) updateData.meta_description = validated.post.metaDescription;
-    if (validated.post.ogImageUrl !== undefined) updateData.og_image_url = validated.post.ogImageUrl;
-    if (validated.post.readingTimeMinutes !== undefined) updateData.reading_time_minutes = validated.post.readingTimeMinutes;
-    if (validated.post.isFeatured !== undefined) updateData.is_featured = validated.post.isFeatured;
+    // Use transaction to ensure atomicity
+    await db.transaction(async (tx) => {
+      // Update blog post - map camelCase to snake_case
+      const updateData: any = {
+        slug: validated.post.slug,
+        status: validated.post.status,
+        category: validated.post.category,
+        updated_at: new Date(),
+      };
 
-    // Set published_at when publishing for the first time
-    if (validated.post.status === 'published' && !existingPost.published_at) {
-      updateData.published_at = new Date();
-    }
+      // Only include optional fields if they're defined
+      if (validated.post.tags !== undefined) updateData.tags = validated.post.tags;
+      if (validated.post.headerImageUrl !== undefined) updateData.header_image_url = validated.post.headerImageUrl;
+      if (validated.post.headerImageAlt !== undefined) updateData.header_image_alt = validated.post.headerImageAlt;
+      if (validated.post.metaTitle !== undefined) updateData.meta_title = validated.post.metaTitle;
+      if (validated.post.metaDescription !== undefined) updateData.meta_description = validated.post.metaDescription;
+      if (validated.post.ogImageUrl !== undefined) updateData.og_image_url = validated.post.ogImageUrl;
+      if (validated.post.readingTimeMinutes !== undefined) updateData.reading_time_minutes = validated.post.readingTimeMinutes;
+      if (validated.post.isFeatured !== undefined) updateData.is_featured = validated.post.isFeatured;
 
-    // Clear published_at when unpublishing
-    if (validated.post.status === 'draft' && existingPost.published_at) {
-      updateData.published_at = null;
-    }
+      // Update reading time if calculated from translations
+      if (readingTime !== null) {
+        updateData.reading_time_minutes = readingTime;
+      }
 
-    await db
-      .update(blogPostsTable)
-      .set(updateData)
-      .where(eq(blogPostsTable.uuid, validated.uuid));
+      // Set published_at when publishing for the first time
+      if (validated.post.status === 'published' && !existingPost.published_at) {
+        updateData.published_at = new Date();
+      }
 
-    // Update translations if provided
-    if (validated.translations) {
-      // Calculate reading time from English translation (or first translation) once
-      const primaryTranslation = validated.translations.find(t => t.language === 'en') || validated.translations[0];
-      const readingTime = primaryTranslation ? calculateReadingTime(primaryTranslation.content) : null;
+      // Clear published_at when unpublishing
+      if (validated.post.status === 'draft' && existingPost.published_at) {
+        updateData.published_at = null;
+      }
 
-      for (const translation of validated.translations) {
-        if (translation.uuid) {
-          // Update existing translation
-          await db
-            .update(blogPostTranslationsTable)
-            .set({
+      await tx
+        .update(blogPostsTable)
+        .set(updateData)
+        .where(eq(blogPostsTable.uuid, validated.uuid));
+
+      // Update translations if provided
+      if (validated.translations) {
+        for (const translation of validated.translations) {
+          if (translation.uuid) {
+            // Update existing translation
+            await tx
+              .update(blogPostTranslationsTable)
+              .set({
+                title: translation.title,
+                excerpt: translation.excerpt,
+                content: translation.content,
+                updated_at: new Date(),
+              })
+              .where(eq(blogPostTranslationsTable.uuid, translation.uuid));
+          } else {
+            // Create new translation
+            await tx.insert(blogPostTranslationsTable).values({
+              blog_post_uuid: validated.uuid,
+              language: translation.language,
               title: translation.title,
               excerpt: translation.excerpt,
               content: translation.content,
-              updated_at: new Date(),
-            })
-            .where(eq(blogPostTranslationsTable.uuid, translation.uuid));
-        } else {
-          // Create new translation
-          await db.insert(blogPostTranslationsTable).values({
-            blog_post_uuid: validated.uuid,
-            language: translation.language,
-            title: translation.title,
-            excerpt: translation.excerpt,
-            content: translation.content,
-          });
+            });
+          }
         }
       }
-
-      // Update reading time once after all translations
-      if (readingTime) {
-        await db
-          .update(blogPostsTable)
-          .set({ reading_time_minutes: readingTime })
-          .where(eq(blogPostsTable.uuid, validated.uuid));
-      }
-    }
+    });
 
     revalidatePath('/blog');
     revalidatePath(`/blog/${validated.post.slug || existingPost.slug}`);
@@ -336,11 +351,11 @@ export async function uploadBlogImage(formData: FormData) {
       };
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
       return {
         success: false,
-        error: 'Image must be less than 5MB',
+        error: `Image must be less than ${MAX_IMAGE_SIZE_MB}MB`,
       };
     }
 
@@ -353,13 +368,12 @@ export async function uploadBlogImage(formData: FormData) {
     }
 
     // Validate file extension (security: prevent malicious file uploads)
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
     const extension = file.name.split('.').pop()?.toLowerCase();
 
-    if (!extension || !allowedExtensions.includes(extension)) {
+    if (!extension || !ALLOWED_IMAGE_EXTENSIONS.includes(extension as any)) {
       return {
         success: false,
-        error: `Invalid file extension. Allowed: ${allowedExtensions.join(', ')}`,
+        error: `Invalid file extension. Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(', ')}`,
       };
     }
 
