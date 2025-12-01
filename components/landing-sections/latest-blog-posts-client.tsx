@@ -37,7 +37,7 @@ export function LatestBlogPostsClient({ posts }: LatestBlogPostsClientProps) {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('blog:blog.latestPosts')}
+            {t('blog:latestPosts')}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Stay updated with the latest news, insights, and updates from the Plugged.in team
@@ -72,7 +72,7 @@ export function LatestBlogPostsClient({ posts }: LatestBlogPostsClientProps) {
                     {/* Category Badge */}
                     <div className="mb-3">
                       <Badge variant="secondary">
-                        {t(`blog:blog.categories.${post.category}`)}
+                        {t(`blog:categories.${post.category}`)}
                       </Badge>
                     </div>
 

@@ -381,8 +381,8 @@ export async function uploadBlogImage(formData: FormData) {
     const timestamp = Date.now();
     const filename = `blog-${timestamp}.${extension}`;
 
-    // Ensure blog-images directory exists
-    const blogImagesDir = join(process.cwd(), 'public', 'blog-images');
+    // Ensure blog-images directory exists - use absolute path for standalone mode
+    const blogImagesDir = '/home/pluggedin/pluggedin-app/public/blog-images';
     await mkdir(blogImagesDir, { recursive: true });
 
     // Save file

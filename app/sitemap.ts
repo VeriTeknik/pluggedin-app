@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/search?source=REGISTRY&offset=0`,
+      url: `${baseUrl}/search?source=REGISTRY&amp;offset=0`,
       lastModified: currentDate,
       changeFrequency: 'daily',
       priority: 0.9,
