@@ -112,23 +112,25 @@ export async function createBlogPost(data: z.infer<typeof createBlogPostSchema>)
     // Use transaction to ensure atomicity
     const result = await db.transaction(async (tx) => {
       // Create blog post
+      const blogPostData: typeof blogPostsTable.$inferInsert = {
+        author_id: user.id,
+        slug: validated.post.slug,
+        status: validated.post.status as BlogPostStatus,
+        category: validated.post.category as BlogPostCategory,
+        tags: validated.post.tags,
+        header_image_url: validated.post.headerImageUrl,
+        header_image_alt: validated.post.headerImageAlt,
+        meta_title: validated.post.metaTitle,
+        meta_description: validated.post.metaDescription,
+        og_image_url: validated.post.ogImageUrl,
+        reading_time_minutes: readingTime,
+        is_featured: validated.post.isFeatured,
+        published_at: validated.post.status === 'published' ? new Date() : undefined,
+      };
+
       const [blogPost] = await tx
         .insert(blogPostsTable)
-        .values({
-          author_id: user.id,
-          slug: validated.post.slug,
-          status: validated.post.status as BlogPostStatus,
-          category: validated.post.category as BlogPostCategory,
-          tags: validated.post.tags,
-          header_image_url: validated.post.headerImageUrl ?? undefined,
-          header_image_alt: validated.post.headerImageAlt ?? undefined,
-          meta_title: validated.post.metaTitle ?? undefined,
-          meta_description: validated.post.metaDescription ?? undefined,
-          og_image_url: validated.post.ogImageUrl ?? undefined,
-          reading_time_minutes: readingTime ?? undefined,
-          is_featured: validated.post.isFeatured,
-          published_at: validated.post.status === 'published' ? new Date() : undefined,
-        })
+        .values(blogPostData)
         .returning();
 
       // Create translations
