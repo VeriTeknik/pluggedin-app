@@ -4,11 +4,11 @@
  */
 
 import { db } from '../db';
-import { blogPostsTable, blogPostTranslationsTable, users } from '../db/schema';
+import { blogPostsTable, blogPostTranslationsTable, users, BlogPostStatus, BlogPostCategory } from '../db/schema';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and } from 'drizzle-orm';
 
-let PAP_POST_UUID = uuidv4();
+let PAP_POST_UUID: string;
 
 async function seedPAPBlogPost() {
   console.log('🌱 Seeding PAP blog post...');
@@ -46,19 +46,19 @@ async function seedPAPBlogPost() {
       PAP_POST_UUID = existingPost.uuid;
     } else {
       // Create the blog post
-      await db.insert(blogPostsTable).values({
-      uuid: PAP_POST_UUID,
+      const [createdPost] = await db.insert(blogPostsTable).values({
       slug: 'introducing-pap-agent-ecosystem',
       author_id: authorUser.id,
-      status: 'published',
-      category: 'announcement',
+      status: BlogPostStatus.PUBLISHED,
+      category: BlogPostCategory.ANNOUNCEMENT,
       is_featured: true,
       published_at: new Date(),
       reading_time_minutes: 8,
       view_count: 0,
       tags: ['PAP', 'Agent Protocol', 'Autonomous Agents', 'Specification', 'MCP'],
-      });
+      }).returning();
 
+      PAP_POST_UUID = createdPost.uuid;
       console.log('✅ Created blog post');
     }
 
@@ -286,10 +286,10 @@ PAP bu zorlukları çift profilli bir mimari ile ele alıyor:
 
     // Add minimal translations for other languages
     const otherLanguages = [
-      { lang: 'zh', title: 'PAP简介：Plugged.in代理协议生态系统规范', excerpt: '一个全面的自主代理生命周期管理框架，为代理生态系统带来结构、安全和互操作性。' },
-      { lang: 'ja', title: 'PAPの紹介：Plugged.inエージェントプロトコルエコシステム仕様', excerpt: '自律エージェントのライフサイクル管理のための包括的なフレームワーク、エージェントエコシステムに構造、セキュリティ、相互運用性をもたらします。' },
-      { lang: 'hi', title: 'PAP का परिचय: Plugged.in एजेंट प्रोटोकॉल इकोसिस्टम स्पेसिफिकेशन', excerpt: 'स्वायत्त एजेंट जीवनचक्र प्रबंधन के लिए एक व्यापक ढांचा, एजेंट पारिस्थितिकी तंत्र में संरचना, सुरक्षा और अंतर-संचालनीयता लाता है।' },
-      { lang: 'nl', title: 'Introductie van PAP: De Plugged.in Agent Protocol Ecosysteem Specificatie', excerpt: 'Een uitgebreid raamwerk voor autonoom agentlevenscyclusbeheer, dat structuur, beveiliging en interoperabiliteit naar het agentecosysteem brengt.' },
+      { lang: 'zh' as const, title: 'PAP简介：Plugged.in代理协议生态系统规范', excerpt: '一个全面的自主代理生命周期管理框架，为代理生态系统带来结构、安全和互操作性。' },
+      { lang: 'ja' as const, title: 'PAPの紹介：Plugged.inエージェントプロトコルエコシステム仕様', excerpt: '自律エージェントのライフサイクル管理のための包括的なフレームワーク、エージェントエコシステムに構造、セキュリティ、相互運用性をもたらします。' },
+      { lang: 'hi' as const, title: 'PAP का परिचय: Plugged.in एजेंट प्रोटोकॉल इकोसिस्टम स्पेसिफिकेशन', excerpt: 'स्वायत्त एजेंट जीवनचक्र प्रबंधन के लिए एक व्यापक ढांचा, एजेंट पारिस्थितिकी तंत्र में संरचना, सुरक्षा और अंतर-संचालनीयता लाता है।' },
+      { lang: 'nl' as const, title: 'Introductie van PAP: De Plugged.in Agent Protocol Ecosysteem Specificatie', excerpt: 'Een uitgebreid raamwerk voor autonoom agentlevenscyclusbeheer, dat structuur, beveiliging en interoperabiliteit naar het agentecosysteem brengt.' },
     ];
 
     for (const { lang, title, excerpt } of otherLanguages) {

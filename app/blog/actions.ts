@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/db';
-import { blogPostsTable, blogPostTranslationsTable } from '@/db/schema';
+import { blogPostsTable, blogPostTranslationsTable, BlogPostStatus, BlogPostCategory } from '@/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { Locale } from '@/i18n/config';
 
@@ -11,7 +11,7 @@ import type { Locale } from '@/i18n/config';
 export async function getPublishedBlogPosts() {
   try {
     const posts = await db.query.blogPostsTable.findMany({
-      where: eq(blogPostsTable.status, 'published'),
+      where: eq(blogPostsTable.status, BlogPostStatus.PUBLISHED),
       with: {
         translations: true,
         author: {
@@ -44,7 +44,7 @@ export async function getFeaturedBlogPosts(limit = 3) {
   try {
     const posts = await db.query.blogPostsTable.findMany({
       where: and(
-        eq(blogPostsTable.status, 'published'),
+        eq(blogPostsTable.status, BlogPostStatus.PUBLISHED),
         eq(blogPostsTable.is_featured, true)
       ),
       with: {
@@ -81,7 +81,7 @@ export async function getBlogPostBySlug(slug: string, language: Locale = 'en') {
     const post = await db.query.blogPostsTable.findFirst({
       where: and(
         eq(blogPostsTable.slug, slug),
-        eq(blogPostsTable.status, 'published')
+        eq(blogPostsTable.status, BlogPostStatus.PUBLISHED)
       ),
       with: {
         translations: true,
@@ -130,8 +130,8 @@ export async function getBlogPostsByCategory(category: string) {
   try {
     const posts = await db.query.blogPostsTable.findMany({
       where: and(
-        eq(blogPostsTable.status, 'published'),
-        eq(blogPostsTable.category, category)
+        eq(blogPostsTable.status, BlogPostStatus.PUBLISHED),
+        eq(blogPostsTable.category, category as BlogPostCategory)
       ),
       with: {
         translations: true,

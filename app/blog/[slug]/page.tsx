@@ -86,7 +86,7 @@ export default async function BlogPostPage({ params }: Props) {
             {post.is_featured && (
               <Badge variant="default">Featured</Badge>
             )}
-            {post.tags.map(tag => (
+            {post.tags?.map(tag => (
               <Badge key={tag} variant="outline">
                 {tag}
               </Badge>

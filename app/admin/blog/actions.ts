@@ -1,11 +1,11 @@
 'use server';
 
 import { db } from '@/db';
-import { blogPostsTable, blogPostTranslationsTable, users } from '@/db/schema';
+import { blogPostsTable, blogPostTranslationsTable, users, BlogPostStatus, BlogPostCategory } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { authOptions } from '@/lib/auth';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { revalidatePath } from 'next/cache';
@@ -112,23 +112,25 @@ export async function createBlogPost(data: z.infer<typeof createBlogPostSchema>)
     // Use transaction to ensure atomicity
     const result = await db.transaction(async (tx) => {
       // Create blog post
+      const blogPostData = {
+        author_id: user.id,
+        slug: validated.post.slug,
+        status: validated.post.status as BlogPostStatus,
+        category: validated.post.category as BlogPostCategory,
+        tags: validated.post.tags,
+        header_image_url: validated.post.headerImageUrl ?? undefined,
+        header_image_alt: validated.post.headerImageAlt ?? undefined,
+        meta_title: validated.post.metaTitle ?? undefined,
+        meta_description: validated.post.metaDescription ?? undefined,
+        og_image_url: validated.post.ogImageUrl ?? undefined,
+        reading_time_minutes: readingTime ?? undefined,
+        is_featured: validated.post.isFeatured,
+        published_at: validated.post.status === 'published' ? new Date() : undefined,
+      };
+
       const [blogPost] = await tx
         .insert(blogPostsTable)
-        .values({
-          author_id: user.id,
-          slug: validated.post.slug,
-          status: validated.post.status,
-          category: validated.post.category,
-          tags: validated.post.tags,
-          header_image_url: validated.post.headerImageUrl,
-          header_image_alt: validated.post.headerImageAlt,
-          meta_title: validated.post.metaTitle,
-          meta_description: validated.post.metaDescription,
-          og_image_url: validated.post.ogImageUrl,
-          reading_time_minutes: readingTime,
-          is_featured: validated.post.isFeatured,
-          published_at: validated.post.status === 'published' ? new Date() : null,
-        })
+        .values(blogPostData)
         .returning();
 
       // Create translations
@@ -205,11 +207,11 @@ export async function updateBlogPost(data: z.infer<typeof updateBlogPostSchema>)
 
     // Use transaction to ensure atomicity
     await db.transaction(async (tx) => {
-      // Update blog post - map camelCase to snake_case
+      // Update blog post
       const updateData: any = {
         slug: validated.post.slug,
-        status: validated.post.status,
-        category: validated.post.category,
+        status: validated.post.status as BlogPostStatus | undefined,
+        category: validated.post.category as BlogPostCategory | undefined,
         updated_at: new Date(),
       };
 

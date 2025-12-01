@@ -2169,7 +2169,7 @@ export const blogPostsTable = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     slug: text('slug').notNull().unique(),
-    status: blogPostStatusEnum('status').notNull().default('draft'),
+    status: blogPostStatusEnum('status').notNull().default(BlogPostStatus.DRAFT),
     published_at: timestamp('published_at', { withTimezone: true }),
     category: blogPostCategoryEnum('category').notNull(),
     tags: text('tags').array().default(sql`'{}'::text[]`),
