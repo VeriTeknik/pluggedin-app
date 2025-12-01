@@ -1,0 +1,3 @@
+# Ignore all images except this .gitignore file
+*
+!.gitignore

@@ -1,0 +1,107 @@
+{
+  "title": "Blog",
+  "readMore": "Read More",
+  "backToList": "Back to Blog",
+  "latestPosts": "Latest from the Blog",
+  "noPosts": "No blog posts found",
+  "readingTime": "{{minutes}} min read",
+  "views": "{{count}} views",
+  "publishedOn": "Published on {{date}}",
+  "updatedOn": "Updated on {{date}}",
+  "categories": {
+    "announcement": "Announcement",
+    "technical": "Technical",
+    "product": "Product",
+    "tutorial": "Tutorial",
+    "case-study": "Case Study"
+  },
+  "status": {
+    "draft": "Draft",
+    "published": "Published",
+    "archived": "Archived"
+  },
+  "admin": {
+    "title": "Blog Management",
+    "createPost": "Create New Post",
+    "editPost": "Edit Post",
+    "deletePost": "Delete Post",
+    "confirmDelete": "Are you sure you want to delete this blog post?",
+    "form": {
+      "slug": "URL Slug",
+      "slugPlaceholder": "unique-url-slug",
+      "slugHelp": "Used in the URL: plugged.in/blog/{{slug}}",
+      "status": "Status",
+      "category": "Category",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add tags (press Enter)",
+      "featured": "Feature on Homepage",
+      "headerImage": "Header Image",
+      "headerImageAlt": "Header Image Alt Text",
+      "uploadImage": "Upload Image",
+      "changeImage": "Change Image",
+      "removeImage": "Remove Image",
+      "metaTitle": "SEO Meta Title",
+      "metaDescription": "SEO Meta Description",
+      "ogImage": "Open Graph Image URL",
+      "translations": "Translations",
+      "selectLanguage": "Select Language",
+      "title": "Title",
+      "titlePlaceholder": "Blog post title",
+      "excerpt": "Excerpt",
+      "excerptPlaceholder": "A short summary of the post",
+      "content": "Content",
+      "contentPlaceholder": "Write your blog post in Markdown...",
+      "readingTime": "Reading Time (minutes)",
+      "readingTimeAuto": "Auto-calculated from content",
+      "addTag": "Add",
+      "basicInformation": "Basic Information",
+      "seo": "SEO"
+    },
+    "validation": {
+      "slugRequired": "URL slug is required",
+      "slugInvalid": "Slug can only contain lowercase letters, numbers, and hyphens",
+      "statusRequired": "Status is required",
+      "categoryRequired": "Category is required",
+      "titleRequired": "Title is required for {{language}}",
+      "excerptRequired": "Excerpt is required for {{language}}",
+      "contentRequired": "Content is required for {{language}}",
+      "imageMaxSize": "Image must be less than 5MB"
+    },
+    "actions": {
+      "save": "Save Post",
+      "saving": "Saving...",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "archive": "Archive",
+      "preview": "Preview",
+      "viewLive": "View Live"
+    },
+    "messages": {
+      "saveSuccess": "Blog post saved successfully",
+      "saveError": "Failed to save blog post",
+      "deleteSuccess": "Blog post deleted successfully",
+      "deleteError": "Failed to delete blog post",
+      "publishSuccess": "Blog post published successfully",
+      "unpublishSuccess": "Blog post unpublished successfully",
+      "archiveSuccess": "Blog post archived successfully",
+      "imageUploadSuccess": "Image uploaded successfully",
+      "imageUploadError": "Failed to upload image"
+    },
+    "list": {
+      "allPosts": "All Posts",
+      "filterByStatus": "Filter by Status",
+      "filterByCategory": "Filter by Category",
+      "searchPlaceholder": "Search posts...",
+      "noResults": "No posts found matching your criteria",
+      "columns": {
+        "title": "Title",
+        "category": "Category",
+        "status": "Status",
+        "author": "Author",
+        "published": "Published",
+        "views": "Views",
+        "actions": "Actions"
+      }
+    }
+  }
+}

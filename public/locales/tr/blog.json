@@ -1,0 +1,107 @@
+{
+  "title": "Blog",
+    "readMore": "Devamını Oku",
+    "backToList": "Blog'a Dön",
+    "latestPosts": "Blog'dan Son Yazılar",
+    "noPosts": "Blog yazısı bulunamadı",
+    "readingTime": "{{minutes}} dk okuma",
+    "views": "{{count}} görüntüleme",
+    "publishedOn": "{{date}} tarihinde yayınlandı",
+    "updatedOn": "{{date}} tarihinde güncellendi",
+    "categories": {
+      "announcement": "Duyuru",
+      "technical": "Teknik",
+      "product": "Ürün",
+      "tutorial": "Eğitim",
+      "case-study": "Vaka Çalışması"
+    },
+    "status": {
+      "draft": "Taslak",
+      "published": "Yayınlandı",
+      "archived": "Arşivlendi"
+    },
+    "admin": {
+      "title": "Blog Yönetimi",
+      "createPost": "Yeni Yazı Oluştur",
+      "editPost": "Yazıyı Düzenle",
+      "deletePost": "Yazıyı Sil",
+      "confirmDelete": "Bu blog yazısını silmek istediğinizden emin misiniz?",
+      "form": {
+        "slug": "URL Slug",
+        "slugPlaceholder": "benzersiz-url-slug",
+        "slugHelp": "URL'de kullanılır: plugged.in/blog/{{slug}}",
+        "status": "Durum",
+        "category": "Kategori",
+        "tags": "Etiketler",
+        "tagsPlaceholder": "Etiket ekle (Enter'a basın)",
+        "featured": "Ana Sayfada Öne Çıkar",
+        "headerImage": "Başlık Görseli",
+        "headerImageAlt": "Başlık Görseli Alt Metni",
+        "uploadImage": "Görsel Yükle",
+        "changeImage": "Görseli Değiştir",
+        "removeImage": "Görseli Kaldır",
+        "metaTitle": "SEO Meta Başlığı",
+        "metaDescription": "SEO Meta Açıklaması",
+        "ogImage": "Open Graph Görsel URL'si",
+        "translations": "Çeviriler",
+        "selectLanguage": "Dil Seçin",
+        "title": "Başlık",
+        "titlePlaceholder": "Blog yazısı başlığı",
+        "excerpt": "Özet",
+        "excerptPlaceholder": "Yazının kısa özeti",
+        "content": "İçerik",
+        "contentPlaceholder": "Blog yazınızı Markdown ile yazın...",
+        "readingTime": "Okuma Süresi (dakika)",
+        "readingTimeAuto": "İçerikten otomatik hesaplanır",
+        "addTag": "Ekle",
+        "basicInformation": "Temel Bilgiler",
+        "seo": "SEO"
+      },
+      "validation": {
+        "slugRequired": "URL slug gereklidir",
+        "slugInvalid": "Slug sadece küçük harf, rakam ve tire içerebilir",
+        "statusRequired": "Durum gereklidir",
+        "categoryRequired": "Kategori gereklidir",
+        "titleRequired": "{{language}} için başlık gereklidir",
+        "excerptRequired": "{{language}} için özet gereklidir",
+        "contentRequired": "{{language}} için içerik gereklidir",
+        "imageMaxSize": "Görsel 5MB'dan küçük olmalıdır"
+      },
+      "actions": {
+        "save": "Yazıyı Kaydet",
+        "saving": "Kaydediliyor...",
+        "publish": "Yayınla",
+        "unpublish": "Yayından Kaldır",
+        "archive": "Arşivle",
+        "preview": "Önizle",
+        "viewLive": "Canlıyı Görüntüle"
+      },
+      "messages": {
+        "saveSuccess": "Blog yazısı başarıyla kaydedildi",
+        "saveError": "Blog yazısı kaydedilemedi",
+        "deleteSuccess": "Blog yazısı başarıyla silindi",
+        "deleteError": "Blog yazısı silinemedi",
+        "publishSuccess": "Blog yazısı başarıyla yayınlandı",
+        "unpublishSuccess": "Blog yazısı yayından kaldırıldı",
+        "archiveSuccess": "Blog yazısı arşivlendi",
+        "imageUploadSuccess": "Görsel başarıyla yüklendi",
+        "imageUploadError": "Görsel yüklenemedi"
+      },
+      "list": {
+        "allPosts": "Tüm Yazılar",
+        "filterByStatus": "Duruma Göre Filtrele",
+        "filterByCategory": "Kategoriye Göre Filtrele",
+        "searchPlaceholder": "Yazılarda ara...",
+        "noResults": "Kriterlerinize uygun yazı bulunamadı",
+        "columns": {
+          "title": "Başlık",
+          "category": "Kategori",
+          "status": "Durum",
+          "author": "Yazar",
+          "published": "Yayınlanma",
+          "views": "Görüntüleme",
+          "actions": "İşlemler"
+        }
+      }
+    }
+}

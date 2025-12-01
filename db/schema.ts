@@ -126,6 +126,28 @@ export const voteTypeEnum = pgEnum(
   enumToPgEnum(VoteType)
 );
 
+// Blog enums
+export enum BlogPostStatus {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  ARCHIVED = 'archived',
+}
+export const blogPostStatusEnum = pgEnum(
+  'blog_post_status',
+  enumToPgEnum(BlogPostStatus)
+);
+
+export enum BlogPostCategory {
+  ANNOUNCEMENT = 'announcement',
+  TECHNICAL = 'technical',
+  PRODUCT = 'product',
+  TUTORIAL = 'tutorial',
+  CASE_STUDY = 'case-study',
+}
+export const blogPostCategoryEnum = pgEnum(
+  'blog_post_category',
+  enumToPgEnum(BlogPostCategory)
+);
 
 // Auth.js / NextAuth.js schema
 export const users = pgTable('users', {
@@ -300,7 +322,6 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
   sharedMcpServers: many(sharedMcpServersTable),
   sharedCollections: many(sharedCollectionsTable),
   embeddedChats: many(embeddedChatsTable),
-  agents: many(agentsTable),
 }));
 
 
@@ -2137,6 +2158,89 @@ export const oauthPkceStatesTable = pgTable('oauth_pkce_states', {
   serverUuidIdx: index('idx_oauth_pkce_states_server_uuid').on(table.server_uuid),
   userIdIdx: index('idx_oauth_pkce_states_user_id').on(table.user_id),
   stateUserIdx: index('idx_oauth_pkce_states_state_user').on(table.state, table.user_id), // Composite for validation query
+}));
+
+// Blog posts table - Global marketing blog (no project scoping)
+export const blogPostsTable = pgTable(
+  'blog_posts',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    author_id: text('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    slug: text('slug').notNull().unique(),
+    status: blogPostStatusEnum('status').notNull().default(BlogPostStatus.DRAFT),
+    published_at: timestamp('published_at', { withTimezone: true }),
+    category: blogPostCategoryEnum('category').notNull(),
+    tags: text('tags').array().default(sql`'{}'::text[]`),
+    header_image_url: text('header_image_url'),
+    header_image_alt: text('header_image_alt'),
+    meta_title: text('meta_title'),
+    meta_description: text('meta_description'),
+    og_image_url: text('og_image_url'),
+    reading_time_minutes: integer('reading_time_minutes'),
+    view_count: integer('view_count').notNull().default(0),
+    is_featured: boolean('is_featured').notNull().default(false),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    slugIdx: index('blog_posts_slug_idx').on(table.slug),
+    authorIdx: index('blog_posts_author_idx').on(table.author_id),
+    statusIdx: index('blog_posts_status_idx').on(table.status),
+    categoryIdx: index('blog_posts_category_idx').on(table.category),
+    publishedAtIdx: index('blog_posts_published_at_idx').on(table.published_at),
+    featuredIdx: index('blog_posts_featured_idx').on(table.is_featured),
+  })
+);
+
+// Blog post translations table - Separate table for multi-language support
+export const blogPostTranslationsTable = pgTable(
+  'blog_post_translations',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    blog_post_uuid: uuid('blog_post_uuid')
+      .notNull()
+      .references(() => blogPostsTable.uuid, { onDelete: 'cascade' }),
+    language: languageEnum('language').notNull(),
+    title: text('title').notNull(),
+    excerpt: text('excerpt').notNull(),
+    content: text('content').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    blogPostIdx: index('blog_post_translations_blog_post_idx').on(table.blog_post_uuid),
+    languageIdx: index('blog_post_translations_language_idx').on(table.language),
+    blogPostLanguageUnique: unique('blog_post_translations_unique').on(
+      table.blog_post_uuid,
+      table.language
+    ),
+  })
+);
+
+// Blog relations
+export const blogPostsRelations = relations(blogPostsTable, ({ one, many }) => ({
+  author: one(users, {
+    fields: [blogPostsTable.author_id],
+    references: [users.id],
+  }),
+  translations: many(blogPostTranslationsTable),
+}));
+
+export const blogPostTranslationsRelations = relations(blogPostTranslationsTable, ({ one }) => ({
+  blogPost: one(blogPostsTable, {
+    fields: [blogPostTranslationsTable.blog_post_uuid],
+    references: [blogPostsTable.uuid],
+  }),
 }));
 
 // ============================================================================

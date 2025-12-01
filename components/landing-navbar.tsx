@@ -19,6 +19,7 @@ const navLinks: Array<{ href: string; labelKey: string; external?: boolean }> = 
   { href: '#features', labelKey: 'navigation.features' },
   { href: '#ai-models', labelKey: 'navigation.aiModels' },
   { href: '#pricing', labelKey: 'navigation.pricing' },
+  { href: '/blog', labelKey: 'navigation.blog' },
   { href: 'https://docs.plugged.in', labelKey: 'navigation.documentation', external: true },
 ];
 

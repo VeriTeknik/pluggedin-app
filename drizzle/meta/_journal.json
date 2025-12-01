@@ -554,6 +554,27 @@
       "when": 1764420535911,
       "tag": "0078_youthful_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1764486338323,
+      "tag": "0079_sad_jimmy_woo",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1764523159793,
+      "tag": "0080_gorgeous_ben_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1764560442385,
+      "tag": "0081_chief_electro",
+      "breakpoints": true
     }
   ]
 }

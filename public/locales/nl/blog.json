@@ -1,0 +1,107 @@
+{
+  "title": "Blog",
+    "readMore": "Lees Meer",
+    "backToList": "Terug naar Blog",
+    "latestPosts": "Laatste van de Blog",
+    "noPosts": "Geen blogberichten gevonden",
+    "readingTime": "{{minutes}} min lezen",
+    "views": "{{count}} keer bekeken",
+    "publishedOn": "Gepubliceerd op {{date}}",
+    "updatedOn": "Bijgewerkt op {{date}}",
+    "categories": {
+      "announcement": "Aankondiging",
+      "technical": "Technisch",
+      "product": "Product",
+      "tutorial": "Tutorial",
+      "case-study": "Casestudy"
+    },
+    "status": {
+      "draft": "Concept",
+      "published": "Gepubliceerd",
+      "archived": "Gearchiveerd"
+    },
+    "admin": {
+      "title": "Blogbeheer",
+      "createPost": "Nieuw Bericht Maken",
+      "editPost": "Bericht Bewerken",
+      "deletePost": "Bericht Verwijderen",
+      "confirmDelete": "Weet u zeker dat u dit blogbericht wilt verwijderen?",
+      "form": {
+        "slug": "URL Slug",
+        "slugPlaceholder": "unieke-url-slug",
+        "slugHelp": "Gebruikt in de URL: plugged.in/blog/{{slug}}",
+        "status": "Status",
+        "category": "Categorie",
+        "tags": "Tags",
+        "tagsPlaceholder": "Voeg tags toe (druk op Enter)",
+        "featured": "Uitgelicht op Homepage",
+        "headerImage": "Headerafbeelding",
+        "headerImageAlt": "Headerafbeelding Alt-tekst",
+        "uploadImage": "Afbeelding Uploaden",
+        "changeImage": "Afbeelding Wijzigen",
+        "removeImage": "Afbeelding Verwijderen",
+        "metaTitle": "SEO Meta Titel",
+        "metaDescription": "SEO Meta Beschrijving",
+        "ogImage": "Open Graph Afbeelding URL",
+        "translations": "Vertalingen",
+        "selectLanguage": "Selecteer Taal",
+        "title": "Titel",
+        "titlePlaceholder": "Blogbericht titel",
+        "excerpt": "Samenvatting",
+        "excerptPlaceholder": "Een korte samenvatting van het bericht",
+        "content": "Inhoud",
+        "contentPlaceholder": "Schrijf uw blogbericht in Markdown...",
+        "readingTime": "Leestijd (minuten)",
+        "readingTimeAuto": "Automatisch berekend uit inhoud",
+        "addTag": "Toevoegen",
+        "basicInformation": "Basisinformatie",
+        "seo": "SEO"
+      },
+      "validation": {
+        "slugRequired": "URL slug is verplicht",
+        "slugInvalid": "Slug mag alleen kleine letters, cijfers en koppeltekens bevatten",
+        "statusRequired": "Status is verplicht",
+        "categoryRequired": "Categorie is verplicht",
+        "titleRequired": "Titel is verplicht voor {{language}}",
+        "excerptRequired": "Samenvatting is verplicht voor {{language}}",
+        "contentRequired": "Inhoud is verplicht voor {{language}}",
+        "imageMaxSize": "Afbeelding moet kleiner zijn dan 5MB"
+      },
+      "actions": {
+        "save": "Bericht Opslaan",
+        "saving": "Opslaan...",
+        "publish": "Publiceren",
+        "unpublish": "Publicatie Ongedaan Maken",
+        "archive": "Archiveren",
+        "preview": "Voorbeeld",
+        "viewLive": "Live Bekijken"
+      },
+      "messages": {
+        "saveSuccess": "Blogbericht succesvol opgeslagen",
+        "saveError": "Blogbericht opslaan mislukt",
+        "deleteSuccess": "Blogbericht succesvol verwijderd",
+        "deleteError": "Blogbericht verwijderen mislukt",
+        "publishSuccess": "Blogbericht succesvol gepubliceerd",
+        "unpublishSuccess": "Blogbericht publicatie ongedaan gemaakt",
+        "archiveSuccess": "Blogbericht gearchiveerd",
+        "imageUploadSuccess": "Afbeelding succesvol geüpload",
+        "imageUploadError": "Afbeelding uploaden mislukt"
+      },
+      "list": {
+        "allPosts": "Alle Berichten",
+        "filterByStatus": "Filteren op Status",
+        "filterByCategory": "Filteren op Categorie",
+        "searchPlaceholder": "Zoek berichten...",
+        "noResults": "Geen berichten gevonden die aan uw criteria voldoen",
+        "columns": {
+          "title": "Titel",
+          "category": "Categorie",
+          "status": "Status",
+          "author": "Auteur",
+          "published": "Gepubliceerd",
+          "views": "Weergaven",
+          "actions": "Acties"
+        }
+      }
+    }
+}
