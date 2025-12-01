@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { BlogPostsListServer } from './components/blog-posts-list-server';
 
+// Force dynamic rendering because this page requires authentication
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Blog Management | Admin',
   description: 'Manage blog posts',
