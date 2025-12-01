@@ -1,6 +1,5 @@
 {
-  "blog": {
-    "title": "ब्लॉग",
+  "title": "ब्लॉग",
     "readMore": "और पढ़ें",
     "backToList": "ब्लॉग पर वापस जाएं",
     "latestPosts": "ब्लॉग से नवीनतम",
@@ -53,7 +52,10 @@
         "content": "सामग्री",
         "contentPlaceholder": "अपनी ब्लॉग पोस्ट Markdown में लिखें...",
         "readingTime": "पढ़ने का समय (मिनट)",
-        "readingTimeAuto": "सामग्री से स्वतः गणना की गई"
+        "readingTimeAuto": "सामग्री से स्वतः गणना की गई",
+        "addTag": "जोड़ें",
+        "basicInformation": "मूल जानकारी",
+        "seo": "SEO"
       },
       "validation": {
         "slugRequired": "URL स्लग आवश्यक है",
@@ -81,7 +83,9 @@
         "deleteError": "ब्लॉग पोस्ट हटाने में विफल",
         "publishSuccess": "ब्लॉग पोस्ट सफलतापूर्वक प्रकाशित",
         "unpublishSuccess": "ब्लॉग पोस्ट अप्रकाशित",
-        "archiveSuccess": "ब्लॉग पोस्ट संग्रहीत"
+        "archiveSuccess": "ब्लॉग पोस्ट संग्रहीत",
+        "imageUploadSuccess": "छवि सफलतापूर्वक अपलोड की गई",
+        "imageUploadError": "छवि अपलोड विफल"
       },
       "list": {
         "allPosts": "सभी पोस्ट",
@@ -100,5 +104,4 @@
         }
       }
     }
-  }
 }

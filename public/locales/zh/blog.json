@@ -1,6 +1,5 @@
 {
-  "blog": {
-    "title": "博客",
+  "title": "博客",
     "readMore": "阅读更多",
     "backToList": "返回博客",
     "latestPosts": "最新博客文章",
@@ -53,7 +52,10 @@
         "content": "内容",
         "contentPlaceholder": "使用 Markdown 编写您的博客文章...",
         "readingTime": "阅读时间（分钟）",
-        "readingTimeAuto": "根据内容自动计算"
+        "readingTimeAuto": "根据内容自动计算",
+        "addTag": "添加",
+        "basicInformation": "基本信息",
+        "seo": "SEO"
       },
       "validation": {
         "slugRequired": "URL 缩略名为必填项",
@@ -81,7 +83,9 @@
         "deleteError": "博客文章删除失败",
         "publishSuccess": "博客文章发布成功",
         "unpublishSuccess": "博客文章已取消发布",
-        "archiveSuccess": "博客文章已归档"
+        "archiveSuccess": "博客文章已归档",
+        "imageUploadSuccess": "图片上传成功",
+        "imageUploadError": "图片上传失败"
       },
       "list": {
         "allPosts": "所有文章",
@@ -100,5 +104,4 @@
         }
       }
     }
-  }
 }

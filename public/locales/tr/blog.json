@@ -1,6 +1,5 @@
 {
-  "blog": {
-    "title": "Blog",
+  "title": "Blog",
     "readMore": "Devamını Oku",
     "backToList": "Blog'a Dön",
     "latestPosts": "Blog'dan Son Yazılar",
@@ -53,7 +52,10 @@
         "content": "İçerik",
         "contentPlaceholder": "Blog yazınızı Markdown ile yazın...",
         "readingTime": "Okuma Süresi (dakika)",
-        "readingTimeAuto": "İçerikten otomatik hesaplanır"
+        "readingTimeAuto": "İçerikten otomatik hesaplanır",
+        "addTag": "Ekle",
+        "basicInformation": "Temel Bilgiler",
+        "seo": "SEO"
       },
       "validation": {
         "slugRequired": "URL slug gereklidir",
@@ -81,7 +83,9 @@
         "deleteError": "Blog yazısı silinemedi",
         "publishSuccess": "Blog yazısı başarıyla yayınlandı",
         "unpublishSuccess": "Blog yazısı yayından kaldırıldı",
-        "archiveSuccess": "Blog yazısı arşivlendi"
+        "archiveSuccess": "Blog yazısı arşivlendi",
+        "imageUploadSuccess": "Görsel başarıyla yüklendi",
+        "imageUploadError": "Görsel yüklenemedi"
       },
       "list": {
         "allPosts": "Tüm Yazılar",
@@ -100,5 +104,4 @@
         }
       }
     }
-  }
 }

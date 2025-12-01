@@ -1,6 +1,5 @@
 {
-  "blog": {
-    "title": "Blog",
+  "title": "Blog",
     "readMore": "Lees Meer",
     "backToList": "Terug naar Blog",
     "latestPosts": "Laatste van de Blog",
@@ -53,7 +52,10 @@
         "content": "Inhoud",
         "contentPlaceholder": "Schrijf uw blogbericht in Markdown...",
         "readingTime": "Leestijd (minuten)",
-        "readingTimeAuto": "Automatisch berekend uit inhoud"
+        "readingTimeAuto": "Automatisch berekend uit inhoud",
+        "addTag": "Toevoegen",
+        "basicInformation": "Basisinformatie",
+        "seo": "SEO"
       },
       "validation": {
         "slugRequired": "URL slug is verplicht",
@@ -81,7 +83,9 @@
         "deleteError": "Blogbericht verwijderen mislukt",
         "publishSuccess": "Blogbericht succesvol gepubliceerd",
         "unpublishSuccess": "Blogbericht publicatie ongedaan gemaakt",
-        "archiveSuccess": "Blogbericht gearchiveerd"
+        "archiveSuccess": "Blogbericht gearchiveerd",
+        "imageUploadSuccess": "Afbeelding succesvol geüpload",
+        "imageUploadError": "Afbeelding uploaden mislukt"
       },
       "list": {
         "allPosts": "Alle Berichten",
@@ -100,5 +104,4 @@
         }
       }
     }
-  }
 }

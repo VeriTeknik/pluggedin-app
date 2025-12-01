@@ -1,6 +1,5 @@
 {
-  "blog": {
-    "title": "ブログ",
+  "title": "ブログ",
     "readMore": "続きを読む",
     "backToList": "ブログに戻る",
     "latestPosts": "ブログの最新記事",
@@ -53,7 +52,10 @@
         "content": "コンテンツ",
         "contentPlaceholder": "Markdownでブログ記事を書く...",
         "readingTime": "読書時間（分）",
-        "readingTimeAuto": "コンテンツから自動計算"
+        "readingTimeAuto": "コンテンツから自動計算",
+        "addTag": "追加",
+        "basicInformation": "基本情報",
+        "seo": "SEO"
       },
       "validation": {
         "slugRequired": "URLスラッグは必須です",
@@ -81,7 +83,9 @@
         "deleteError": "ブログ記事の削除に失敗しました",
         "publishSuccess": "ブログ記事が正常に公開されました",
         "unpublishSuccess": "ブログ記事が非公開になりました",
-        "archiveSuccess": "ブログ記事がアーカイブされました"
+        "archiveSuccess": "ブログ記事がアーカイブされました",
+        "imageUploadSuccess": "画像がアップロードされました",
+        "imageUploadError": "画像のアップロードに失敗しました"
       },
       "list": {
         "allPosts": "すべての記事",
@@ -100,5 +104,4 @@
         }
       }
     }
-  }
 }
