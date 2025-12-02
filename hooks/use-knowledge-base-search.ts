@@ -48,6 +48,16 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Capture project UUID when query starts to ensure stable reference during search
+  const [capturedProjectUuid, setCapturedProjectUuid] = useState<string | undefined>();
+
+  // Update captured project UUID when query changes and project is available
+  useEffect(() => {
+    if (query.trim() && currentProject?.uuid) {
+      setCapturedProjectUuid(currentProject.uuid);
+    }
+  }, [query, currentProject?.uuid]);
+
   const searchKnowledgeBase = useCallback(async (searchQuery: string) => {
     if (!session?.user?.id) {
       setError('Not authenticated');
@@ -63,6 +73,9 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
       return;
     }
 
+    // Use captured project UUID for stable reference, fall back to current if not captured yet
+    const projectUuidToUse = capturedProjectUuid || currentProject?.uuid;
+
     setIsLoading(true);
     setError(null);
 
@@ -70,7 +83,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
       const result = await askKnowledgeBase(
         session.user.id,
         searchQuery,
-        currentProject?.uuid
+        projectUuidToUse
       );
 
       if (result.success && result.answer) {
@@ -95,7 +108,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user?.id, currentProject?.uuid]);
+  }, [session?.user?.id, capturedProjectUuid, currentProject?.uuid]);
 
   // Debounce search
   useEffect(() => {
@@ -124,6 +137,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
     setDocuments([]);
     setError(null);
     setQuery('');
+    setCapturedProjectUuid(undefined);
   }, []);
 
   return {
