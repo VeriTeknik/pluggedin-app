@@ -61,7 +61,9 @@ Compass is fully PAP-RFC-001 compliant:
   container_port: 3000,
   health_endpoint: '/health',
   env_schema: {
-    required: ['PAP_STATION_URL', 'PAP_AGENT_ID', 'PAP_AGENT_KEY', 'PLUGGEDIN_API_URL', 'PLUGGEDIN_API_KEY'],
+    // These are automatically provided by the deployment system:
+    // PAP_STATION_URL, PAP_AGENT_ID, PAP_AGENT_KEY, PLUGGEDIN_API_URL, PLUGGEDIN_API_KEY
+    required: [],
     optional: ['BASE_URL', 'PORT'],
     defaults: {
       PORT: '3000',

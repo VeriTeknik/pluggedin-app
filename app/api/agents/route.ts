@@ -6,6 +6,7 @@ import {
   agentsTable,
   agentTemplatesTable,
   agentLifecycleEventsTable,
+  apiKeysTable,
   AgentState,
   AccessLevel,
 } from '@/db/schema';
@@ -384,13 +385,40 @@ export async function POST(request: Request) {
 
     // Build environment variables for the agent
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hub.plugged.in';
+
+    // Get or create an API key for the agent to authenticate with PAP Station
+    const apiKeys = await db
+      .select()
+      .from(apiKeysTable)
+      .where(eq(apiKeysTable.project_uuid, auth.project.uuid))
+      .limit(1);
+
+    let agentApiKey = apiKeys[0]?.api_key;
+    if (!agentApiKey) {
+      // Create a new API key if none exists
+      const { customAlphabet } = await import('nanoid');
+      const nanoid = customAlphabet(
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+        64
+      );
+      agentApiKey = `pg_in_${nanoid(64)}`;
+      await db.insert(apiKeysTable).values({
+        project_uuid: auth.project.uuid,
+        api_key: agentApiKey,
+        name: `Agent: ${normalizedName}`,
+      });
+    }
+
     const agentEnv: Record<string, string> = {
       // PAP Protocol required env vars
-      PAP_STATION_URL: `${baseUrl}/api/pap`,
+      // Note: PAP Station API is at /api/agents (not /api/pap)
+      PAP_STATION_URL: `${baseUrl}/api/agents`,
       PAP_AGENT_ID: newAgent.uuid,
       PAP_AGENT_DNS: dnsName,
+      PAP_AGENT_KEY: agentApiKey, // API key for heartbeat/metrics auth
       // Plugged.in API access (for Model Router)
       PLUGGEDIN_API_URL: `${baseUrl}/api`,
+      PLUGGEDIN_API_KEY: agentApiKey, // Same key for API access
       // Agent identity
       AGENT_NAME: normalizedName,
       AGENT_DNS_NAME: dnsName,

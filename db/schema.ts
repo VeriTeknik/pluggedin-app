@@ -2565,3 +2565,142 @@ export const agentModelsRelations = relations(agentModelsTable, ({ one }) => ({
     references: [agentsTable.uuid],
   }),
 }));
+
+// ============================================================================
+// PAP Heartbeat Collector - Cluster and Alert Tables
+// ============================================================================
+
+// Cluster status enum for tracking cluster health
+export enum ClusterStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  MAINTENANCE = 'MAINTENANCE',
+}
+export const clusterStatusEnum = pgEnum(
+  'cluster_status',
+  enumToPgEnum(ClusterStatus)
+);
+
+// Alert types from collectors
+export enum ClusterAlertType {
+  AGENT_DEATH = 'AGENT_DEATH',
+  EMERGENCY_MODE = 'EMERGENCY_MODE',
+  RESTART_DETECTED = 'RESTART_DETECTED',
+}
+export const clusterAlertTypeEnum = pgEnum(
+  'cluster_alert_type',
+  enumToPgEnum(ClusterAlertType)
+);
+
+// Alert severity levels
+export enum AlertSeverity {
+  CRITICAL = 'critical',
+  WARNING = 'warning',
+  INFO = 'info',
+}
+export const alertSeverityEnum = pgEnum(
+  'alert_severity',
+  enumToPgEnum(AlertSeverity)
+);
+
+/**
+ * Clusters Table - Registry of PAP Heartbeat Collectors
+ *
+ * Each cluster has its own local collector that:
+ * - Receives heartbeats from agents
+ * - Performs local zombie detection
+ * - Pushes alerts to central on problems
+ */
+export const clustersTable = pgTable(
+  'clusters',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    // Unique cluster identifier (e.g., 'is.plugged.in', 'prod-us-east')
+    cluster_id: text('cluster_id').notNull().unique(),
+    // Human-readable name
+    name: text('name').notNull(),
+    // Description of the cluster
+    description: text('description'),
+    // Internal collector URL for proxying requests
+    collector_url: text('collector_url'),
+    // Cluster status
+    status: clusterStatusEnum('status').default('ACTIVE'),
+    // Last time an alert was received from this cluster
+    last_alert_at: timestamp('last_alert_at', { withTimezone: true }),
+    // Last time we successfully communicated with the collector
+    last_seen_at: timestamp('last_seen_at', { withTimezone: true }),
+    // Total agents tracked by this cluster (updated periodically)
+    agent_count: integer('agent_count').default(0),
+    // Healthy agents count
+    healthy_agent_count: integer('healthy_agent_count').default(0),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    clusterIdIdx: index('clusters_cluster_id_idx').on(table.cluster_id),
+    statusIdx: index('clusters_status_idx').on(table.status),
+  })
+);
+
+/**
+ * Cluster Alerts Table - Alerts received from collectors
+ *
+ * Collectors push alerts here when:
+ * - An agent dies (missed heartbeat deadline)
+ * - An agent enters EMERGENCY mode
+ * - An agent restart is detected
+ */
+export const clusterAlertsTable = pgTable(
+  'cluster_alerts',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    // Which cluster sent this alert
+    cluster_uuid: uuid('cluster_uuid')
+      .references(() => clustersTable.uuid, { onDelete: 'cascade' }),
+    // Alert type
+    alert_type: clusterAlertTypeEnum('alert_type').notNull(),
+    // Which agent this alert is about
+    agent_uuid: uuid('agent_uuid'),
+    // Agent name (for display when agent may be deleted)
+    agent_name: text('agent_name'),
+    // Alert severity
+    severity: alertSeverityEnum('severity').notNull(),
+    // Additional details (missed intervals, previous mode, etc.)
+    details: jsonb('details'),
+    // Has the alert been acknowledged?
+    acknowledged: boolean('acknowledged').default(false),
+    // Who acknowledged it
+    acknowledged_by: text('acknowledged_by'),
+    acknowledged_at: timestamp('acknowledged_at', { withTimezone: true }),
+    // Alert timestamp from collector
+    alert_timestamp: timestamp('alert_timestamp', { withTimezone: true }),
+    // When we received it
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    clusterUuidIdx: index('cluster_alerts_cluster_uuid_idx').on(table.cluster_uuid),
+    alertTypeIdx: index('cluster_alerts_alert_type_idx').on(table.alert_type),
+    agentUuidIdx: index('cluster_alerts_agent_uuid_idx').on(table.agent_uuid),
+    acknowledgedIdx: index('cluster_alerts_acknowledged_idx').on(table.acknowledged),
+    createdAtIdx: index('cluster_alerts_created_at_idx').on(table.created_at),
+  })
+);
+
+// Relations for clusters
+export const clustersRelations = relations(clustersTable, ({ many }) => ({
+  alerts: many(clusterAlertsTable),
+}));
+
+// Relations for cluster alerts
+export const clusterAlertsRelations = relations(clusterAlertsTable, ({ one }) => ({
+  cluster: one(clustersTable, {
+    fields: [clusterAlertsTable.cluster_uuid],
+    references: [clustersTable.uuid],
+  }),
+}));
