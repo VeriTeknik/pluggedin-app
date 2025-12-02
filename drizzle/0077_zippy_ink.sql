@@ -1,1 +1,1 @@
-CREATE INDEX "clipboards_visibility_idx" ON "clipboards" USING btree ("profile_uuid","visibility");
+CREATE INDEX IF NOT EXISTS "clipboards_visibility_idx" ON "clipboards" USING btree ("profile_uuid","visibility");

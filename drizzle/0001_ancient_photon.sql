@@ -11,5 +11,5 @@ CREATE TABLE IF NOT EXISTS "custom_mcp_servers" (
 );
 --> statement-breakpoint
 ALTER TABLE "custom_mcp_servers" ADD CONSTRAINT "custom_mcp_servers_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "custom_mcp_servers_status_idx" ON "custom_mcp_servers" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "custom_mcp_servers_profile_uuid_idx" ON "custom_mcp_servers" USING btree ("profile_uuid");
+CREATE INDEX IF NOT EXISTS "custom_mcp_servers_status_idx" ON "custom_mcp_servers" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "custom_mcp_servers_profile_uuid_idx" ON "custom_mcp_servers" USING btree ("profile_uuid");

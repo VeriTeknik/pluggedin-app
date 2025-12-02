@@ -1,1 +1,1 @@
-ALTER TABLE "mcp_server_oauth_tokens" ADD COLUMN "version" integer DEFAULT 1 NOT NULL;
+ALTER TABLE "mcp_server_oauth_tokens" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;

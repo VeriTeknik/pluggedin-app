@@ -10,6 +10,6 @@ CREATE TABLE IF NOT EXISTS "tools" (
     "created_at" timestamp with time zone NOT NULL DEFAULT now()
 );
 
-CREATE INDEX "tools_mcp_server_uuid_idx" ON "tools" ("mcp_server_uuid");
-CREATE INDEX "tools_status_idx" ON "tools" ("status");
-CREATE UNIQUE INDEX "tools_mcp_server_name_idx" ON "tools" ("mcp_server_uuid", "name");
+CREATE INDEX IF NOT EXISTS "tools_mcp_server_uuid_idx" ON "tools" ("mcp_server_uuid");
+CREATE INDEX IF NOT EXISTS "tools_status_idx" ON "tools" ("status");
+CREATE UNIQUE INDEX IF NOT EXISTS "tools_mcp_server_name_idx" ON "tools" ("mcp_server_uuid", "name");

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "resource_templates" (
 --> statement-breakpoint
 DO $$ BEGIN
     IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'mcp_servers' AND column_name = 'notes') THEN
-        ALTER TABLE "mcp_servers" ADD COLUMN "notes" text;
+        ALTER TABLE "mcp_servers" ADD COLUMN IF NOT EXISTS "notes" text;
     END IF;
 END $$;--> statement-breakpoint
 DO $$ BEGIN

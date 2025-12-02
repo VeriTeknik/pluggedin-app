@@ -1,1 +1,1 @@
-ALTER TABLE "projects" ADD COLUMN "active_profile_uuid" uuid;
+ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "active_profile_uuid" uuid;

@@ -1,1 +1,1 @@
-ALTER TABLE "codes" ADD COLUMN "file_name" text NOT NULL;
+ALTER TABLE "codes" ADD COLUMN IF NOT EXISTS "file_name" text NOT NULL;
