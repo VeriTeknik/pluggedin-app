@@ -1,9 +1,11 @@
 import { eq } from 'drizzle-orm';
+import { getServerSession } from 'next-auth/next';
 import { NextResponse } from 'next/server';
 
 import { trackApiKeyUsage } from '@/app/actions/api-keys';
 import { db } from '@/db';
-import { apiKeysTable } from '@/db/schema';
+import { apiKeysTable, projectsTable } from '@/db/schema';
+import { authOptions } from '@/lib/auth';
 
 import { getProjectActiveProfile } from '../actions/profiles';
 
@@ -53,10 +55,77 @@ export async function authenticateApiKey(request: Request) {
     success: true,
     apiKey: apiKeyRecord[0],
     activeProfile,
+    project: {
+      uuid: apiKeyRecord[0].project_uuid,
+      user_id: activeProfile.userId,
+    },
     user: {
       id: activeProfile.userId,
       email: activeProfile.userEmail,
       username: activeProfile.username,
     },
+    authType: 'apikey' as const,
+  };
+}
+
+/**
+ * Authenticate request using either session (for UI) or API key (for external calls)
+ * Tries session first, falls back to API key
+ */
+export async function authenticate(request: Request) {
+  // First, try session-based auth (for UI access)
+  const session = await getServerSession(authOptions);
+
+  if (session?.user?.id) {
+    // Get user's project and active profile
+    const project = await db
+      .select({ uuid: projectsTable.uuid })
+      .from(projectsTable)
+      .where(eq(projectsTable.user_id, session.user.id))
+      .limit(1);
+
+    if (project.length === 0) {
+      return {
+        error: NextResponse.json(
+          { error: 'No project found for user' },
+          { status: 401 }
+        ),
+      };
+    }
+
+    const activeProfile = await getProjectActiveProfile(project[0].uuid);
+    if (!activeProfile) {
+      return {
+        error: NextResponse.json(
+          { error: 'No active profile found' },
+          { status: 401 }
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      activeProfile,
+      project: { uuid: project[0].uuid, user_id: session.user.id },
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        username: activeProfile.username,
+      },
+      authType: 'session' as const,
+    };
+  }
+
+  // Fall back to API key auth
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authenticateApiKey(request);
+  }
+
+  return {
+    error: NextResponse.json(
+      { error: 'Authentication required' },
+      { status: 401 }
+    ),
   };
 }

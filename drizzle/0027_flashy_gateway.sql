@@ -1,1 +1,1 @@
-ALTER TABLE "shared_mcp_servers" ADD COLUMN "template" jsonb DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE "shared_mcp_servers" ADD COLUMN IF NOT EXISTS "template" jsonb DEFAULT '{}'::jsonb NOT NULL;

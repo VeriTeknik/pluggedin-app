@@ -1,6 +1,6 @@
 CREATE TYPE "public"."agent_state" AS ENUM('NEW', 'PROVISIONED', 'ACTIVE', 'DRAINING', 'TERMINATED', 'KILLED');--> statement-breakpoint
 CREATE TYPE "public"."heartbeat_mode" AS ENUM('EMERGENCY', 'IDLE', 'SLEEP');--> statement-breakpoint
-CREATE TABLE "agent_heartbeats" (
+CREATE TABLE IF NOT EXISTS "agent_heartbeats" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"agent_uuid" uuid NOT NULL,
 	"mode" "heartbeat_mode" DEFAULT 'IDLE' NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE "agent_heartbeats" (
 	"timestamp" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "agent_lifecycle_events" (
+CREATE TABLE IF NOT EXISTS "agent_lifecycle_events" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"agent_uuid" uuid NOT NULL,
 	"event_type" text NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE "agent_lifecycle_events" (
 	"timestamp" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "agent_metrics" (
+CREATE TABLE IF NOT EXISTS "agent_metrics" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"agent_uuid" uuid NOT NULL,
 	"cpu_percent" integer,
@@ -28,7 +28,7 @@ CREATE TABLE "agent_metrics" (
 	"timestamp" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "agent_models" (
+CREATE TABLE IF NOT EXISTS "agent_models" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"agent_uuid" uuid NOT NULL,
 	"model_name" text NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE "agent_models" (
 	CONSTRAINT "agent_models_agent_model_unique" UNIQUE("agent_uuid","model_name","model_provider")
 );
 --> statement-breakpoint
-CREATE TABLE "agents" (
+CREATE TABLE IF NOT EXISTS "agents" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"dns_name" text NOT NULL,
@@ -61,14 +61,14 @@ ALTER TABLE "agent_lifecycle_events" ADD CONSTRAINT "agent_lifecycle_events_agen
 ALTER TABLE "agent_metrics" ADD CONSTRAINT "agent_metrics_agent_uuid_agents_uuid_fk" FOREIGN KEY ("agent_uuid") REFERENCES "public"."agents"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_models" ADD CONSTRAINT "agent_models_agent_uuid_agents_uuid_fk" FOREIGN KEY ("agent_uuid") REFERENCES "public"."agents"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agents" ADD CONSTRAINT "agents_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "agent_heartbeats_agent_uuid_idx" ON "agent_heartbeats" USING btree ("agent_uuid");--> statement-breakpoint
-CREATE INDEX "agent_heartbeats_timestamp_idx" ON "agent_heartbeats" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "agent_lifecycle_events_agent_uuid_idx" ON "agent_lifecycle_events" USING btree ("agent_uuid");--> statement-breakpoint
-CREATE INDEX "agent_lifecycle_events_timestamp_idx" ON "agent_lifecycle_events" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "agent_lifecycle_events_event_type_idx" ON "agent_lifecycle_events" USING btree ("event_type");--> statement-breakpoint
-CREATE INDEX "agent_metrics_agent_uuid_idx" ON "agent_metrics" USING btree ("agent_uuid");--> statement-breakpoint
-CREATE INDEX "agent_metrics_timestamp_idx" ON "agent_metrics" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "agent_models_agent_uuid_idx" ON "agent_models" USING btree ("agent_uuid");--> statement-breakpoint
-CREATE INDEX "agents_profile_uuid_idx" ON "agents" USING btree ("profile_uuid");--> statement-breakpoint
-CREATE INDEX "agents_state_idx" ON "agents" USING btree ("state");--> statement-breakpoint
-CREATE INDEX "agents_dns_name_idx" ON "agents" USING btree ("dns_name");
+CREATE INDEX IF NOT EXISTS "agent_heartbeats_agent_uuid_idx" ON "agent_heartbeats" USING btree ("agent_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_heartbeats_timestamp_idx" ON "agent_heartbeats" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_lifecycle_events_agent_uuid_idx" ON "agent_lifecycle_events" USING btree ("agent_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_lifecycle_events_timestamp_idx" ON "agent_lifecycle_events" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_lifecycle_events_event_type_idx" ON "agent_lifecycle_events" USING btree ("event_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_metrics_agent_uuid_idx" ON "agent_metrics" USING btree ("agent_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_metrics_timestamp_idx" ON "agent_metrics" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agent_models_agent_uuid_idx" ON "agent_models" USING btree ("agent_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agents_profile_uuid_idx" ON "agents" USING btree ("profile_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agents_state_idx" ON "agents" USING btree ("state");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "agents_dns_name_idx" ON "agents" USING btree ("dns_name");

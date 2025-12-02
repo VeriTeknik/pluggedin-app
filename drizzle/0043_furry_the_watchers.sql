@@ -1,4 +1,4 @@
-CREATE TABLE "mcp_oauth_sessions" (
+CREATE TABLE IF NOT EXISTS "mcp_oauth_sessions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"state" text NOT NULL,
 	"server_uuid" uuid NOT NULL,
@@ -10,5 +10,5 @@ CREATE TABLE "mcp_oauth_sessions" (
 	CONSTRAINT "mcp_oauth_sessions_state_unique" UNIQUE("state")
 );
 --> statement-breakpoint
-CREATE INDEX "idx_mcp_oauth_sessions_state" ON "mcp_oauth_sessions" USING btree ("state");--> statement-breakpoint
-CREATE INDEX "idx_mcp_oauth_sessions_expires_at" ON "mcp_oauth_sessions" USING btree ("expires_at");
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_sessions_state" ON "mcp_oauth_sessions" USING btree ("state");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_sessions_expires_at" ON "mcp_oauth_sessions" USING btree ("expires_at");

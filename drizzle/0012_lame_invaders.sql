@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "playground_settings" (
 );
 --> statement-breakpoint
 ALTER TABLE "playground_settings" ADD CONSTRAINT "playground_settings_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "playground_settings_profile_uuid_idx" ON "playground_settings" USING btree ("profile_uuid");
+CREATE INDEX IF NOT EXISTS "playground_settings_profile_uuid_idx" ON "playground_settings" USING btree ("profile_uuid");
 --> statement-breakpoint
 -- Add constraints for valid values
 ALTER TABLE "playground_settings" ADD CONSTRAINT "valid_provider" CHECK (provider IN ('anthropic', 'openai'));

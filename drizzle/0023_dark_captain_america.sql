@@ -1,4 +1,4 @@
-CREATE TABLE "prompts" (
+CREATE TABLE IF NOT EXISTS "prompts" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"mcp_server_uuid" uuid NOT NULL,
 	"name" text NOT NULL,
@@ -9,4 +9,4 @@ CREATE TABLE "prompts" (
 );
 --> statement-breakpoint
 ALTER TABLE "prompts" ADD CONSTRAINT "prompts_mcp_server_uuid_mcp_servers_uuid_fk" FOREIGN KEY ("mcp_server_uuid") REFERENCES "public"."mcp_servers"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "prompts_mcp_server_uuid_idx" ON "prompts" USING btree ("mcp_server_uuid");
+CREATE INDEX IF NOT EXISTS "prompts_mcp_server_uuid_idx" ON "prompts" USING btree ("mcp_server_uuid");

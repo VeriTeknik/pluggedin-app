@@ -1,1 +1,1 @@
-ALTER TABLE "mcp_server_oauth_tokens" ADD COLUMN "refresh_token_used_at" timestamp with time zone;
+ALTER TABLE "mcp_server_oauth_tokens" ADD COLUMN IF NOT EXISTS "refresh_token_used_at" timestamp with time zone;

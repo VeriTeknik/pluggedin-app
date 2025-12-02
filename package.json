@@ -15,6 +15,7 @@
     "dev:clean": "pnpm clean && pnpm dev",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
     "db:migrate:auth": "tsx scripts/apply-migrations.js",
     "db:fix:fk": "tsx scripts/add-missing-fk.ts",
     "version:patch": "pnpm version patch",

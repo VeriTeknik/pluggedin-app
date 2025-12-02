@@ -10,10 +10,10 @@ CREATE TABLE IF NOT EXISTS "release_notes" (
 );
 
 --> statement-breakpoint
-CREATE INDEX "release_notes_repository_idx" ON "release_notes" USING btree ("repository");
+CREATE INDEX IF NOT EXISTS "release_notes_repository_idx" ON "release_notes" USING btree ("repository");
 --> statement-breakpoint
-CREATE INDEX "release_notes_version_idx" ON "release_notes" USING btree ("version");
+CREATE INDEX IF NOT EXISTS "release_notes_version_idx" ON "release_notes" USING btree ("version");
 --> statement-breakpoint
-CREATE INDEX "release_notes_release_date_idx" ON "release_notes" USING btree ("release_date");
+CREATE INDEX IF NOT EXISTS "release_notes_release_date_idx" ON "release_notes" USING btree ("release_date");
 --> statement-breakpoint
-CREATE UNIQUE INDEX "release_notes_repository_version_idx" ON "release_notes" USING btree ("repository", "version"); 
+CREATE UNIQUE INDEX IF NOT EXISTS "release_notes_repository_version_idx" ON "release_notes" USING btree ("repository", "version"); 

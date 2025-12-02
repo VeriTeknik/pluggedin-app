@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS "tools" (
 --> statement-breakpoint
 DO $$ BEGIN
     IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'enabled_capabilities') THEN
-        ALTER TABLE "profiles" ADD COLUMN "enabled_capabilities" "profile_capability"[] DEFAULT '{}'::profile_capability[] NOT NULL;
+        ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "enabled_capabilities" "profile_capability"[] DEFAULT '{}'::profile_capability[] NOT NULL;
     END IF;
 END $$;--> statement-breakpoint
 DO $$ BEGIN

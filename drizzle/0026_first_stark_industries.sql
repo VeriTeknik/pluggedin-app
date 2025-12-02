@@ -1,4 +1,4 @@
-CREATE TABLE "embedded_chats" (
+CREATE TABLE IF NOT EXISTS "embedded_chats" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"profile_uuid" uuid NOT NULL,
 	"title" text NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE "embedded_chats" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "followers" (
+CREATE TABLE IF NOT EXISTS "followers" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"follower_user_id" text NOT NULL, -- Changed name and type
 	"followed_user_id" text NOT NULL, -- Changed name and type
@@ -18,7 +18,7 @@ CREATE TABLE "followers" (
 	-- Removed inline constraint, will add later
 );
 --> statement-breakpoint
-CREATE TABLE "shared_collections" (
+CREATE TABLE IF NOT EXISTS "shared_collections" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"profile_uuid" uuid NOT NULL,
 	"title" text NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE "shared_collections" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "shared_mcp_servers" (
+CREATE TABLE IF NOT EXISTS "shared_mcp_servers" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"profile_uuid" uuid NOT NULL,
 	"server_uuid" uuid NOT NULL,
@@ -56,15 +56,15 @@ ALTER TABLE "followers" ADD CONSTRAINT "followers_unique_user_relationship_idx" 
 ALTER TABLE "shared_collections" ADD CONSTRAINT "shared_collections_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "shared_mcp_servers" ADD CONSTRAINT "shared_mcp_servers_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "shared_mcp_servers" ADD CONSTRAINT "shared_mcp_servers_server_uuid_mcp_servers_uuid_fk" FOREIGN KEY ("server_uuid") REFERENCES "public"."mcp_servers"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "embedded_chats_profile_uuid_idx" ON "embedded_chats" USING btree ("profile_uuid");--> statement-breakpoint
-CREATE INDEX "embedded_chats_is_public_idx" ON "embedded_chats" USING btree ("is_public");--> statement-breakpoint
-CREATE INDEX "embedded_chats_is_active_idx" ON "embedded_chats" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "embedded_chats_profile_uuid_idx" ON "embedded_chats" USING btree ("profile_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "embedded_chats_is_public_idx" ON "embedded_chats" USING btree ("is_public");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "embedded_chats_is_active_idx" ON "embedded_chats" USING btree ("is_active");--> statement-breakpoint
 -- Create NEW indices for followers table
-CREATE INDEX "followers_follower_user_id_idx" ON "followers" USING btree ("follower_user_id");--> statement-breakpoint
-CREATE INDEX "followers_followed_user_id_idx" ON "followers" USING btree ("followed_user_id");--> statement-breakpoint
-CREATE INDEX "shared_collections_profile_uuid_idx" ON "shared_collections" USING btree ("profile_uuid");--> statement-breakpoint
-CREATE INDEX "shared_collections_is_public_idx" ON "shared_collections" USING btree ("is_public");--> statement-breakpoint
-CREATE INDEX "shared_mcp_servers_profile_uuid_idx" ON "shared_mcp_servers" USING btree ("profile_uuid");--> statement-breakpoint
-CREATE INDEX "shared_mcp_servers_server_uuid_idx" ON "shared_mcp_servers" USING btree ("server_uuid");--> statement-breakpoint
-CREATE INDEX "shared_mcp_servers_is_public_idx" ON "shared_mcp_servers" USING btree ("is_public");
+CREATE INDEX IF NOT EXISTS "followers_follower_user_id_idx" ON "followers" USING btree ("follower_user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "followers_followed_user_id_idx" ON "followers" USING btree ("followed_user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "shared_collections_profile_uuid_idx" ON "shared_collections" USING btree ("profile_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "shared_collections_is_public_idx" ON "shared_collections" USING btree ("is_public");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "shared_mcp_servers_profile_uuid_idx" ON "shared_mcp_servers" USING btree ("profile_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "shared_mcp_servers_server_uuid_idx" ON "shared_mcp_servers" USING btree ("server_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "shared_mcp_servers_is_public_idx" ON "shared_mcp_servers" USING btree ("is_public");
 -- Removed index and unique constraint creation for profiles.username

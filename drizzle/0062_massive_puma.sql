@@ -8,7 +8,7 @@ BEGIN
     AND table_name = 'users'
     AND column_name = 'show_workspace_ui'
   ) THEN
-    ALTER TABLE "users" ADD COLUMN "show_workspace_ui" boolean DEFAULT false NOT NULL;
+    ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "show_workspace_ui" boolean DEFAULT false NOT NULL;
   END IF;
 END $$;
 

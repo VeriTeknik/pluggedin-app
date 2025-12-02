@@ -1,1 +1,1 @@
-ALTER TABLE "clipboards" ADD COLUMN "source" varchar(20) DEFAULT 'ui' NOT NULL;
+ALTER TABLE "clipboards" ADD COLUMN IF NOT EXISTS "source" varchar(20) DEFAULT 'ui' NOT NULL;

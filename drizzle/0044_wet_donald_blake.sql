@@ -1,1 +1,1 @@
-ALTER TABLE "mcp_servers" ADD COLUMN "config" jsonb;
+ALTER TABLE "mcp_servers" ADD COLUMN IF NOT EXISTS "config" jsonb;

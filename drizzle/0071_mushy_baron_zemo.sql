@@ -1,1 +1,1 @@
-ALTER TABLE "oauth_pkce_states" ADD COLUMN "integrity_hash" text NOT NULL;
+ALTER TABLE "oauth_pkce_states" ADD COLUMN IF NOT EXISTS "integrity_hash" text NOT NULL;

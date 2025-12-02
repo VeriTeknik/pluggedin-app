@@ -135,5 +135,11 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000, // 1 minute
     max: 30,
     message: 'Too many clipboard delete requests. Please slow down.'
+  },
+  // Model Router rate limits (for PAP agents)
+  chatCompletions: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+    message: 'Too many chat completion requests. Please slow down.'
   }
 };
