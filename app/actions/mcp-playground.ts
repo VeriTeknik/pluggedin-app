@@ -895,7 +895,7 @@ Please answer the user's question using both the provided context and your avail
         configurable: { thread_id: threadId },
         callbacks: [
           {
-            handleLLMNewToken: async (token) => {
+            handleLLMNewToken: async (token: string) => {
               // Add token to current message
               currentAiMessage += token;
 
@@ -939,7 +939,7 @@ Please answer the user's question using both the provided context and your avail
                 }]);
               }
             },
-            handleToolStart: async (tool) => {
+            handleToolStart: async (tool: any) => {
               // Tool çalıştırılmaya başladığında loglara ekliyoruz
               await addServerLogForProfile(
                 profileUuid,
@@ -951,7 +951,7 @@ Please answer the user's question using both the provided context and your avail
               currentAiMessage = '';
               isFirstToken = true;
             },
-            handleToolEnd: async (output) => {
+            handleToolEnd: async (output: any) => {
               // Tool çalışması bittiğinde loglara ekliyoruz
               await addServerLogForProfile(
                 profileUuid,
