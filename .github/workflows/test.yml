@@ -1,0 +1,160 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+        env:
+          # Minimal env vars needed for tests
+          NEXTAUTH_SECRET: test-secret-for-ci
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+
+  security-tests:
+    runs-on: ubuntu-latest
+    name: Security Tests (Sandbox)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+
+      - name: Verify bubblewrap installation
+        run: |
+          which bwrap
+          bwrap --version
+
+      - name: Run security tests
+        run: pnpm test tests/security/
+        env:
+          NEXTAUTH_SECRET: test-secret-for-ci
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+
+      - name: Verify sandbox code exists in playground
+        run: |
+          # This check ensures the sandbox fix is not accidentally removed
+          echo "Checking for sandbox implementation in mcp-playground.ts..."
+
+          # Check that createBubblewrapConfig is imported
+          if ! grep -q "import.*createBubblewrapConfig.*from.*client-wrapper" app/actions/mcp-playground.ts; then
+            echo "ERROR: createBubblewrapConfig import missing from mcp-playground.ts"
+            echo "This is a critical security regression!"
+            exit 1
+          fi
+
+          # Check that bwrap config is applied
+          if ! grep -q "createBubblewrapConfig" app/actions/mcp-playground.ts; then
+            echo "ERROR: createBubblewrapConfig call missing from mcp-playground.ts"
+            echo "This is a critical security regression!"
+            exit 1
+          fi
+
+          # Check for the sandbox application logic
+          if ! grep -q "Applied bubblewrap sandbox" app/actions/mcp-playground.ts; then
+            echo "ERROR: Sandbox application logging missing from mcp-playground.ts"
+            echo "This is a critical security regression!"
+            exit 1
+          fi
+
+          echo "Sandbox implementation verified successfully!"
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linter
+        run: pnpm lint

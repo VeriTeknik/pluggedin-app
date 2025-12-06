@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { McpServerType, profilesTable } from '@/db/schema';
+import { createBubblewrapConfig } from '@/lib/mcp/client-wrapper';
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
 import { ensureLogDirectories } from './log-retention'; // Correct path alias
@@ -492,69 +493,87 @@ export async function getOrCreatePlaygroundSession(
 
     // Read workspace and local bin paths from env or use defaults
     const mcpWorkspacePath = process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace';
-    const _localBinPath = process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'; // Needed for uvx path
 
-    // Format servers for conversion and apply sandboxing for STDIO using firejail
+    // Format servers for conversion and apply sandboxing for STDIO using bubblewrap
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
       const isFilesystemServer = server.command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
-      // Removed isUvxServer check
 
+      // Base config for all servers
+      let serverCommand = server.command;
+      let serverArgs = server.args;
+      let serverEnv = server.env;
 
       if (isFilesystemServer && server.type === 'STDIO') {
-        // Special handling for filesystem server: set cwd and ensure arg points within workspace
+        // Special handling for filesystem server: ensure arg points within workspace
+        serverArgs = [...(server.args?.slice(0, -1) ?? []), '.'];
+      }
+
+      // Apply bubblewrap sandboxing for STDIO servers on Linux
+      if (server.type === McpServerType.STDIO && process.platform === 'linux') {
+        // Create a mock server config for bubblewrap
+        const mockServerConfig = {
+          uuid: server.uuid,
+          type: McpServerType.STDIO,
+          command: serverCommand,
+          args: serverArgs,
+          env: serverEnv,
+          name: server.name,
+        };
+
+        const bwrapConfig = createBubblewrapConfig(mockServerConfig as any);
+
+        if (bwrapConfig) {
+          // Use bubblewrap wrapper
+          serverCommand = bwrapConfig.command;
+          serverArgs = bwrapConfig.args;
+          serverEnv = bwrapConfig.env;
+          console.log(`[MCP Playground] Applied bubblewrap sandbox to server: ${server.name}`);
+        } else {
+          console.warn(`[MCP Playground] Bubblewrap not available for server: ${server.name}, running without sandbox`);
+        }
+      }
+
+      if (isFilesystemServer && server.type === 'STDIO') {
         mcpServersConfig[server.name] = {
-          command: server.command,
-          // Ensure the last argument is '.' to target the cwd
-          args: [...(server.args?.slice(0, -1) ?? []), '.'],
-          env: server.env,
+          command: serverCommand,
+          args: serverArgs,
+          env: serverEnv,
           url: server.url,
           type: server.type,
-          uuid: server.uuid, // Pass UUID for OAuth HOME detection
-          config: server.config, // Pass config for OAuth detection
-          transport: 'stdio', // Add explicit transport field
-          cwd: mcpWorkspacePath // Explicitly set the CWD for the server process
+          uuid: server.uuid,
+          config: server.config,
+          transport: 'stdio',
+          cwd: mcpWorkspacePath
         };
       } else {
-        // Pass other server configs directly; firejail logic is handled in client-wrapper.ts
         mcpServersConfig[server.name] = {
-          command: server.command,
-          args: server.args,
-          env: server.env,
+          command: serverCommand,
+          args: serverArgs,
+          env: serverEnv,
           url: server.url,
           type: server.type,
-          uuid: server.uuid, // Pass UUID for OAuth HOME detection
-          config: server.config, // Pass config for OAuth detection
-          // Do not set cwd for non-filesystem servers unless specifically needed/configured
+          uuid: server.uuid,
+          config: server.config,
         };
-        
+
         // Add transport field based on server type
         if (server.type === McpServerType.STDIO) {
           mcpServersConfig[server.name].transport = 'stdio';
         } else if (server.type === McpServerType.SSE) {
           mcpServersConfig[server.name].transport = 'sse';
-          // Include streamableHTTPOptions for SSE servers with OAuth
           const serverWithOptions = server as any;
           if (serverWithOptions.streamableHTTPOptions) {
             mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
           }
         } else if (server.type === McpServerType.STREAMABLE_HTTP) {
           mcpServersConfig[server.name].transport = 'streamable_http';
-          // Cast server to any to access dynamically added fields
           const serverWithOptions = server as any;
           if (serverWithOptions.streamableHTTPOptions) {
             mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
           }
         }
       }
-
-      // Removed absolute path logic for uvx
-
-      // Add applySandboxing flag specifically for playground sessions for STDIO servers
-      if (mcpServersConfig[server.name]?.type === 'STDIO') {
-        mcpServersConfig[server.name].applySandboxing = true;
-      }
-
     });
 
     // Initialize LLM with streaming
