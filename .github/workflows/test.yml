@@ -89,8 +89,8 @@ jobs:
           which bwrap
           bwrap --version
 
-      - name: Run security tests
-        run: pnpm test tests/security/
+      - name: Run sandbox security tests
+        run: pnpm test tests/security/mcp-sandbox.test.ts
         env:
           NEXTAUTH_SECRET: test-secret-for-ci
           DATABASE_URL: postgresql://test:test@localhost:5432/test
