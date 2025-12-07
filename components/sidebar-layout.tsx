@@ -219,14 +219,6 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="PAP Agents" className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/agents'>
-                        <Server className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">Agents</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={t('playground.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/mcp-playground'>
                         <FlaskConical className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
@@ -296,10 +288,10 @@ export default function SidebarLayout({
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('blog:blog.title')} className="group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuButton asChild tooltip={t('blog:title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/blog'>
                         <Newspaper className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('blog:blog.title')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('blog:title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
