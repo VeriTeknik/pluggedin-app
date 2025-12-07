@@ -130,6 +130,27 @@ interface AgentDetailResponse {
   kubernetesStatus: KubernetesStatus | null;
 }
 
+// Collector heartbeat data (from pap-heartbeat-collector)
+interface CollectorHeartbeat {
+  agent_uuid: string;
+  agent_name: string;
+  mode: string;
+  uptime_seconds: number;
+  last_seen: string;
+  healthy: boolean;
+  observation_mode: boolean;
+  consecutive_heartbeats: number;
+}
+
+// Helper to extract cluster_id from dns_name (e.g., "cem.is.plugged.in" → "is.plugged.in")
+function extractClusterId(dnsName: string): string {
+  const parts = dnsName.split('.');
+  if (parts.length >= 3) {
+    return parts.slice(1).join('.');
+  }
+  return dnsName;
+}
+
 // Heartbeat intervals per mode (PAP-RFC-001 §8.1)
 const HEARTBEAT_INTERVALS: Record<string, number> = {
   EMERGENCY: 5 * 1000,
@@ -217,6 +238,16 @@ export default function AgentDetailPage() {
   );
 
   const agent = data?.agent;
+
+  // Fetch heartbeat status from collector when on telemetry tab
+  const clusterId = agent?.dns_name ? extractClusterId(agent.dns_name) : null;
+  const { data: collectorData, error: collectorError } = useSWR<CollectorHeartbeat>(
+    activeTab === 'telemetry' && agent?.uuid && clusterId
+      ? `/api/clusters/${clusterId}/agents/${agent.uuid}`
+      : null,
+    fetcher,
+    { refreshInterval: 5000 }
+  );
   const recentHeartbeats = data?.recentHeartbeats || [];
   const recentMetrics = data?.recentMetrics || [];
   const lifecycleEvents = data?.lifecycleEvents || [];
@@ -491,12 +522,12 @@ export default function AgentDetailPage() {
         </TabsContent>
 
         <TabsContent value="telemetry" className="space-y-4">
-          {/* Health Status Card */}
+          {/* Health Status Card - uses collector data when available */}
           {agent.state === 'ACTIVE' && (
-            <Card className={isHealthy ? 'border-green-500/50' : 'border-red-500/50'}>
+            <Card className={(collectorData?.healthy ?? isHealthy) ? 'border-green-500/50' : 'border-red-500/50'}>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  {isHealthy ? (
+                  {(collectorData?.healthy ?? isHealthy) ? (
                     <Heart className="h-5 w-5 text-green-500" />
                   ) : (
                     <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -507,16 +538,16 @@ export default function AgentDetailPage() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge variant={isHealthy ? 'default' : 'destructive'}>
-                      {isHealthy ? 'Healthy' : 'Unhealthy'}
+                    <Badge variant={(collectorData?.healthy ?? isHealthy) ? 'default' : 'destructive'}>
+                      {(collectorData?.healthy ?? isHealthy) ? 'Healthy' : 'Unhealthy'}
                     </Badge>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Mode: {lastHeartbeatMode} (interval: {expectedInterval / 1000}s)
+                      Mode: {collectorData?.mode ?? lastHeartbeatMode} (interval: {HEARTBEAT_INTERVALS[collectorData?.mode ?? lastHeartbeatMode] / 1000 || 30}s)
                     </p>
                   </div>
-                  {agent.last_heartbeat_at && (
+                  {(collectorData?.last_seen || agent.last_heartbeat_at) && (
                     <div className="text-right">
-                      <p className="text-2xl font-bold">{timeAgo(agent.last_heartbeat_at)}</p>
+                      <p className="text-2xl font-bold">{timeAgo(collectorData?.last_seen ?? agent.last_heartbeat_at)}</p>
                       <p className="text-sm text-muted-foreground">Last heartbeat</p>
                     </div>
                   )}
@@ -566,7 +597,7 @@ export default function AgentDetailPage() {
             </Card>
           )}
 
-          {/* Recent Heartbeats */}
+          {/* Recent Heartbeats - from Collector */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -578,11 +609,51 @@ export default function AgentDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {recentHeartbeats.length === 0 ? (
+              {collectorError ? (
+                <p className="text-sm text-muted-foreground">
+                  Unable to fetch heartbeats from collector
+                </p>
+              ) : collectorData ? (
+                <div className="space-y-4">
+                  {/* Current Status */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      {collectorData.healthy ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-500" />
+                      )}
+                      <div>
+                        <Badge variant={collectorData.healthy ? 'default' : 'destructive'}>
+                          {collectorData.healthy ? 'Healthy' : 'Unhealthy'}
+                        </Badge>
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          Mode: {collectorData.mode}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{timeAgo(collectorData.last_seen)}</p>
+                      <p className="text-xs text-muted-foreground">Last seen</p>
+                    </div>
+                  </div>
+                  {/* Details */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Uptime</p>
+                      <p className="font-medium">{formatUptime(Math.floor(collectorData.uptime_seconds))}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Consecutive Heartbeats</p>
+                      <p className="font-medium">{collectorData.consecutive_heartbeats.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : recentHeartbeats.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No heartbeats received yet</p>
               ) : (
                 <div className="space-y-2">
-                  {recentHeartbeats.map((hb) => (
+                  {recentHeartbeats.map((hb: Heartbeat) => (
                     <div key={hb.id} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">{hb.mode}</Badge>
