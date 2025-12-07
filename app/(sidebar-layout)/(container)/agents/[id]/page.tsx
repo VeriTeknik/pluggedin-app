@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, RefreshCw, RotateCw, Server, Terminal, Trash2, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, Pause, Play, RefreshCw, RotateCw, Server, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -227,6 +227,8 @@ export default function AgentDetailPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [isSuspending, setIsSuspending] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const { toast } = useToast();
 
@@ -300,6 +302,64 @@ export default function AgentDetailPage() {
       });
     } finally {
       setIsRestarting(false);
+    }
+  };
+
+  const handleSuspend = async () => {
+    try {
+      setIsSuspending(true);
+      const response = await fetch(`/api/agents/${id}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'User requested suspension via UI' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to suspend agent');
+      }
+
+      await mutate();
+      toast({
+        title: 'Agent Suspended',
+        description: 'Agent has been suspended. Use Resume to bring it back online.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to suspend agent',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
+  const handleResume = async () => {
+    try {
+      setIsResuming(true);
+      const response = await fetch(`/api/agents/${id}/resume`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to resume agent');
+      }
+
+      await mutate();
+      toast({
+        title: 'Agent Resuming',
+        description: 'Agent is starting up. It will become ACTIVE after sending first heartbeat.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to resume agent',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResuming(false);
     }
   };
 
@@ -405,6 +465,12 @@ export default function AgentDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold">{agent.name}</h1>
               <Badge variant={getStateBadgeVariant(agent.state)}>{agent.state}</Badge>
+              {(agent.metadata as Record<string, unknown>)?.intentionally_suspended === true && (
+                <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                  <Pause className="mr-1 h-3 w-3" />
+                  Suspended
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground font-mono text-sm mt-1">{agent.dns_name}</p>
           </div>
@@ -427,6 +493,30 @@ export default function AgentDetailPage() {
                 <RotateCw className={`mr-2 h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
                 {isRestarting ? 'Restarting...' : 'Restart'}
               </Button>
+            )}
+            {/* Suspend/Resume button - only show for non-terminated agents */}
+            {agent.state !== 'TERMINATED' && agent.state !== 'KILLED' && (
+              (agent.metadata as Record<string, unknown>)?.intentionally_suspended === true ? (
+                <Button
+                  variant="outline"
+                  onClick={handleResume}
+                  disabled={isResuming}
+                  className="text-green-600 hover:text-green-700"
+                >
+                  <Play className={`mr-2 h-4 w-4 ${isResuming ? 'animate-pulse' : ''}`} />
+                  {isResuming ? 'Resuming...' : 'Resume'}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleSuspend}
+                  disabled={isSuspending}
+                  className="text-yellow-600 hover:text-yellow-700"
+                >
+                  <Pause className={`mr-2 h-4 w-4 ${isSuspending ? 'animate-pulse' : ''}`} />
+                  {isSuspending ? 'Suspending...' : 'Suspend'}
+                </Button>
+              )
             )}
             <Button
               variant="outline"
