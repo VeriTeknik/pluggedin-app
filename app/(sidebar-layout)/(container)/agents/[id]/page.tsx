@@ -131,7 +131,7 @@ interface AgentDetailResponse {
 }
 
 // Collector heartbeat data (from pap-heartbeat-collector)
-interface CollectorHeartbeat {
+interface CollectorAgentData {
   agent_uuid: string;
   agent_name: string;
   mode: string;
@@ -140,6 +140,12 @@ interface CollectorHeartbeat {
   healthy: boolean;
   observation_mode: boolean;
   consecutive_heartbeats: number;
+}
+
+interface CollectorResponse {
+  cluster_id: string;
+  cluster_name: string;
+  agent: CollectorAgentData;
 }
 
 // Helper to extract cluster_id from dns_name (e.g., "cem.is.plugged.in" → "is.plugged.in")
@@ -241,13 +247,14 @@ export default function AgentDetailPage() {
 
   // Fetch heartbeat status from collector when on telemetry tab
   const clusterId = agent?.dns_name ? extractClusterId(agent.dns_name) : null;
-  const { data: collectorData, error: collectorError } = useSWR<CollectorHeartbeat>(
+  const { data: collectorResponse, error: collectorError } = useSWR<CollectorResponse>(
     activeTab === 'telemetry' && agent?.uuid && clusterId
       ? `/api/clusters/${clusterId}/agents/${agent.uuid}`
       : null,
     fetcher,
     { refreshInterval: 5000 }
   );
+  const collectorData = collectorResponse?.agent;
   const recentHeartbeats = data?.recentHeartbeats || [];
   const recentMetrics = data?.recentMetrics || [];
   const lifecycleEvents = data?.lifecycleEvents || [];
