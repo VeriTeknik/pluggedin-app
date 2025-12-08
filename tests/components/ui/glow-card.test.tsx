@@ -43,7 +43,10 @@ describe('GlowCard', () => {
 
     const card = container.firstChild as HTMLElement;
     expect(card).toHaveClass('relative');
-    expect(card.className).toContain('glow');
+    // Check for gradient and animation classes that create the glow effect
+    expect(card.className).toContain('electric-cyan');
+    expect(card.className).toContain('neon-purple');
+    expect(card.className).toContain('animate-gradient-shift');
   });
 
   it('renders with hover effect', () => {
