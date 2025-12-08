@@ -2246,6 +2246,19 @@ export const blogPostTranslationsRelations = relations(blogPostTranslationsTable
 // ============================================================================
 // PAP (Plugged.in Agent Protocol) Tables
 // ============================================================================
+//
+// TIMEZONE CONVENTION:
+// All timestamps in PAP tables use `WITH TIME ZONE` (timestamptz).
+// - Storage: Timestamps stored as UTC internally
+// - Display: PostgreSQL converts to client's timezone on retrieval
+// - Comparison: Accurate cross-timezone comparisons
+// - DST Safety: No ambiguity during daylight saving transitions
+//
+// Application code should:
+// - Use timezone-aware datetime objects (Date with UTC, dayjs, luxon)
+// - Store timestamps in UTC or let the database handle conversion
+// - Use ISO 8601 format for API responses (e.g., "2024-01-15T10:30:00Z")
+// ============================================================================
 
 // PAP Agent State Enum - Normative lifecycle states per PAP-RFC-001 v1.0
 export enum AgentState {
@@ -2519,7 +2532,14 @@ export const agentLifecycleEventsTable = pgTable(
   })
 );
 
-// Agent model assignments - For future implementation
+/**
+ * Agent model assignments - For future implementation
+ *
+ * NOTE: A partial unique index exists via migration to ensure only ONE model
+ * per agent can have is_default=true:
+ *   CREATE UNIQUE INDEX "agent_models_one_default_per_agent"
+ *   ON "agent_models" ("agent_uuid") WHERE "is_default" = true;
+ */
 export const agentModelsTable = pgTable(
   'agent_models',
   {
@@ -2529,6 +2549,7 @@ export const agentModelsTable = pgTable(
       .references(() => agentsTable.uuid, { onDelete: 'cascade' }),
     model_name: text('model_name').notNull(), // e.g., 'claude-3-sonnet', 'gpt-4'
     model_provider: text('model_provider').notNull(), // e.g., 'anthropic', 'openai'
+    // Only one model per agent can be default (enforced by partial unique index)
     is_default: boolean('is_default').default(false),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -2541,6 +2562,7 @@ export const agentModelsTable = pgTable(
       table.model_name,
       table.model_provider
     ),
+    // Note: Partial unique index for is_default=true is in migration 0083
   })
 );
 

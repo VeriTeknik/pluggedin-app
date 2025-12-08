@@ -111,3 +111,40 @@ CHECK (dns_name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND LENGTH(dns_name) <= 63);
 --
 -- This comment serves as documentation for operators to implement
 -- retention based on their specific requirements and scale.
+
+-- ============================================================================
+-- 7. UNIQUE DEFAULT MODEL CONSTRAINT
+-- ============================================================================
+-- Ensure only one model can be marked as default per agent.
+-- This uses a partial unique index (PostgreSQL feature) that only applies
+-- when is_default = true.
+CREATE UNIQUE INDEX "agent_models_one_default_per_agent"
+ON "agent_models" ("agent_uuid")
+WHERE "is_default" = true;
+--> statement-breakpoint
+
+-- ============================================================================
+-- 8. TIMEZONE CONVENTION DOCUMENTATION
+-- ============================================================================
+-- CONVENTION: All timestamps in this schema use `WITH TIME ZONE` (timestamptz)
+--
+-- This ensures:
+--   1. Storage: All timestamps stored as UTC internally
+--   2. Display: PostgreSQL converts to client's timezone on retrieval
+--   3. Comparison: Accurate cross-timezone comparisons
+--   4. DST Safety: No ambiguity during daylight saving transitions
+--
+-- Application code should:
+--   - Always use timezone-aware datetime objects
+--   - Store timestamps in UTC or let the database handle conversion
+--   - Use ISO 8601 format for API responses (e.g., "2024-01-15T10:30:00Z")
+--
+-- Tables using timestamptz:
+--   - agents: created_at, provisioned_at, activated_at, terminated_at, last_heartbeat_at
+--   - agent_heartbeats: timestamp
+--   - agent_metrics: timestamp
+--   - agent_lifecycle_events: timestamp
+--   - agent_templates: created_at, updated_at
+--   - agent_models: created_at
+--   - clusters: last_alert_at, last_seen_at, created_at, updated_at
+--   - cluster_alerts: acknowledged_at, alert_timestamp, created_at
