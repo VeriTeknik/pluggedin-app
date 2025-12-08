@@ -1,5 +1,6 @@
 CREATE TYPE "public"."access_level" AS ENUM('PRIVATE', 'PUBLIC');--> statement-breakpoint
 CREATE TYPE "public"."agent_state" AS ENUM('NEW', 'PROVISIONED', 'ACTIVE', 'DRAINING', 'TERMINATED', 'KILLED');--> statement-breakpoint
+-- Note: alert_severity uses lowercase values to match standard monitoring conventions (Prometheus, Grafana, etc.)
 CREATE TYPE "public"."alert_severity" AS ENUM('critical', 'warning', 'info');--> statement-breakpoint
 CREATE TYPE "public"."cluster_alert_type" AS ENUM('AGENT_DEATH', 'EMERGENCY_MODE', 'RESTART_DETECTED');--> statement-breakpoint
 CREATE TYPE "public"."cluster_status" AS ENUM('ACTIVE', 'INACTIVE', 'MAINTENANCE');--> statement-breakpoint
