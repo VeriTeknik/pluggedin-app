@@ -2261,12 +2261,31 @@ export const agentStateEnum = pgEnum(
   enumToPgEnum(AgentState)
 );
 
-// PAP Heartbeat Mode Enum - Per PAP-RFC-001 §8.2
+/**
+ * PAP Heartbeat Mode Enum - Per PAP-RFC-001 §8.2
+ *
+ * Heartbeat intervals by mode:
+ * - EMERGENCY: 5 seconds (critical operations)
+ * - IDLE: 30 seconds (default, normal operation)
+ * - SLEEP: 15 minutes (low activity, battery saving)
+ *
+ * @see HEARTBEAT_INTERVALS for numeric constants (milliseconds)
+ */
 export enum HeartbeatMode {
   EMERGENCY = 'EMERGENCY',  // 5s interval
   IDLE = 'IDLE',           // 30s interval (default)
   SLEEP = 'SLEEP',         // 15min interval
 }
+
+/**
+ * Heartbeat interval constants in milliseconds.
+ * Use these for application-level timeout calculations.
+ */
+export const HEARTBEAT_INTERVALS = {
+  [HeartbeatMode.EMERGENCY]: 5_000,      // 5 seconds
+  [HeartbeatMode.IDLE]: 30_000,          // 30 seconds
+  [HeartbeatMode.SLEEP]: 15 * 60_000,    // 15 minutes
+} as const;
 export const heartbeatModeEnum = pgEnum(
   'heartbeat_mode',
   enumToPgEnum(HeartbeatMode)
@@ -2418,6 +2437,8 @@ export const agentsTable = pgTable(
     dnsNameIdx: index('agents_dns_name_idx').on(table.dns_name),
     accessLevelIdx: index('agents_access_level_idx').on(table.access_level),
     deploymentStatusIdx: index('agents_deployment_status_idx').on(table.deployment_status),
+    // Index for zombie detection queries (agents with stale heartbeats)
+    lastHeartbeatAtIdx: index('agents_last_heartbeat_at_idx').on(table.last_heartbeat_at),
   })
 );
 
@@ -2438,6 +2459,8 @@ export const agentHeartbeatsTable = pgTable(
   (table) => ({
     agentUuidIdx: index('agent_heartbeats_agent_uuid_idx').on(table.agent_uuid),
     timestampIdx: index('agent_heartbeats_timestamp_idx').on(table.timestamp),
+    // Composite index for efficient "heartbeats for agent X in time range" queries
+    agentTimestampIdx: index('agent_heartbeats_agent_timestamp_idx').on(table.agent_uuid, table.timestamp),
   })
 );
 
@@ -2460,6 +2483,8 @@ export const agentMetricsTable = pgTable(
   (table) => ({
     agentUuidIdx: index('agent_metrics_agent_uuid_idx').on(table.agent_uuid),
     timestampIdx: index('agent_metrics_timestamp_idx').on(table.timestamp),
+    // Composite index for efficient "metrics for agent X in time range" queries
+    agentTimestampIdx: index('agent_metrics_agent_timestamp_idx').on(table.agent_uuid, table.timestamp),
   })
 );
 
@@ -2489,6 +2514,8 @@ export const agentLifecycleEventsTable = pgTable(
     agentUuidIdx: index('agent_lifecycle_events_agent_uuid_idx').on(table.agent_uuid),
     timestampIdx: index('agent_lifecycle_events_timestamp_idx').on(table.timestamp),
     eventTypeIdx: index('agent_lifecycle_events_event_type_idx').on(table.event_type),
+    // Composite index for efficient "events for agent X ordered by time" queries
+    agentTimestampIdx: index('agent_lifecycle_events_agent_timestamp_idx').on(table.agent_uuid, table.timestamp),
   })
 );
 
@@ -2592,7 +2619,12 @@ export const clusterAlertTypeEnum = pgEnum(
   enumToPgEnum(ClusterAlertType)
 );
 
-// Alert severity levels
+/**
+ * Alert severity levels for cluster alerts.
+ *
+ * Uses lowercase values to match standard monitoring conventions
+ * (Prometheus, Grafana, PagerDuty, etc.) for easier integration.
+ */
 export enum AlertSeverity {
   CRITICAL = 'critical',
   WARNING = 'warning',
@@ -2663,8 +2695,9 @@ export const clusterAlertsTable = pgTable(
       .references(() => clustersTable.uuid, { onDelete: 'cascade' }),
     // Alert type
     alert_type: clusterAlertTypeEnum('alert_type').notNull(),
-    // Which agent this alert is about
-    agent_uuid: uuid('agent_uuid'),
+    // Which agent this alert is about (FK with SET NULL to preserve alerts after agent deletion)
+    agent_uuid: uuid('agent_uuid')
+      .references(() => agentsTable.uuid, { onDelete: 'set null' }),
     // Agent name (for display when agent may be deleted)
     agent_name: text('agent_name'),
     // Alert severity
@@ -2689,6 +2722,12 @@ export const clusterAlertsTable = pgTable(
     agentUuidIdx: index('cluster_alerts_agent_uuid_idx').on(table.agent_uuid),
     acknowledgedIdx: index('cluster_alerts_acknowledged_idx').on(table.acknowledged),
     createdAtIdx: index('cluster_alerts_created_at_idx').on(table.created_at),
+    // Composite index for efficient unacknowledged alerts queries
+    clusterAckCreatedIdx: index('cluster_alerts_cluster_ack_created_idx').on(
+      table.cluster_uuid,
+      table.acknowledged,
+      table.created_at
+    ),
   })
 );
 
