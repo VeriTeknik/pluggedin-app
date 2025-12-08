@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 describe('Toggle Group Component', () => {
   it('should export ToggleGroup and ToggleGroupItem', () => {
-    // Just verify the imports work - we can't test React components without proper setup
-    const toggleGroupModule = require('@/components/ui/toggle-group');
-    
-    expect(toggleGroupModule).toBeDefined();
-    expect(toggleGroupModule.ToggleGroup).toBeDefined();
-    expect(toggleGroupModule.ToggleGroupItem).toBeDefined();
+    // Verify the imports work
+    expect(ToggleGroup).toBeDefined();
+    expect(ToggleGroupItem).toBeDefined();
+    expect(typeof ToggleGroup).toBe('object'); // React.forwardRef returns an object
+    expect(typeof ToggleGroupItem).toBe('object');
   });
 });
