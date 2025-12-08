@@ -2242,3 +2242,526 @@ export const blogPostTranslationsRelations = relations(blogPostTranslationsTable
     references: [blogPostsTable.uuid],
   }),
 }));
+
+// ============================================================================
+// PAP (Plugged.in Agent Protocol) Tables
+// ============================================================================
+//
+// TIMEZONE CONVENTION:
+// All timestamps in PAP tables use `WITH TIME ZONE` (timestamptz).
+// - Storage: Timestamps stored as UTC internally
+// - Display: PostgreSQL converts to client's timezone on retrieval
+// - Comparison: Accurate cross-timezone comparisons
+// - DST Safety: No ambiguity during daylight saving transitions
+//
+// Application code should:
+// - Use timezone-aware datetime objects (Date with UTC, dayjs, luxon)
+// - Store timestamps in UTC or let the database handle conversion
+// - Use ISO 8601 format for API responses (e.g., "2024-01-15T10:30:00Z")
+// ============================================================================
+
+// PAP Agent State Enum - Normative lifecycle states per PAP-RFC-001 v1.0
+export enum AgentState {
+  NEW = 'NEW',                     // Initial state, not yet provisioned
+  PROVISIONED = 'PROVISIONED',     // Infrastructure ready, not yet active
+  ACTIVE = 'ACTIVE',               // Running and accepting requests
+  DRAINING = 'DRAINING',           // Gracefully shutting down
+  TERMINATED = 'TERMINATED',       // Cleanly shut down
+  KILLED = 'KILLED',               // Forcefully terminated by Station
+}
+export const agentStateEnum = pgEnum(
+  'agent_state',
+  enumToPgEnum(AgentState)
+);
+
+/**
+ * PAP Heartbeat Mode Enum - Per PAP-RFC-001 §8.2
+ *
+ * Heartbeat intervals by mode:
+ * - EMERGENCY: 5 seconds (critical operations)
+ * - IDLE: 30 seconds (default, normal operation)
+ * - SLEEP: 15 minutes (low activity, battery saving)
+ *
+ * @see HEARTBEAT_INTERVALS for numeric constants (milliseconds)
+ */
+export enum HeartbeatMode {
+  EMERGENCY = 'EMERGENCY',  // 5s interval
+  IDLE = 'IDLE',           // 30s interval (default)
+  SLEEP = 'SLEEP',         // 15min interval
+}
+
+/**
+ * Heartbeat interval constants in milliseconds.
+ * Use these for application-level timeout calculations.
+ */
+export const HEARTBEAT_INTERVALS = {
+  [HeartbeatMode.EMERGENCY]: 5_000,      // 5 seconds
+  [HeartbeatMode.IDLE]: 30_000,          // 30 seconds
+  [HeartbeatMode.SLEEP]: 15 * 60_000,    // 15 minutes
+} as const;
+export const heartbeatModeEnum = pgEnum(
+  'heartbeat_mode',
+  enumToPgEnum(HeartbeatMode)
+);
+
+// PAP Access Level Enum - Agent visibility
+export enum AccessLevel {
+  PRIVATE = 'PRIVATE',     // Only hub API key can access
+  PUBLIC = 'PUBLIC',       // Anyone with URL (link sharing)
+}
+export const accessLevelEnum = pgEnum(
+  'access_level',
+  enumToPgEnum(AccessLevel)
+);
+
+// PAP Deployment Status Enum
+export enum DeploymentStatus {
+  PENDING = 'PENDING',       // Waiting to be deployed
+  DEPLOYING = 'DEPLOYING',   // Deployment in progress
+  RUNNING = 'RUNNING',       // Successfully deployed and running
+  FAILED = 'FAILED',         // Deployment failed
+  STOPPED = 'STOPPED',       // Manually stopped
+}
+export const deploymentStatusEnum = pgEnum(
+  'deployment_status',
+  enumToPgEnum(DeploymentStatus)
+);
+
+// ============================================================================
+// Agent Marketplace Tables
+// ============================================================================
+
+// Agent Templates - Marketplace catalog
+export const agentTemplatesTable = pgTable(
+  'agent_templates',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Identity (namespace/name pattern like npm/docker)
+    namespace: text('namespace').notNull(),        // 'veriteknik'
+    name: text('name').notNull(),                  // 'compass'
+    version: text('version').notNull(),            // '1.0.0'
+
+    // Display
+    display_name: text('display_name').notNull(),  // 'Compass - AI Jury'
+    description: text('description'),              // Short description
+    long_description: text('long_description'),    // Markdown content
+    icon_url: text('icon_url'),
+    banner_url: text('banner_url'),
+
+    // Technical
+    docker_image: text('docker_image').notNull(),  // 'ghcr.io/veriteknik/compass-agent:v1.0.0'
+    container_port: integer('container_port').default(3000),
+    health_endpoint: text('health_endpoint').default('/health'),
+    env_schema: jsonb('env_schema').$type<{
+      required?: string[];
+      optional?: string[];
+      defaults?: Record<string, string>;
+    }>(),
+
+    // Metadata
+    tags: text('tags').array(),                    // ['ai', 'research', 'consensus']
+    category: text('category'),                    // 'research', 'productivity', etc.
+
+    // Publishing
+    is_public: boolean('is_public').default(false),
+    is_verified: boolean('is_verified').default(false),
+    is_featured: boolean('is_featured').default(false),
+    publisher_id: text('publisher_id'),            // User ID of publisher
+    repository_url: text('repository_url'),        // GitHub repo URL
+    documentation_url: text('documentation_url'),
+
+    // Stats
+    install_count: integer('install_count').default(0),
+
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    namespaceNameVersionUnique: unique('agent_templates_namespace_name_version_unique').on(
+      table.namespace,
+      table.name,
+      table.version
+    ),
+    namespaceIdx: index('agent_templates_namespace_idx').on(table.namespace),
+    categoryIdx: index('agent_templates_category_idx').on(table.category),
+    isPublicIdx: index('agent_templates_is_public_idx').on(table.is_public),
+  })
+);
+
+// Main agents table (agent instances deployed by users)
+export const agentsTable = pgTable(
+  'agents',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    name: text('name').notNull().unique(), // DNS-safe subdomain (e.g., 'oracle', 'my-compass')
+    dns_name: text('dns_name').notNull().unique(), // Full DNS: {name}.is.plugged.in
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+
+    // Marketplace - Link to template (optional for custom agents)
+    template_uuid: uuid('template_uuid')
+      .references(() => agentTemplatesTable.uuid, { onDelete: 'set null' }),
+
+    // Access control
+    access_level: accessLevelEnum('access_level').notNull().default('PRIVATE'),
+
+    // PAP State
+    state: agentStateEnum('state').notNull().default('NEW'),
+    heartbeat_mode: heartbeatModeEnum('heartbeat_mode').notNull().default('IDLE'),
+    deployment_status: deploymentStatusEnum('deployment_status').notNull().default('PENDING'),
+
+    // Kubernetes
+    kubernetes_namespace: text('kubernetes_namespace').default('agents'),
+    kubernetes_deployment: text('kubernetes_deployment'), // Deployment name in K8s
+
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    provisioned_at: timestamp('provisioned_at', { withTimezone: true }),
+    activated_at: timestamp('activated_at', { withTimezone: true }),
+    terminated_at: timestamp('terminated_at', { withTimezone: true }),
+    last_heartbeat_at: timestamp('last_heartbeat_at', { withTimezone: true }),
+
+    // Metadata
+    metadata: jsonb('metadata').$type<{
+      description?: string;
+      image?: string; // Container image (overrides template if set)
+      resources?: {
+        cpu_request?: string;
+        memory_request?: string;
+        cpu_limit?: string;
+        memory_limit?: string;
+      };
+      env_overrides?: Record<string, string>; // Custom env vars
+      [key: string]: any;
+    }>(),
+  },
+  (table) => ({
+    profileUuidIdx: index('agents_profile_uuid_idx').on(table.profile_uuid),
+    templateUuidIdx: index('agents_template_uuid_idx').on(table.template_uuid),
+    stateIdx: index('agents_state_idx').on(table.state),
+    dnsNameIdx: index('agents_dns_name_idx').on(table.dns_name),
+    accessLevelIdx: index('agents_access_level_idx').on(table.access_level),
+    deploymentStatusIdx: index('agents_deployment_status_idx').on(table.deployment_status),
+    // Index for zombie detection queries (agents with stale heartbeats)
+    lastHeartbeatAtIdx: index('agents_last_heartbeat_at_idx').on(table.last_heartbeat_at),
+  })
+);
+
+// Agent heartbeats - CRITICAL: Liveness only, no metrics (PAP Zombie Prevention)
+export const agentHeartbeatsTable = pgTable(
+  'agent_heartbeats',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    agent_uuid: uuid('agent_uuid')
+      .notNull()
+      .references(() => agentsTable.uuid, { onDelete: 'cascade' }),
+    mode: heartbeatModeEnum('mode').notNull().default('IDLE'),
+    uptime_seconds: integer('uptime_seconds').notNull(),
+    timestamp: timestamp('timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    agentUuidIdx: index('agent_heartbeats_agent_uuid_idx').on(table.agent_uuid),
+    timestampIdx: index('agent_heartbeats_timestamp_idx').on(table.timestamp),
+    // Composite index for efficient "heartbeats for agent X in time range" queries
+    agentTimestampIdx: index('agent_heartbeats_agent_timestamp_idx').on(table.agent_uuid, table.timestamp),
+  })
+);
+
+// Agent metrics - Separate from heartbeats per PAP-RFC-001 §8.2
+export const agentMetricsTable = pgTable(
+  'agent_metrics',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    agent_uuid: uuid('agent_uuid')
+      .notNull()
+      .references(() => agentsTable.uuid, { onDelete: 'cascade' }),
+    cpu_percent: integer('cpu_percent'), // 0-100
+    memory_mb: integer('memory_mb'),
+    requests_handled: integer('requests_handled'),
+    custom_metrics: jsonb('custom_metrics').$type<Record<string, number>>(),
+    timestamp: timestamp('timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    agentUuidIdx: index('agent_metrics_agent_uuid_idx').on(table.agent_uuid),
+    timestampIdx: index('agent_metrics_timestamp_idx').on(table.timestamp),
+    // Composite index for efficient "metrics for agent X in time range" queries
+    agentTimestampIdx: index('agent_metrics_agent_timestamp_idx').on(table.agent_uuid, table.timestamp),
+  })
+);
+
+// Agent lifecycle events - Immutable audit trail
+export const agentLifecycleEventsTable = pgTable(
+  'agent_lifecycle_events',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    agent_uuid: uuid('agent_uuid')
+      .notNull()
+      .references(() => agentsTable.uuid, { onDelete: 'cascade' }),
+    event_type: text('event_type').notNull(), // CREATED, PROVISIONED, ACTIVATED, DRAINING, TERMINATED, KILLED, ERROR
+    from_state: agentStateEnum('from_state'),
+    to_state: agentStateEnum('to_state'),
+    metadata: jsonb('metadata').$type<{
+      reason?: string;
+      triggered_by?: string; // user_id or 'system'
+      error_code?: string;
+      error_message?: string;
+      [key: string]: any;
+    }>(),
+    timestamp: timestamp('timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    agentUuidIdx: index('agent_lifecycle_events_agent_uuid_idx').on(table.agent_uuid),
+    timestampIdx: index('agent_lifecycle_events_timestamp_idx').on(table.timestamp),
+    eventTypeIdx: index('agent_lifecycle_events_event_type_idx').on(table.event_type),
+    // Composite index for efficient "events for agent X ordered by time" queries
+    agentTimestampIdx: index('agent_lifecycle_events_agent_timestamp_idx').on(table.agent_uuid, table.timestamp),
+  })
+);
+
+/**
+ * Agent model assignments - For future implementation
+ *
+ * NOTE: A partial unique index exists via migration to ensure only ONE model
+ * per agent can have is_default=true:
+ *   CREATE UNIQUE INDEX "agent_models_one_default_per_agent"
+ *   ON "agent_models" ("agent_uuid") WHERE "is_default" = true;
+ */
+export const agentModelsTable = pgTable(
+  'agent_models',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    agent_uuid: uuid('agent_uuid')
+      .notNull()
+      .references(() => agentsTable.uuid, { onDelete: 'cascade' }),
+    model_name: text('model_name').notNull(), // e.g., 'claude-3-sonnet', 'gpt-4'
+    model_provider: text('model_provider').notNull(), // e.g., 'anthropic', 'openai'
+    // Only one model per agent can be default (enforced by partial unique index)
+    is_default: boolean('is_default').default(false),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    agentUuidIdx: index('agent_models_agent_uuid_idx').on(table.agent_uuid),
+    agentModelUnique: unique('agent_models_agent_model_unique').on(
+      table.agent_uuid,
+      table.model_name,
+      table.model_provider
+    ),
+    // Note: Partial unique index for is_default=true is in migration 0083
+  })
+);
+
+// Relations for agent templates
+export const agentTemplatesRelations = relations(agentTemplatesTable, ({ many }) => ({
+  instances: many(agentsTable),
+}));
+
+// Relations for agents (instances)
+export const agentsRelations = relations(agentsTable, ({ one, many }) => ({
+  profile: one(profilesTable, {
+    fields: [agentsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  template: one(agentTemplatesTable, {
+    fields: [agentsTable.template_uuid],
+    references: [agentTemplatesTable.uuid],
+  }),
+  heartbeats: many(agentHeartbeatsTable),
+  metrics: many(agentMetricsTable),
+  lifecycleEvents: many(agentLifecycleEventsTable),
+  models: many(agentModelsTable),
+}));
+
+export const agentHeartbeatsRelations = relations(agentHeartbeatsTable, ({ one }) => ({
+  agent: one(agentsTable, {
+    fields: [agentHeartbeatsTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+}));
+
+export const agentMetricsRelations = relations(agentMetricsTable, ({ one }) => ({
+  agent: one(agentsTable, {
+    fields: [agentMetricsTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+}));
+
+export const agentLifecycleEventsRelations = relations(agentLifecycleEventsTable, ({ one }) => ({
+  agent: one(agentsTable, {
+    fields: [agentLifecycleEventsTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+}));
+
+export const agentModelsRelations = relations(agentModelsTable, ({ one }) => ({
+  agent: one(agentsTable, {
+    fields: [agentModelsTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+}));
+
+// ============================================================================
+// PAP Heartbeat Collector - Cluster and Alert Tables
+// ============================================================================
+
+// Cluster status enum for tracking cluster health
+export enum ClusterStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  MAINTENANCE = 'MAINTENANCE',
+}
+export const clusterStatusEnum = pgEnum(
+  'cluster_status',
+  enumToPgEnum(ClusterStatus)
+);
+
+// Alert types from collectors
+export enum ClusterAlertType {
+  AGENT_DEATH = 'AGENT_DEATH',
+  EMERGENCY_MODE = 'EMERGENCY_MODE',
+  RESTART_DETECTED = 'RESTART_DETECTED',
+}
+export const clusterAlertTypeEnum = pgEnum(
+  'cluster_alert_type',
+  enumToPgEnum(ClusterAlertType)
+);
+
+/**
+ * Alert severity levels for cluster alerts.
+ *
+ * Uses lowercase values to match standard monitoring conventions
+ * (Prometheus, Grafana, PagerDuty, etc.) for easier integration.
+ */
+export enum AlertSeverity {
+  CRITICAL = 'critical',
+  WARNING = 'warning',
+  INFO = 'info',
+}
+export const alertSeverityEnum = pgEnum(
+  'alert_severity',
+  enumToPgEnum(AlertSeverity)
+);
+
+/**
+ * Clusters Table - Registry of PAP Heartbeat Collectors
+ *
+ * Each cluster has its own local collector that:
+ * - Receives heartbeats from agents
+ * - Performs local zombie detection
+ * - Pushes alerts to central on problems
+ */
+export const clustersTable = pgTable(
+  'clusters',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    // Unique cluster identifier (e.g., 'is.plugged.in', 'prod-us-east')
+    cluster_id: text('cluster_id').notNull().unique(),
+    // Human-readable name
+    name: text('name').notNull(),
+    // Description of the cluster
+    description: text('description'),
+    // Internal collector URL for proxying requests
+    collector_url: text('collector_url'),
+    // Cluster status
+    status: clusterStatusEnum('status').default('ACTIVE'),
+    // Last time an alert was received from this cluster
+    last_alert_at: timestamp('last_alert_at', { withTimezone: true }),
+    // Last time we successfully communicated with the collector
+    last_seen_at: timestamp('last_seen_at', { withTimezone: true }),
+    // Total agents tracked by this cluster (updated periodically)
+    agent_count: integer('agent_count').default(0),
+    // Healthy agents count
+    healthy_agent_count: integer('healthy_agent_count').default(0),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    clusterIdIdx: index('clusters_cluster_id_idx').on(table.cluster_id),
+    statusIdx: index('clusters_status_idx').on(table.status),
+  })
+);
+
+/**
+ * Cluster Alerts Table - Alerts received from collectors
+ *
+ * Collectors push alerts here when:
+ * - An agent dies (missed heartbeat deadline)
+ * - An agent enters EMERGENCY mode
+ * - An agent restart is detected
+ */
+export const clusterAlertsTable = pgTable(
+  'cluster_alerts',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    // Which cluster sent this alert
+    cluster_uuid: uuid('cluster_uuid')
+      .references(() => clustersTable.uuid, { onDelete: 'cascade' }),
+    // Alert type
+    alert_type: clusterAlertTypeEnum('alert_type').notNull(),
+    // Which agent this alert is about (FK with SET NULL to preserve alerts after agent deletion)
+    agent_uuid: uuid('agent_uuid')
+      .references(() => agentsTable.uuid, { onDelete: 'set null' }),
+    // Agent name (for display when agent may be deleted)
+    agent_name: text('agent_name'),
+    // Alert severity
+    severity: alertSeverityEnum('severity').notNull(),
+    // Additional details (missed intervals, previous mode, etc.)
+    details: jsonb('details'),
+    // Has the alert been acknowledged?
+    acknowledged: boolean('acknowledged').default(false),
+    // Who acknowledged it
+    acknowledged_by: text('acknowledged_by'),
+    acknowledged_at: timestamp('acknowledged_at', { withTimezone: true }),
+    // Alert timestamp from collector
+    alert_timestamp: timestamp('alert_timestamp', { withTimezone: true }),
+    // When we received it
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    clusterUuidIdx: index('cluster_alerts_cluster_uuid_idx').on(table.cluster_uuid),
+    alertTypeIdx: index('cluster_alerts_alert_type_idx').on(table.alert_type),
+    agentUuidIdx: index('cluster_alerts_agent_uuid_idx').on(table.agent_uuid),
+    acknowledgedIdx: index('cluster_alerts_acknowledged_idx').on(table.acknowledged),
+    createdAtIdx: index('cluster_alerts_created_at_idx').on(table.created_at),
+    // Composite index for efficient unacknowledged alerts queries
+    clusterAckCreatedIdx: index('cluster_alerts_cluster_ack_created_idx').on(
+      table.cluster_uuid,
+      table.acknowledged,
+      table.created_at
+    ),
+  })
+);
+
+// Relations for clusters
+export const clustersRelations = relations(clustersTable, ({ many }) => ({
+  alerts: many(clusterAlertsTable),
+}));
+
+// Relations for cluster alerts
+export const clusterAlertsRelations = relations(clusterAlertsTable, ({ one }) => ({
+  cluster: one(clustersTable, {
+    fields: [clusterAlertsTable.cluster_uuid],
+    references: [clustersTable.uuid],
+  }),
+}));
