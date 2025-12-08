@@ -3,6 +3,23 @@ import { render, screen } from '@testing-library/react';
 import { TrustIndicatorsSection } from '@/components/landing-sections/trust-indicators';
 import '@testing-library/jest-dom';
 
+// Mock useMetrics hook
+vi.mock('@/contexts/metrics-context', () => ({
+  useMetrics: () => ({
+    metrics: {
+      totalUsers: 1000,
+      totalProjects: 500,
+      totalServers: 460,
+      totalRegistryServers: 100,
+      newProfiles30d: 50,
+      newUsers30d: 30,
+    },
+    isLoading: false,
+    hasError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -12,17 +29,12 @@ vi.mock('react-i18next', () => ({
         'trust.subtitle': 'Join thousands of organizations that trust Plugged.in',
         'trust.certifications.soc2.label': 'SOC 2 Type II',
         'trust.certifications.soc2.description': 'Certified',
-        'trust.certifications.iso.label': 'ISO 27001',
-        'trust.certifications.iso.description': 'Compliant',
+        'trust.certifications.pciDss.label': 'PCI DSS',
+        'trust.certifications.pciDss.description': 'Compliant',
         'trust.certifications.gdpr.label': 'GDPR',
         'trust.certifications.gdpr.description': 'Compliant',
         'trust.certifications.hipaa.label': 'HIPAA',
         'trust.certifications.hipaa.description': 'Ready',
-        'trust.growth.title': 'From 0 to 14,000+ API calls in just 30 days',
-        'trust.growth.subtitle': 'Join 620+ developers building the future',
-        'trust.growth.stats.documents': '87+ AI Documents',
-        'trust.growth.stats.servers': '460 Active Servers',
-        'trust.growth.stats.projects': '650+ Projects Created',
       };
       return translations[key] || key;
     },
@@ -36,9 +48,6 @@ vi.mock('react-i18next', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: vi.fn(({ children, ...props }) => <div {...props}>{children}</div>),
-    h2: vi.fn(({ children, ...props }) => <h2 {...props}>{children}</h2>),
-    p: vi.fn(({ children, ...props }) => <p {...props}>{children}</p>),
-    h3: vi.fn(({ children, ...props }) => <h3 {...props}>{children}</h3>),
   },
 }));
 
@@ -56,7 +65,16 @@ vi.mock('lucide-react', () => ({
   Lock: vi.fn(({ className }) => <div className={className}>Lock Icon</div>),
   Award: vi.fn(({ className }) => <div className={className}>Award Icon</div>),
   CheckCircle2: vi.fn(({ className }) => <div className={className}>Check Icon</div>),
-  Star: vi.fn(({ className }) => <div className={className}>Star Icon</div>),
+}));
+
+// Mock AnimatedMetric component
+vi.mock('@/components/ui/animated-metric', () => ({
+  AnimatedMetric: vi.fn(({ value, suffix, label }) => (
+    <div data-testid="animated-metric">
+      <div>{value}{suffix}</div>
+      <div>{label}</div>
+    </div>
+  )),
 }));
 
 describe('TrustIndicatorsSection', () => {
@@ -76,7 +94,7 @@ describe('TrustIndicatorsSection', () => {
 
     // Check certification labels
     expect(screen.getByText('SOC 2 Type II')).toBeInTheDocument();
-    expect(screen.getByText('ISO 27001')).toBeInTheDocument();
+    expect(screen.getByText('PCI DSS')).toBeInTheDocument();
     expect(screen.getByText('GDPR')).toBeInTheDocument();
     expect(screen.getByText('HIPAA')).toBeInTheDocument();
 
@@ -95,19 +113,14 @@ describe('TrustIndicatorsSection', () => {
     expect(screen.getByText('Check Icon')).toBeInTheDocument();
   });
 
-  it('renders growth story section', () => {
+  it('renders stats grid with metrics', () => {
     render(<TrustIndicatorsSection />);
 
-    expect(screen.getByText('From 0 to 14,000+ API calls in just 30 days')).toBeInTheDocument();
-    expect(screen.getByText('Join 620+ developers building the future')).toBeInTheDocument();
-  });
-
-  it('renders growth statistics', () => {
-    render(<TrustIndicatorsSection />);
-
-    expect(screen.getByText('87+ AI Documents')).toBeInTheDocument();
-    expect(screen.getByText('460 Active Servers')).toBeInTheDocument();
-    expect(screen.getByText('650+ Projects Created')).toBeInTheDocument();
+    // Check stat labels are rendered
+    expect(screen.getByText('Monthly Growth')).toBeInTheDocument();
+    expect(screen.getByText('Verified Tools')).toBeInTheDocument();
+    expect(screen.getByText('MCP Servers')).toBeInTheDocument();
+    expect(screen.getByText('Active Developers')).toBeInTheDocument();
   });
 
   it('applies correct gradient classes for styling', () => {
@@ -121,10 +134,8 @@ describe('TrustIndicatorsSection', () => {
     const { motion } = await import('framer-motion');
     render(<TrustIndicatorsSection />);
 
-    // Verify motion components are used
+    // Verify motion.div is used for animations
     expect(motion.div).toHaveBeenCalled();
-    expect(motion.h2).toHaveBeenCalled();
-    expect(motion.p).toHaveBeenCalled();
   });
 
   it('triggers animations when in view', async () => {
@@ -161,34 +172,25 @@ describe('TrustIndicatorsSection', () => {
     // Should have 4 certification cards
     const certCards = Array.from(cards).filter(card =>
       card.textContent?.includes('SOC 2') ||
-      card.textContent?.includes('ISO') ||
+      card.textContent?.includes('PCI DSS') ||
       card.textContent?.includes('GDPR') ||
       card.textContent?.includes('HIPAA')
     );
 
     expect(certCards).toHaveLength(4);
 
-    // Check for hover classes
+    // Check for group class (enables hover effects)
     certCards.forEach(card => {
       expect(card).toHaveClass('group');
-      expect(card.querySelector('.group-hover\\:scale-110')).toBeTruthy();
     });
   });
 
-  it('renders growth chart visualization', () => {
+  it('renders background gradient', () => {
     render(<TrustIndicatorsSection />);
 
-    // Check for chart bars
-    const chartBars = document.querySelectorAll('.bg-gradient-to-t');
-    expect(chartBars.length).toBeGreaterThan(0);
-  });
-
-  it('renders star ratings in growth stats', () => {
-    render(<TrustIndicatorsSection />);
-
-    // Multiple star icons should be present for ratings
-    const starIcons = screen.getAllByText('Star Icon');
-    expect(starIcons.length).toBeGreaterThan(0);
+    // Check for background gradient
+    const gradientBg = document.querySelector('.bg-gradient-to-b');
+    expect(gradientBg).toBeInTheDocument();
   });
 
   it('applies responsive grid layout', () => {
@@ -212,14 +214,6 @@ describe('TrustIndicatorsSection', () => {
     render(<TrustIndicatorsSection />);
 
     const section = document.querySelector('section');
-    expect(section).toHaveClass('py-16', 'md:py-24');
-  });
-
-  it('renders growth timeline dots', () => {
-    render(<TrustIndicatorsSection />);
-
-    // Should have timeline dots for each stat
-    const timelineDots = document.querySelectorAll('.absolute.w-3.h-3');
-    expect(timelineDots.length).toBeGreaterThan(0);
+    expect(section).toHaveClass('py-20');
   });
 });
