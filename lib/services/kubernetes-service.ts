@@ -53,8 +53,30 @@ const k8sAuthHeader = K8S_SERVICE_ACCOUNT_TOKEN ? `Bearer ${K8S_SERVICE_ACCOUNT_
 // Default namespace for PAP agents
 const DEFAULT_AGENT_NAMESPACE = process.env.K8S_AGENT_NAMESPACE || 'agents';
 
-// Request timeout (30 seconds)
-const K8S_REQUEST_TIMEOUT_MS = 30000;
+// Allowed namespaces for PAP agents (comma-separated env var or default)
+const ALLOWED_AGENT_NAMESPACES = new Set(
+  (process.env.K8S_ALLOWED_NAMESPACES || 'agents,agents-dev,agents-staging')
+    .split(',')
+    .map((ns) => ns.trim())
+    .filter(Boolean)
+);
+
+/**
+ * Validate namespace against allowlist.
+ * Returns error message if invalid, null if valid.
+ */
+export function validateNamespace(namespace: string): string | null {
+  if (!namespace || namespace.trim() === '') {
+    return 'Namespace cannot be empty';
+  }
+  if (!ALLOWED_AGENT_NAMESPACES.has(namespace)) {
+    return `Namespace '${namespace}' is not allowed. Allowed namespaces: ${Array.from(ALLOWED_AGENT_NAMESPACES).join(', ')}`;
+  }
+  return null;
+}
+
+// Request timeout (configurable via env var, default 30 seconds)
+const K8S_REQUEST_TIMEOUT_MS = parseInt(process.env.K8S_REQUEST_TIMEOUT_MS || '30000', 10);
 
 // Helper function to make HTTPS request with self-signed cert support
 function httpsRequest(
@@ -82,10 +104,15 @@ function httpsRequest(
 
     const httpModule = isHttps ? https : http;
 
+    // Track if promise has been settled to prevent double rejection
+    let settled = false;
+
     const req = httpModule.request(requestOptions, (res) => {
       let body = '';
       res.on('data', (chunk) => (body += chunk));
       res.on('end', () => {
+        if (settled) return;
+        settled = true;
         resolve({
           status: res.statusCode || 0,
           statusText: res.statusMessage || '',
@@ -94,13 +121,18 @@ function httpsRequest(
       });
     });
 
-    // Set request timeout
+    // Set request timeout - use destroy(err) to trigger error handler with timeout error
     req.setTimeout(K8S_REQUEST_TIMEOUT_MS, () => {
-      req.destroy();
-      reject(new Error(`Kubernetes API request timed out after ${K8S_REQUEST_TIMEOUT_MS}ms`));
+      if (settled) return;
+      const timeoutError = new Error(`Kubernetes API request timed out after ${K8S_REQUEST_TIMEOUT_MS}ms`);
+      req.destroy(timeoutError);
     });
 
-    req.on('error', reject);
+    req.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    });
 
     if (options.body) {
       req.write(options.body);
@@ -137,12 +169,27 @@ async function k8sRequest(
   });
 
   if (response.status >= 400) {
-    // Only log full error details in development to avoid leaking cluster information
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(`Kubernetes API error: ${response.status} ${response.statusText}`, response.body);
-    } else {
-      console.error(`Kubernetes API error: ${response.status} ${response.statusText}`);
+    // Extract only safe error information from K8s response
+    // K8s API returns structured errors with message, reason, code fields
+    let safeErrorInfo = '';
+    try {
+      const errorBody = JSON.parse(response.body);
+      // Only extract standard K8s error fields, avoid exposing internal details
+      const safeFields = {
+        message: errorBody.message,
+        reason: errorBody.reason,
+        code: errorBody.code,
+        kind: errorBody.kind,
+      };
+      safeErrorInfo = JSON.stringify(safeFields);
+    } catch {
+      // Not JSON or parse failed - log nothing from body
+      safeErrorInfo = '(non-JSON response)';
     }
+
+    // Log sanitized error info even in dev mode
+    console.error(`Kubernetes API error: ${response.status} ${response.statusText} - ${safeErrorInfo}`);
+
     // Return sanitized error
     throw new Error(`Kubernetes API error: ${response.status} ${response.statusText}`);
   }

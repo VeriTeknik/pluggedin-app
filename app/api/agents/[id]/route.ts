@@ -94,7 +94,7 @@ async function applyRateLimit(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Apply rate limiting
@@ -104,7 +104,7 @@ export async function GET(
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = params;
+    const { id: agentId } = await params;
 
     // Fetch agent
     const agents = await db
@@ -127,37 +127,39 @@ export async function GET(
 
     const agent = agents[0];
 
-    // Fetch recent heartbeats (last 10)
-    const recentHeartbeats = await db
-      .select()
-      .from(agentHeartbeatsTable)
-      .where(eq(agentHeartbeatsTable.agent_uuid, agentId))
-      .orderBy(desc(agentHeartbeatsTable.timestamp))
-      .limit(10);
+    // Fetch all related data in parallel for better performance
+    const [recentHeartbeats, recentMetrics, lifecycleEvents, kubernetesStatus] = await Promise.all([
+      // Recent heartbeats (last 10)
+      db
+        .select()
+        .from(agentHeartbeatsTable)
+        .where(eq(agentHeartbeatsTable.agent_uuid, agentId))
+        .orderBy(desc(agentHeartbeatsTable.timestamp))
+        .limit(10),
 
-    // Fetch recent metrics (last 10)
-    const recentMetrics = await db
-      .select()
-      .from(agentMetricsTable)
-      .where(eq(agentMetricsTable.agent_uuid, agentId))
-      .orderBy(desc(agentMetricsTable.timestamp))
-      .limit(10);
+      // Recent metrics (last 10)
+      db
+        .select()
+        .from(agentMetricsTable)
+        .where(eq(agentMetricsTable.agent_uuid, agentId))
+        .orderBy(desc(agentMetricsTable.timestamp))
+        .limit(10),
 
-    // Fetch lifecycle events
-    const lifecycleEvents = await db
-      .select()
-      .from(agentLifecycleEventsTable)
-      .where(eq(agentLifecycleEventsTable.agent_uuid, agentId))
-      .orderBy(desc(agentLifecycleEventsTable.timestamp));
+      // Lifecycle events
+      db
+        .select()
+        .from(agentLifecycleEventsTable)
+        .where(eq(agentLifecycleEventsTable.agent_uuid, agentId))
+        .orderBy(desc(agentLifecycleEventsTable.timestamp)),
 
-    // Get Kubernetes deployment status
-    let kubernetesStatus = null;
-    if (agent.kubernetes_deployment) {
-      kubernetesStatus = await kubernetesService.getDeploymentStatus(
-        agent.kubernetes_deployment,
-        agent.kubernetes_namespace || 'agents'
-      );
-    }
+      // Kubernetes deployment status (null if no deployment)
+      agent.kubernetes_deployment
+        ? kubernetesService.getDeploymentStatus(
+            agent.kubernetes_deployment,
+            agent.kubernetes_namespace || 'agents'
+          )
+        : Promise.resolve(null),
+    ]);
 
     return NextResponse.json(serializeForJson({
       agent,
@@ -219,7 +221,7 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Apply rate limiting
@@ -229,7 +231,7 @@ export async function DELETE(
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = params;
+    const { id: agentId } = await params;
 
     // Fetch agent
     const agents = await db
@@ -352,7 +354,7 @@ export async function DELETE(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Apply rate limiting
@@ -362,7 +364,7 @@ export async function PATCH(
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = params;
+    const { id: agentId } = await params;
     const body = await request.json();
     const { access_level, metadata: newMetadata } = body;
 

@@ -122,6 +122,23 @@ export function validateEnvKey(key: string): string | null {
 }
 
 /**
+ * Maximum size for individual environment variable values.
+ */
+const MAX_ENV_VALUE_SIZE = 8192; // 8KB
+
+/**
+ * Sanitize an environment variable value.
+ * Removes control characters and truncates to max size.
+ */
+function sanitizeEnvValue(value: unknown): string {
+  const str = String(value ?? '');
+  // Remove ASCII control characters (except tab, newline, carriage return which may be intentional)
+  const sanitized = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  // Truncate to max size
+  return sanitized.slice(0, MAX_ENV_VALUE_SIZE);
+}
+
+/**
  * Build environment variables for agent deployment.
  *
  * @param opts - Configuration options
@@ -161,19 +178,24 @@ export function buildAgentEnv(opts: {
     PORT: String(template?.container_port || 3000),
   };
 
-  // Apply template defaults
+  // Apply template defaults (sanitize values, skip protected keys)
   if (template?.env_schema?.defaults) {
     for (const [key, value] of Object.entries(template.env_schema.defaults)) {
-      if (!env[key]) {
-        env[key] = String(value);
+      // Skip if already set or key is protected
+      if (!env[key] && validateEnvKey(key) === null) {
+        env[key] = sanitizeEnvValue(value);
       }
     }
   }
 
-  // Apply user overrides (highest priority)
+  // Apply user overrides (highest priority, sanitize values)
+  // Note: Key validation should happen at API layer before calling this function
   if (envOverrides) {
     for (const [key, value] of Object.entries(envOverrides)) {
-      env[key] = String(value);
+      // Double-check protection even though API should validate
+      if (validateEnvKey(key) === null) {
+        env[key] = sanitizeEnvValue(value);
+      }
     }
   }
 

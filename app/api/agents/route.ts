@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate env_overrides keys if provided
+    // Validate env_overrides if provided
     if (env_overrides !== undefined && env_overrides !== null) {
       if (typeof env_overrides !== 'object') {
         return NextResponse.json(
@@ -270,13 +270,44 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      for (const key of Object.keys(env_overrides)) {
+
+      // Size limit (64KB total for env_overrides)
+      const envStr = JSON.stringify(env_overrides);
+      if (envStr.length > 65536) {
+        return NextResponse.json(
+          { error: 'env_overrides exceeds maximum size of 64KB' },
+          { status: 400 }
+        );
+      }
+
+      for (const [key, value] of Object.entries(env_overrides)) {
+        // Validate key format
         const keyError = validateEnvKey(key);
         if (keyError) {
           return NextResponse.json(
             { error: keyError },
             { status: 400 }
           );
+        }
+
+        // Validate value (must be string, number, or boolean; no control chars)
+        if (value !== null && value !== undefined) {
+          const valueStr = String(value);
+          // Check for control characters (except tab, newline, carriage return)
+          // eslint-disable-next-line no-control-regex
+          if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(valueStr)) {
+            return NextResponse.json(
+              { error: `Invalid characters in env_overrides value for key '${key}'` },
+              { status: 400 }
+            );
+          }
+          // Limit individual value size (8KB)
+          if (valueStr.length > 8192) {
+            return NextResponse.json(
+              { error: `env_overrides value for key '${key}' exceeds maximum size of 8KB` },
+              { status: 400 }
+            );
+          }
         }
       }
     }

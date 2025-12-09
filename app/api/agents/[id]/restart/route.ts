@@ -74,7 +74,7 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Apply rate limiting
@@ -97,7 +97,7 @@ export async function POST(
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = params;
+    const { id: agentId } = await params;
 
     // Parse optional body
     let force = false;
