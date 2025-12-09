@@ -12,22 +12,7 @@ import {
 import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
-
-// Convert BigInt (as strings to preserve precision) and Date values for JSON serialization
-const serializeForJson = (obj: any): any => {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'bigint') return obj.toString(); // Use string to avoid precision loss for large values
-  if (obj instanceof Date) return obj.toISOString();
-  if (Array.isArray(obj)) return obj.map(serializeForJson);
-  if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key in obj) {
-      result[key] = serializeForJson(obj[key]);
-    }
-    return result;
-  }
-  return obj;
-};
+import { serializeForJson } from '@/lib/serialize-for-json';
 
 /**
  * @swagger

@@ -144,28 +144,42 @@ export async function POST(request: NextRequest) {
 
         // Auto-drain if too many missed intervals
         if (AUTO_DRAIN_MULTIPLIER > 0 && missedIntervals >= AUTO_DRAIN_MULTIPLIER) {
-          await db
+          // Use optimistic locking - only transition from ACTIVE to prevent invalid state transitions
+          // This guards against race conditions where state changed between query and update
+          const updateResult = await db
             .update(agentsTable)
             .set({
               state: AgentState.DRAINING,
             })
-            .where(eq(agentsTable.uuid, agent.uuid));
+            .where(
+              and(
+                eq(agentsTable.uuid, agent.uuid),
+                eq(agentsTable.state, AgentState.ACTIVE) // Only transition from ACTIVE
+              )
+            )
+            .returning();
 
-          await db.insert(agentLifecycleEventsTable).values({
-            agent_uuid: agent.uuid,
-            event_type: 'AUTO_DRAINING',
-            from_state: AgentState.ACTIVE,
-            to_state: AgentState.DRAINING,
-            metadata: {
-              triggered_by: 'zombie_detection',
-              missed_intervals: missedIntervals,
-              last_heartbeat: new Date(lastHeartbeat).toISOString(),
-              reason: `Agent unresponsive for ${missedIntervals} intervals`,
-            },
-          });
+          // Only log event and count if update actually happened
+          if (updateResult.length > 0) {
+            await db.insert(agentLifecycleEventsTable).values({
+              agent_uuid: agent.uuid,
+              event_type: 'AUTO_DRAINING',
+              from_state: AgentState.ACTIVE,
+              to_state: AgentState.DRAINING,
+              metadata: {
+                triggered_by: 'zombie_detection',
+                missed_intervals: missedIntervals,
+                last_heartbeat: new Date(lastHeartbeat).toISOString(),
+                reason: `Agent unresponsive for ${missedIntervals} intervals`,
+              },
+            });
 
-          drainedCount++;
-          console.log(`[Zombie Check] Auto-draining agent ${agent.name} (${agent.uuid}) - ${missedIntervals} missed intervals`);
+            drainedCount++;
+            console.log(`[Zombie Check] Auto-draining agent ${agent.name} (${agent.uuid}) - ${missedIntervals} missed intervals`);
+          } else {
+            // State changed concurrently - log for debugging but don't count as drained
+            console.log(`[Zombie Check] Skipped auto-drain for ${agent.name} (${agent.uuid}) - state changed concurrently`);
+          }
         }
       }
     }
