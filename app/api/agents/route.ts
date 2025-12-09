@@ -13,46 +13,9 @@ import {
 
 import { authenticate } from '../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
-
-// Convert BigInt and Date values for JSON serialization
-const serializeForJson = (obj: any): any => {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'bigint') return Number(obj);
-  if (obj instanceof Date) return obj.toISOString();
-  if (Array.isArray(obj)) return obj.map(serializeForJson);
-  if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key in obj) {
-      result[key] = serializeForJson(obj[key]);
-    }
-    return result;
-  }
-  return obj;
-};
-
-// Reserved agent names that cannot be used
-const RESERVED_AGENT_NAMES = new Set([
-  // System/Infrastructure names
-  'api', 'app', 'www', 'web', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'ssh', 'dns',
-  'ns', 'ns1', 'ns2', 'ns3', 'mx', 'mx1', 'mx2', 'vpn', 'proxy', 'gateway', 'gw',
-  'admin', 'administrator', 'root', 'system', 'sysadmin', 'webmaster', 'postmaster',
-  'hostmaster', 'support', 'help', 'info', 'contact', 'sales', 'billing',
-  // Kubernetes/Cloud names
-  'kubernetes', 'k8s', 'kube', 'cluster', 'node', 'pod', 'service', 'ingress',
-  'traefik', 'nginx', 'envoy', 'istio', 'linkerd',
-  // PAP specific names
-  'pap', 'station', 'satellite', 'control', 'control-plane', 'registry',
-  'hub', 'gateway', 'proxy', 'mcp', 'hooks', 'telemetry', 'metrics', 'heartbeat',
-  // Plugged.in product names
-  'pluggedin', 'plugged', 'is', 'a', 'focus', 'memory', 'demo', 'test', 'staging',
-  'production', 'prod', 'dev', 'development', 'sandbox', 'preview',
-  // Common reserved names
-  'localhost', 'local', 'internal', 'private', 'public', 'static', 'assets', 'cdn',
-  'status', 'health', 'healthz', 'ready', 'readyz', 'live', 'livez',
-  'auth', 'login', 'logout', 'signup', 'register', 'oauth', 'sso', 'callback',
-  // Wildcards/catch-alls
-  'default', 'null', 'undefined', 'void', 'none', 'empty', 'blank',
-]);
+import { serializeForJson } from '@/lib/serialize-for-json';
+import { validateAgentName } from '@/lib/agent-name-policy';
+import { buildAgentEnv } from '@/lib/agent-helpers';
 
 /**
  * @swagger
@@ -268,53 +231,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // Validate required fields
-    if (!name) {
+    // Validate and normalize agent name using shared policy
+    const nameValidation = validateAgentName(name);
+    if (!nameValidation.ok) {
       return NextResponse.json(
-        { error: 'Name is required' },
+        { error: nameValidation.message },
         { status: 400 }
       );
     }
-
-    // Normalize name to lowercase
-    const normalizedName = name.toLowerCase().trim();
-
-    // Validate name length (DNS label max is 63 chars, min is 1)
-    if (normalizedName.length < 2 || normalizedName.length > 63) {
-      return NextResponse.json(
-        { error: 'Name must be between 2 and 63 characters' },
-        { status: 400 }
-      );
-    }
-
-    // Validate DNS-safe name (lowercase alphanumeric and hyphens only)
-    // Must start and end with alphanumeric, can have hyphens in between
-    const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-    if (!dnsNameRegex.test(normalizedName)) {
-      return NextResponse.json(
-        { error: 'Name must be DNS-safe: lowercase letters, numbers, and hyphens only. Must start and end with a letter or number.' },
-        { status: 400 }
-      );
-    }
-
-    // Check for consecutive hyphens (not allowed in DNS)
-    if (normalizedName.includes('--')) {
-      return NextResponse.json(
-        { error: 'Name cannot contain consecutive hyphens' },
-        { status: 400 }
-      );
-    }
-
-    // Check reserved names
-    if (RESERVED_AGENT_NAMES.has(normalizedName)) {
-      return NextResponse.json(
-        { error: `Name '${normalizedName}' is reserved and cannot be used` },
-        { status: 400 }
-      );
-    }
-
-    // Generate DNS name: {name}.is.plugged.in
-    const dnsName = `${normalizedName}.is.plugged.in`;
+    const { normalizedName, dnsName } = nameValidation;
 
     // Check if agent with this DNS name already exists GLOBALLY (across all profiles)
     // DNS names must be unique across the entire system
@@ -409,38 +334,16 @@ export async function POST(request: Request) {
       });
     }
 
-    const agentEnv: Record<string, string> = {
-      // PAP Protocol required env vars
-      // Note: PAP Station API is at /api/agents (not /api/pap)
-      PAP_STATION_URL: `${baseUrl}/api/agents`,
-      PAP_AGENT_ID: newAgent.uuid,
-      PAP_AGENT_DNS: dnsName,
-      PAP_AGENT_KEY: agentApiKey, // API key for heartbeat/metrics auth
-      // Plugged.in API access (for Model Router)
-      PLUGGEDIN_API_URL: `${baseUrl}/api`,
-      PLUGGEDIN_API_KEY: agentApiKey, // Same key for API access
-      // Agent identity
-      AGENT_NAME: normalizedName,
-      AGENT_DNS_NAME: dnsName,
-      // Port configuration
-      PORT: String(template?.container_port || 3000),
-    };
-
-    // Merge template defaults
-    if (template?.env_schema?.defaults) {
-      for (const [key, value] of Object.entries(template.env_schema.defaults)) {
-        if (!agentEnv[key]) {
-          agentEnv[key] = String(value);
-        }
-      }
-    }
-
-    // Merge user env_overrides
-    if (env_overrides) {
-      for (const [key, value] of Object.entries(env_overrides)) {
-        agentEnv[key] = String(value);
-      }
-    }
+    // Build environment variables using shared helper
+    const agentEnv = buildAgentEnv({
+      baseUrl,
+      agentId: newAgent.uuid,
+      normalizedName,
+      dnsName,
+      apiKey: agentApiKey,
+      template,
+      envOverrides: env_overrides,
+    });
 
     // Deploy to Kubernetes
     const deploymentResult = await kubernetesService.deployAgent({

@@ -64,13 +64,13 @@ import { kubernetesService } from '@/lib/services/kubernetes-service';
  */
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = await params;
+    const { id: agentId } = params;
 
     // Verify agent exists and belongs to profile
     const agents = await db

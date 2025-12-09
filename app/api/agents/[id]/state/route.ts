@@ -68,13 +68,13 @@ import { authenticate } from '../../../auth';
  */
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = await params;
+    const { id: agentId } = params;
 
     // Parse request body
     const body = await request.json();
@@ -124,7 +124,21 @@ export async function POST(
 
     const agent = agents[0];
 
+    // SECURITY: Validate from_state matches persisted state (don't trust client-provided state)
+    const persistedState = agent.state as AgentState;
+    if (from_state !== persistedState) {
+      return NextResponse.json(
+        {
+          error: `State mismatch: client reported from_state '${from_state}' but server has '${persistedState}'`,
+          current_state: persistedState,
+          hint: 'Refresh agent state and retry',
+        },
+        { status: 409 } // Conflict
+      );
+    }
+
     // Validate state transition (normative FSM enforcement)
+    // Uses PERSISTED state for validation, not client-provided from_state
     const validTransitions: Map<AgentState, AgentState[]> = new Map([
       [AgentState.NEW, [AgentState.PROVISIONED, AgentState.KILLED]],
       [AgentState.PROVISIONED, [AgentState.ACTIVE, AgentState.TERMINATED, AgentState.KILLED]],
@@ -134,11 +148,12 @@ export async function POST(
       [AgentState.KILLED, []],
     ]);
 
-    const allowedNextStates = validTransitions.get(from_state as AgentState) || [];
+    const allowedNextStates = validTransitions.get(persistedState) || [];
     if (!allowedNextStates.includes(to_state as AgentState)) {
       return NextResponse.json(
         {
-          error: `Invalid state transition: ${from_state} → ${to_state}`,
+          error: `Invalid state transition: ${persistedState} → ${to_state}`,
+          current_state: persistedState,
           allowed_transitions: allowedNextStates,
           normative_fsm: 'PAP-RFC-001 §7.2',
         },

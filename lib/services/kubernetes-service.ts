@@ -9,10 +9,35 @@
 
 import * as https from 'https';
 import * as http from 'http';
+import * as fs from 'fs';
 
 // Kubernetes API configuration (direct API with Service Account token)
 const K8S_API_URL = process.env.K8S_API_URL || 'https://127.0.0.1:6443';
 const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
+
+// TLS verification configuration
+// By default, we verify certs using the in-cluster CA or K8S_CA_CERT
+// Only set K8S_INSECURE_SKIP_TLS_VERIFY=true for local development
+const K8S_INSECURE_SKIP_TLS_VERIFY = process.env.K8S_INSECURE_SKIP_TLS_VERIFY === 'true';
+
+// Load CA certificate: prefer K8S_CA_CERT env var, then in-cluster CA file
+const IN_CLUSTER_CA_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt';
+function loadK8sCaCert(): Buffer | undefined {
+  // 1. Check for base64-encoded CA in environment
+  if (process.env.K8S_CA_CERT) {
+    return Buffer.from(process.env.K8S_CA_CERT, 'base64');
+  }
+  // 2. Check for in-cluster CA file (standard Kubernetes location)
+  try {
+    if (fs.existsSync(IN_CLUSTER_CA_PATH)) {
+      return fs.readFileSync(IN_CLUSTER_CA_PATH);
+    }
+  } catch {
+    // File doesn't exist or not readable - that's fine
+  }
+  return undefined;
+}
+const K8S_CA_CERT = loadK8sCaCert();
 
 // Auth header for Kubernetes API
 const k8sAuthHeader = K8S_SERVICE_ACCOUNT_TOKEN ? `Bearer ${K8S_SERVICE_ACCOUNT_TOKEN}` : '';
@@ -36,7 +61,9 @@ function httpsRequest(
       path: parsedUrl.pathname + parsedUrl.search,
       method: options.method || 'GET',
       headers: options.headers || {},
-      rejectUnauthorized: false, // Allow self-signed certificates
+      // TLS verification: enabled by default, uses in-cluster CA or K8S_CA_CERT
+      rejectUnauthorized: !K8S_INSECURE_SKIP_TLS_VERIFY,
+      ...(K8S_CA_CERT && { ca: K8S_CA_CERT }),
     };
 
     const httpModule = isHttps ? https : http;
@@ -63,11 +90,11 @@ function httpsRequest(
   });
 }
 
-// Helper function to make Kubernetes API requests
+// Helper function to make Kubernetes API requests (internal)
 async function k8sRequest(
   path: string,
   options: { method?: string; body?: string; contentType?: string; rawResponse?: boolean } = {}
-): Promise<any> {
+): Promise<unknown> {
   if (!K8S_SERVICE_ACCOUNT_TOKEN) {
     throw new Error('No Kubernetes authentication configured. Set K8S_SERVICE_ACCOUNT_TOKEN environment variable.');
   }
@@ -106,6 +133,216 @@ async function k8sRequest(
   return JSON.parse(response.body);
 }
 
+/**
+ * Typed helper for JSON responses from Kubernetes API.
+ */
+async function k8sJson<T>(
+  path: string,
+  options: { method?: string; body?: object; contentType?: string } = {}
+): Promise<T> {
+  const result = await k8sRequest(path, {
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  return result as T;
+}
+
+/**
+ * Typed helper for text responses from Kubernetes API (e.g., logs).
+ */
+async function k8sText(path: string): Promise<string> {
+  const result = await k8sRequest(path, { rawResponse: true });
+  return result as string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Kubernetes API Response Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface K8sDeploymentResponse {
+  metadata: { name: string; namespace: string };
+  spec?: {
+    replicas?: number;
+    template?: {
+      metadata?: { annotations?: Record<string, string> };
+    };
+  };
+  status?: {
+    replicas?: number;
+    readyReplicas?: number;
+    availableReplicas?: number;
+    updatedReplicas?: number;
+    unavailableReplicas?: number;
+    conditions?: Array<{
+      type: string;
+      status: string;
+      reason?: string;
+      message?: string;
+    }>;
+  };
+}
+
+interface K8sPodListResponse {
+  items: Array<{
+    metadata: { name: string };
+    spec?: { nodeName?: string };
+    status?: {
+      phase?: string;
+      podIP?: string;
+      startTime?: string;
+      containerStatuses?: Array<{
+        name: string;
+        ready: boolean;
+        restartCount: number;
+        state?: {
+          running?: Record<string, unknown>;
+          waiting?: { reason?: string; message?: string };
+          terminated?: { reason?: string; message?: string };
+        };
+      }>;
+    };
+  }>;
+}
+
+interface K8sDeploymentListResponse {
+  items: Array<{
+    metadata: { name: string };
+    status?: { replicas?: number; readyReplicas?: number };
+  }>;
+}
+
+interface K8sEventListResponse {
+  items: Array<{
+    type?: string;
+    reason?: string;
+    message?: string;
+    count?: number;
+    firstTimestamp?: string;
+    lastTimestamp?: string;
+    eventTime?: string;
+    source?: { component?: string; host?: string };
+  }>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Manifest Builder Functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ManifestConfig {
+  name: string;
+  namespace: string;
+  dnsName: string;
+  image: string;
+  containerPort: number;
+  resources: {
+    cpuRequest: string;
+    memoryRequest: string;
+    cpuLimit: string;
+    memoryLimit: string;
+  };
+  env?: Array<{ name: string; value: string }>;
+}
+
+function buildDeploymentManifest(config: ManifestConfig): object {
+  return {
+    apiVersion: 'apps/v1',
+    kind: 'Deployment',
+    metadata: {
+      name: config.name,
+      namespace: config.namespace,
+      labels: { app: config.name, 'pap-agent': 'true' },
+    },
+    spec: {
+      replicas: 1,
+      selector: { matchLabels: { app: config.name } },
+      template: {
+        metadata: { labels: { app: config.name, 'pap-agent': 'true' } },
+        spec: {
+          securityContext: {
+            runAsNonRoot: true,
+            runAsUser: 1001,
+            fsGroup: 1001,
+            seccompProfile: { type: 'RuntimeDefault' },
+          },
+          containers: [
+            {
+              name: 'agent',
+              image: config.image,
+              ports: [{ containerPort: config.containerPort, name: 'http' }],
+              env: config.env?.length ? config.env : undefined,
+              resources: {
+                requests: { cpu: config.resources.cpuRequest, memory: config.resources.memoryRequest },
+                limits: { cpu: config.resources.cpuLimit, memory: config.resources.memoryLimit },
+              },
+              securityContext: {
+                allowPrivilegeEscalation: false,
+                capabilities: { drop: ['ALL'] },
+                readOnlyRootFilesystem: false,
+              },
+            },
+          ],
+        },
+      },
+    },
+  };
+}
+
+function buildServiceManifest(config: ManifestConfig): object {
+  return {
+    apiVersion: 'v1',
+    kind: 'Service',
+    metadata: {
+      name: config.name,
+      namespace: config.namespace,
+      labels: { app: config.name, 'pap-agent': 'true' },
+    },
+    spec: {
+      selector: { app: config.name },
+      ports: [{ port: 80, targetPort: config.containerPort, protocol: 'TCP', name: 'http' }],
+      type: 'ClusterIP',
+    },
+  };
+}
+
+function buildIngressManifest(config: ManifestConfig): object {
+  return {
+    apiVersion: 'networking.k8s.io/v1',
+    kind: 'Ingress',
+    metadata: {
+      name: config.name,
+      namespace: config.namespace,
+      labels: { app: config.name, 'pap-agent': 'true' },
+      annotations: {
+        'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
+        'traefik.ingress.kubernetes.io/router.entrypoints': 'web,websecure',
+        'traefik.ingress.kubernetes.io/router.tls': 'true',
+      },
+    },
+    spec: {
+      ingressClassName: 'traefik',
+      tls: [{ hosts: [config.dnsName], secretName: `${config.name}-tls` }],
+      rules: [
+        {
+          host: config.dnsName,
+          http: {
+            paths: [
+              {
+                path: '/',
+                pathType: 'Prefix',
+                backend: { service: { name: config.name, port: { number: 80 } } },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public Types
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface AgentDeploymentConfig {
   name: string; // DNS-safe agent name (e.g., 'focus', 'memory')
   dnsName: string; // Full DNS: {name}.{cluster}.a.plugged.in
@@ -139,289 +376,49 @@ export interface DeploymentStatus {
 export class KubernetesService {
   private readonly defaultNamespace = 'agents';
   private readonly defaultImage = 'nginxinc/nginx-unprivileged:alpine';
-  private readonly clusterDomain = 'is.plugged.in';
 
   /**
-   * Generate Kubernetes deployment YAML for a PAP agent
-   */
-  private generateDeploymentYAML(config: AgentDeploymentConfig): string {
-    const namespace = config.namespace || this.defaultNamespace;
-    const image = config.image || this.defaultImage;
-    const resources = config.resources || {
-      cpuRequest: '100m',
-      memoryRequest: '256Mi',
-      cpuLimit: '1000m',
-      memoryLimit: '1Gi',
-    };
-
-    return `---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ${config.name}
-  namespace: ${namespace}
-  labels:
-    app: ${config.name}
-    pap-agent: "true"
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: ${config.name}
-  template:
-    metadata:
-      labels:
-        app: ${config.name}
-        pap-agent: "true"
-    spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1001
-        fsGroup: 1001
-      containers:
-      - name: agent
-        image: ${image}
-        ports:
-        - containerPort: 8080
-          name: http
-        resources:
-          requests:
-            cpu: ${resources.cpuRequest}
-            memory: ${resources.memoryRequest}
-          limits:
-            cpu: ${resources.cpuLimit}
-            memory: ${resources.memoryLimit}
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: false
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ${config.name}
-  namespace: ${namespace}
-  labels:
-    app: ${config.name}
-    pap-agent: "true"
-spec:
-  selector:
-    app: ${config.name}
-  ports:
-  - port: 80
-    targetPort: 8080
-    protocol: TCP
-    name: http
-  type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ${config.name}
-  namespace: ${namespace}
-  labels:
-    app: ${config.name}
-    pap-agent: "true"
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
-spec:
-  ingressClassName: traefik
-  tls:
-  - hosts:
-    - ${config.dnsName}
-    secretName: ${config.name}-tls
-  rules:
-  - host: ${config.dnsName}
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: ${config.name}
-            port:
-              number: 80
-`;
-  }
-
-  /**
-   * Deploy a new PAP agent to Kubernetes via Rancher API
+   * Deploy a new PAP agent to Kubernetes via Kubernetes API.
+   * Creates Deployment, Service, and Ingress resources.
    */
   async deployAgent(config: AgentDeploymentConfig): Promise<{ success: boolean; message: string; deploymentName: string }> {
     try {
       const namespace = config.namespace || this.defaultNamespace;
-      const image = config.image || this.defaultImage;
-      const containerPort = config.containerPort || 8080;
-      const resources = config.resources || {
-        cpuRequest: '100m',
-        memoryRequest: '256Mi',
-        cpuLimit: '1000m',
-        memoryLimit: '1Gi',
+
+      // Build manifest configuration
+      const manifestConfig: ManifestConfig = {
+        name: config.name,
+        namespace,
+        dnsName: config.dnsName,
+        image: config.image || this.defaultImage,
+        containerPort: config.containerPort || 8080,
+        resources: {
+          cpuRequest: config.resources?.cpuRequest || '100m',
+          memoryRequest: config.resources?.memoryRequest || '256Mi',
+          cpuLimit: config.resources?.cpuLimit || '1000m',
+          memoryLimit: config.resources?.memoryLimit || '1Gi',
+        },
+        env: config.env
+          ? Object.entries(config.env).map(([name, value]) => ({ name, value: String(value) }))
+          : undefined,
       };
 
-      // Build environment variables array
-      const envVars: Array<{ name: string; value: string }> = [];
-      if (config.env) {
-        for (const [key, value] of Object.entries(config.env)) {
-          envVars.push({ name: key, value: String(value) });
-        }
-      }
-
-      // Create Deployment
-      const deployment = {
-        apiVersion: 'apps/v1',
-        kind: 'Deployment',
-        metadata: {
-          name: config.name,
-          namespace,
-          labels: {
-            app: config.name,
-            'pap-agent': 'true',
-          },
-        },
-        spec: {
-          replicas: 1,
-          selector: {
-            matchLabels: {
-              app: config.name,
-            },
-          },
-          template: {
-            metadata: {
-              labels: {
-                app: config.name,
-                'pap-agent': 'true',
-              },
-            },
-            spec: {
-              securityContext: {
-                runAsNonRoot: true,
-                runAsUser: 1001,
-                fsGroup: 1001,
-                seccompProfile: {
-                  type: 'RuntimeDefault',
-                },
-              },
-              containers: [
-                {
-                  name: 'agent',
-                  image,
-                  ports: [{ containerPort, name: 'http' }],
-                  env: envVars.length > 0 ? envVars : undefined,
-                  resources: {
-                    requests: {
-                      cpu: resources.cpuRequest,
-                      memory: resources.memoryRequest,
-                    },
-                    limits: {
-                      cpu: resources.cpuLimit,
-                      memory: resources.memoryLimit,
-                    },
-                  },
-                  securityContext: {
-                    allowPrivilegeEscalation: false,
-                    capabilities: { drop: ['ALL'] },
-                    readOnlyRootFilesystem: false,
-                  },
-                },
-              ],
-            },
-          },
-        },
-      };
-
-      await k8sRequest(`/apis/apps/v1/namespaces/${namespace}/deployments`, {
+      // Create Deployment using manifest builder
+      await k8sJson(`/apis/apps/v1/namespaces/${namespace}/deployments`, {
         method: 'POST',
-        body: JSON.stringify(deployment),
+        body: buildDeploymentManifest(manifestConfig),
       });
 
-      // Create Service
-      const service = {
-        apiVersion: 'v1',
-        kind: 'Service',
-        metadata: {
-          name: config.name,
-          namespace,
-          labels: {
-            app: config.name,
-            'pap-agent': 'true',
-          },
-        },
-        spec: {
-          selector: {
-            app: config.name,
-          },
-          ports: [
-            {
-              port: 80,
-              targetPort: containerPort,
-              protocol: 'TCP',
-              name: 'http',
-            },
-          ],
-          type: 'ClusterIP',
-        },
-      };
-
-      await k8sRequest(`/api/v1/namespaces/${namespace}/services`, {
+      // Create Service using manifest builder
+      await k8sJson(`/api/v1/namespaces/${namespace}/services`, {
         method: 'POST',
-        body: JSON.stringify(service),
+        body: buildServiceManifest(manifestConfig),
       });
 
-      // Create Ingress
-      const ingress = {
-        apiVersion: 'networking.k8s.io/v1',
-        kind: 'Ingress',
-        metadata: {
-          name: config.name,
-          namespace,
-          labels: {
-            app: config.name,
-            'pap-agent': 'true',
-          },
-          annotations: {
-            'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
-            'traefik.ingress.kubernetes.io/router.entrypoints': 'web,websecure',
-            'traefik.ingress.kubernetes.io/router.tls': 'true',
-          },
-        },
-        spec: {
-          ingressClassName: 'traefik',
-          tls: [
-            {
-              hosts: [config.dnsName],
-              secretName: `${config.name}-tls`,
-            },
-          ],
-          rules: [
-            {
-              host: config.dnsName,
-              http: {
-                paths: [
-                  {
-                    path: '/',
-                    pathType: 'Prefix',
-                    backend: {
-                      service: {
-                        name: config.name,
-                        port: { number: 80 },
-                      },
-                    },
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      };
-
-      await k8sRequest(`/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
+      // Create Ingress using manifest builder
+      await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
         method: 'POST',
-        body: JSON.stringify(ingress),
+        body: buildIngressManifest(manifestConfig),
       });
 
       return {
@@ -440,13 +437,13 @@ spec:
   }
 
   /**
-   * Get deployment status for an agent via Rancher API
+   * Get deployment status for an agent via Kubernetes API.
    */
   async getDeploymentStatus(name: string, namespace?: string): Promise<DeploymentStatus | null> {
     try {
       const ns = namespace || this.defaultNamespace;
 
-      const deployment = await k8sRequest(
+      const deployment = await k8sJson<K8sDeploymentResponse>(
         `/apis/apps/v1/namespaces/${ns}/deployments/${name}`
       );
 
@@ -461,19 +458,19 @@ spec:
         unavailableReplicas: status.unavailableReplicas,
         conditions: status.conditions || [],
       };
-    } catch (error) {
+    } catch {
       // Deployment doesn't exist or error occurred
       return null;
     }
   }
 
   /**
-   * Check if an agent deployment exists via Kubernetes API
+   * Check if an agent deployment exists via Kubernetes API.
    */
   async deploymentExists(name: string, namespace?: string): Promise<boolean> {
     try {
       const ns = namespace || this.defaultNamespace;
-      await k8sRequest(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`);
+      await k8sJson<K8sDeploymentResponse>(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`);
       return true;
     } catch {
       return false;
@@ -481,7 +478,7 @@ spec:
   }
 
   /**
-   * Delete an agent deployment and all related resources via Rancher API
+   * Delete an agent deployment and all related resources via Kubernetes API.
    */
   async deleteAgent(name: string, namespace?: string): Promise<{ success: boolean; message: string }> {
     try {
@@ -489,36 +486,28 @@ spec:
 
       // Delete deployment
       try {
-        await k8sRequest(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, {
-          method: 'DELETE',
-        });
+        await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, { method: 'DELETE' });
       } catch (error) {
         console.warn(`Warning: Could not delete deployment ${name}:`, error);
       }
 
       // Delete service
       try {
-        await k8sRequest(`/api/v1/namespaces/${ns}/services/${name}`, {
-          method: 'DELETE',
-        });
+        await k8sJson(`/api/v1/namespaces/${ns}/services/${name}`, { method: 'DELETE' });
       } catch (error) {
         console.warn(`Warning: Could not delete service ${name}:`, error);
       }
 
       // Delete ingress
       try {
-        await k8sRequest(`/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, {
-          method: 'DELETE',
-        });
+        await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, { method: 'DELETE' });
       } catch (error) {
         console.warn(`Warning: Could not delete ingress ${name}:`, error);
       }
 
       // Delete TLS secret
       try {
-        await k8sRequest(`/api/v1/namespaces/${ns}/secrets/${name}-tls`, {
-          method: 'DELETE',
-        });
+        await k8sJson(`/api/v1/namespaces/${ns}/secrets/${name}-tls`, { method: 'DELETE' });
       } catch (error) {
         console.warn(`Warning: Could not delete TLS secret for ${name}:`, error);
       }
@@ -537,18 +526,16 @@ spec:
   }
 
   /**
-   * List all PAP agent deployments via Kubernetes API
+   * List all PAP agent deployments via Kubernetes API.
    */
   async listAgents(namespace?: string): Promise<Array<{ name: string; ready: boolean }>> {
     try {
       const ns = namespace || this.defaultNamespace;
-      const result = await k8sRequest(
+      const result = await k8sJson<K8sDeploymentListResponse>(
         `/apis/apps/v1/namespaces/${ns}/deployments?labelSelector=pap-agent=true`
       );
 
-      const deployments = result.items || [];
-
-      return deployments.map((deployment: any) => ({
+      return (result.items || []).map((deployment) => ({
         name: deployment.metadata.name,
         ready: (deployment.status?.readyReplicas || 0) === (deployment.status?.replicas || 0),
       }));
@@ -559,22 +546,16 @@ spec:
   }
 
   /**
-   * Scale an agent deployment
+   * Scale an agent deployment.
    */
   async scaleAgent(name: string, replicas: number, namespace?: string): Promise<{ success: boolean; message: string }> {
     try {
       const ns = namespace || this.defaultNamespace;
 
-      // Use PATCH to update the replicas
-      await k8sRequest(
-        `/apis/apps/v1/namespaces/${ns}/deployments/${name}/scale`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            spec: { replicas },
-          }),
-        }
-      );
+      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}/scale`, {
+        method: 'PATCH',
+        body: { spec: { replicas } },
+      });
 
       return {
         success: true,
@@ -590,15 +571,15 @@ spec:
   }
 
   /**
-   * Restart a deployment using the Kubernetes rollout restart mechanism
-   * This adds a restart annotation which triggers a rolling restart
+   * Restart a deployment using the Kubernetes rollout restart mechanism.
+   * Adds a restart annotation which triggers a rolling restart.
    */
   async restartDeployment(name: string, namespace?: string): Promise<{ success: boolean; message: string }> {
     try {
       const ns = namespace || this.defaultNamespace;
 
       // Get current deployment
-      const deployment = await k8sRequest(
+      const deployment = await k8sJson<K8sDeploymentResponse>(
         `/apis/apps/v1/namespaces/${ns}/deployments/${name}`
       );
 
@@ -608,23 +589,10 @@ spec:
       annotations['kubectl.kubernetes.io/restartedAt'] = now;
 
       // Patch the deployment with the restart annotation
-      const patch = {
-        spec: {
-          template: {
-            metadata: {
-              annotations,
-            },
-          },
-        },
-      };
-
-      await k8sRequest(
-        `/apis/apps/v1/namespaces/${ns}/deployments/${name}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(patch),
-        }
-      );
+      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, {
+        method: 'PATCH',
+        body: { spec: { template: { metadata: { annotations } } } },
+      });
 
       return {
         success: true,
@@ -640,14 +608,14 @@ spec:
   }
 
   /**
-   * Get logs from an agent pod via Kubernetes API
+   * Get logs from an agent pod via Kubernetes API.
    */
   async getAgentLogs(name: string, namespace?: string, tailLines: number = 100): Promise<string | null> {
     try {
       const ns = namespace || this.defaultNamespace;
 
       // First get pods for this deployment
-      const pods = await k8sRequest(
+      const pods = await k8sJson<K8sPodListResponse>(
         `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
       );
 
@@ -657,7 +625,7 @@ spec:
       }
 
       // Find a running pod (prefer running pods)
-      const runningPod = pods.items.find((pod: any) => pod.status?.phase === 'Running');
+      const runningPod = pods.items.find((pod) => pod.status?.phase === 'Running');
       const targetPod = runningPod || pods.items[0];
       const podName = targetPod.metadata?.name;
 
@@ -666,14 +634,11 @@ spec:
         return null;
       }
 
-      // Get logs from the pod using Kubernetes API
-      // The logs endpoint returns plain text, so we use rawResponse: true
+      // Get logs from the pod (returns plain text)
       try {
-        const logs = await k8sRequest(
-          `/api/v1/namespaces/${ns}/pods/${podName}/log?tailLines=${tailLines}&timestamps=true`,
-          { rawResponse: true }
+        return await k8sText(
+          `/api/v1/namespaces/${ns}/pods/${podName}/log?tailLines=${tailLines}&timestamps=true`
         );
-        return logs;
       } catch (logError) {
         // Handle case where container is waiting to start (ImagePullBackOff, etc.)
         const errorMsg = logError instanceof Error ? logError.message : '';
@@ -690,7 +655,7 @@ spec:
   }
 
   /**
-   * Get pod events for an agent deployment
+   * Get pod events for an agent deployment.
    */
   async getAgentEvents(name: string, namespace?: string): Promise<Array<{
     type: string;
@@ -705,15 +670,15 @@ spec:
       const ns = namespace || this.defaultNamespace;
 
       // Get pods for this deployment
-      const pods = await k8sRequest(
+      const pods = await k8sJson<K8sPodListResponse>(
         `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
       );
 
-      const podNames = pods.items?.map((pod: any) => pod.metadata.name) || [];
-      const allEvents: any[] = [];
+      const podNames = pods.items?.map((pod) => pod.metadata.name) || [];
+      const allEvents: K8sEventListResponse['items'] = [];
 
       // Get events for deployment
-      const deploymentEvents = await k8sRequest(
+      const deploymentEvents = await k8sJson<K8sEventListResponse>(
         `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${name},involvedObject.kind=Deployment`
       );
       allEvents.push(...(deploymentEvents.items || []));
@@ -721,7 +686,7 @@ spec:
       // Get events for each pod
       for (const podName of podNames) {
         try {
-          const podEvents = await k8sRequest(
+          const podEvents = await k8sJson<K8sEventListResponse>(
             `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${podName},involvedObject.kind=Pod`
           );
           allEvents.push(...(podEvents.items || []));
@@ -738,7 +703,7 @@ spec:
         return timeB - timeA;
       });
 
-      return allEvents.map(event => ({
+      return allEvents.map((event) => ({
         type: event.type || 'Normal',
         reason: event.reason || 'Unknown',
         message: event.message || '',
@@ -754,7 +719,7 @@ spec:
   }
 
   /**
-   * Get pod status details for an agent
+   * Get pod status details for an agent.
    */
   async getAgentPodStatus(name: string, namespace?: string): Promise<Array<{
     name: string;
@@ -776,12 +741,12 @@ spec:
     try {
       const ns = namespace || this.defaultNamespace;
 
-      const pods = await k8sRequest(
+      const pods = await k8sJson<K8sPodListResponse>(
         `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
       );
 
-      return (pods.items || []).map((pod: any) => {
-        const containerStatuses = (pod.status?.containerStatuses || []).map((cs: any) => {
+      return (pods.items || []).map((pod) => {
+        const containerStatuses = (pod.status?.containerStatuses || []).map((cs) => {
           let state = 'Unknown';
           let stateReason: string | undefined;
           let stateMessage: string | undefined;
@@ -811,8 +776,8 @@ spec:
         return {
           name: pod.metadata?.name || 'unknown',
           phase: pod.status?.phase || 'Unknown',
-          ready: containerStatuses.every((cs: any) => cs.ready),
-          restarts: containerStatuses.reduce((sum: number, cs: any) => sum + cs.restartCount, 0),
+          ready: containerStatuses.every((cs) => cs.ready),
+          restarts: containerStatuses.reduce((sum, cs) => sum + cs.restartCount, 0),
           containerStatuses,
           startTime: pod.status?.startTime,
           podIP: pod.status?.podIP,
@@ -826,7 +791,7 @@ spec:
   }
 
   /**
-   * Upgrade an agent with new image and/or resources using rolling update via Kubernetes API
+   * Upgrade an agent with new image and/or resources using rolling update via Kubernetes API.
    */
   async upgradeAgent(config: {
     name: string;
@@ -850,14 +815,11 @@ spec:
       const ns = config.namespace || this.defaultNamespace;
 
       // Build the patch object
-      const patch: any = {
+      const patch: Record<string, unknown> = {
         spec: {
           template: {
             spec: {
-              containers: [{
-                name: 'agent',
-                image: config.image,
-              }],
+              containers: [{ name: 'agent', image: config.image }],
             },
           },
         },
@@ -865,7 +827,7 @@ spec:
 
       // Add resources if provided
       if (config.resources) {
-        const resources: any = {};
+        const resources: { requests?: Record<string, string>; limits?: Record<string, string> } = {};
         if (config.resources.cpu_request || config.resources.memory_request) {
           resources.requests = {};
           if (config.resources.cpu_request) resources.requests.cpu = config.resources.cpu_request;
@@ -877,14 +839,16 @@ spec:
           if (config.resources.memory_limit) resources.limits.memory = config.resources.memory_limit;
         }
         if (Object.keys(resources).length > 0) {
-          patch.spec.template.spec.containers[0].resources = resources;
+          ((patch.spec as Record<string, unknown>).template as Record<string, unknown>).spec = {
+            containers: [{ name: 'agent', image: config.image, resources }],
+          };
         }
       }
 
       // Add strategy if provided
       if (config.strategy?.type === 'RollingUpdate' && config.strategy.rollingUpdate) {
         const { maxSurge, maxUnavailable } = config.strategy.rollingUpdate;
-        patch.spec.strategy = {
+        (patch.spec as Record<string, unknown>).strategy = {
           type: 'RollingUpdate',
           rollingUpdate: {
             ...(maxSurge !== undefined && { maxSurge }),
@@ -894,13 +858,10 @@ spec:
       }
 
       // Apply the patch
-      await k8sRequest(
-        `/apis/apps/v1/namespaces/${ns}/deployments/${config.name}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(patch),
-        }
-      );
+      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${config.name}`, {
+        method: 'PATCH',
+        body: patch,
+      });
 
       // Note: We can't easily wait for rollout via API like kubectl does
       // The caller should poll getDeploymentStatus to check progress

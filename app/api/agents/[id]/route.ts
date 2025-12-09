@@ -14,6 +14,7 @@ import {
 
 import { authenticate } from '../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
+import { serializeForJson } from '@/lib/serialize-for-json';
 
 /**
  * @swagger
@@ -67,13 +68,13 @@ import { kubernetesService } from '@/lib/services/kubernetes-service';
  */
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = await params;
+    const { id: agentId } = params;
 
     // Fetch agent
     const agents = await db
@@ -127,22 +128,6 @@ export async function GET(
         agent.kubernetes_namespace || 'agents'
       );
     }
-
-    // Convert BigInt and Date values for JSON serialization
-    const serializeForJson = (obj: any): any => {
-      if (obj === null || obj === undefined) return obj;
-      if (typeof obj === 'bigint') return Number(obj);
-      if (obj instanceof Date) return obj.toISOString();
-      if (Array.isArray(obj)) return obj.map(serializeForJson);
-      if (typeof obj === 'object') {
-        const result: any = {};
-        for (const key in obj) {
-          result[key] = serializeForJson(obj[key]);
-        }
-        return result;
-      }
-      return obj;
-    };
 
     return NextResponse.json(serializeForJson({
       agent,
@@ -204,13 +189,13 @@ export async function GET(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = await params;
+    const { id: agentId } = params;
 
     // Fetch agent
     const agents = await db
@@ -333,13 +318,13 @@ export async function DELETE(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const { id: agentId } = await params;
+    const { id: agentId } = params;
     const body = await request.json();
     const { access_level, metadata: newMetadata } = body;
 
@@ -419,22 +404,6 @@ export async function PATCH(
         },
       });
     }
-
-    // Serialize for JSON response
-    const serializeForJson = (obj: any): any => {
-      if (obj === null || obj === undefined) return obj;
-      if (typeof obj === 'bigint') return Number(obj);
-      if (obj instanceof Date) return obj.toISOString();
-      if (Array.isArray(obj)) return obj.map(serializeForJson);
-      if (typeof obj === 'object') {
-        const result: any = {};
-        for (const key in obj) {
-          result[key] = serializeForJson(obj[key]);
-        }
-        return result;
-      }
-      return obj;
-    };
 
     return NextResponse.json({
       message: 'Agent updated successfully',
