@@ -271,4 +271,35 @@ export const EnhancedRateLimiters = {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10, // 10 requests per hour
   }),
+
+  // PAP Agent rate limits
+  agentCreate: createRedisRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20, // 20 agent creations per hour (resource intensive)
+  }),
+
+  agentList: createRedisRateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 60, // 60 list requests per minute
+  }),
+
+  agentRead: createRedisRateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 120, // 120 reads per minute (individual agent + status polling)
+  }),
+
+  agentUpdate: createRedisRateLimiter({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 30, // 30 updates per 5 minutes
+  }),
+
+  agentDelete: createRedisRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20, // 20 deletions per hour
+  }),
+
+  agentLifecycle: createRedisRateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30, // 30 lifecycle operations per minute (state changes, heartbeats)
+  }),
 };
