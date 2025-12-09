@@ -67,6 +67,14 @@ export function validateNamespace(namespace: string): string | null {
   return null;
 }
 
+/**
+ * Encode a value for use in a Kubernetes API URL path segment.
+ * SECURITY: Prevents path traversal and injection by properly encoding special characters.
+ */
+function encodePathSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
 // Request timeout (configurable via env var, default 30 seconds)
 const K8S_REQUEST_TIMEOUT_MS = parseInt(process.env.K8S_REQUEST_TIMEOUT_MS || '30000', 10);
 
@@ -497,8 +505,11 @@ export class KubernetesService {
           : undefined,
       };
 
+      // SECURITY: Encode namespace for URL path
+      const encodedNamespace = encodePathSegment(namespace);
+
       // Create Deployment first (required for Service/Ingress to work)
-      await k8sJson(`/apis/apps/v1/namespaces/${namespace}/deployments`, {
+      await k8sJson(`/apis/apps/v1/namespaces/${encodedNamespace}/deployments`, {
         method: 'POST',
         body: buildDeploymentManifest(manifestConfig),
       });
@@ -506,11 +517,11 @@ export class KubernetesService {
       // Create Service and Ingress in parallel (both depend on Deployment)
       try {
         await Promise.all([
-          k8sJson(`/api/v1/namespaces/${namespace}/services`, {
+          k8sJson(`/api/v1/namespaces/${encodedNamespace}/services`, {
             method: 'POST',
             body: buildServiceManifest(manifestConfig),
           }),
-          k8sJson(`/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
+          k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNamespace}/ingresses`, {
             method: 'POST',
             body: buildIngressManifest(manifestConfig),
           }),
@@ -543,9 +554,12 @@ export class KubernetesService {
   async getDeploymentStatus(name: string, namespace?: string): Promise<DeploymentStatus | null> {
     try {
       const ns = namespace || this.defaultNamespace;
+      // SECURITY: Encode path segments
+      const encodedNs = encodePathSegment(ns);
+      const encodedName = encodePathSegment(name);
 
       const deployment = await k8sJson<K8sDeploymentResponse>(
-        `/apis/apps/v1/namespaces/${ns}/deployments/${name}`
+        `/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`
       );
 
       const status = deployment.status || {};
@@ -571,7 +585,10 @@ export class KubernetesService {
   async deploymentExists(name: string, namespace?: string): Promise<boolean> {
     try {
       const ns = namespace || this.defaultNamespace;
-      await k8sJson<K8sDeploymentResponse>(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`);
+      // SECURITY: Encode path segments
+      const encodedNs = encodePathSegment(ns);
+      const encodedName = encodePathSegment(name);
+      await k8sJson<K8sDeploymentResponse>(`/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`);
       return true;
     } catch {
       return false;
@@ -601,9 +618,13 @@ export class KubernetesService {
     const deleted: string[] = [];
     const failed: string[] = [];
 
+    // SECURITY: Encode path segments
+    const encodedNs = encodePathSegment(ns);
+    const encodedName = encodePathSegment(name);
+
     // Delete deployment
     try {
-      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, { method: 'DELETE' });
+      await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`, { method: 'DELETE' });
       deleted.push('deployment');
     } catch (error) {
       console.warn(`Warning: Could not delete deployment ${name}:`, error);
@@ -612,7 +633,7 @@ export class KubernetesService {
 
     // Delete service
     try {
-      await k8sJson(`/api/v1/namespaces/${ns}/services/${name}`, { method: 'DELETE' });
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/services/${encodedName}`, { method: 'DELETE' });
       deleted.push('service');
     } catch (error) {
       console.warn(`Warning: Could not delete service ${name}:`, error);
@@ -621,7 +642,7 @@ export class KubernetesService {
 
     // Delete ingress
     try {
-      await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, { method: 'DELETE' });
+      await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}`, { method: 'DELETE' });
       deleted.push('ingress');
     } catch (error) {
       console.warn(`Warning: Could not delete ingress ${name}:`, error);
@@ -630,7 +651,7 @@ export class KubernetesService {
 
     // Delete TLS secret
     try {
-      await k8sJson(`/api/v1/namespaces/${ns}/secrets/${name}-tls`, { method: 'DELETE' });
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-tls`)}`, { method: 'DELETE' });
       deleted.push('tls-secret');
     } catch (error) {
       console.warn(`Warning: Could not delete TLS secret for ${name}:`, error);
@@ -654,8 +675,10 @@ export class KubernetesService {
   async listAgents(namespace?: string): Promise<Array<{ name: string; ready: boolean }>> {
     try {
       const ns = namespace || this.defaultNamespace;
+      // SECURITY: Encode namespace for URL path
+      const encodedNs = encodePathSegment(ns);
       const result = await k8sJson<K8sDeploymentListResponse>(
-        `/apis/apps/v1/namespaces/${ns}/deployments?labelSelector=pap-agent=true`
+        `/apis/apps/v1/namespaces/${encodedNs}/deployments?labelSelector=pap-agent=true`
       );
 
       return (result.items || []).map((deployment) => ({
@@ -681,7 +704,11 @@ export class KubernetesService {
         return { success: false, message: namespaceError };
       }
 
-      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}/scale`, {
+      // SECURITY: Encode path segments
+      const encodedNs = encodePathSegment(ns);
+      const encodedName = encodePathSegment(name);
+
+      await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}/scale`, {
         method: 'PATCH',
         body: { spec: { replicas } },
       });
@@ -713,9 +740,13 @@ export class KubernetesService {
         return { success: false, message: namespaceError };
       }
 
+      // SECURITY: Encode path segments
+      const encodedNs = encodePathSegment(ns);
+      const encodedName = encodePathSegment(name);
+
       // Get current deployment
       const deployment = await k8sJson<K8sDeploymentResponse>(
-        `/apis/apps/v1/namespaces/${ns}/deployments/${name}`
+        `/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`
       );
 
       // Add restart annotation (Kubernetes way to trigger rolling restart)
@@ -724,7 +755,7 @@ export class KubernetesService {
       annotations['kubectl.kubernetes.io/restartedAt'] = now;
 
       // Patch the deployment with the restart annotation
-      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, {
+      await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`, {
         method: 'PATCH',
         body: { spec: { template: { metadata: { annotations } } } },
       });
@@ -748,10 +779,13 @@ export class KubernetesService {
   async getAgentLogs(name: string, namespace?: string, tailLines: number = 100): Promise<string | null> {
     try {
       const ns = namespace || this.defaultNamespace;
+      // SECURITY: Encode path segments and query parameters
+      const encodedNs = encodePathSegment(ns);
+      const encodedLabelSelector = encodeURIComponent(`app=${name}`);
 
       // First get pods for this deployment
       const pods = await k8sJson<K8sPodListResponse>(
-        `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
+        `/api/v1/namespaces/${encodedNs}/pods?labelSelector=${encodedLabelSelector}`
       );
 
       if (!pods.items || pods.items.length === 0) {
@@ -769,10 +803,13 @@ export class KubernetesService {
         return null;
       }
 
+      // SECURITY: Encode pod name for URL path
+      const encodedPodName = encodePathSegment(podName);
+
       // Get logs from the pod (returns plain text)
       try {
         return await k8sText(
-          `/api/v1/namespaces/${ns}/pods/${podName}/log?tailLines=${tailLines}&timestamps=true`
+          `/api/v1/namespaces/${encodedNs}/pods/${encodedPodName}/log?tailLines=${tailLines}&timestamps=true`
         );
       } catch (logError) {
         // Handle case where container is waiting to start (ImagePullBackOff, etc.)
@@ -803,28 +840,33 @@ export class KubernetesService {
   }>> {
     try {
       const ns = namespace || this.defaultNamespace;
+      // SECURITY: Encode path segments and query parameters
+      const encodedNs = encodePathSegment(ns);
+      const encodedLabelSelector = encodeURIComponent(`app=${name}`);
 
       // Get pods for this deployment
       const pods = await k8sJson<K8sPodListResponse>(
-        `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
+        `/api/v1/namespaces/${encodedNs}/pods?labelSelector=${encodedLabelSelector}`
       );
 
       const podNames = pods.items?.map((pod) => pod.metadata.name) || [];
       const allEvents: K8sEventListResponse['items'] = [];
 
       // Get events for deployment
+      const encodedDeploymentFieldSelector = encodeURIComponent(`involvedObject.name=${name},involvedObject.kind=Deployment`);
       const deploymentEvents = await k8sJson<K8sEventListResponse>(
-        `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${name},involvedObject.kind=Deployment`
+        `/api/v1/namespaces/${encodedNs}/events?fieldSelector=${encodedDeploymentFieldSelector}`
       );
       allEvents.push(...(deploymentEvents.items || []));
 
       // Get events for each pod in parallel
       const podEventResults = await Promise.allSettled(
-        podNames.map((podName) =>
-          k8sJson<K8sEventListResponse>(
-            `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${podName},involvedObject.kind=Pod`
-          )
-        )
+        podNames.map((podName) => {
+          const encodedPodFieldSelector = encodeURIComponent(`involvedObject.name=${podName},involvedObject.kind=Pod`);
+          return k8sJson<K8sEventListResponse>(
+            `/api/v1/namespaces/${encodedNs}/events?fieldSelector=${encodedPodFieldSelector}`
+          );
+        })
       );
 
       for (let i = 0; i < podEventResults.length; i++) {
@@ -881,9 +923,12 @@ export class KubernetesService {
   }>> {
     try {
       const ns = namespace || this.defaultNamespace;
+      // SECURITY: Encode path segments and query parameters
+      const encodedNs = encodePathSegment(ns);
+      const encodedLabelSelector = encodeURIComponent(`app=${name}`);
 
       const pods = await k8sJson<K8sPodListResponse>(
-        `/api/v1/namespaces/${ns}/pods?labelSelector=app=${name}`
+        `/api/v1/namespaces/${encodedNs}/pods?labelSelector=${encodedLabelSelector}`
       );
 
       return (pods.items || []).map((pod) => {
@@ -998,8 +1043,12 @@ export class KubernetesService {
         };
       }
 
+      // SECURITY: Encode path segments
+      const encodedNs = encodePathSegment(ns);
+      const encodedName = encodePathSegment(config.name);
+
       // Apply the patch
-      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${config.name}`, {
+      await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`, {
         method: 'PATCH',
         body: patch,
       });

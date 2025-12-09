@@ -11,6 +11,7 @@ import {
 import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { validateAgentName } from '@/lib/agent-name-policy';
 
 /**
  * @swagger
@@ -134,17 +135,15 @@ export async function POST(
       );
     }
 
-    // Validate DNS-safe name
-    const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-    if (!dnsNameRegex.test(name)) {
+    // SECURITY: Use centralized name validation (consistent with agent creation)
+    const nameValidation = validateAgentName(name);
+    if (!nameValidation.ok) {
       return NextResponse.json(
-        {
-          error:
-            'Name must be DNS-safe: lowercase alphanumeric and hyphens only, must start and end with alphanumeric',
-        },
+        { error: nameValidation.message },
         { status: 400 }
       );
     }
+    const { normalizedName, dnsName } = nameValidation;
 
     // Fetch source agent
     const sourceAgents = await db
@@ -167,28 +166,6 @@ export async function POST(
 
     const sourceAgent = sourceAgents[0];
 
-    // Check if name is already taken
-    const existingAgents = await db
-      .select()
-      .from(agentsTable)
-      .where(
-        and(
-          eq(agentsTable.name, name),
-          eq(agentsTable.profile_uuid, auth.activeProfile.uuid)
-        )
-      )
-      .limit(1);
-
-    if (existingAgents.length > 0) {
-      return NextResponse.json(
-        { error: `Agent with name "${name}" already exists` },
-        { status: 400 }
-      );
-    }
-
-    // Generate DNS name
-    const dnsName = `${name}.is.plugged.in`;
-
     // Clone metadata, applying overrides
     const sourceMetadata = (sourceAgent.metadata as Record<string, unknown>) || {};
     const newMetadata = {
@@ -205,18 +182,38 @@ export async function POST(
     };
 
     // Create new agent in database
-    const [newAgent] = await db
-      .insert(agentsTable)
-      .values({
-        name,
-        dns_name: dnsName,
-        profile_uuid: auth.activeProfile.uuid,
-        state: AgentState.NEW,
-        description: description || `Replica of ${sourceAgent.name}`,
-        kubernetes_namespace: sourceAgent.kubernetes_namespace || 'agents',
-        metadata: newMetadata,
-      })
-      .returning();
+    // SECURITY: Use atomic insert with unique constraint instead of check-then-insert
+    // to prevent TOCTOU race conditions on dns_name uniqueness
+    let newAgent;
+    try {
+      const [insertedAgent] = await db
+        .insert(agentsTable)
+        .values({
+          name: normalizedName,
+          dns_name: dnsName,
+          profile_uuid: auth.activeProfile.uuid,
+          state: AgentState.NEW,
+          description: description || `Replica of ${sourceAgent.name}`,
+          kubernetes_namespace: sourceAgent.kubernetes_namespace || 'agents',
+          metadata: newMetadata,
+        })
+        .returning();
+      newAgent = insertedAgent;
+    } catch (insertError: unknown) {
+      // Handle unique constraint violation (PostgreSQL error code 23505)
+      if (
+        insertError &&
+        typeof insertError === 'object' &&
+        'code' in insertError &&
+        insertError.code === '23505'
+      ) {
+        return NextResponse.json(
+          { error: `DNS name '${dnsName}' is already registered` },
+          { status: 409 }
+        );
+      }
+      throw insertError;
+    }
 
     // Log lifecycle event for new agent
     await db.insert(agentLifecycleEventsTable).values({
@@ -253,7 +250,7 @@ export async function POST(
         overrides?.resources || (sourceMetadata.resources as Record<string, string>);
 
       deploymentResult = await kubernetesService.deployAgent({
-        name,
+        name: normalizedName,
         dnsName,
         namespace: newAgent.kubernetes_namespace || 'agents',
         image,
@@ -273,7 +270,7 @@ export async function POST(
           .update(agentsTable)
           .set({
             state: AgentState.PROVISIONED,
-            kubernetes_deployment: name,
+            kubernetes_deployment: normalizedName,
             provisioned_at: new Date(),
           })
           .where(eq(agentsTable.uuid, newAgent.uuid));

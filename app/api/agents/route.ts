@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -42,6 +42,54 @@ async function applyRateLimit(
     );
   }
   return null;
+}
+
+/**
+ * Check agent quota for a profile and return error response if exceeded.
+ * SECURITY: Enforces quota limits to prevent resource exhaustion.
+ */
+async function checkAgentQuota(
+  profileUuid: string,
+  profileMetadata: Record<string, unknown> | null
+): Promise<{ allowed: boolean; error?: NextResponse }> {
+  // Get current agent count
+  const totalAgentsResult = await db
+    .select({ count: count() })
+    .from(agentsTable)
+    .where(eq(agentsTable.profile_uuid, profileUuid));
+
+  const totalAgents = totalAgentsResult[0]?.count || 0;
+
+  // Calculate quota limit (same logic as quota endpoint)
+  const tier = (profileMetadata?.subscription_tier as string) || 'free';
+  let maxAgents = 10; // Default: free tier
+  if (tier === 'pro') maxAgents = 100;
+  if (tier === 'enterprise') maxAgents = -1; // unlimited
+
+  // Allow override from profile metadata
+  if (profileMetadata?.max_agents !== undefined) {
+    maxAgents = profileMetadata.max_agents as number;
+  }
+
+  // Check if quota exceeded
+  if (maxAgents !== -1 && totalAgents >= maxAgents) {
+    return {
+      allowed: false,
+      error: NextResponse.json(
+        {
+          error: 'Agent quota exceeded',
+          quota: {
+            max_agents: maxAgents,
+            current_agents: totalAgents,
+            tier,
+          },
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { allowed: true };
 }
 
 // Kubernetes resource specification patterns
@@ -248,6 +296,13 @@ export async function POST(request: NextRequest) {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
+    // SECURITY: Enforce agent quota before creating new agents
+    const quotaCheck = await checkAgentQuota(
+      auth.activeProfile.uuid,
+      auth.activeProfile.metadata as Record<string, unknown> | null
+    );
+    if (!quotaCheck.allowed) return quotaCheck.error!;
+
     const body = await request.json();
     const { name, template_uuid, access_level, description, image, resources, env_overrides } = body;
 
@@ -351,21 +406,6 @@ export async function POST(request: NextRequest) {
     }
     const { normalizedName, dnsName } = nameValidation;
 
-    // Check if agent with this DNS name already exists GLOBALLY (across all profiles)
-    // DNS names must be unique across the entire system
-    const existingGlobal = await db
-      .select()
-      .from(agentsTable)
-      .where(eq(agentsTable.dns_name, dnsName))
-      .limit(1);
-
-    if (existingGlobal.length > 0) {
-      return NextResponse.json(
-        { error: `DNS name '${dnsName}' is already registered` },
-        { status: 409 }
-      );
-    }
-
     // Resolve image: explicit > template > none
     const resolvedImage = image || template?.docker_image || undefined;
 
@@ -378,29 +418,51 @@ export async function POST(request: NextRequest) {
     }
 
     // Create agent in database with NEW state
-    const [newAgent] = await db
-      .insert(agentsTable)
-      .values({
-        name: normalizedName,
-        dns_name: dnsName,
-        profile_uuid: auth.activeProfile.uuid,
-        template_uuid: template?.uuid || null,
-        access_level: access_level || AccessLevel.PRIVATE,
-        state: AgentState.NEW,
-        kubernetes_namespace: 'agents',
-        kubernetes_deployment: normalizedName,
-        metadata: {
-          description: description || template?.description,
-          image: resolvedImage,
-          container_port: template?.container_port || 3000,
-          health_endpoint: template?.health_endpoint || '/health',
-          resources,
-          env_overrides,
-          template_name: template ? `${template.namespace}/${template.name}` : undefined,
-          template_version: template?.version,
-        },
-      })
-      .returning();
+    // SECURITY: Use atomic insert with unique constraint instead of check-then-insert
+    // to prevent TOCTOU race conditions on dns_name uniqueness
+    let newAgent;
+    try {
+      const [insertedAgent] = await db
+        .insert(agentsTable)
+        .values({
+          name: normalizedName,
+          dns_name: dnsName,
+          profile_uuid: auth.activeProfile.uuid,
+          template_uuid: template?.uuid || null,
+          access_level: access_level || AccessLevel.PRIVATE,
+          state: AgentState.NEW,
+          kubernetes_namespace: 'agents',
+          kubernetes_deployment: normalizedName,
+          metadata: {
+            description: description || template?.description,
+            image: resolvedImage,
+            container_port: template?.container_port || 3000,
+            health_endpoint: template?.health_endpoint || '/health',
+            resources,
+            env_overrides,
+            template_name: template ? `${template.namespace}/${template.name}` : undefined,
+            template_version: template?.version,
+          },
+        })
+        .returning();
+      newAgent = insertedAgent;
+    } catch (insertError: unknown) {
+      // Handle unique constraint violation (PostgreSQL error code 23505)
+      // This catches race conditions where another request inserted the same dns_name
+      if (
+        insertError &&
+        typeof insertError === 'object' &&
+        'code' in insertError &&
+        insertError.code === '23505'
+      ) {
+        return NextResponse.json(
+          { error: `DNS name '${dnsName}' is already registered` },
+          { status: 409 }
+        );
+      }
+      // Re-throw other errors
+      throw insertError;
+    }
 
     // Increment template install count
     if (template) {
