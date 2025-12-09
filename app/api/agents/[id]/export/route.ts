@@ -129,35 +129,74 @@ export async function POST(
       );
     }
 
-    // Fetch agent
-    const agents = await db
-      .select()
-      .from(agentsTable)
-      .where(
-        and(
-          eq(agentsTable.uuid, agentId),
-          eq(agentsTable.profile_uuid, auth.activeProfile.uuid)
+    // Use transaction for consistent snapshot of agent data
+    // This ensures all fetched data reflects the same point in time
+    const snapshot = await db.transaction(async (tx) => {
+      // Fetch agent
+      const agents = await tx
+        .select()
+        .from(agentsTable)
+        .where(
+          and(
+            eq(agentsTable.uuid, agentId),
+            eq(agentsTable.profile_uuid, auth.activeProfile.uuid)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (agents.length === 0) {
+      if (agents.length === 0) {
+        return { notFound: true } as const;
+      }
+
+      const agent = agents[0];
+
+      // Fetch lifecycle events (complete audit trail)
+      const lifecycleEvents = await tx
+        .select()
+        .from(agentLifecycleEventsTable)
+        .where(eq(agentLifecycleEventsTable.agent_uuid, agentId))
+        .orderBy(desc(agentLifecycleEventsTable.timestamp));
+
+      // Optionally include telemetry history
+      let heartbeats: unknown[] = [];
+      let metrics: unknown[] = [];
+
+      if (includeTelemetry) {
+        heartbeats = await tx
+          .select()
+          .from(agentHeartbeatsTable)
+          .where(eq(agentHeartbeatsTable.agent_uuid, agentId))
+          .orderBy(desc(agentHeartbeatsTable.timestamp))
+          .limit(telemetryLimit);
+
+        metrics = await tx
+          .select()
+          .from(agentMetricsTable)
+          .where(eq(agentMetricsTable.agent_uuid, agentId))
+          .orderBy(desc(agentMetricsTable.timestamp))
+          .limit(telemetryLimit);
+      }
+
+      return {
+        notFound: false,
+        agent,
+        lifecycleEvents,
+        heartbeats,
+        metrics,
+      } as const;
+    });
+
+    // Handle not found case (after transaction)
+    if (snapshot.notFound) {
       return NextResponse.json(
         { error: 'Agent not found' },
         { status: 404 }
       );
     }
 
-    const agent = agents[0];
+    const { agent, lifecycleEvents, heartbeats, metrics } = snapshot;
 
-    // Fetch lifecycle events (complete audit trail)
-    const lifecycleEvents = await db
-      .select()
-      .from(agentLifecycleEventsTable)
-      .where(eq(agentLifecycleEventsTable.agent_uuid, agentId))
-      .orderBy(desc(agentLifecycleEventsTable.timestamp));
-
-    // Get Kubernetes deployment configuration
+    // Get Kubernetes deployment configuration (outside transaction - external API call)
     let kubernetesConfig = null;
     if (agent.kubernetes_deployment) {
       const deploymentStatus = await kubernetesService.getDeploymentStatus(
@@ -207,29 +246,15 @@ export async function POST(
       kubernetes_config: kubernetesConfig,
     };
 
-    // Optionally include telemetry history
+    // Add telemetry if requested
     if (includeTelemetry) {
-      const heartbeats = await db
-        .select()
-        .from(agentHeartbeatsTable)
-        .where(eq(agentHeartbeatsTable.agent_uuid, agentId))
-        .orderBy(desc(agentHeartbeatsTable.timestamp))
-        .limit(telemetryLimit);
-
-      const metrics = await db
-        .select()
-        .from(agentMetricsTable)
-        .where(eq(agentMetricsTable.agent_uuid, agentId))
-        .orderBy(desc(agentMetricsTable.timestamp))
-        .limit(telemetryLimit);
-
       exportData.telemetry = {
         heartbeats,
         metrics,
       };
     }
 
-    // Log lifecycle event for audit trail
+    // Log lifecycle event for audit trail (outside transaction - doesn't need to be atomic)
     await db.insert(agentLifecycleEventsTable).values({
       agent_uuid: agentId,
       event_type: 'EXPORTED',
@@ -240,8 +265,8 @@ export async function POST(
         include_telemetry: includeTelemetry,
         telemetry_records: includeTelemetry
           ? {
-              heartbeats: exportData.telemetry?.heartbeats.length || 0,
-              metrics: exportData.telemetry?.metrics.length || 0,
+              heartbeats: heartbeats.length,
+              metrics: metrics.length,
             }
           : null,
       },

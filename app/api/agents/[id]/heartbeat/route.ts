@@ -200,8 +200,10 @@ export async function POST(
     });
 
     // PROVISIONED → ACTIVE transition on first heartbeat (PAP-RFC-001 §7.2)
+    // SECURITY: Use optimistic locking to prevent race conditions when multiple
+    // heartbeats arrive concurrently - only transition if still in PROVISIONED state
     if (agent.state === AgentState.PROVISIONED) {
-      await db
+      const updateResult = await db
         .update(agentsTable)
         .set({
           state: AgentState.ACTIVE,
@@ -213,25 +215,34 @@ export async function POST(
             last_heartbeat_mode: mode,
           },
         })
-        .where(eq(agentsTable.uuid, agentId));
+        .where(
+          and(
+            eq(agentsTable.uuid, agentId),
+            eq(agentsTable.state, AgentState.PROVISIONED) // Only transition from PROVISIONED
+          )
+        )
+        .returning();
 
-      // Log lifecycle event for state transition
-      await db.insert(agentLifecycleEventsTable).values({
-        agent_uuid: agentId,
-        event_type: 'ACTIVATED',
-        from_state: AgentState.PROVISIONED,
-        to_state: AgentState.ACTIVE,
-        metadata: {
-          triggered_by: 'heartbeat',
-          first_heartbeat_mode: mode,
-          uptime_seconds,
-        },
-      });
+      // Only log lifecycle event if WE made the transition (not a concurrent request)
+      if (updateResult.length > 0) {
+        await db.insert(agentLifecycleEventsTable).values({
+          agent_uuid: agentId,
+          event_type: 'ACTIVATED',
+          from_state: AgentState.PROVISIONED,
+          to_state: AgentState.ACTIVE,
+          metadata: {
+            triggered_by: 'heartbeat',
+            first_heartbeat_mode: mode,
+            uptime_seconds,
+          },
+        });
 
-      stateTransition = {
-        from: AgentState.PROVISIONED,
-        to: AgentState.ACTIVE,
-      };
+        stateTransition = {
+          from: AgentState.PROVISIONED,
+          to: AgentState.ACTIVE,
+        };
+      }
+      // If updateResult is empty, another heartbeat already activated the agent
     } else {
       // Just update last_heartbeat timestamp and metadata
       await db

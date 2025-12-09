@@ -206,28 +206,45 @@ async function k8sRequest(
   });
 
   if (response.status >= 400) {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     // Extract only safe error information from K8s response
     // K8s API returns structured errors with message, reason, code fields
     let safeErrorInfo = '';
+    let logMessage = `Kubernetes API error: ${response.status} ${response.statusText}`;
+
     try {
       const errorBody = JSON.parse(response.body);
       // Only extract standard K8s error fields, avoid exposing internal details
       const safeFields = {
-        message: errorBody.message,
-        reason: errorBody.reason,
-        code: errorBody.code,
-        kind: errorBody.kind,
+        reason: errorBody.reason,  // e.g., "NotFound", "AlreadyExists"
+        code: errorBody.code,      // HTTP status code
+        kind: errorBody.kind,      // Usually "Status"
       };
-      safeErrorInfo = JSON.stringify(safeFields);
+
+      // SECURITY: Redact resource names from message in production
+      // K8s messages often contain pod/service/namespace names
+      if (isDevelopment) {
+        safeFields.message = errorBody.message;
+        safeErrorInfo = JSON.stringify(safeFields);
+      } else {
+        // In production, only include the reason (not the full message with resource names)
+        safeErrorInfo = `reason=${safeFields.reason}, code=${safeFields.code}`;
+      }
     } catch {
       // Not JSON or parse failed - log nothing from body
       safeErrorInfo = '(non-JSON response)';
     }
 
-    // Log sanitized error info even in dev mode
-    console.error(`Kubernetes API error: ${response.status} ${response.statusText} - ${safeErrorInfo}`);
+    // Log error: detailed in development, minimal in production
+    if (isDevelopment) {
+      console.error(`${logMessage} - ${safeErrorInfo}`);
+    } else {
+      // Production: log minimal info to avoid leaking cluster details
+      console.error(`${logMessage} - ${safeErrorInfo}`);
+    }
 
-    // Return sanitized error
+    // Return sanitized error (never includes internal details)
     throw new Error(`Kubernetes API error: ${response.status} ${response.statusText}`);
   }
 
