@@ -20,14 +20,6 @@ const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
 // Only set K8S_INSECURE_SKIP_TLS_VERIFY=true for local development
 const K8S_INSECURE_SKIP_TLS_VERIFY = process.env.K8S_INSECURE_SKIP_TLS_VERIFY === 'true';
 
-// SECURITY: Fail hard if TLS verification is disabled in production
-if (K8S_INSECURE_SKIP_TLS_VERIFY && process.env.NODE_ENV === 'production') {
-  throw new Error(
-    'K8S_INSECURE_SKIP_TLS_VERIFY cannot be enabled in production. ' +
-    'Set K8S_CA_CERT with your cluster CA certificate instead.'
-  );
-}
-
 // Load CA certificate: prefer K8S_CA_CERT env var, then in-cluster CA file
 const IN_CLUSTER_CA_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt';
 function loadK8sCaCert(): Buffer | undefined {
@@ -88,6 +80,22 @@ function httpsRequest(
   }
 ): Promise<{ status: number; statusText: string; body: string }> {
   return new Promise((resolve, reject) => {
+    // SECURITY: Runtime TLS validation for production environments
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      if (K8S_INSECURE_SKIP_TLS_VERIFY) {
+        return reject(new Error(
+          'K8S_INSECURE_SKIP_TLS_VERIFY cannot be enabled in production. ' +
+          'Set K8S_CA_CERT with your cluster CA certificate instead.'
+        ));
+      }
+      if (!K8S_CA_CERT) {
+        return reject(new Error(
+          'K8S_CA_CERT must be configured in production for secure Kubernetes API communication.'
+        ));
+      }
+    }
+
     const parsedUrl = new URL(url);
     const isHttps = parsedUrl.protocol === 'https:';
 
@@ -121,11 +129,13 @@ function httpsRequest(
       });
     });
 
-    // Set request timeout - use destroy(err) to trigger error handler with timeout error
+    // Set request timeout - set settled before destroy to prevent race condition
     req.setTimeout(K8S_REQUEST_TIMEOUT_MS, () => {
       if (settled) return;
+      settled = true;
       const timeoutError = new Error(`Kubernetes API request timed out after ${K8S_REQUEST_TIMEOUT_MS}ms`);
       req.destroy(timeoutError);
+      reject(timeoutError);
     });
 
     req.on('error', (err) => {
@@ -459,6 +469,16 @@ export class KubernetesService {
     try {
       const namespace = config.namespace || this.defaultNamespace;
 
+      // SECURITY: Validate namespace against allowlist (defense in depth)
+      const namespaceError = validateNamespace(namespace);
+      if (namespaceError) {
+        return {
+          success: false,
+          message: namespaceError,
+          deploymentName: config.name,
+        };
+      }
+
       // Build manifest configuration
       const manifestConfig: ManifestConfig = {
         name: config.name,
@@ -568,6 +588,16 @@ export class KubernetesService {
     failedResources?: string[];
   }> {
     const ns = namespace || this.defaultNamespace;
+
+    // SECURITY: Validate namespace against allowlist
+    const namespaceError = validateNamespace(ns);
+    if (namespaceError) {
+      return {
+        success: false,
+        message: namespaceError,
+      };
+    }
+
     const deleted: string[] = [];
     const failed: string[] = [];
 
@@ -645,6 +675,12 @@ export class KubernetesService {
     try {
       const ns = namespace || this.defaultNamespace;
 
+      // SECURITY: Validate namespace against allowlist
+      const namespaceError = validateNamespace(ns);
+      if (namespaceError) {
+        return { success: false, message: namespaceError };
+      }
+
       await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}/scale`, {
         method: 'PATCH',
         body: { spec: { replicas } },
@@ -670,6 +706,12 @@ export class KubernetesService {
   async restartDeployment(name: string, namespace?: string): Promise<{ success: boolean; message: string }> {
     try {
       const ns = namespace || this.defaultNamespace;
+
+      // SECURITY: Validate namespace against allowlist
+      const namespaceError = validateNamespace(ns);
+      if (namespaceError) {
+        return { success: false, message: namespaceError };
+      }
 
       // Get current deployment
       const deployment = await k8sJson<K8sDeploymentResponse>(
