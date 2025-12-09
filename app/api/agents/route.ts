@@ -19,14 +19,17 @@ import { validateAgentName } from '@/lib/agent-name-policy';
 import { buildAgentEnv } from '@/lib/agent-helpers';
 
 // Kubernetes resource specification patterns
-const k8sResourcePattern = /^(\d+)(m|Mi|Gi|Ki)?$/;
+// CPU: supports integer (1), fractional (0.5), or millicores (100m)
+const k8sCpuPattern = /^(\d+(\.\d+)?)(m)?$/;
+// Memory: supports integer with unit suffix (256Mi, 1Gi, etc.)
+const k8sMemoryPattern = /^(\d+)(Ki|Mi|Gi|Ti)?$/;
 
 // Zod schema for resource validation
 const resourcesSchema = z.object({
-  cpu_request: z.string().regex(k8sResourcePattern, 'Invalid CPU format (e.g., "100m", "1")').optional(),
-  memory_request: z.string().regex(k8sResourcePattern, 'Invalid memory format (e.g., "256Mi", "1Gi")').optional(),
-  cpu_limit: z.string().regex(k8sResourcePattern, 'Invalid CPU format (e.g., "1000m", "2")').optional(),
-  memory_limit: z.string().regex(k8sResourcePattern, 'Invalid memory format (e.g., "1Gi", "512Mi")').optional(),
+  cpu_request: z.string().regex(k8sCpuPattern, 'Invalid CPU format (e.g., "100m", "0.5", "1")').optional(),
+  memory_request: z.string().regex(k8sMemoryPattern, 'Invalid memory format (e.g., "256Mi", "1Gi")').optional(),
+  cpu_limit: z.string().regex(k8sCpuPattern, 'Invalid CPU format (e.g., "1000m", "0.5", "2")').optional(),
+  memory_limit: z.string().regex(k8sMemoryPattern, 'Invalid memory format (e.g., "1Gi", "512Mi")').optional(),
 }).optional();
 
 /**
@@ -279,8 +282,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Resolve image: explicit > template > default
+    // Resolve image: explicit > template > none
     const resolvedImage = image || template?.docker_image || undefined;
+
+    // Require either an image or a template to be specified
+    if (!resolvedImage && !template_uuid) {
+      return NextResponse.json(
+        { error: 'Either template_uuid or image must be provided' },
+        { status: 400 }
+      );
+    }
 
     // Create agent in database with NEW state
     const [newAgent] = await db

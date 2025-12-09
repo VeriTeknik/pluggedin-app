@@ -20,11 +20,10 @@ const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
 // Only set K8S_INSECURE_SKIP_TLS_VERIFY=true for local development
 const K8S_INSECURE_SKIP_TLS_VERIFY = process.env.K8S_INSECURE_SKIP_TLS_VERIFY === 'true';
 
-// Warn if TLS verification is disabled in production
+// SECURITY: Fail hard if TLS verification is disabled in production
 if (K8S_INSECURE_SKIP_TLS_VERIFY && process.env.NODE_ENV === 'production') {
-  console.warn(
-    '[SECURITY WARNING] K8S_INSECURE_SKIP_TLS_VERIFY is enabled in production. ' +
-    'This disables TLS certificate verification and should NEVER be used in production. ' +
+  throw new Error(
+    'K8S_INSECURE_SKIP_TLS_VERIFY cannot be enabled in production. ' +
     'Set K8S_CA_CERT with your cluster CA certificate instead.'
   );
 }
@@ -138,9 +137,13 @@ async function k8sRequest(
   });
 
   if (response.status >= 400) {
-    // Log full error details server-side for debugging
-    console.error(`Kubernetes API error: ${response.status} ${response.statusText}`, response.body);
-    // Return sanitized error to avoid leaking cluster information
+    // Only log full error details in development to avoid leaking cluster information
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`Kubernetes API error: ${response.status} ${response.statusText}`, response.body);
+    } else {
+      console.error(`Kubernetes API error: ${response.status} ${response.statusText}`);
+    }
+    // Return sanitized error
     throw new Error(`Kubernetes API error: ${response.status} ${response.statusText}`);
   }
 
@@ -427,23 +430,30 @@ export class KubernetesService {
           : undefined,
       };
 
-      // Create Deployment using manifest builder
+      // Create Deployment first (required for Service/Ingress to work)
       await k8sJson(`/apis/apps/v1/namespaces/${namespace}/deployments`, {
         method: 'POST',
         body: buildDeploymentManifest(manifestConfig),
       });
 
-      // Create Service using manifest builder
-      await k8sJson(`/api/v1/namespaces/${namespace}/services`, {
-        method: 'POST',
-        body: buildServiceManifest(manifestConfig),
-      });
-
-      // Create Ingress using manifest builder
-      await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
-        method: 'POST',
-        body: buildIngressManifest(manifestConfig),
-      });
+      // Create Service and Ingress in parallel (both depend on Deployment)
+      try {
+        await Promise.all([
+          k8sJson(`/api/v1/namespaces/${namespace}/services`, {
+            method: 'POST',
+            body: buildServiceManifest(manifestConfig),
+          }),
+          k8sJson(`/apis/networking.k8s.io/v1/namespaces/${namespace}/ingresses`, {
+            method: 'POST',
+            body: buildIngressManifest(manifestConfig),
+          }),
+        ]);
+      } catch (error) {
+        // Rollback deployment on Service/Ingress failure
+        console.error(`Failed to create Service/Ingress for ${config.name}, rolling back deployment:`, error);
+        await this.deleteAgent(config.name, namespace);
+        throw error;
+      }
 
       return {
         success: true,
@@ -719,16 +729,22 @@ export class KubernetesService {
       );
       allEvents.push(...(deploymentEvents.items || []));
 
-      // Get events for each pod
-      for (const podName of podNames) {
-        try {
-          const podEvents = await k8sJson<K8sEventListResponse>(
+      // Get events for each pod in parallel
+      const podEventResults = await Promise.allSettled(
+        podNames.map((podName) =>
+          k8sJson<K8sEventListResponse>(
             `/api/v1/namespaces/${ns}/events?fieldSelector=involvedObject.name=${podName},involvedObject.kind=Pod`
-          );
-          allEvents.push(...(podEvents.items || []));
-        } catch (error) {
+          )
+        )
+      );
+
+      for (let i = 0; i < podEventResults.length; i++) {
+        const result = podEventResults[i];
+        if (result.status === 'fulfilled') {
+          allEvents.push(...(result.value.items || []));
+        } else {
           // Pod might have been deleted
-          console.warn(`Could not get events for pod ${podName}:`, error);
+          console.warn(`Could not get events for pod ${podNames[i]}:`, result.reason);
         }
       }
 
