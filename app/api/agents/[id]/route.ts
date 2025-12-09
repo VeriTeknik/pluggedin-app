@@ -145,12 +145,13 @@ export async function GET(
         .orderBy(desc(agentMetricsTable.timestamp))
         .limit(10),
 
-      // Lifecycle events
+      // Lifecycle events (limit to 100 most recent to prevent unbounded queries)
       db
         .select()
         .from(agentLifecycleEventsTable)
         .where(eq(agentLifecycleEventsTable.agent_uuid, agentId))
-        .orderBy(desc(agentLifecycleEventsTable.timestamp)),
+        .orderBy(desc(agentLifecycleEventsTable.timestamp))
+        .limit(100),
 
       // Kubernetes deployment status (null if no deployment)
       agent.kubernetes_deployment

@@ -181,8 +181,9 @@ export async function POST(
     }
 
     // Update agent metadata to mark as intentionally suspended
+    // Use optimistic locking - include current state in WHERE clause to prevent race conditions
     const now = new Date().toISOString();
-    await db
+    const updateResult = await db
       .update(agentsTable)
       .set({
         metadata: {
@@ -193,7 +194,26 @@ export async function POST(
           suspended_by: auth.project.user_id,
         },
       })
-      .where(eq(agentsTable.uuid, agentId));
+      .where(
+        and(
+          eq(agentsTable.uuid, agentId),
+          eq(agentsTable.state, agent.state as AgentState) // Optimistic lock on current state
+        )
+      )
+      .returning();
+
+    // Check if update succeeded (no rows affected means state changed concurrently)
+    if (updateResult.length === 0) {
+      // Attempt to undo the Kubernetes scale (best effort)
+      await kubernetesService.scaleAgent(deploymentName, 1, namespace).catch(() => {});
+      return NextResponse.json(
+        {
+          error: 'Suspend failed due to concurrent modification',
+          hint: 'Agent state changed while processing. Refresh and retry.',
+        },
+        { status: 409 } // Conflict
+      );
+    }
 
     // Log lifecycle event
     await db.insert(agentLifecycleEventsTable).values({

@@ -103,14 +103,20 @@ export async function POST(
 
     // Parse request body
     const body = await request.json().catch(() => ({}));
-    const drainTimeoutSeconds = body.drain_timeout_seconds || 300;
+    const rawDrainTimeout = body.drain_timeout_seconds;
 
-    // Validate drain timeout
-    if (drainTimeoutSeconds < 10 || drainTimeoutSeconds > 3600) {
-      return NextResponse.json(
-        { error: 'drain_timeout_seconds must be between 10 and 3600' },
-        { status: 400 }
-      );
+    // Validate drain timeout - must be an integer within bounds
+    let drainTimeoutSeconds = 300; // default
+    if (rawDrainTimeout !== undefined) {
+      // Coerce to number and validate it's a positive integer
+      const parsed = Number(rawDrainTimeout);
+      if (!Number.isInteger(parsed) || parsed < 10 || parsed > 3600) {
+        return NextResponse.json(
+          { error: 'drain_timeout_seconds must be an integer between 10 and 3600' },
+          { status: 400 }
+        );
+      }
+      drainTimeoutSeconds = parsed;
     }
 
     // Fetch agent
@@ -160,7 +166,8 @@ export async function POST(
     }
 
     // Update agent state to DRAINING
-    const [updatedAgent] = await db
+    // Use optimistic locking - include current state in WHERE clause to prevent race conditions
+    const updateResult = await db
       .update(agentsTable)
       .set({
         state: AgentState.DRAINING,
@@ -170,8 +177,34 @@ export async function POST(
           drain_timeout_seconds: drainTimeoutSeconds,
         },
       })
-      .where(eq(agentsTable.uuid, agentId))
+      .where(
+        and(
+          eq(agentsTable.uuid, agentId),
+          eq(agentsTable.state, AgentState.ACTIVE) // Optimistic lock - only transition from ACTIVE
+        )
+      )
       .returning();
+
+    // Check if update succeeded (no rows affected means state changed concurrently)
+    if (updateResult.length === 0) {
+      // Attempt to undo the Kubernetes scale (best effort)
+      if (agent.kubernetes_deployment) {
+        await kubernetesService.scaleAgent(
+          agent.kubernetes_deployment,
+          1,
+          agent.kubernetes_namespace || 'agents'
+        ).catch(() => {});
+      }
+      return NextResponse.json(
+        {
+          error: 'Shutdown failed due to concurrent modification',
+          hint: 'Agent state changed while processing. Refresh and retry.',
+        },
+        { status: 409 } // Conflict
+      );
+    }
+
+    const updatedAgent = updateResult[0];
 
     // Log lifecycle event
     await db.insert(agentLifecycleEventsTable).values({

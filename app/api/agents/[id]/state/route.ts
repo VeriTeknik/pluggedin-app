@@ -212,10 +212,28 @@ export async function POST(
       updateData.terminated_at = new Date();
     }
 
-    await db
+    // Use optimistic locking - include current state in WHERE clause to prevent race conditions
+    const updateResult = await db
       .update(agentsTable)
       .set(updateData)
-      .where(eq(agentsTable.uuid, agentId));
+      .where(
+        and(
+          eq(agentsTable.uuid, agentId),
+          eq(agentsTable.state, persistedState) // Optimistic lock on current state
+        )
+      )
+      .returning();
+
+    // Check if update succeeded (no rows affected means state changed concurrently)
+    if (updateResult.length === 0) {
+      return NextResponse.json(
+        {
+          error: 'State transition failed due to concurrent modification',
+          hint: 'Agent state changed while processing. Refresh and retry.',
+        },
+        { status: 409 } // Conflict
+      );
+    }
 
     // Log lifecycle event
     await db.insert(agentLifecycleEventsTable).values({
