@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
@@ -8,6 +8,7 @@ import {
 } from '@/db/schema';
 
 import { authenticate } from '../../../auth';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
  * @swagger
@@ -74,10 +75,27 @@ import { authenticate } from '../../../auth';
  *         description: Internal Server Error - Failed to record metrics.
  */
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await EnhancedRateLimiters.agentMetrics(request);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests', retryAfter: rateLimitResult.retryAfter },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+            'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+          },
+        }
+      );
+    }
+
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
