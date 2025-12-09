@@ -93,7 +93,7 @@ export async function POST(
 
     // Parse request body
     const body = await request.json();
-    const { mode, uptime_seconds } = body;
+    const { mode, uptime_seconds, timestamp } = body;
 
     // Validate required fields
     if (!mode || uptime_seconds === undefined) {
@@ -110,6 +110,40 @@ export async function POST(
         { error: `Invalid mode. Must be one of: ${validModes.join(', ')}` },
         { status: 400 }
       );
+    }
+
+    // SECURITY: Validate timestamp to prevent replay attacks (if provided)
+    // Heartbeats older than 2x the expected interval are rejected
+    if (timestamp !== undefined) {
+      const heartbeatTime = new Date(timestamp).getTime();
+      const now = Date.now();
+
+      // Reject if timestamp is in the future (clock skew tolerance: 5 seconds)
+      if (heartbeatTime > now + 5000) {
+        return NextResponse.json(
+          { error: 'Heartbeat timestamp is in the future' },
+          { status: 400 }
+        );
+      }
+
+      // Calculate max age based on mode (2x the expected interval)
+      const modeIntervals: Record<string, number> = {
+        EMERGENCY: 5 * 1000,  // 5 seconds
+        IDLE: 30 * 1000,      // 30 seconds
+        SLEEP: 15 * 60 * 1000 // 15 minutes
+      };
+      const maxAge = 2 * (modeIntervals[mode] || modeIntervals.IDLE);
+
+      if (now - heartbeatTime > maxAge) {
+        return NextResponse.json(
+          {
+            error: 'Heartbeat timestamp too old (potential replay attack)',
+            max_age_ms: maxAge,
+            received_age_ms: now - heartbeatTime,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate uptime_seconds

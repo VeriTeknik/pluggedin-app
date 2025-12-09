@@ -13,6 +13,7 @@ import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
+import { redactSensitiveMetadata } from '@/lib/agent-helpers';
 
 /**
  * @swagger
@@ -174,12 +175,25 @@ export async function POST(
       }
     }
 
+    // SECURITY: Redact sensitive fields from agent metadata before export
+    // This prevents accidental exposure of API keys, tokens, secrets, etc.
+    const redactedAgent = {
+      ...agent,
+      metadata: redactSensitiveMetadata(agent.metadata as Record<string, unknown>),
+    };
+
+    // Also redact lifecycle event metadata
+    const redactedLifecycleEvents = lifecycleEvents.map(event => ({
+      ...event,
+      metadata: redactSensitiveMetadata(event.metadata as Record<string, unknown>),
+    }));
+
     // Build export object
     const exportData: {
       export_version: string;
       exported_at: string;
-      agent: typeof agent;
-      lifecycle_events: typeof lifecycleEvents;
+      agent: typeof redactedAgent;
+      lifecycle_events: typeof redactedLifecycleEvents;
       kubernetes_config: typeof kubernetesConfig;
       telemetry?: {
         heartbeats: unknown[];
@@ -188,8 +202,8 @@ export async function POST(
     } = {
       export_version: 'pap-export/1.0',
       exported_at: new Date().toISOString(),
-      agent,
-      lifecycle_events: lifecycleEvents,
+      agent: redactedAgent,
+      lifecycle_events: redactedLifecycleEvents,
       kubernetes_config: kubernetesConfig,
     };
 

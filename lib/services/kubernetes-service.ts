@@ -78,6 +78,25 @@ function encodePathSegment(value: string): string {
 // Request timeout (configurable via env var, default 30 seconds)
 const K8S_REQUEST_TIMEOUT_MS = parseInt(process.env.K8S_REQUEST_TIMEOUT_MS || '30000', 10);
 
+// Overall deployment timeout (default 60 seconds for complete Deployment+Service+Ingress)
+const K8S_DEPLOY_TIMEOUT_MS = parseInt(process.env.K8S_DEPLOY_TIMEOUT_MS || '60000', 10);
+
+/**
+ * Wrap a promise with a timeout.
+ * SECURITY: Prevents resource-intensive operations from hanging indefinitely.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)),
+        timeoutMs
+      )
+    ),
+  ]);
+}
+
 // Helper function to make HTTPS request with self-signed cert support
 function httpsRequest(
   url: string,
@@ -472,72 +491,16 @@ export class KubernetesService {
   /**
    * Deploy a new PAP agent to Kubernetes via Kubernetes API.
    * Creates Deployment, Service, and Ingress resources.
+   * SECURITY: Wrapped with overall operation timeout to prevent hanging.
    */
   async deployAgent(config: AgentDeploymentConfig): Promise<{ success: boolean; message: string; deploymentName: string }> {
     try {
-      const namespace = config.namespace || this.defaultNamespace;
-
-      // SECURITY: Validate namespace against allowlist (defense in depth)
-      const namespaceError = validateNamespace(namespace);
-      if (namespaceError) {
-        return {
-          success: false,
-          message: namespaceError,
-          deploymentName: config.name,
-        };
-      }
-
-      // Build manifest configuration
-      const manifestConfig: ManifestConfig = {
-        name: config.name,
-        namespace,
-        dnsName: config.dnsName,
-        image: config.image || this.defaultImage,
-        containerPort: config.containerPort || 8080,
-        resources: {
-          cpuRequest: config.resources?.cpuRequest || '100m',
-          memoryRequest: config.resources?.memoryRequest || '256Mi',
-          cpuLimit: config.resources?.cpuLimit || '1000m',
-          memoryLimit: config.resources?.memoryLimit || '1Gi',
-        },
-        env: config.env
-          ? Object.entries(config.env).map(([name, value]) => ({ name, value: String(value) }))
-          : undefined,
-      };
-
-      // SECURITY: Encode namespace for URL path
-      const encodedNamespace = encodePathSegment(namespace);
-
-      // Create Deployment first (required for Service/Ingress to work)
-      await k8sJson(`/apis/apps/v1/namespaces/${encodedNamespace}/deployments`, {
-        method: 'POST',
-        body: buildDeploymentManifest(manifestConfig),
-      });
-
-      // Create Service and Ingress in parallel (both depend on Deployment)
-      try {
-        await Promise.all([
-          k8sJson(`/api/v1/namespaces/${encodedNamespace}/services`, {
-            method: 'POST',
-            body: buildServiceManifest(manifestConfig),
-          }),
-          k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNamespace}/ingresses`, {
-            method: 'POST',
-            body: buildIngressManifest(manifestConfig),
-          }),
-        ]);
-      } catch (error) {
-        // Rollback deployment on Service/Ingress failure
-        console.error(`Failed to create Service/Ingress for ${config.name}, rolling back deployment:`, error);
-        await this.deleteAgent(config.name, namespace);
-        throw error;
-      }
-
-      return {
-        success: true,
-        message: `Agent ${config.name} deployed successfully`,
-        deploymentName: config.name,
-      };
+      // Wrap entire deployment with timeout
+      return await withTimeout(
+        this._deployAgentInternal(config),
+        K8S_DEPLOY_TIMEOUT_MS,
+        `Agent deployment (${config.name})`
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
@@ -546,6 +509,75 @@ export class KubernetesService {
         deploymentName: config.name,
       };
     }
+  }
+
+  /**
+   * Internal deployment logic (called with timeout wrapper).
+   */
+  private async _deployAgentInternal(config: AgentDeploymentConfig): Promise<{ success: boolean; message: string; deploymentName: string }> {
+    const namespace = config.namespace || this.defaultNamespace;
+
+    // SECURITY: Validate namespace against allowlist (defense in depth)
+    const namespaceError = validateNamespace(namespace);
+    if (namespaceError) {
+      return {
+        success: false,
+        message: namespaceError,
+        deploymentName: config.name,
+      };
+    }
+
+    // Build manifest configuration
+    const manifestConfig: ManifestConfig = {
+      name: config.name,
+      namespace,
+      dnsName: config.dnsName,
+      image: config.image || this.defaultImage,
+      containerPort: config.containerPort || 8080,
+      resources: {
+        cpuRequest: config.resources?.cpuRequest || '100m',
+        memoryRequest: config.resources?.memoryRequest || '256Mi',
+        cpuLimit: config.resources?.cpuLimit || '1000m',
+        memoryLimit: config.resources?.memoryLimit || '1Gi',
+      },
+      env: config.env
+        ? Object.entries(config.env).map(([name, value]) => ({ name, value: String(value) }))
+        : undefined,
+    };
+
+    // SECURITY: Encode namespace for URL path
+    const encodedNamespace = encodePathSegment(namespace);
+
+    // Create Deployment first (required for Service/Ingress to work)
+    await k8sJson(`/apis/apps/v1/namespaces/${encodedNamespace}/deployments`, {
+      method: 'POST',
+      body: buildDeploymentManifest(manifestConfig),
+    });
+
+    // Create Service and Ingress in parallel (both depend on Deployment)
+    try {
+      await Promise.all([
+        k8sJson(`/api/v1/namespaces/${encodedNamespace}/services`, {
+          method: 'POST',
+          body: buildServiceManifest(manifestConfig),
+        }),
+        k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNamespace}/ingresses`, {
+          method: 'POST',
+          body: buildIngressManifest(manifestConfig),
+        }),
+      ]);
+    } catch (error) {
+      // Rollback deployment on Service/Ingress failure
+      console.error(`Failed to create Service/Ingress for ${config.name}, rolling back deployment:`, error);
+      await this.deleteAgent(config.name, namespace);
+      throw error;
+    }
+
+    return {
+      success: true,
+      message: `Agent ${config.name} deployed successfully`,
+      deploymentName: config.name,
+    };
   }
 
   /**

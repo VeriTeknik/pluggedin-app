@@ -16,7 +16,7 @@ import { authenticate } from '../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { validateAgentName } from '@/lib/agent-name-policy';
-import { buildAgentEnv, validateEnvKey } from '@/lib/agent-helpers';
+import { buildAgentEnv, validateEnvKey, validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
@@ -315,6 +315,15 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // SECURITY: Validate resource limits don't exceed maximums
+      const resourceError = validateResourceLimits(resources);
+      if (resourceError) {
+        return NextResponse.json(
+          { error: resourceError },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate env_overrides if provided
@@ -415,6 +424,17 @@ export async function POST(request: NextRequest) {
         { error: 'Either template_uuid or image must be provided' },
         { status: 400 }
       );
+    }
+
+    // SECURITY: Validate container image is from allowed registry
+    if (resolvedImage) {
+      const imageError = validateContainerImage(resolvedImage);
+      if (imageError) {
+        return NextResponse.json(
+          { error: imageError },
+          { status: 400 }
+        );
+      }
     }
 
     // Create agent in database with NEW state

@@ -11,6 +11,7 @@ import {
 import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
 
 /**
  * @swagger
@@ -145,6 +146,28 @@ export async function POST(
         { error: 'Either "image" or "boot_image_url" is required' },
         { status: 400 }
       );
+    }
+
+    // SECURITY: Validate container image is from allowed registry
+    if (image) {
+      const imageError = validateContainerImage(image);
+      if (imageError) {
+        return NextResponse.json(
+          { error: imageError },
+          { status: 400 }
+        );
+      }
+    }
+
+    // SECURITY: Validate resource limits don't exceed maximums
+    if (resources) {
+      const resourceError = validateResourceLimits(resources);
+      if (resourceError) {
+        return NextResponse.json(
+          { error: resourceError },
+          { status: 400 }
+        );
+      }
     }
 
     // Fetch agent
