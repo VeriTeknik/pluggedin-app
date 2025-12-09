@@ -119,12 +119,19 @@ export async function POST(
     // Parse request body
     const body = await request.json().catch(() => ({}));
     const includeTelemetry = body.include_telemetry ?? false;
-    const telemetryLimit = body.telemetry_limit || 100;
+    const rawTelemetryLimit = body.telemetry_limit;
 
-    // Validate telemetry limit
-    if (telemetryLimit < 1 || telemetryLimit > 10000) {
+    // Validate telemetry_limit BEFORE using it
+    // SECURITY: Ensure integer type to prevent injection via Drizzle's .limit()
+    const telemetryLimit = rawTelemetryLimit === undefined ? 100 : rawTelemetryLimit;
+    if (
+      typeof telemetryLimit !== 'number' ||
+      !Number.isInteger(telemetryLimit) ||
+      telemetryLimit < 1 ||
+      telemetryLimit > 10000
+    ) {
       return NextResponse.json(
-        { error: 'telemetry_limit must be between 1 and 10000' },
+        { error: 'telemetry_limit must be an integer between 1 and 10000' },
         { status: 400 }
       );
     }
@@ -150,12 +157,15 @@ export async function POST(
 
       const agent = agents[0];
 
-      // Fetch lifecycle events (complete audit trail)
+      // Fetch lifecycle events (audit trail - limited to prevent unbounded queries)
+      // Default limit of 1000 most recent events per agent
+      const LIFECYCLE_EVENTS_LIMIT = 1000;
       const lifecycleEvents = await tx
         .select()
         .from(agentLifecycleEventsTable)
         .where(eq(agentLifecycleEventsTable.agent_uuid, agentId))
-        .orderBy(desc(agentLifecycleEventsTable.timestamp));
+        .orderBy(desc(agentLifecycleEventsTable.timestamp))
+        .limit(LIFECYCLE_EVENTS_LIMIT);
 
       // Optionally include telemetry history
       let heartbeats: unknown[] = [];

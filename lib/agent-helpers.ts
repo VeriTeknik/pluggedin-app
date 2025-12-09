@@ -11,6 +11,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
 import { authenticate } from '@/app/api/auth';
+import { MAX_MEMORY_GI, MAX_CPU_CORES } from '@/lib/pap-constants';
 
 /** Successful auth result type. */
 type AuthSuccess = Awaited<ReturnType<typeof authenticate>> & { error: null };
@@ -185,12 +186,23 @@ export function validateContainerImage(image: string): string | null {
     normalizedImage.startsWith(registry.toLowerCase())
   );
 
-  // Also allow simple image names (e.g., "nginx:alpine") which default to Docker Hub library
-  const isSimpleImage = !normalizedImage.includes('/') ||
-    (normalizedImage.split('/').length === 2 && !normalizedImage.includes('.'));
+  // SECURITY: Simple image detection is restrictive to prevent bypass
+  // Only allow images with NO slash (Docker Hub official library images like "nginx", "redis")
+  // Images with slashes MUST match an explicit allowed registry to prevent
+  // "malicious-registry/image" from being allowed as a "simple" namespace/image
+  const isOfficialLibraryImage = !normalizedImage.includes('/');
 
-  if (!isAllowed && !isSimpleImage) {
+  if (!isAllowed && !isOfficialLibraryImage) {
     return `Image must be from an allowed registry. Allowed: ${ALLOWED_IMAGE_REGISTRIES.slice(0, 3).join(', ')}...`;
+  }
+
+  // Additional validation for official library images (no slashes)
+  // Must match pattern: [a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9._-]+)?(@sha256:[a-f0-9]+)?
+  if (isOfficialLibraryImage) {
+    const validOfficialPattern = /^[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9._-]+)?(@sha256:[a-f0-9]+)?$/;
+    if (!validOfficialPattern.test(normalizedImage)) {
+      return 'Invalid image name format';
+    }
   }
 
   return null;
@@ -200,12 +212,8 @@ export function validateContainerImage(image: string): string | null {
 // Resource Limits Validation
 // ============================================================================
 
-/**
- * Maximum allowed resource limits.
- * SECURITY: Prevents resource exhaustion attacks.
- */
-const MAX_MEMORY_GI = 16;  // 16 GiB max
-const MAX_CPU_CORES = 8;   // 8 cores max
+// MAX_MEMORY_GI and MAX_CPU_CORES are imported from pap-constants.ts
+// They can be configured via PAP_MAX_MEMORY_GI and PAP_MAX_CPU_CORES env vars
 
 /**
  * Parse a Kubernetes memory resource string to bytes.

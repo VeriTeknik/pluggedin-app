@@ -11,6 +11,12 @@ import {
 
 import { authenticate } from '../../../auth';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import {
+  HEARTBEAT_INTERVALS,
+  DEFAULT_HEARTBEAT_INTERVAL,
+  CLOCK_SKEW_TOLERANCE_MS,
+  REPLAY_ATTACK_MULTIPLIER,
+} from '@/lib/pap-constants';
 
 /**
  * @swagger
@@ -113,26 +119,22 @@ export async function POST(
     }
 
     // SECURITY: Validate timestamp to prevent replay attacks (if provided)
-    // Heartbeats older than 2x the expected interval are rejected
+    // Heartbeats older than REPLAY_ATTACK_MULTIPLIER * expected interval are rejected
     if (timestamp !== undefined) {
       const heartbeatTime = new Date(timestamp).getTime();
       const now = Date.now();
 
-      // Reject if timestamp is in the future (clock skew tolerance: 5 seconds)
-      if (heartbeatTime > now + 5000) {
+      // Reject if timestamp is in the future (with clock skew tolerance)
+      if (heartbeatTime > now + CLOCK_SKEW_TOLERANCE_MS) {
         return NextResponse.json(
           { error: 'Heartbeat timestamp is in the future' },
           { status: 400 }
         );
       }
 
-      // Calculate max age based on mode (2x the expected interval)
-      const modeIntervals: Record<string, number> = {
-        EMERGENCY: 5 * 1000,  // 5 seconds
-        IDLE: 30 * 1000,      // 30 seconds
-        SLEEP: 15 * 60 * 1000 // 15 minutes
-      };
-      const maxAge = 2 * (modeIntervals[mode] || modeIntervals.IDLE);
+      // Calculate max age based on mode (uses shared constants from pap-constants.ts)
+      const interval = HEARTBEAT_INTERVALS[mode as keyof typeof HEARTBEAT_INTERVALS] || DEFAULT_HEARTBEAT_INTERVAL;
+      const maxAge = REPLAY_ATTACK_MULTIPLIER * interval;
 
       if (now - heartbeatTime > maxAge) {
         return NextResponse.json(
@@ -147,9 +149,10 @@ export async function POST(
     }
 
     // Validate uptime_seconds
-    if (typeof uptime_seconds !== 'number' || uptime_seconds < 0) {
+    // SECURITY: Check for finite number to prevent NaN/Infinity injection into database
+    if (typeof uptime_seconds !== 'number' || uptime_seconds < 0 || !Number.isFinite(uptime_seconds)) {
       return NextResponse.json(
-        { error: 'uptime_seconds must be a non-negative number' },
+        { error: 'uptime_seconds must be a non-negative finite number' },
         { status: 400 }
       );
     }

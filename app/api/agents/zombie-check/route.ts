@@ -8,23 +8,19 @@ import {
   AgentState,
   HeartbeatMode,
 } from '@/db/schema';
+import {
+  HEARTBEAT_INTERVALS,
+  DEFAULT_HEARTBEAT_INTERVAL,
+  ZOMBIE_GRACE_MULTIPLIER,
+  ZOMBIE_AUTO_DRAIN_MULTIPLIER,
+} from '@/lib/pap-constants';
 
-// Heartbeat intervals per mode (PAP-RFC-001 §8.1)
-const HEARTBEAT_INTERVALS = {
-  [HeartbeatMode.EMERGENCY]: 5 * 1000, // 5 seconds
-  [HeartbeatMode.IDLE]: 30 * 1000, // 30 seconds
-  [HeartbeatMode.SLEEP]: 15 * 60 * 1000, // 15 minutes
+// Map HeartbeatMode enum values to HEARTBEAT_INTERVALS keys
+const MODE_INTERVALS: Record<string, number> = {
+  [HeartbeatMode.EMERGENCY]: HEARTBEAT_INTERVALS.EMERGENCY,
+  [HeartbeatMode.IDLE]: HEARTBEAT_INTERVALS.IDLE,
+  [HeartbeatMode.SLEEP]: HEARTBEAT_INTERVALS.SLEEP,
 };
-
-// Default to IDLE interval if mode unknown
-const DEFAULT_INTERVAL = HEARTBEAT_INTERVALS[HeartbeatMode.IDLE];
-
-// Grace period multiplier: zombie detected after N missed intervals
-// GRACE_MULTIPLIER = 2 means agent is marked unhealthy after missing 2 consecutive intervals
-const GRACE_MULTIPLIER = 2;
-
-// After how many missed intervals to auto-drain (0 = disabled)
-const AUTO_DRAIN_MULTIPLIER = 5;
 
 /**
  * Verify cron authorization
@@ -126,13 +122,13 @@ export async function POST(request: NextRequest) {
       // Get heartbeat mode from metadata
       const metadata = agent.metadata as Record<string, unknown> | null;
       const lastMode = (metadata?.last_heartbeat_mode as string) || HeartbeatMode.IDLE;
-      const interval = HEARTBEAT_INTERVALS[lastMode as HeartbeatMode] || DEFAULT_INTERVAL;
+      const interval = MODE_INTERVALS[lastMode] || DEFAULT_HEARTBEAT_INTERVAL;
 
       // Calculate time since last heartbeat
       const timeSinceHeartbeat = now.getTime() - new Date(lastHeartbeat).getTime();
       const missedIntervals = Math.floor(timeSinceHeartbeat / interval);
 
-      if (missedIntervals >= GRACE_MULTIPLIER) {
+      if (missedIntervals >= ZOMBIE_GRACE_MULTIPLIER) {
         unhealthyCount++;
 
         // Log unhealthy event
@@ -143,7 +139,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Auto-drain if too many missed intervals
-        if (AUTO_DRAIN_MULTIPLIER > 0 && missedIntervals >= AUTO_DRAIN_MULTIPLIER) {
+        if (ZOMBIE_AUTO_DRAIN_MULTIPLIER > 0 && missedIntervals >= ZOMBIE_AUTO_DRAIN_MULTIPLIER) {
           // Use optimistic locking - only transition from ACTIVE to prevent invalid state transitions
           // This guards against race conditions where state changed between query and update
           const updateResult = await db
@@ -229,7 +225,7 @@ export async function GET(request: NextRequest) {
       const lastHeartbeat = agent.last_heartbeat_at;
       const metadata = agent.metadata as Record<string, unknown> | null;
       const lastMode = (metadata?.last_heartbeat_mode as string) || HeartbeatMode.IDLE;
-      const interval = HEARTBEAT_INTERVALS[lastMode as HeartbeatMode] || DEFAULT_INTERVAL;
+      const interval = MODE_INTERVALS[lastMode] || DEFAULT_HEARTBEAT_INTERVAL;
 
       if (!lastHeartbeat) {
         return {
@@ -245,7 +241,7 @@ export async function GET(request: NextRequest) {
 
       const timeSinceHeartbeat = now.getTime() - new Date(lastHeartbeat).getTime();
       const missedIntervals = Math.floor(timeSinceHeartbeat / interval);
-      const healthy = missedIntervals < GRACE_MULTIPLIER;
+      const healthy = missedIntervals < ZOMBIE_GRACE_MULTIPLIER;
 
       return {
         uuid: agent.uuid,
