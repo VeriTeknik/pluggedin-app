@@ -300,6 +300,24 @@ export const EnhancedRateLimiters = {
 
   agentLifecycle: createRedisRateLimiter({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 30, // 30 lifecycle operations per minute (state changes, heartbeats)
+    max: 30, // 30 lifecycle operations per minute (state changes)
+  }),
+
+  // Heartbeat-specific: Higher limit for EMERGENCY mode (5s intervals = 12/min per agent)
+  agentHeartbeat: createRedisRateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 120, // 120 heartbeats per minute (supports multiple agents in EMERGENCY mode)
+  }),
+
+  // Metrics: Lower limit since they're typically sent every 60s
+  agentMetrics: createRedisRateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 60, // 60 metrics submissions per minute
+  }),
+
+  // Export/replicate/upgrade: Resource-intensive operations
+  agentIntensive: createRedisRateLimiter({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 10, // 10 intensive operations per 5 minutes
   }),
 };
