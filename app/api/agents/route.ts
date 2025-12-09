@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -16,7 +16,33 @@ import { authenticate } from '../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { validateAgentName } from '@/lib/agent-name-policy';
-import { buildAgentEnv } from '@/lib/agent-helpers';
+import { buildAgentEnv, validateEnvKey } from '@/lib/agent-helpers';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+
+/**
+ * Apply rate limiting and return 429 response if exceeded.
+ */
+async function applyRateLimit(
+  request: NextRequest,
+  limiter: typeof EnhancedRateLimiters.agentList
+): Promise<NextResponse | null> {
+  const result = await limiter(request);
+  if (!result.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', retryAfter: result.retryAfter },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(result.retryAfter || 60),
+          'X-RateLimit-Limit': String(result.limit),
+          'X-RateLimit-Remaining': String(result.remaining),
+          'X-RateLimit-Reset': new Date(result.reset).toISOString(),
+        },
+      }
+    );
+  }
+  return null;
+}
 
 // Kubernetes resource specification patterns
 // CPU: supports integer (1), fractional (0.5), or millicores (100m)
@@ -76,8 +102,12 @@ const resourcesSchema = z.object({
  *       500:
  *         description: Internal Server Error - Failed to fetch agents.
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await applyRateLimit(request, EnhancedRateLimiters.agentList);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
@@ -209,8 +239,12 @@ export async function GET(request: Request) {
  *       500:
  *         description: Internal Server Error - Failed to create the agent.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting (stricter for resource-intensive agent creation)
+    const rateLimitResponse = await applyRateLimit(request, EnhancedRateLimiters.agentCreate);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
@@ -225,6 +259,25 @@ export async function POST(request: Request) {
           { error: 'Invalid resource specification', details: resourceValidation.error.flatten() },
           { status: 400 }
         );
+      }
+    }
+
+    // Validate env_overrides keys if provided
+    if (env_overrides !== undefined && env_overrides !== null) {
+      if (typeof env_overrides !== 'object') {
+        return NextResponse.json(
+          { error: 'env_overrides must be an object' },
+          { status: 400 }
+        );
+      }
+      for (const key of Object.keys(env_overrides)) {
+        const keyError = validateEnvKey(key);
+        if (keyError) {
+          return NextResponse.json(
+            { error: keyError },
+            { status: 400 }
+          );
+        }
       }
     }
 

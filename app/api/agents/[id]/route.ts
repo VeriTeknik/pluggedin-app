@@ -1,5 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
@@ -15,6 +15,32 @@ import {
 import { authenticate } from '../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { serializeForJson } from '@/lib/serialize-for-json';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+
+/**
+ * Apply rate limiting and return 429 response if exceeded.
+ */
+async function applyRateLimit(
+  request: NextRequest,
+  limiter: typeof EnhancedRateLimiters.agentRead
+): Promise<NextResponse | null> {
+  const result = await limiter(request);
+  if (!result.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', retryAfter: result.retryAfter },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(result.retryAfter || 60),
+          'X-RateLimit-Limit': String(result.limit),
+          'X-RateLimit-Remaining': String(result.remaining),
+          'X-RateLimit-Reset': new Date(result.reset).toISOString(),
+        },
+      }
+    );
+  }
+  return null;
+}
 
 /**
  * @swagger
@@ -67,10 +93,14 @@ import { serializeForJson } from '@/lib/serialize-for-json';
  *         description: Internal Server Error - Failed to fetch agent.
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await applyRateLimit(request, EnhancedRateLimiters.agentRead);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
@@ -188,10 +218,14 @@ export async function GET(
  *         description: Internal Server Error - Failed to delete agent.
  */
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await applyRateLimit(request, EnhancedRateLimiters.agentDelete);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
@@ -317,16 +351,31 @@ export async function DELETE(
  *         description: Internal Server Error - Failed to update agent.
  */
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await applyRateLimit(request, EnhancedRateLimiters.agentUpdate);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
     const { id: agentId } = params;
     const body = await request.json();
     const { access_level, metadata: newMetadata } = body;
+
+    // Validate metadata size to prevent abuse (max 64KB)
+    if (newMetadata !== undefined) {
+      const metadataStr = JSON.stringify(newMetadata);
+      if (metadataStr.length > 65536) {
+        return NextResponse.json(
+          { error: 'Metadata exceeds maximum size of 64KB' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Fetch agent
     const agents = await db

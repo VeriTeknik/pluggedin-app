@@ -80,6 +80,48 @@ export async function loadAuthorizedAgent(
 }
 
 /**
+ * Protected environment variable prefixes that cannot be overwritten by users.
+ * These are set by the system and required for agent operation.
+ */
+const PROTECTED_ENV_PREFIXES = ['PAP_', 'PLUGGEDIN_', 'AGENT_'];
+
+/**
+ * Protected individual environment variable names.
+ */
+const PROTECTED_ENV_KEYS = new Set(['PORT', 'NODE_ENV', 'HOME', 'PATH', 'USER']);
+
+/**
+ * Validate an environment variable key.
+ * Returns error message if invalid, null if valid.
+ */
+export function validateEnvKey(key: string): string | null {
+  // Must be non-empty
+  if (!key || key.trim() === '') {
+    return 'Environment variable key cannot be empty';
+  }
+
+  // POSIX standard: [A-Za-z_][A-Za-z0-9_]*
+  const validEnvKeyPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
+  if (!validEnvKeyPattern.test(key)) {
+    return `Invalid environment variable key '${key}'. Must start with a letter or underscore and contain only letters, numbers, and underscores.`;
+  }
+
+  // Check protected individual keys
+  if (PROTECTED_ENV_KEYS.has(key)) {
+    return `Environment variable '${key}' is protected and cannot be overwritten`;
+  }
+
+  // Check protected prefixes
+  for (const prefix of PROTECTED_ENV_PREFIXES) {
+    if (key.startsWith(prefix)) {
+      return `Environment variables starting with '${prefix}' are protected and cannot be overwritten`;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Build environment variables for agent deployment.
  *
  * @param opts - Configuration options
