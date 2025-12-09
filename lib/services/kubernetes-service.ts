@@ -20,6 +20,15 @@ const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
 // Only set K8S_INSECURE_SKIP_TLS_VERIFY=true for local development
 const K8S_INSECURE_SKIP_TLS_VERIFY = process.env.K8S_INSECURE_SKIP_TLS_VERIFY === 'true';
 
+// Warn if TLS verification is disabled in production
+if (K8S_INSECURE_SKIP_TLS_VERIFY && process.env.NODE_ENV === 'production') {
+  console.warn(
+    '[SECURITY WARNING] K8S_INSECURE_SKIP_TLS_VERIFY is enabled in production. ' +
+    'This disables TLS certificate verification and should NEVER be used in production. ' +
+    'Set K8S_CA_CERT with your cluster CA certificate instead.'
+  );
+}
+
 // Load CA certificate: prefer K8S_CA_CERT env var, then in-cluster CA file
 const IN_CLUSTER_CA_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt';
 function loadK8sCaCert(): Buffer | undefined {
@@ -41,6 +50,12 @@ const K8S_CA_CERT = loadK8sCaCert();
 
 // Auth header for Kubernetes API
 const k8sAuthHeader = K8S_SERVICE_ACCOUNT_TOKEN ? `Bearer ${K8S_SERVICE_ACCOUNT_TOKEN}` : '';
+
+// Default namespace for PAP agents
+const DEFAULT_AGENT_NAMESPACE = process.env.K8S_AGENT_NAMESPACE || 'agents';
+
+// Request timeout (30 seconds)
+const K8S_REQUEST_TIMEOUT_MS = 30000;
 
 // Helper function to make HTTPS request with self-signed cert support
 function httpsRequest(
@@ -80,6 +95,12 @@ function httpsRequest(
       });
     });
 
+    // Set request timeout
+    req.setTimeout(K8S_REQUEST_TIMEOUT_MS, () => {
+      req.destroy();
+      reject(new Error(`Kubernetes API request timed out after ${K8S_REQUEST_TIMEOUT_MS}ms`));
+    });
+
     req.on('error', reject);
 
     if (options.body) {
@@ -117,7 +138,10 @@ async function k8sRequest(
   });
 
   if (response.status >= 400) {
-    throw new Error(`Kubernetes API error: ${response.status} ${response.statusText} - ${response.body}`);
+    // Log full error details server-side for debugging
+    console.error(`Kubernetes API error: ${response.status} ${response.statusText}`, response.body);
+    // Return sanitized error to avoid leaking cluster information
+    throw new Error(`Kubernetes API error: ${response.status} ${response.statusText}`);
   }
 
   // Handle 204 No Content (for DELETE operations)
@@ -374,7 +398,7 @@ export interface DeploymentStatus {
 }
 
 export class KubernetesService {
-  private readonly defaultNamespace = 'agents';
+  private readonly defaultNamespace = DEFAULT_AGENT_NAMESPACE;
   private readonly defaultImage = 'nginxinc/nginx-unprivileged:alpine';
 
   /**
@@ -480,49 +504,61 @@ export class KubernetesService {
   /**
    * Delete an agent deployment and all related resources via Kubernetes API.
    */
-  async deleteAgent(name: string, namespace?: string): Promise<{ success: boolean; message: string }> {
+  async deleteAgent(name: string, namespace?: string): Promise<{
+    success: boolean;
+    message: string;
+    deletedResources?: string[];
+    failedResources?: string[];
+  }> {
+    const ns = namespace || this.defaultNamespace;
+    const deleted: string[] = [];
+    const failed: string[] = [];
+
+    // Delete deployment
     try {
-      const ns = namespace || this.defaultNamespace;
-
-      // Delete deployment
-      try {
-        await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, { method: 'DELETE' });
-      } catch (error) {
-        console.warn(`Warning: Could not delete deployment ${name}:`, error);
-      }
-
-      // Delete service
-      try {
-        await k8sJson(`/api/v1/namespaces/${ns}/services/${name}`, { method: 'DELETE' });
-      } catch (error) {
-        console.warn(`Warning: Could not delete service ${name}:`, error);
-      }
-
-      // Delete ingress
-      try {
-        await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, { method: 'DELETE' });
-      } catch (error) {
-        console.warn(`Warning: Could not delete ingress ${name}:`, error);
-      }
-
-      // Delete TLS secret
-      try {
-        await k8sJson(`/api/v1/namespaces/${ns}/secrets/${name}-tls`, { method: 'DELETE' });
-      } catch (error) {
-        console.warn(`Warning: Could not delete TLS secret for ${name}:`, error);
-      }
-
-      return {
-        success: true,
-        message: `Agent ${name} deleted successfully`,
-      };
+      await k8sJson(`/apis/apps/v1/namespaces/${ns}/deployments/${name}`, { method: 'DELETE' });
+      deleted.push('deployment');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return {
-        success: false,
-        message: `Failed to delete agent: ${errorMessage}`,
-      };
+      console.warn(`Warning: Could not delete deployment ${name}:`, error);
+      failed.push('deployment');
     }
+
+    // Delete service
+    try {
+      await k8sJson(`/api/v1/namespaces/${ns}/services/${name}`, { method: 'DELETE' });
+      deleted.push('service');
+    } catch (error) {
+      console.warn(`Warning: Could not delete service ${name}:`, error);
+      failed.push('service');
+    }
+
+    // Delete ingress
+    try {
+      await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses/${name}`, { method: 'DELETE' });
+      deleted.push('ingress');
+    } catch (error) {
+      console.warn(`Warning: Could not delete ingress ${name}:`, error);
+      failed.push('ingress');
+    }
+
+    // Delete TLS secret
+    try {
+      await k8sJson(`/api/v1/namespaces/${ns}/secrets/${name}-tls`, { method: 'DELETE' });
+      deleted.push('tls-secret');
+    } catch (error) {
+      console.warn(`Warning: Could not delete TLS secret for ${name}:`, error);
+      failed.push('tls-secret');
+    }
+
+    const allDeleted = failed.length === 0;
+    return {
+      success: allDeleted,
+      message: allDeleted
+        ? `Agent ${name} deleted successfully`
+        : `Agent ${name} partially deleted. Failed: ${failed.join(', ')}`,
+      deletedResources: deleted,
+      failedResources: failed.length > 0 ? failed : undefined,
+    };
   }
 
   /**

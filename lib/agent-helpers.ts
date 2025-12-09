@@ -12,13 +12,16 @@ import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
 import { authenticate } from '@/app/api/auth';
 
+/** Successful auth result type. */
+type AuthSuccess = Awaited<ReturnType<typeof authenticate>> & { error: null };
+
 /**
  * Result type for loadAuthorizedAgent helper.
  */
 export type LoadAgentResult =
   | {
       success: true;
-      auth: Awaited<ReturnType<typeof authenticate>> & { error: null };
+      auth: AuthSuccess;
       agent: typeof agentsTable.$inferSelect;
     }
   | {
@@ -68,9 +71,10 @@ export async function loadAuthorizedAgent(
     };
   }
 
+  // auth.error is null at this point, so we can safely cast
   return {
     success: true,
-    auth: auth as LoadAgentResult extends { success: true } ? LoadAgentResult['auth'] : never,
+    auth: auth as AuthSuccess,
     agent,
   };
 }

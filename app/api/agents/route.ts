@@ -1,5 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import {
@@ -16,6 +17,17 @@ import { kubernetesService } from '@/lib/services/kubernetes-service';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { validateAgentName } from '@/lib/agent-name-policy';
 import { buildAgentEnv } from '@/lib/agent-helpers';
+
+// Kubernetes resource specification patterns
+const k8sResourcePattern = /^(\d+)(m|Mi|Gi|Ki)?$/;
+
+// Zod schema for resource validation
+const resourcesSchema = z.object({
+  cpu_request: z.string().regex(k8sResourcePattern, 'Invalid CPU format (e.g., "100m", "1")').optional(),
+  memory_request: z.string().regex(k8sResourcePattern, 'Invalid memory format (e.g., "256Mi", "1Gi")').optional(),
+  cpu_limit: z.string().regex(k8sResourcePattern, 'Invalid CPU format (e.g., "1000m", "2")').optional(),
+  memory_limit: z.string().regex(k8sResourcePattern, 'Invalid memory format (e.g., "1Gi", "512Mi")').optional(),
+}).optional();
 
 /**
  * @swagger
@@ -201,6 +213,17 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { name, template_uuid, access_level, description, image, resources, env_overrides } = body;
+
+    // Validate resources if provided
+    if (resources !== undefined) {
+      const resourceValidation = resourcesSchema.safeParse(resources);
+      if (!resourceValidation.success) {
+        return NextResponse.json(
+          { error: 'Invalid resource specification', details: resourceValidation.error.flatten() },
+          { status: 400 }
+        );
+      }
+    }
 
     // Load template if provided
     let template = null;
@@ -409,6 +432,16 @@ export async function POST(request: Request) {
     }));
   } catch (error) {
     console.error('Error creating agent:', error);
+
+    // Handle unique constraint violation (race condition on dns_name)
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorMessage.includes('unique') || errorMessage.includes('duplicate') || errorMessage.includes('23505')) {
+      return NextResponse.json(
+        { error: 'DNS name is already registered. Please try a different name.' },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to create agent' },
       { status: 500 }
