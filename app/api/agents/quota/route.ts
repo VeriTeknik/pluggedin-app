@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { agentsTable, AgentState } from '@/db/schema';
 
-import { authenticate } from '../auth';
+import { authenticate } from '../../auth';
 
 /**
  * @swagger

@@ -111,8 +111,13 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const featured = searchParams.get('featured') === 'true';
     const verified = searchParams.get('verified') === 'true';
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
-    const offset = parseInt(searchParams.get('offset') || '0');
+
+    // Parse limit/offset with NaN fallback to safe defaults
+    const rawLimit = Number.parseInt(searchParams.get('limit') ?? '20', 10);
+    const limit = Math.min(Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 20, 100);
+
+    const rawOffset = Number.parseInt(searchParams.get('offset') ?? '0', 10);
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
 
     // Build conditions
     const conditions = [eq(agentTemplatesTable.is_public, true)];

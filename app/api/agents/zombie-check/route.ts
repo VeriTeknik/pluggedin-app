@@ -19,7 +19,8 @@ const HEARTBEAT_INTERVALS = {
 // Default to IDLE interval if mode unknown
 const DEFAULT_INTERVAL = HEARTBEAT_INTERVALS[HeartbeatMode.IDLE];
 
-// Grace period multiplier (1x interval = zombie after 1 missed heartbeat)
+// Grace period multiplier: zombie detected after N missed intervals
+// GRACE_MULTIPLIER = 2 means agent is marked unhealthy after missing 2 consecutive intervals
 const GRACE_MULTIPLIER = 2;
 
 // After how many missed intervals to auto-drain (0 = disabled)
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
             metadata: {
               triggered_by: 'zombie_detection',
               missed_intervals: missedIntervals,
-              last_heartbeat: lastHeartbeat.toISOString(),
+              last_heartbeat: new Date(lastHeartbeat).toISOString(),
               reason: `Agent unresponsive for ${missedIntervals} intervals`,
             },
           });
@@ -238,7 +239,7 @@ export async function GET(request: NextRequest) {
         healthy,
         missedIntervals,
         timeSinceHeartbeat,
-        lastHeartbeat: lastHeartbeat.toISOString(),
+        lastHeartbeat: new Date(lastHeartbeat).toISOString(),
         mode: lastMode,
         interval,
       };

@@ -12,10 +12,10 @@ import {
 import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
-// Convert BigInt and Date values for JSON serialization
+// Convert BigInt (as strings to preserve precision) and Date values for JSON serialization
 const serializeForJson = (obj: any): any => {
   if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'bigint') return Number(obj);
+  if (typeof obj === 'bigint') return obj.toString(); // Use string to avoid precision loss for large values
   if (obj instanceof Date) return obj.toISOString();
   if (Array.isArray(obj)) return obj.map(serializeForJson);
   if (typeof obj === 'object') {
@@ -219,7 +219,7 @@ export async function POST(
       from_state: agent.state,
       to_state: agent.state, // State doesn't change on export
       metadata: {
-        triggered_by: auth.user.id,
+        triggered_by: auth.project.user_id, // Consistent with other lifecycle events
         include_telemetry: includeTelemetry,
         telemetry_records: includeTelemetry
           ? {
