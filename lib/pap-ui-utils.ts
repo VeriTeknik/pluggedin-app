@@ -35,7 +35,7 @@ export interface Agent {
 }
 
 /**
- * Agent template from marketplace.
+ * Agent template from marketplace (listing view).
  */
 export interface AgentTemplate {
   uuid: string;
@@ -55,6 +55,35 @@ export interface AgentTemplate {
   documentation_url?: string;
   created_at: string;
 }
+
+/**
+ * Extended agent template with deployment details (detail view).
+ */
+export interface AgentTemplateDetail extends AgentTemplate {
+  long_description?: string;
+  docker_image: string;
+  container_port?: number;
+  health_endpoint?: string;
+  env_schema?: {
+    required?: string[];
+    optional?: string[];
+    defaults?: Record<string, string>;
+  };
+  deployment_count?: number;
+  updated_at: string;
+}
+
+/**
+ * Agent template categories for filtering.
+ */
+export const AGENT_CATEGORIES = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'research', label: 'Research' },
+  { value: 'productivity', label: 'Productivity' },
+  { value: 'development', label: 'Development' },
+  { value: 'communication', label: 'Communication' },
+  { value: 'automation', label: 'Automation' },
+] as const;
 
 // ============================================================================
 // Data Fetching
@@ -247,3 +276,107 @@ export function validateAgentName(name: string): string | null {
 
   return null;
 }
+
+// ============================================================================
+// Image URL Validation (Security)
+// ============================================================================
+
+/**
+ * Allowed image URL protocols.
+ * SECURITY: Only allow http/https to prevent javascript:, data:, and other XSS vectors.
+ */
+const ALLOWED_IMAGE_PROTOCOLS = ['https:', 'http:'];
+
+/**
+ * Allowed image hosting domains for template icons/banners.
+ * SECURITY: Restrict to trusted domains to prevent SSRF and tracking pixels.
+ */
+const ALLOWED_IMAGE_DOMAINS = [
+  'plugged.in',
+  'is.plugged.in',
+  'github.com',
+  'raw.githubusercontent.com',
+  'avatars.githubusercontent.com',
+  'user-images.githubusercontent.com',
+  'ghcr.io',
+];
+
+/**
+ * Validate an image URL for safe rendering.
+ * SECURITY: Prevents XSS via javascript:, data: URIs and restricts to trusted domains.
+ *
+ * @param url - The URL to validate
+ * @param strictDomainCheck - If true, only allow ALLOWED_IMAGE_DOMAINS (default: true)
+ * @returns true if the URL is safe to render, false otherwise
+ */
+export function isValidImageUrl(url: string | undefined | null, strictDomainCheck = true): boolean {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    // Check protocol (must be http or https)
+    if (!ALLOWED_IMAGE_PROTOCOLS.includes(parsed.protocol)) {
+      return false;
+    }
+
+    // SECURITY: Check for suspicious patterns in both original and decoded URL
+    // This catches encoded XSS vectors like "javascript%3A" or "data%3A"
+    const urlsToCheck = [url, url.toLowerCase()];
+    try {
+      urlsToCheck.push(decodeURIComponent(url));
+      urlsToCheck.push(decodeURIComponent(url).toLowerCase());
+    } catch {
+      // Ignore decode errors - malformed encoding is also suspicious
+    }
+
+    const dangerousPatterns = ['javascript:', 'data:', 'vbscript:', 'file:'];
+    for (const checkUrl of urlsToCheck) {
+      for (const pattern of dangerousPatterns) {
+        if (checkUrl.includes(pattern)) {
+          return false;
+        }
+      }
+    }
+
+    // Strict domain check for production
+    if (strictDomainCheck) {
+      const hostname = parsed.hostname.toLowerCase();
+      const isAllowed = ALLOWED_IMAGE_DOMAINS.some(
+        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+      );
+      if (!isAllowed) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    // Invalid URL
+    return false;
+  }
+}
+
+// ============================================================================
+// Marketplace Constants
+// ============================================================================
+
+/**
+ * Default number of templates to fetch per page.
+ */
+export const DEFAULT_TEMPLATES_LIMIT = 50;
+
+/**
+ * Default container port for agents.
+ */
+export const DEFAULT_CONTAINER_PORT = 3000;
+
+/**
+ * SWR configuration options for marketplace pages.
+ */
+export const SWR_MARKETPLACE_CONFIG = {
+  revalidateOnFocus: false,
+  dedupingInterval: 2000,
+} as const;
