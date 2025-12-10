@@ -35,7 +35,7 @@ export interface Agent {
 }
 
 /**
- * Agent template from marketplace.
+ * Agent template from marketplace (listing view).
  */
 export interface AgentTemplate {
   uuid: string;
@@ -55,6 +55,35 @@ export interface AgentTemplate {
   documentation_url?: string;
   created_at: string;
 }
+
+/**
+ * Extended agent template with deployment details (detail view).
+ */
+export interface AgentTemplateDetail extends AgentTemplate {
+  long_description?: string;
+  docker_image: string;
+  container_port?: number;
+  health_endpoint?: string;
+  env_schema?: {
+    required?: string[];
+    optional?: string[];
+    defaults?: Record<string, string>;
+  };
+  deployment_count?: number;
+  updated_at: string;
+}
+
+/**
+ * Agent template categories for filtering.
+ */
+export const AGENT_CATEGORIES = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'research', label: 'Research' },
+  { value: 'productivity', label: 'Productivity' },
+  { value: 'development', label: 'Development' },
+  { value: 'communication', label: 'Communication' },
+  { value: 'automation', label: 'Automation' },
+] as const;
 
 // ============================================================================
 // Data Fetching
@@ -293,9 +322,23 @@ export function isValidImageUrl(url: string | undefined | null, strictDomainChec
       return false;
     }
 
-    // Check for suspicious patterns
-    if (url.includes('javascript:') || url.includes('data:') || url.includes('vbscript:')) {
-      return false;
+    // SECURITY: Check for suspicious patterns in both original and decoded URL
+    // This catches encoded XSS vectors like "javascript%3A" or "data%3A"
+    const urlsToCheck = [url, url.toLowerCase()];
+    try {
+      urlsToCheck.push(decodeURIComponent(url));
+      urlsToCheck.push(decodeURIComponent(url).toLowerCase());
+    } catch {
+      // Ignore decode errors - malformed encoding is also suspicious
+    }
+
+    const dangerousPatterns = ['javascript:', 'data:', 'vbscript:', 'file:'];
+    for (const checkUrl of urlsToCheck) {
+      for (const pattern of dangerousPatterns) {
+        if (checkUrl.includes(pattern)) {
+          return false;
+        }
+      }
     }
 
     // Strict domain check for production

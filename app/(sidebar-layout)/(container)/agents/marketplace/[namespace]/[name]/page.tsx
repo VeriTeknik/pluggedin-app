@@ -48,40 +48,12 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
+  type AgentTemplateDetail,
   DEFAULT_CONTAINER_PORT,
   isValidImageUrl,
+  SWR_MARKETPLACE_CONFIG,
   validateAgentName,
 } from '@/lib/pap-ui-utils';
-
-interface AgentTemplate {
-  uuid: string;
-  namespace: string;
-  name: string;
-  version: string;
-  display_name: string;
-  description: string;
-  long_description?: string;
-  icon_url?: string;
-  banner_url?: string;
-  docker_image: string;
-  container_port?: number;
-  health_endpoint?: string;
-  env_schema?: {
-    required?: string[];
-    optional?: string[];
-    defaults?: Record<string, string>;
-  };
-  category?: string;
-  tags?: string[];
-  is_verified: boolean;
-  is_featured: boolean;
-  install_count: number;
-  deployment_count?: number;
-  repository_url?: string;
-  documentation_url?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 interface TemplateVersion {
   version: string;
@@ -89,7 +61,7 @@ interface TemplateVersion {
 }
 
 interface TemplateResponse {
-  template: AgentTemplate;
+  template: AgentTemplateDetail;
   versions: TemplateVersion[];
 }
 
@@ -108,7 +80,8 @@ export default function TemplateDetailPage() {
 
   const { data, error, isLoading } = useSWR<TemplateResponse>(
     `/api/agents/templates/${namespace}/${name}`,
-    fetcher
+    fetcher,
+    SWR_MARKETPLACE_CONFIG
   );
 
   const [isDeployDialogOpen, setIsDeployDialogOpen] = useState(false);
@@ -135,8 +108,15 @@ export default function TemplateDetailPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to deploy agent');
+        // Handle specific error cases
+        if (response.status === 429) {
+          throw new Error('Deployment rate limit reached. Please try again later.');
+        }
+        if (response.status === 409) {
+          throw new Error('An agent with this name already exists. Please choose a different name.');
+        }
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to deploy agent');
       }
 
       const result = await response.json();

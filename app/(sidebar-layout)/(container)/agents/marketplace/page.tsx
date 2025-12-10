@@ -33,29 +33,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  AGENT_CATEGORIES,
+  type AgentTemplate,
   DEFAULT_TEMPLATES_LIMIT,
   isValidImageUrl,
   SWR_MARKETPLACE_CONFIG,
 } from '@/lib/pap-ui-utils';
-
-interface AgentTemplate {
-  uuid: string;
-  namespace: string;
-  name: string;
-  version: string;
-  display_name: string;
-  description: string;
-  icon_url?: string;
-  banner_url?: string;
-  category?: string;
-  tags?: string[];
-  is_verified: boolean;
-  is_featured: boolean;
-  install_count: number;
-  repository_url?: string;
-  documentation_url?: string;
-  created_at: string;
-}
 
 interface TemplatesResponse {
   templates: AgentTemplate[];
@@ -70,14 +53,6 @@ const fetcher = async (url: string) => {
   return response.json();
 };
 
-const CATEGORIES = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'research', label: 'Research' },
-  { value: 'productivity', label: 'Productivity' },
-  { value: 'development', label: 'Development' },
-  { value: 'communication', label: 'Communication' },
-  { value: 'automation', label: 'Automation' },
-];
 
 export default function MarketplacePage() {
   const router = useRouter();
@@ -156,7 +131,7 @@ export default function MarketplacePage() {
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((cat) => (
+              {AGENT_CATEGORIES.map((cat) => (
                 <SelectItem key={cat.value} value={cat.value}>
                   {cat.label}
                 </SelectItem>

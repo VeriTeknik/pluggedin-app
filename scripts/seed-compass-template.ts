@@ -97,13 +97,32 @@ async function seedCompassTemplate() {
       console.log(`   Version: ${existingTemplate.version}`);
       console.log(`   Image: ${existingTemplate.docker_image}`);
 
-      // Update to latest version
-      console.log('\n📝 Updating template to latest version...');
+      // Update only content fields, preserve metadata (install_count, is_verified, etc.)
+      console.log('\n📝 Updating template content...');
       await db
         .update(agentTemplatesTable)
         .set({
-          ...COMPASS_TEMPLATE,
+          // Content updates
+          version: COMPASS_TEMPLATE.version,
+          display_name: COMPASS_TEMPLATE.display_name,
+          description: COMPASS_TEMPLATE.description,
+          long_description: COMPASS_TEMPLATE.long_description,
+          // Deployment config
+          docker_image: COMPASS_TEMPLATE.docker_image,
+          container_port: COMPASS_TEMPLATE.container_port,
+          health_endpoint: COMPASS_TEMPLATE.health_endpoint,
+          env_schema: COMPASS_TEMPLATE.env_schema,
+          // Presentation
+          icon_url: COMPASS_TEMPLATE.icon_url,
+          banner_url: COMPASS_TEMPLATE.banner_url,
+          tags: COMPASS_TEMPLATE.tags,
+          category: COMPASS_TEMPLATE.category,
+          // Links
+          repository_url: COMPASS_TEMPLATE.repository_url,
+          documentation_url: COMPASS_TEMPLATE.documentation_url,
+          // Timestamp
           updated_at: new Date(),
+          // NOTE: Preserves: install_count, is_verified, is_featured, is_public, created_at
         })
         .where(eq(agentTemplatesTable.uuid, existingTemplate.uuid));
 
