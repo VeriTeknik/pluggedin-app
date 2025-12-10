@@ -26,6 +26,12 @@ import { authenticate } from '@/app/api/auth';
 const COLLECTOR_REQUEST_TIMEOUT_MS = 10_000;
 
 /**
+ * Maximum response size from collector in bytes (5MB for agent list).
+ * Prevents memory exhaustion from malicious/misconfigured collectors.
+ */
+const MAX_COLLECTOR_RESPONSE_BYTES = 5_242_880;
+
+/**
  * GET /api/clusters/{clusterId}/agents
  *
  * Proxy to collector to get all agents.
@@ -78,6 +84,18 @@ export async function GET(
       );
       return NextResponse.json(
         { error: 'Collector unavailable', status: collectorResponse.status },
+        { status: 502 }
+      );
+    }
+
+    // Check response size before parsing
+    const contentLength = collectorResponse.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_COLLECTOR_RESPONSE_BYTES) {
+      console.error(
+        `[Clusters] Collector response too large: ${contentLength} bytes for ${clusterId}`
+      );
+      return NextResponse.json(
+        { error: 'Collector response too large' },
         { status: 502 }
       );
     }

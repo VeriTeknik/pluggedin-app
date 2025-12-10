@@ -11,16 +11,36 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { clustersTable } from '@/db/schema';
+import { authenticate } from '@/app/api/auth';
+
+/**
+ * Timeout for collector requests in milliseconds.
+ * Set to 10 seconds to allow for slow network conditions.
+ */
+const COLLECTOR_REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * Maximum response size from collector in bytes (1MB).
+ * Prevents memory exhaustion from malicious/misconfigured collectors.
+ */
+const MAX_COLLECTOR_RESPONSE_BYTES = 1_048_576;
 
 /**
  * GET /api/clusters/{clusterId}/agents/{agentId}
  *
  * Proxy to collector to get single agent status.
+ * Requires authenticated user.
  */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ clusterId: string; agentId: string }> }
 ) {
+  // Authenticate the request
+  const auth = await authenticate(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   const { clusterId, agentId } = await params;
 
   try {
@@ -51,7 +71,7 @@ export async function GET(
         headers: {
           'Content-Type': 'application/json',
         },
-        signal: AbortSignal.timeout(10000), // 10s timeout
+        signal: AbortSignal.timeout(COLLECTOR_REQUEST_TIMEOUT_MS),
       }
     );
 
@@ -68,6 +88,18 @@ export async function GET(
       );
       return NextResponse.json(
         { error: 'Collector unavailable', status: collectorResponse.status },
+        { status: 502 }
+      );
+    }
+
+    // Check response size before parsing
+    const contentLength = collectorResponse.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_COLLECTOR_RESPONSE_BYTES) {
+      console.error(
+        `[Clusters] Collector response too large: ${contentLength} bytes for agent ${agentId}`
+      );
+      return NextResponse.json(
+        { error: 'Collector response too large' },
         { status: 502 }
       );
     }
