@@ -216,7 +216,7 @@ async function k8sRequest(
     try {
       const errorBody = JSON.parse(response.body);
       // Only extract standard K8s error fields, avoid exposing internal details
-      const safeFields = {
+      const safeFields: { reason?: string; code?: number; kind?: string; message?: string } = {
         reason: errorBody.reason,  // e.g., "NotFound", "AlreadyExists"
         code: errorBody.code,      // HTTP status code
         kind: errorBody.kind,      // Usually "Status"
@@ -236,12 +236,14 @@ async function k8sRequest(
       safeErrorInfo = '(non-JSON response)';
     }
 
-    // Log error: detailed in development, minimal in production
+    // SECURITY: Log error with appropriate detail level
+    // Development: include K8s error details for debugging
+    // Production: minimal logging to avoid leaking cluster topology
     if (isDevelopment) {
-      console.error(`${logMessage} - ${safeErrorInfo}`);
+      console.error(`[K8s] ${logMessage} - ${safeErrorInfo}`);
     } else {
-      // Production: log minimal info to avoid leaking cluster details
-      console.error(`${logMessage} - ${safeErrorInfo}`);
+      // Production: only log HTTP status, no K8s-specific details
+      console.error(`[K8s] API error: ${response.status}`);
     }
 
     // Return sanitized error (never includes internal details)
