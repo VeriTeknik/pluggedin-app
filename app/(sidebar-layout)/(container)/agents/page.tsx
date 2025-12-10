@@ -51,103 +51,14 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-
-// Reserved agent names that cannot be used (must match backend)
-const RESERVED_AGENT_NAMES = new Set([
-  'api', 'app', 'www', 'web', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'ssh', 'dns',
-  'ns', 'ns1', 'ns2', 'ns3', 'mx', 'mx1', 'mx2', 'vpn', 'proxy', 'gateway', 'gw',
-  'admin', 'administrator', 'root', 'system', 'sysadmin', 'webmaster', 'postmaster',
-  'hostmaster', 'support', 'help', 'info', 'contact', 'sales', 'billing',
-  'kubernetes', 'k8s', 'kube', 'cluster', 'node', 'pod', 'service', 'ingress',
-  'traefik', 'nginx', 'envoy', 'istio', 'linkerd',
-  'pap', 'station', 'satellite', 'control', 'control-plane', 'registry',
-  'hub', 'gateway', 'proxy', 'mcp', 'hooks', 'telemetry', 'metrics', 'heartbeat',
-  'pluggedin', 'plugged', 'is', 'a', 'focus', 'memory', 'demo', 'test', 'staging',
-  'production', 'prod', 'dev', 'development', 'sandbox', 'preview',
-  'localhost', 'local', 'internal', 'private', 'public', 'static', 'assets', 'cdn',
-  'status', 'health', 'healthz', 'ready', 'readyz', 'live', 'livez',
-  'auth', 'login', 'logout', 'signup', 'register', 'oauth', 'sso', 'callback',
-  'default', 'null', 'undefined', 'void', 'none', 'empty', 'blank',
-]);
-
-// Validate agent name and return error message if invalid
-function validateAgentName(name: string): string | null {
-  const normalized = name.toLowerCase().trim();
-
-  if (!normalized) {
-    return null; // Empty is okay, will be caught by disabled button
-  }
-
-  if (normalized.length < 2) {
-    return 'Name must be at least 2 characters';
-  }
-
-  if (normalized.length > 63) {
-    return 'Name must be 63 characters or less';
-  }
-
-  const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-  if (!dnsNameRegex.test(normalized)) {
-    if (/[A-Z]/.test(name)) {
-      return 'Name will be converted to lowercase';
-    }
-    if (/^-/.test(normalized) || /-$/.test(normalized)) {
-      return 'Name cannot start or end with a hyphen';
-    }
-    if (/[^a-z0-9-]/.test(normalized)) {
-      return 'Only lowercase letters, numbers, and hyphens allowed';
-    }
-    return 'Invalid name format';
-  }
-
-  if (normalized.includes('--')) {
-    return 'Name cannot contain consecutive hyphens';
-  }
-
-  if (RESERVED_AGENT_NAMES.has(normalized)) {
-    return `'${normalized}' is a reserved name`;
-  }
-
-  return null;
-}
-
-interface Agent {
-  uuid: string;
-  name: string;
-  dns_name: string;
-  state: string;
-  access_level: 'PRIVATE' | 'PUBLIC';
-  template_uuid?: string;
-  heartbeat_mode?: string;
-  deployment_status?: string;
-  created_at: string;
-  last_heartbeat_at?: string;
-  metadata?: {
-    template_name?: string;
-    template_version?: string;
-    description?: string;
-    [key: string]: any;
-  };
-}
-
-interface AgentTemplate {
-  uuid: string;
-  namespace: string;
-  name: string;
-  version: string;
-  display_name: string;
-  description: string;
-  icon_url?: string;
-  banner_url?: string;
-  category?: string;
-  tags?: string[];
-  is_verified: boolean;
-  is_featured: boolean;
-  install_count: number;
-  repository_url?: string;
-  documentation_url?: string;
-  created_at: string;
-}
+import {
+  type Agent,
+  type AgentTemplate,
+  fetcher,
+  getStateBadgeVariant,
+  isArchivedState,
+  validateAgentName,
+} from '@/lib/pap-ui-utils';
 
 interface TemplatesResponse {
   templates: AgentTemplate[];
@@ -155,12 +66,6 @@ interface TemplatesResponse {
   limit: number;
   offset: number;
 }
-
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to fetch');
-  return response.json();
-};
 
 const CATEGORIES = [
   { value: 'all', label: 'All Categories' },
@@ -201,15 +106,15 @@ export default function AgentsPage() {
     fetcher
   );
 
-  // Filter out terminated and killed agents
+  // Filter out terminated and killed agents using centralized helper
   const activeAgents = useMemo(() => {
     if (!agents) return [];
-    return agents.filter(agent => !['TERMINATED', 'KILLED'].includes(agent.state));
+    return agents.filter(agent => !isArchivedState(agent.state));
   }, [agents]);
 
   const archivedCount = useMemo(() => {
     if (!agents) return 0;
-    return agents.filter(agent => ['TERMINATED', 'KILLED'].includes(agent.state)).length;
+    return agents.filter(agent => isArchivedState(agent.state)).length;
   }, [agents]);
 
   // Create agent dialog state
@@ -218,6 +123,10 @@ export default function AgentsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [deleteAgentId, setDeleteAgentId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Cache validation result to avoid repeated calls (Comment 3 & 5)
+  const nameValidationError = useMemo(() => validateAgentName(newAgentName), [newAgentName]);
+  const isNameValid = !!newAgentName && !nameValidationError;
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -292,22 +201,6 @@ export default function AgentsPage() {
     if (category && category !== 'all') params.set('category', category);
     if (showFeatured) params.set('featured', 'true');
     router.push(`/agents?${params.toString()}`);
-  };
-
-  const getStateBadgeVariant = (state: string) => {
-    switch (state) {
-      case 'ACTIVE':
-        return 'default';
-      case 'PROVISIONED':
-        return 'secondary';
-      case 'DRAINING':
-        return 'outline';
-      case 'TERMINATED':
-      case 'KILLED':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
   };
 
   const getStateIcon = (state: string) => {
@@ -555,20 +448,20 @@ export default function AgentsPage() {
                 value={newAgentName}
                 onChange={(e) => setNewAgentName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 maxLength={63}
-                className={validateAgentName(newAgentName) ? 'border-destructive' : ''}
+                className={nameValidationError ? 'border-destructive' : ''}
               />
-              {validateAgentName(newAgentName) ? (
+              {nameValidationError ? (
                 <p className="text-xs text-destructive">
-                  {validateAgentName(newAgentName)}
+                  {nameValidationError}
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   Lowercase letters, numbers, and hyphens only (2-63 chars)
                 </p>
               )}
-              {newAgentName && !validateAgentName(newAgentName) && (
+              {isNameValid && (
                 <div className="text-xs bg-muted p-2 rounded font-mono">
-                  DNS: {newAgentName.toLowerCase().trim()}.is.plugged.in
+                  DNS: {newAgentName}.is.plugged.in
                 </div>
               )}
             </div>
@@ -583,7 +476,7 @@ export default function AgentsPage() {
             </Button>
             <Button
               onClick={handleCreateAgent}
-              disabled={!newAgentName || !!validateAgentName(newAgentName) || isCreating}
+              disabled={!isNameValid || isCreating}
             >
               {isCreating ? 'Creating...' : 'Create Agent'}
             </Button>

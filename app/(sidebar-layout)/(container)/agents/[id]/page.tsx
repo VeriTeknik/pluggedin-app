@@ -3,7 +3,7 @@
 import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, Pause, Play, RefreshCw, RotateCw, Server, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
@@ -26,21 +26,16 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-
-interface Agent {
-  uuid: string;
-  name: string;
-  dns_name: string;
-  state: string;
-  created_at: string;
-  provisioned_at?: string;
-  activated_at?: string;
-  terminated_at?: string;
-  last_heartbeat_at?: string;
-  metadata?: any;
-  kubernetes_namespace?: string;
-  kubernetes_deployment?: string;
-}
+import {
+  type Agent,
+  fetcher,
+  formatDate,
+  formatUptime,
+  getEffectiveHeartbeatConfig,
+  getStateBadgeVariant,
+  HEARTBEAT_INTERVALS,
+  timeAgo,
+} from '@/lib/pap-ui-utils';
 
 interface Heartbeat {
   id: number;
@@ -157,59 +152,6 @@ function extractClusterId(dnsName: string): string {
   return dnsName;
 }
 
-// Heartbeat intervals per mode (PAP-RFC-001 §8.1)
-const HEARTBEAT_INTERVALS: Record<string, number> = {
-  EMERGENCY: 5 * 1000,
-  IDLE: 30 * 1000,
-  SLEEP: 15 * 60 * 1000,
-};
-
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to fetch');
-  return response.json();
-};
-
-// Format uptime in human readable format
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  const parts = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  parts.push(`${secs}s`);
-  return parts.join(' ');
-}
-
-// Calculate time ago
-function timeAgo(timestamp: string | null | undefined): string {
-  if (!timestamp) return 'Never';
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return 'Invalid Date';
-  const diff = Date.now() - date.getTime();
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 0) return 'Just now';
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-// Format date safely
-function formatDate(timestamp: string | null | undefined): string {
-  if (!timestamp) return 'N/A';
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return 'Invalid Date';
-  return date.toLocaleString();
-}
-
 export default function AgentDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -262,106 +204,85 @@ export default function AgentDetailPage() {
   const lifecycleEvents = data?.lifecycleEvents || [];
   const kubernetesStatus = data?.kubernetesStatus;
 
-  // Calculate health status
+  // Calculate health status - derive mode and interval once (Comment 1)
   const lastHeartbeat = recentHeartbeats[0];
-  const lastHeartbeatMode = lastHeartbeat?.mode || 'IDLE';
-  const expectedInterval = HEARTBEAT_INTERVALS[lastHeartbeatMode] || HEARTBEAT_INTERVALS.IDLE;
+  const { effectiveMode, effectiveIntervalMs } = getEffectiveHeartbeatConfig(lastHeartbeat?.mode);
   const timeSinceHeartbeat = agent?.last_heartbeat_at
     ? Date.now() - new Date(agent.last_heartbeat_at).getTime()
     : Infinity;
-  const isHealthy = timeSinceHeartbeat < expectedInterval * 2;
+  const isHealthy = timeSinceHeartbeat < effectiveIntervalMs * 2;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await mutate();
-    setIsRefreshing(false);
-  };
-
-  const handleRestart = async () => {
     try {
-      setIsRestarting(true);
-      const response = await fetch(`/api/agents/${id}/restart`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to restart agent');
-      }
-
       await mutate();
-      toast({
-        title: 'Agent Restarting',
-        description: 'Agent restart initiated. It will become ACTIVE after sending first heartbeat.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to restart agent',
-        variant: 'destructive',
-      });
     } finally {
-      setIsRestarting(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleSuspend = async () => {
+  // Extract common agent action logic (Comment 4)
+  const performAgentAction = useCallback(async (opts: {
+    endpoint: string;
+    setLoading: (v: boolean) => void;
+    successTitle: string;
+    successDescription: string;
+    errorPrefix: string;
+    body?: Record<string, unknown>;
+  }) => {
+    const { endpoint, setLoading, successTitle, successDescription, errorPrefix, body } = opts;
     try {
-      setIsSuspending(true);
-      const response = await fetch(`/api/agents/${id}/suspend`, {
+      setLoading(true);
+      const response = await fetch(`/api/agents/${id}/${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'User requested suspension via UI' }),
+        ...(body && {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to suspend agent');
+        const errorData = await response.json();
+        throw new Error(errorData.error || `${errorPrefix}`);
       }
 
       await mutate();
-      toast({
-        title: 'Agent Suspended',
-        description: 'Agent has been suspended. Use Resume to bring it back online.',
-      });
+      toast({ title: successTitle, description: successDescription });
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to suspend agent',
+        description: error instanceof Error ? error.message : errorPrefix,
         variant: 'destructive',
       });
     } finally {
-      setIsSuspending(false);
+      setLoading(false);
     }
-  };
+  }, [id, mutate, toast]);
 
-  const handleResume = async () => {
-    try {
-      setIsResuming(true);
-      const response = await fetch(`/api/agents/${id}/resume`, {
-        method: 'POST',
-      });
+  const handleRestart = () => performAgentAction({
+    endpoint: 'restart',
+    setLoading: setIsRestarting,
+    successTitle: 'Agent Restarting',
+    successDescription: 'Agent restart initiated. It will become ACTIVE after sending first heartbeat.',
+    errorPrefix: 'Failed to restart agent',
+  });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to resume agent');
-      }
+  const handleSuspend = () => performAgentAction({
+    endpoint: 'suspend',
+    setLoading: setIsSuspending,
+    successTitle: 'Agent Suspended',
+    successDescription: 'Agent has been suspended. Use Resume to bring it back online.',
+    errorPrefix: 'Failed to suspend agent',
+    body: { reason: 'User requested suspension via UI' },
+  });
 
-      await mutate();
-      toast({
-        title: 'Agent Resuming',
-        description: 'Agent is starting up. It will become ACTIVE after sending first heartbeat.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to resume agent',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsResuming(false);
-    }
-  };
+  const handleResume = () => performAgentAction({
+    endpoint: 'resume',
+    setLoading: setIsResuming,
+    successTitle: 'Agent Resuming',
+    successDescription: 'Agent is starting up. It will become ACTIVE after sending first heartbeat.',
+    errorPrefix: 'Failed to resume agent',
+  });
 
   const handleDelete = async () => {
     try {
@@ -419,22 +340,6 @@ export default function AgentDetailPage() {
       });
     } finally {
       setIsExporting(false);
-    }
-  };
-
-  const getStateBadgeVariant = (state: string) => {
-    switch (state) {
-      case 'ACTIVE':
-        return 'default';
-      case 'PROVISIONED':
-        return 'secondary';
-      case 'DRAINING':
-        return 'outline';
-      case 'TERMINATED':
-      case 'KILLED':
-        return 'destructive';
-      default:
-        return 'secondary';
     }
   };
 
@@ -639,7 +544,7 @@ export default function AgentDetailPage() {
                       {(collectorData?.healthy ?? isHealthy) ? 'Healthy' : 'Unhealthy'}
                     </Badge>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Mode: {collectorData?.mode ?? lastHeartbeatMode} (interval: {HEARTBEAT_INTERVALS[collectorData?.mode ?? lastHeartbeatMode] / 1000 || 30}s)
+                      Mode: {collectorData?.mode ?? effectiveMode} (interval: {(HEARTBEAT_INTERVALS[collectorData?.mode ?? effectiveMode] ?? effectiveIntervalMs) / 1000}s)
                     </p>
                   </div>
                   {(collectorData?.last_seen || agent.last_heartbeat_at) && (

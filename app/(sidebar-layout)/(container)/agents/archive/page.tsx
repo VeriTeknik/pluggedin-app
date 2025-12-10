@@ -1,8 +1,8 @@
 'use client';
 
-import { ArrowLeft, Server, Trash2 } from 'lucide-react';
+import { ArrowLeft, Server } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,74 +15,21 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-
-interface Agent {
-  uuid: string;
-  name: string;
-  dns_name: string;
-  state: string;
-  created_at: string;
-  terminated_at?: string;
-  metadata?: any;
-}
-
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to fetch agents');
-  return response.json();
-};
+  type Agent,
+  fetcher,
+  formatDate,
+  getStateBadgeVariant,
+  isArchivedState,
+} from '@/lib/pap-ui-utils';
 
 export default function AgentsArchivePage() {
-  const { data: agents, error, isLoading, mutate } = useSWR<Agent[]>('/api/agents', fetcher);
-  const [deleteAgentId, setDeleteAgentId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
+  const { data: agents, error, isLoading } = useSWR<Agent[]>('/api/agents', fetcher);
 
   // Filter to show only terminated and killed agents
   const archivedAgents = useMemo(() => {
     if (!agents) return [];
-    return agents.filter(agent => ['TERMINATED', 'KILLED'].includes(agent.state));
+    return agents.filter(agent => isArchivedState(agent.state));
   }, [agents]);
-
-  const handlePermanentDelete = async (agentId: string) => {
-    try {
-      setIsDeleting(true);
-      // For now, we just show a message - permanent delete can be implemented later
-      toast({
-        title: 'Not Implemented',
-        description: 'Permanent deletion is not yet implemented. Agents are kept for audit trail.',
-      });
-      setDeleteAgentId(null);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const getStateBadgeVariant = (state: string) => {
-    switch (state) {
-      case 'TERMINATED':
-        return 'destructive';
-      case 'KILLED':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
-  };
-
-  const formatDate = (timestamp: string | undefined): string => {
-    if (!timestamp) return 'N/A';
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleString();
-  };
 
   if (isLoading) {
     return (
