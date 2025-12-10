@@ -32,6 +32,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DEFAULT_TEMPLATES_LIMIT,
+  isValidImageUrl,
+  SWR_MARKETPLACE_CONFIG,
+} from '@/lib/pap-ui-utils';
 
 interface AgentTemplate {
   uuid: string;
@@ -95,11 +100,15 @@ export default function MarketplacePage() {
     if (searchQuery) params.set('search', searchQuery);
     if (category && category !== 'all') params.set('category', category);
     if (showFeatured) params.set('featured', 'true');
-    params.set('limit', '50');
+    params.set('limit', String(DEFAULT_TEMPLATES_LIMIT));
     return `/api/agents/templates?${params.toString()}`;
   }, [searchQuery, category, showFeatured]);
 
-  const { data, error, isLoading } = useSWR<TemplatesResponse>(queryUrl, fetcher);
+  const { data, error, isLoading } = useSWR<TemplatesResponse>(
+    queryUrl,
+    fetcher,
+    SWR_MARKETPLACE_CONFIG
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,7 +217,7 @@ function TemplateCard({ template }: { template: AgentTemplate }) {
     <Card className="hover:shadow-lg transition-shadow flex flex-col">
       <CardHeader>
         <div className="flex items-start gap-3">
-          {template.icon_url ? (
+          {isValidImageUrl(template.icon_url) ? (
             <img
               src={template.icon_url}
               alt={template.display_name}

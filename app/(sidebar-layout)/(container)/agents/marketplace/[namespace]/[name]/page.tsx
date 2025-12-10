@@ -47,7 +47,11 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { validateAgentName } from '@/lib/pap-ui-utils';
+import {
+  DEFAULT_CONTAINER_PORT,
+  isValidImageUrl,
+  validateAgentName,
+} from '@/lib/pap-ui-utils';
 
 interface AgentTemplate {
   uuid: string;
@@ -206,7 +210,7 @@ export default function TemplateDetailPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-6 mb-8">
         {/* Icon */}
-        {template.icon_url ? (
+        {isValidImageUrl(template.icon_url) ? (
           <img
             src={template.icon_url}
             alt={template.display_name}
@@ -253,8 +257,12 @@ export default function TemplateDetailPage() {
 
         {/* Deploy Button */}
         <div className="flex flex-col gap-2">
-          <Button size="lg" onClick={() => setIsDeployDialogOpen(true)}>
-            <Rocket className="mr-2 h-5 w-5" />
+          <Button
+            size="lg"
+            onClick={() => setIsDeployDialogOpen(true)}
+            aria-label={`Deploy ${template.display_name}`}
+          >
+            <Rocket className="mr-2 h-5 w-5" aria-hidden="true" />
             Deploy Agent
           </Button>
           <div className="flex items-center justify-center text-sm text-muted-foreground">
@@ -347,7 +355,7 @@ export default function TemplateDetailPage() {
               <Separator />
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Port</span>
-                <span>{template.container_port || 3000}</span>
+                <span>{template.container_port || DEFAULT_CONTAINER_PORT}</span>
               </div>
               <Separator />
               <div className="flex justify-between">
