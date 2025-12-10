@@ -17,16 +17,30 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { clustersTable } from '@/db/schema';
+import { authenticate } from '@/app/api/auth';
+
+/**
+ * Timeout for collector requests in milliseconds.
+ * Set to 10 seconds to allow for slow network conditions.
+ */
+const COLLECTOR_REQUEST_TIMEOUT_MS = 10_000;
 
 /**
  * GET /api/clusters/{clusterId}/agents
  *
  * Proxy to collector to get all agents.
+ * Requires authenticated user.
  */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ clusterId: string }> }
 ) {
+  // Authenticate the request
+  const auth = await authenticate(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   const { clusterId } = await params;
 
   try {
@@ -55,7 +69,7 @@ export async function GET(
       headers: {
         'Content-Type': 'application/json',
       },
-      signal: AbortSignal.timeout(10000), // 10s timeout
+      signal: AbortSignal.timeout(COLLECTOR_REQUEST_TIMEOUT_MS),
     });
 
     if (!collectorResponse.ok) {

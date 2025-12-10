@@ -16,6 +16,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { clustersTable, clusterAlertsTable, ClusterAlertType, AlertSeverity } from '@/db/schema';
+import { authenticate } from '@/app/api/auth';
 
 // Collector API key from environment
 const COLLECTOR_API_KEY = process.env.PAP_COLLECTOR_API_KEY;
@@ -32,7 +33,9 @@ const alertSchema = z.object({
 });
 
 /**
- * Validate collector API key
+ * Validate collector API key using constant-time comparison.
+ * SECURITY: Prevents timing attacks by ensuring comparison time is constant
+ * regardless of key length differences or match position.
  */
 function validateCollectorAuth(authHeader: string | null): boolean {
   if (!authHeader?.startsWith('Bearer ')) {
@@ -47,14 +50,16 @@ function validateCollectorAuth(authHeader: string | null): boolean {
     return false;
   }
 
-  // Constant-time comparison to prevent timing attacks
-  if (token.length !== COLLECTOR_API_KEY.length) {
-    return false;
-  }
+  // SECURITY: Constant-time comparison that handles different lengths
+  // XOR the lengths first (different lengths will always fail)
+  // Then iterate over max length to prevent timing leakage
+  const maxLength = Math.max(token.length, COLLECTOR_API_KEY.length);
+  let result = token.length ^ COLLECTOR_API_KEY.length;
 
-  let result = 0;
-  for (let i = 0; i < token.length; i++) {
-    result |= token.charCodeAt(i) ^ COLLECTOR_API_KEY.charCodeAt(i);
+  for (let i = 0; i < maxLength; i++) {
+    const a = i < token.length ? token.charCodeAt(i) : 0;
+    const b = i < COLLECTOR_API_KEY.length ? COLLECTOR_API_KEY.charCodeAt(i) : 0;
+    result |= a ^ b;
   }
 
   return result === 0;
@@ -174,11 +179,13 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ clusterId: string }> }
 ) {
+  // Authenticate the request
+  const auth = await authenticate(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   const { clusterId } = await params;
-
-  // TODO: Add proper admin authentication
-  // For now, this endpoint is open for development
-
   const url = new URL(request.url);
   const limit = parseInt(url.searchParams.get('limit') || '50', 10);
   const acknowledged = url.searchParams.get('acknowledged');

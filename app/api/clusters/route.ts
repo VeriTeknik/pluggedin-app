@@ -8,19 +8,34 @@
  *   - Register a new cluster
  */
 
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { clustersTable } from '@/db/schema';
+import { authenticate } from '@/app/api/auth';
 
-// Validation schema for new cluster registration
+/**
+ * Validation schema for new cluster registration.
+ * SECURITY: collector_url must use HTTPS in production to prevent MITM attacks.
+ */
 const createClusterSchema = z.object({
   cluster_id: z.string().min(1).max(255),
   name: z.string().min(1).max(255),
   description: z.string().optional(),
-  collector_url: z.string().url().optional(),
+  collector_url: z
+    .string()
+    .url()
+    .refine(
+      (url) => {
+        // Allow HTTP only in development for local testing
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        return isDevelopment || url.startsWith('https://');
+      },
+      { message: 'Collector URL must use HTTPS in production' }
+    )
+    .optional(),
 });
 
 /**
@@ -52,9 +67,14 @@ export async function GET() {
  * POST /api/clusters
  *
  * Register a new cluster.
+ * Requires authenticated user.
  */
 export async function POST(request: Request) {
-  // TODO: Add proper admin authentication
+  // Authenticate the request
+  const auth = await authenticate(request);
+  if (auth.error) {
+    return auth.error;
+  }
 
   try {
     const body = await request.json();
@@ -62,7 +82,7 @@ export async function POST(request: Request) {
 
     // Check if cluster already exists
     const existing = await db.query.clustersTable.findFirst({
-      where: (clusters, { eq }) => eq(clusters.cluster_id, validated.cluster_id),
+      where: eq(clustersTable.cluster_id, validated.cluster_id),
     });
 
     if (existing) {

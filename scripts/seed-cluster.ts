@@ -4,6 +4,8 @@
  * Run with: npx tsx scripts/seed-cluster.ts
  */
 
+import { eq } from 'drizzle-orm';
+
 import { db } from '../db';
 import { clustersTable } from '../db/schema';
 
@@ -13,7 +15,7 @@ async function seedCluster() {
   try {
     // Check if cluster already exists
     const existing = await db.query.clustersTable.findFirst({
-      where: (clusters, { eq }) => eq(clusters.cluster_id, 'is.plugged.in'),
+      where: eq(clustersTable.cluster_id, 'is.plugged.in'),
     });
 
     if (existing) {
@@ -23,7 +25,7 @@ async function seedCluster() {
         .set({
           collector_url: 'https://collector.is.plugged.in',
         })
-        .where((clusters, { eq }) => eq(clusters.cluster_id, 'is.plugged.in'));
+        .where(eq(clustersTable.cluster_id, 'is.plugged.in'));
       console.log('Updated cluster collector_url');
     } else {
       // Create the cluster
