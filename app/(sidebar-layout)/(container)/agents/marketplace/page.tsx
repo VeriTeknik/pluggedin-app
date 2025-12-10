@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +81,13 @@ export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [showFeatured, setShowFeatured] = useState(searchParams.get('featured') === 'true');
+
+  // Sync state with URL when user navigates back/forward
+  useEffect(() => {
+    setSearchQuery(searchParams.get('search') || '');
+    setCategory(searchParams.get('category') || 'all');
+    setShowFeatured(searchParams.get('featured') === 'true');
+  }, [searchParams]);
 
   // Build query URL
   const queryUrl = useMemo(() => {

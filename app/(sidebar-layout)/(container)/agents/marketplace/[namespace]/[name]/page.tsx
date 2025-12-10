@@ -47,40 +47,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-
-// Reserved agent names (must match backend)
-const RESERVED_AGENT_NAMES = new Set([
-  'api', 'app', 'www', 'web', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'ssh', 'dns',
-  'ns', 'ns1', 'ns2', 'ns3', 'mx', 'mx1', 'mx2', 'vpn', 'proxy', 'gateway', 'gw',
-  'admin', 'administrator', 'root', 'system', 'sysadmin', 'webmaster', 'postmaster',
-  'hostmaster', 'support', 'help', 'info', 'contact', 'sales', 'billing',
-  'kubernetes', 'k8s', 'kube', 'cluster', 'node', 'pod', 'service', 'ingress',
-  'traefik', 'nginx', 'envoy', 'istio', 'linkerd',
-  'pap', 'station', 'satellite', 'control', 'control-plane', 'registry',
-  'hub', 'gateway', 'proxy', 'mcp', 'hooks', 'telemetry', 'metrics', 'heartbeat',
-  'pluggedin', 'plugged', 'is', 'a', 'focus', 'memory', 'demo', 'test', 'staging',
-  'production', 'prod', 'dev', 'development', 'sandbox', 'preview',
-  'localhost', 'local', 'internal', 'private', 'public', 'static', 'assets', 'cdn',
-  'status', 'health', 'healthz', 'ready', 'readyz', 'live', 'livez',
-  'auth', 'login', 'logout', 'signup', 'register', 'oauth', 'sso', 'callback',
-  'default', 'null', 'undefined', 'void', 'none', 'empty', 'blank',
-]);
-
-function validateAgentName(name: string): string | null {
-  const normalized = name.toLowerCase().trim();
-  if (!normalized) return null;
-  if (normalized.length < 2) return 'Name must be at least 2 characters';
-  if (normalized.length > 63) return 'Name must be 63 characters or less';
-  const dnsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-  if (!dnsNameRegex.test(normalized)) {
-    if (/^-/.test(normalized) || /-$/.test(normalized)) return 'Name cannot start or end with a hyphen';
-    if (/[^a-z0-9-]/.test(normalized)) return 'Only lowercase letters, numbers, and hyphens allowed';
-    return 'Invalid name format';
-  }
-  if (normalized.includes('--')) return 'Name cannot contain consecutive hyphens';
-  if (RESERVED_AGENT_NAMES.has(normalized)) return `'${normalized}' is a reserved name`;
-  return null;
-}
+import { validateAgentName } from '@/lib/pap-ui-utils';
 
 interface AgentTemplate {
   uuid: string;
@@ -144,6 +111,9 @@ export default function TemplateDetailPage() {
   const [agentName, setAgentName] = useState('');
   const [accessLevel, setAccessLevel] = useState('PRIVATE');
   const [isDeploying, setIsDeploying] = useState(false);
+
+  // Compute validation once to avoid multiple calls per render
+  const nameError = validateAgentName(agentName);
 
   const handleDeploy = async () => {
     if (!data?.template) return;
@@ -463,18 +433,16 @@ export default function TemplateDetailPage() {
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 maxLength={63}
-                className={validateAgentName(agentName) ? 'border-destructive' : ''}
+                className={nameError ? 'border-destructive' : ''}
               />
-              {validateAgentName(agentName) ? (
-                <p className="text-xs text-destructive">
-                  {validateAgentName(agentName)}
-                </p>
+              {nameError ? (
+                <p className="text-xs text-destructive">{nameError}</p>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   Lowercase letters, numbers, and hyphens only
                 </p>
               )}
-              {agentName && !validateAgentName(agentName) && (
+              {agentName && !nameError && (
                 <div className="text-xs bg-muted p-2 rounded">
                   <div className="flex items-center gap-2">
                     <Globe className="h-3 w-3" />
@@ -521,7 +489,7 @@ export default function TemplateDetailPage() {
             </Button>
             <Button
               onClick={handleDeploy}
-              disabled={!agentName || !!validateAgentName(agentName) || isDeploying}
+              disabled={!agentName || !!nameError || isDeploying}
             >
               {isDeploying ? 'Deploying...' : 'Deploy Agent'}
             </Button>

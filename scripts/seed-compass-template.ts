@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { agentTemplatesTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 const COMPASS_TEMPLATE = {
   namespace: 'veriteknik',
@@ -83,9 +83,12 @@ async function seedCompassTemplate() {
   console.log('🧭 Seeding Compass agent template...\n');
 
   try {
-    // Check if template already exists
+    // Check if template already exists (by namespace + name for uniqueness)
     const existingTemplate = await db.query.agentTemplatesTable.findFirst({
-      where: eq(agentTemplatesTable.name, 'compass'),
+      where: and(
+        eq(agentTemplatesTable.namespace, COMPASS_TEMPLATE.namespace),
+        eq(agentTemplatesTable.name, COMPASS_TEMPLATE.name)
+      ),
     });
 
     if (existingTemplate) {
