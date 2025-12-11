@@ -17,8 +17,42 @@ import { clustersTable } from '@/db/schema';
 import { authenticate } from '@/app/api/auth';
 
 /**
+ * Maximum URL length to prevent DoS attacks.
+ */
+const MAX_URL_LENGTH = 2048;
+
+/**
+ * Hosts blocked for SSRF prevention.
+ */
+const BLOCKED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'];
+
+/**
+ * Check if hostname is a private/internal IP address.
+ * SECURITY: Prevents SSRF attacks targeting internal infrastructure.
+ */
+function isPrivateNetwork(hostname: string): boolean {
+  // IPv4 private ranges
+  const privateIPv4Patterns = [
+    /^10\./,                          // 10.0.0.0/8
+    /^172\.(1[6-9]|2[0-9]|3[01])\./,  // 172.16.0.0/12
+    /^192\.168\./,                     // 192.168.0.0/16
+    /^169\.254\./,                     // Link-local 169.254.0.0/16
+    /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./, // CGNAT 100.64.0.0/10
+  ];
+
+  for (const pattern of privateIPv4Patterns) {
+    if (pattern.test(hostname)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Validation schema for new cluster registration.
  * SECURITY: collector_url must use HTTPS in production to prevent MITM attacks.
+ * SECURITY: Blocks localhost and private IPs to prevent SSRF attacks.
  */
 const createClusterSchema = z.object({
   cluster_id: z.string().min(1).max(255),
@@ -26,6 +60,7 @@ const createClusterSchema = z.object({
   description: z.string().optional(),
   collector_url: z
     .string()
+    .max(MAX_URL_LENGTH, { message: 'Collector URL is too long' })
     .url()
     .refine(
       (url) => {
@@ -34,6 +69,31 @@ const createClusterSchema = z.object({
         return isDevelopment || url.startsWith('https://');
       },
       { message: 'Collector URL must use HTTPS in production' }
+    )
+    .refine(
+      (url) => {
+        // SSRF prevention: block localhost and loopback
+        try {
+          const parsed = new URL(url);
+          const hostname = parsed.hostname.toLowerCase();
+
+          // Block known localhost aliases
+          if (BLOCKED_HOSTS.includes(hostname)) {
+            return false;
+          }
+
+          // Block private IP ranges (except in development)
+          const isDevelopment = process.env.NODE_ENV === 'development';
+          if (!isDevelopment && isPrivateNetwork(hostname)) {
+            return false;
+          }
+
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'Collector URL cannot point to localhost or private networks' }
     )
     .optional(),
 });

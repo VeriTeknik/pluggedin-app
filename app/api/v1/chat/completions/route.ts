@@ -172,24 +172,40 @@ export async function POST(request: NextRequest) {
 
       const stream = new ReadableStream({
         async start(controller) {
+          let streamCompleted = false;
           try {
             for await (const chunk of routeChatCompletionStreaming(validatedRequest)) {
               const data = `data: ${JSON.stringify(chunk)}\n\n`;
               controller.enqueue(encoder.encode(data));
             }
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
+            streamCompleted = true;
           } catch (error) {
             console.error('[ModelRouter] Streaming error:', error);
+            // SECURITY: Sanitize error message to prevent information disclosure
+            const errorMessage =
+              error instanceof Error && !error.message.toLowerCase().includes('api key')
+                ? error.message
+                : 'An error occurred while streaming';
             const errorData = `data: ${JSON.stringify({
               error: {
-                message: error instanceof Error ? error.message : 'Unknown error',
+                message: errorMessage,
                 type: 'api_error',
                 code: 'internal_error',
               },
             })}\n\n`;
             controller.enqueue(encoder.encode(errorData));
-            controller.close();
+          } finally {
+            // Always close the stream to prevent resource leaks
+            if (!streamCompleted) {
+              try {
+                controller.close();
+              } catch {
+                // Controller may already be closed
+              }
+            } else {
+              controller.close();
+            }
           }
         },
       });

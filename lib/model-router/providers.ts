@@ -72,6 +72,43 @@ function getApiKey(provider: ModelProvider): string {
 }
 
 /**
+ * Sanitize provider error messages to prevent information disclosure.
+ * SECURITY: Removes sensitive information like API keys from error messages.
+ */
+function sanitizeProviderError(
+  error: { error?: { message?: string } } | undefined,
+  provider: string,
+  status: number
+): string {
+  const message = error?.error?.message || '';
+
+  // Check for sensitive patterns that should be sanitized
+  const sensitivePatterns = [
+    /api[_-]?key/i,
+    /authorization/i,
+    /bearer/i,
+    /token/i,
+    /credential/i,
+    /secret/i,
+    /sk-[a-zA-Z0-9]+/,  // OpenAI API key pattern
+    /x-goog-api-key/i,
+  ];
+
+  for (const pattern of sensitivePatterns) {
+    if (pattern.test(message)) {
+      return `${provider} authentication error`;
+    }
+  }
+
+  // Return sanitized message or generic error
+  if (message && message.length < 200) {
+    return message;
+  }
+
+  return `${provider} API error: ${status}`;
+}
+
+/**
  * Convert messages to Anthropic format
  */
 function convertToAnthropicMessages(
@@ -147,7 +184,7 @@ async function callOpenAI(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
+    throw new Error(sanitizeProviderError(error, 'OpenAI', response.status));
   }
 
   return response.json();
@@ -183,7 +220,7 @@ async function* callOpenAIStreaming(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
+    throw new Error(sanitizeProviderError(error, 'OpenAI', response.status));
   }
 
   const reader = response.body?.getReader();
@@ -245,7 +282,7 @@ async function callAnthropic(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || `Anthropic API error: ${response.status}`);
+    throw new Error(sanitizeProviderError(error, 'Anthropic', response.status));
   }
 
   const anthropicResponse = await response.json();
@@ -305,7 +342,7 @@ async function* callAnthropicStreaming(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || `Anthropic API error: ${response.status}`);
+    throw new Error(sanitizeProviderError(error, 'Anthropic', response.status));
   }
 
   const reader = response.body?.getReader();
@@ -377,12 +414,13 @@ async function callGoogle(
   const { systemInstruction, contents } = convertToGoogleMessages(request.messages);
   const resolvedModel = resolveModelAlias(request.model);
 
-  const url = `${PROVIDER_URLS.google}/models/${resolvedModel}:generateContent?key=${apiKey}`;
+  const url = `${PROVIDER_URLS.google}/models/${resolvedModel}:generateContent`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
       systemInstruction,
@@ -398,7 +436,7 @@ async function callGoogle(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || `Google API error: ${response.status}`);
+    throw new Error(sanitizeProviderError(error, 'Google', response.status));
   }
 
   const googleResponse = await response.json();
@@ -438,12 +476,13 @@ async function* callGoogleStreaming(
   const { systemInstruction, contents } = convertToGoogleMessages(request.messages);
   const resolvedModel = resolveModelAlias(request.model);
 
-  const url = `${PROVIDER_URLS.google}/models/${resolvedModel}:streamGenerateContent?key=${apiKey}&alt=sse`;
+  const url = `${PROVIDER_URLS.google}/models/${resolvedModel}:streamGenerateContent?alt=sse`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
       systemInstruction,
@@ -459,7 +498,7 @@ async function* callGoogleStreaming(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || `Google API error: ${response.status}`);
+    throw new Error(sanitizeProviderError(error, 'Google', response.status));
   }
 
   const reader = response.body?.getReader();
