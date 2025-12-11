@@ -86,6 +86,15 @@ export async function POST(
     );
   }
 
+  // Check request size to prevent DoS from massive payloads
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > 10_000) {
+    return NextResponse.json(
+      { error: 'Request body too large' },
+      { status: 413 }
+    );
+  }
+
   try {
     const body = await request.json();
     const validatedAlert = alertSchema.parse(body);

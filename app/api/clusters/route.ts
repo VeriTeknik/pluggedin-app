@@ -23,8 +23,26 @@ const MAX_URL_LENGTH = 2048;
 
 /**
  * Hosts blocked for SSRF prevention.
+ * Includes localhost aliases and cloud metadata endpoints.
  */
-const BLOCKED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'];
+const BLOCKED_HOSTS = [
+  // Localhost aliases
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+  '::1',
+  '[::1]',
+  // AWS metadata
+  '169.254.169.254',
+  // GCP metadata
+  'metadata.google.internal',
+  'metadata.goog',
+  // Azure metadata
+  '169.254.169.254',
+  // Kubernetes internal
+  'kubernetes.default',
+  'kubernetes.default.svc',
+];
 
 /**
  * Check if hostname is a private/internal IP address.
@@ -36,11 +54,24 @@ function isPrivateNetwork(hostname: string): boolean {
     /^10\./,                          // 10.0.0.0/8
     /^172\.(1[6-9]|2[0-9]|3[01])\./,  // 172.16.0.0/12
     /^192\.168\./,                     // 192.168.0.0/16
-    /^169\.254\./,                     // Link-local 169.254.0.0/16
+    /^169\.254\./,                     // Link-local 169.254.0.0/16 (includes AWS metadata)
     /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./, // CGNAT 100.64.0.0/10
   ];
 
+  // IPv6 private ranges
+  const privateIPv6Patterns = [
+    /^fe80:/i,   // Link-local
+    /^fc00:/i,   // Unique local
+    /^fd[0-9a-f]{2}:/i, // Unique local
+  ];
+
   for (const pattern of privateIPv4Patterns) {
+    if (pattern.test(hostname)) {
+      return true;
+    }
+  }
+
+  for (const pattern of privateIPv6Patterns) {
     if (pattern.test(hostname)) {
       return true;
     }
@@ -57,7 +88,7 @@ function isPrivateNetwork(hostname: string): boolean {
 const createClusterSchema = z.object({
   cluster_id: z.string().min(1).max(255),
   name: z.string().min(1).max(255),
-  description: z.string().optional(),
+  description: z.string().max(1000).optional(),
   collector_url: z
     .string()
     .max(MAX_URL_LENGTH, { message: 'Collector URL is too long' })
