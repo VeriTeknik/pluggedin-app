@@ -143,13 +143,16 @@ interface CollectorResponse {
   agent: CollectorAgentData;
 }
 
-// Helper to extract cluster_id from dns_name (e.g., "cem.is.plugged.in" → "is.plugged.in")
-function extractClusterId(dnsName: string): string {
-  const parts = dnsName.split('.');
-  if (parts.length >= 3) {
-    return parts.slice(1).join('.');
-  }
-  return dnsName;
+/**
+ * Get the cluster_id for an agent.
+ * Since dns_name is now just the subdomain (e.g., "dev1"), and all agents
+ * are currently deployed to the "is.plugged.in" cluster, we return that.
+ *
+ * TODO: When supporting multiple clusters, add a cluster_id field to agents table
+ * or determine cluster based on deployment configuration.
+ */
+function getClusterId(_dnsName: string): string {
+  return 'is.plugged.in';
 }
 
 export default function AgentDetailPage() {
@@ -201,7 +204,7 @@ export default function AgentDetailPage() {
   const agent = data?.agent;
 
   // Fetch heartbeat status from collector when on telemetry tab
-  const clusterId = agent?.dns_name ? extractClusterId(agent.dns_name) : null;
+  const clusterId = agent?.dns_name ? getClusterId(agent.dns_name) : null;
   const { data: collectorResponse, error: collectorError } = useSWR(
     activeTab === 'telemetry' && agent?.uuid && clusterId
       ? `/api/clusters/${clusterId}/agents/${agent.uuid}`
@@ -391,7 +394,7 @@ export default function AgentDetailPage() {
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground font-mono text-sm mt-1">{agent.dns_name}</p>
+            <p className="text-muted-foreground font-mono text-sm mt-1">{agent.dns_name}.is.plugged.in</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -480,7 +483,7 @@ export default function AgentDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">DNS Name</p>
-                  <p className="font-mono text-sm">{agent.dns_name}</p>
+                  <p className="font-mono text-sm">{agent.dns_name}.is.plugged.in</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">State</p>
@@ -520,14 +523,14 @@ export default function AgentDetailPage() {
               <CardContent className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => window.open(`https://${agent.dns_name}`, '_blank')}
+                  onClick={() => window.open(`https://${agent.dns_name}.is.plugged.in`, '_blank')}
                 >
                   <Server className="mr-2 h-4 w-4" />
                   Open Agent
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => window.open(`https://${agent.dns_name}/tools`, '_blank')}
+                  onClick={() => window.open(`https://${agent.dns_name}.is.plugged.in/tools`, '_blank')}
                 >
                   <Activity className="mr-2 h-4 w-4" />
                   View Tools

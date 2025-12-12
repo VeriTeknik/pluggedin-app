@@ -90,7 +90,7 @@ export default function AgentsArchivePage() {
                   </Badge>
                 </div>
                 <CardDescription className="font-mono text-xs">
-                  {agent.dns_name}
+                  {agent.dns_name}.is.plugged.in
                 </CardDescription>
               </CardHeader>
               <CardContent>
