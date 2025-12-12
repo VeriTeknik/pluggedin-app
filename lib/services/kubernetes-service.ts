@@ -15,6 +15,11 @@ import * as https from 'https';
 const K8S_API_URL = process.env.K8S_API_URL || 'https://127.0.0.1:6443';
 const K8S_SERVICE_ACCOUNT_TOKEN = process.env.K8S_SERVICE_ACCOUNT_TOKEN || '';
 
+// TLS Server Name override (for when K8S_API_URL hostname doesn't match cert SANs)
+// Example: If connecting via k8s.is.plugged.in but cert only has 'is.plugged.in',
+// set K8S_TLS_SERVER_NAME=is.plugged.in to use that for TLS verification
+const K8S_TLS_SERVER_NAME = process.env.K8S_TLS_SERVER_NAME || '';
+
 // TLS verification configuration
 // By default, we verify certs using the in-cluster CA or K8S_CA_CERT
 // Only set K8S_INSECURE_SKIP_TLS_VERIFY=true for local development
@@ -135,6 +140,16 @@ function httpsRequest(
       // TLS verification: enabled by default, uses in-cluster CA or K8S_CA_CERT
       rejectUnauthorized: !K8S_INSECURE_SKIP_TLS_VERIFY,
       ...(K8S_CA_CERT && { ca: K8S_CA_CERT }),
+      // Server name override for TLS (when URL hostname doesn't match cert SANs)
+      // This tells Node to verify cert against K8S_TLS_SERVER_NAME instead of URL hostname
+      ...(K8S_TLS_SERVER_NAME && {
+        servername: K8S_TLS_SERVER_NAME,
+        checkServerIdentity: (_host: string, cert: { subject: { CN?: string } }) => {
+          // Use tls.checkServerIdentity with overridden hostname
+          const tls = require('tls');
+          return tls.checkServerIdentity(K8S_TLS_SERVER_NAME, cert);
+        },
+      }),
     };
 
     const httpModule = isHttps ? https : http;
