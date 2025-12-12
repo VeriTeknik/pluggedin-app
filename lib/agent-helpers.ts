@@ -5,13 +5,13 @@
  * to reduce duplication across route handlers.
  */
 
-import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 
+import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
-import { authenticate } from '@/app/api/auth';
-import { MAX_MEMORY_GI, MAX_CPU_CORES } from '@/lib/pap-constants';
+import { MAX_CPU_CORES,MAX_MEMORY_GI } from '@/lib/pap-constants';
 
 /** Successful auth result type. */
 type AuthSuccess = Awaited<ReturnType<typeof authenticate>> & { error: null };
@@ -145,7 +145,7 @@ const ALLOWED_IMAGE_REGISTRIES = [
   'nginxinc/',
   'docker.io/nginxinc/',
   // GitHub Container Registry (org-specific)
-  'ghcr.io/veritektik/',
+  'ghcr.io/veriteknik/',
   'ghcr.io/pluggedin/',
   // Allow images without registry prefix (Docker Hub official images)
   // These get normalized to docker.io/library/
