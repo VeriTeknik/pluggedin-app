@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
-import { authenticate } from '../../../auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
+
+import { authenticate } from '../../../auth';
 
 /**
  * @swagger

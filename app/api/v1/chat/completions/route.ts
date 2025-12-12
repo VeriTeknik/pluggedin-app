@@ -14,14 +14,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { authenticateApiKey } from '@/app/api/auth';
-import { RATE_LIMITS, rateLimit } from '@/lib/api-rate-limit';
+import { rateLimit } from '@/lib/api-rate-limit';
 import {
-  routeChatCompletion,
-  routeChatCompletionStreaming,
   calculateCost,
+  type ChatCompletionRequest,
   getProviderForModel,
   resolveModelAlias,
-  type ChatCompletionRequest,
+  routeChatCompletion,
+  routeChatCompletionStreaming,
 } from '@/lib/model-router';
 
 // Add chat completions rate limit

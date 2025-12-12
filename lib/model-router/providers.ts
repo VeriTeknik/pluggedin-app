@@ -6,14 +6,14 @@
  */
 
 import {
+  ChatCompletionChunk,
   ChatCompletionRequest,
   ChatCompletionResponse,
-  ChatCompletionChunk,
   ChatMessage,
-  ModelProvider,
   MODEL_ALIASES,
-  MODEL_PROVIDERS,
   MODEL_PRICING,
+  MODEL_PROVIDERS,
+  ModelProvider,
 } from './types';
 
 // Provider base URLs
@@ -350,7 +350,7 @@ async function* callAnthropicStreaming(
 
   const decoder = new TextDecoder();
   let buffer = '';
-  let messageId = `chatcmpl-${Date.now()}`;
+  const messageId = `chatcmpl-${Date.now()}`;
   const created = Math.floor(Date.now() / 1000);
 
   while (true) {

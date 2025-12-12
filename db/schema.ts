@@ -1,4 +1,4 @@
-import { relations,sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   bigserial,
   boolean,
@@ -62,15 +62,15 @@ export const mcpServerStatusEnum = pgEnum(
 
 export const mcpServerTypeEnum = pgEnum(
   'mcp_server_type',
-   enumToPgEnum(McpServerType)
- );
- 
- export const mcpServerSourceEnum = pgEnum(
-   'mcp_server_source',
-   enumToPgEnum(McpServerSource)
- );
- 
- export enum ToggleStatus {
+  enumToPgEnum(McpServerType)
+);
+
+export const mcpServerSourceEnum = pgEnum(
+  'mcp_server_source',
+  enumToPgEnum(McpServerSource)
+);
+
+export enum ToggleStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
 }
@@ -183,11 +183,11 @@ export const users = pgTable('users', {
   // Workspace UI visibility flag for gradual deprecation
   show_workspace_ui: boolean('show_workspace_ui').default(false).notNull(),
 },
-(table) => ({
-  usersUsernameIdx: index('users_username_idx').on(table.username),
-  usersEmailIdx: index('users_email_idx').on(table.email),
-  usersShowWorkspaceUiIdx: index('users_show_workspace_ui_idx').on(table.show_workspace_ui),
-}));
+  (table) => ({
+    usersUsernameIdx: index('users_username_idx').on(table.username),
+    usersEmailIdx: index('users_email_idx').on(table.email),
+    usersShowWorkspaceUiIdx: index('users_show_workspace_ui_idx').on(table.show_workspace_ui),
+  }));
 
 
 export const accounts = pgTable(
@@ -246,7 +246,7 @@ export const verificationTokens = pgTable(
 
 // Declare tables in an order that avoids circular references
 export const projectsTable = pgTable(
-  'projects', 
+  'projects',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     name: text('name').notNull(),
@@ -277,12 +277,12 @@ export const profilesTable = pgTable(
     language: languageEnum('language').default('en'),
     enabled_capabilities: profileCapabilityEnum('enabled_capabilities')
       .array()
-    .notNull()
-    .default(sql`'{}'::profile_capability[]`),
-  // Removed bio, is_public, avatar_url, language from profiles
-},
-(table) => ({ // Use object syntax for indexes
-  profilesProjectUuidIdx: index('profiles_project_uuid_idx').on(table.project_uuid),
+      .notNull()
+      .default(sql`'{}'::profile_capability[]`),
+    // Removed bio, is_public, avatar_url, language from profiles
+  },
+  (table) => ({ // Use object syntax for indexes
+    profilesProjectUuidIdx: index('profiles_project_uuid_idx').on(table.project_uuid),
   })
 );
 
@@ -334,7 +334,7 @@ export const projectsToProfilesRelation = {
 };
 
 export const codesTable = pgTable(
-  'codes', 
+  'codes',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     fileName: text('file_name').notNull(),
@@ -464,8 +464,8 @@ export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) =>
   resources: many(resourcesTable),
   prompts: many(promptsTable),
   customInstructions: one(customInstructionsTable, {
-     fields: [mcpServersTable.uuid],
-     references: [customInstructionsTable.mcp_server_uuid],
+    fields: [mcpServersTable.uuid],
+    references: [customInstructionsTable.mcp_server_uuid],
   }),
   // Phase 1: MCP Schema Alignment
   remoteHeaders: many(mcpServerRemoteHeadersTable),
@@ -556,11 +556,11 @@ export const playgroundSettingsTable = pgTable(
 export const searchCacheTable = pgTable(
   'search_cache',
   {
-     uuid: uuid('uuid').primaryKey().defaultRandom(),
-     source: mcpServerSourceEnum('source').notNull(),
-     query: text('query').notNull(),
-     results: jsonb('results').notNull(),
-     created_at: timestamp('created_at', { withTimezone: true })
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    source: mcpServerSourceEnum('source').notNull(),
+    query: text('query').notNull(),
+    results: jsonb('results').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
     expires_at: timestamp('expires_at', { withTimezone: true })
@@ -577,12 +577,12 @@ export const serverInstallationsTable = pgTable(
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     server_uuid: uuid('server_uuid')
-       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-     external_id: text('external_id'),
-     source: mcpServerSourceEnum('source').notNull(),
-     profile_uuid: uuid('profile_uuid')
-       .notNull()
-       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    external_id: text('external_id'),
+    source: mcpServerSourceEnum('source').notNull(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -727,11 +727,11 @@ export const auditLogsTable = pgTable("audit_logs", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   metadata: jsonb("metadata"),
 },
-(table) => ({ // Use object syntax for indexes
-  auditLogsProfileUuidIdx: index('audit_logs_profile_uuid_idx').on(table.profile_uuid),
-  auditLogsTypeIdx: index('audit_logs_type_idx').on(table.type),
-  auditLogsCreatedAtIdx: index('audit_logs_created_at_idx').on(table.created_at),
-}));
+  (table) => ({ // Use object syntax for indexes
+    auditLogsProfileUuidIdx: index('audit_logs_profile_uuid_idx').on(table.profile_uuid),
+    auditLogsTypeIdx: index('audit_logs_type_idx').on(table.type),
+    auditLogsCreatedAtIdx: index('audit_logs_created_at_idx').on(table.created_at),
+  }));
 
 export const auditLogsRelations = relations(auditLogsTable, ({ one }) => ({
   profile: one(profilesTable, {
@@ -758,13 +758,13 @@ export const notificationsTable = pgTable("notifications", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   expires_at: timestamp("expires_at", { withTimezone: true }),
 },
-(table) => ({ // Use object syntax for indexes
-  notificationsProfileUuidIdx: index('notifications_profile_uuid_idx').on(table.profile_uuid),
-  notificationsReadIdx: index('notifications_read_idx').on(table.read),
-  notificationsCreatedAtIdx: index('notifications_created_at_idx').on(table.created_at),
-  // Composite index for profile + read + created queries
-  notificationsProfileReadCreatedIdx: index('idx_notifications_profile_read_created').on(table.profile_uuid, table.read, table.created_at),
-}));
+  (table) => ({ // Use object syntax for indexes
+    notificationsProfileUuidIdx: index('notifications_profile_uuid_idx').on(table.profile_uuid),
+    notificationsReadIdx: index('notifications_read_idx').on(table.read),
+    notificationsCreatedAtIdx: index('notifications_created_at_idx').on(table.created_at),
+    // Composite index for profile + read + created queries
+    notificationsProfileReadCreatedIdx: index('idx_notifications_profile_read_created').on(table.profile_uuid, table.read, table.created_at),
+  }));
 
 export const notificationsRelations = relations(notificationsTable, ({ one }) => ({
   profile: one(profilesTable, {
@@ -781,11 +781,11 @@ export const systemLogsTable = pgTable("system_logs", {
   details: jsonb("details"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 },
-(table) => ({ // Use object syntax for indexes
-  systemLogsLevelIdx: index('system_logs_level_idx').on(table.level),
-  systemLogsSourceIdx: index('system_logs_source_idx').on(table.source),
-  systemLogsCreatedAtIdx: index('system_logs_created_at_idx').on(table.created_at),
-}));
+  (table) => ({ // Use object syntax for indexes
+    systemLogsLevelIdx: index('system_logs_level_idx').on(table.level),
+    systemLogsSourceIdx: index('system_logs_source_idx').on(table.source),
+    systemLogsCreatedAtIdx: index('system_logs_created_at_idx').on(table.created_at),
+  }));
 
 export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -795,9 +795,9 @@ export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 },
-(table) => ({ // Use object syntax for indexes
-  logRetentionPoliciesProfileUuidIdx: index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
-}));
+  (table) => ({ // Use object syntax for indexes
+    logRetentionPoliciesProfileUuidIdx: index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
+  }));
 
 export const logRetentionPoliciesRelations = relations(logRetentionPoliciesTable, ({ one }) => ({
   profile: one(profilesTable, {
@@ -882,7 +882,7 @@ export const resourcesTable = pgTable(
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
-    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE), 
+    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE),
   },
   (table) => ({ // Use object syntax for indexes
     resourcesMcpServerUuidIdx: index('resources_mcp_server_uuid_idx').on(table.mcp_server_uuid),
@@ -1222,7 +1222,7 @@ export const releaseNotes = pgTable('release_notes', {
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
-	accounts: many(accounts),
+  accounts: many(accounts),
   sessions: many(sessions),
   projects: many(projectsTable),
   codes: many(codesTable),
@@ -1239,17 +1239,17 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const mcpServersPromptsRelations = relations(mcpServersTable, ({ one, many }) => ({
   prompts: many(promptsTable),
   customInstructions: one(customInstructionsTable, {
-     fields: [mcpServersTable.uuid],
-     references: [customInstructionsTable.mcp_server_uuid],
+    fields: [mcpServersTable.uuid],
+    references: [customInstructionsTable.mcp_server_uuid],
   }),
 }));
 
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
-	user: one(users, {
-		fields: [accounts.userId],
-		references: [users.id],
-	}),
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -1266,7 +1266,7 @@ export const followersTable = pgTable(
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     // Change to reference users table
-    follower_user_id: text('follower_user_id') 
+    follower_user_id: text('follower_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     followed_user_id: text('followed_user_id')
@@ -1288,12 +1288,12 @@ export const followersTable = pgTable(
 
 export const followersRelations = relations(followersTable, ({ one }) => ({
   // Update relations to point to users table
-  followerUser: one(users, { 
+  followerUser: one(users, {
     fields: [followersTable.follower_user_id],
     references: [users.id],
     relationName: 'following' // User is following others
   }),
-  followedUser: one(users, { 
+  followedUser: one(users, {
     fields: [followersTable.followed_user_id],
     references: [users.id],
     relationName: 'followers' // User is followed by others
@@ -2409,12 +2409,12 @@ export const agentsTable = pgTable(
       .references(() => agentTemplatesTable.uuid, { onDelete: 'set null' }),
 
     // Access control
-    access_level: accessLevelEnum('access_level').notNull().default('PRIVATE'),
+    access_level: accessLevelEnum('access_level').notNull().default(AccessLevel.PRIVATE),
 
     // PAP State
-    state: agentStateEnum('state').notNull().default('NEW'),
-    heartbeat_mode: heartbeatModeEnum('heartbeat_mode').notNull().default('IDLE'),
-    deployment_status: deploymentStatusEnum('deployment_status').notNull().default('PENDING'),
+    state: agentStateEnum('state').notNull().default(AgentState.NEW),
+    heartbeat_mode: heartbeatModeEnum('heartbeat_mode').notNull().default(HeartbeatMode.IDLE),
+    deployment_status: deploymentStatusEnum('deployment_status').notNull().default(DeploymentStatus.PENDING),
 
     // Kubernetes
     kubernetes_namespace: text('kubernetes_namespace').default('agents'),
@@ -2463,7 +2463,7 @@ export const agentHeartbeatsTable = pgTable(
     agent_uuid: uuid('agent_uuid')
       .notNull()
       .references(() => agentsTable.uuid, { onDelete: 'cascade' }),
-    mode: heartbeatModeEnum('mode').notNull().default('IDLE'),
+    mode: heartbeatModeEnum('mode').notNull().default(HeartbeatMode.IDLE),
     uptime_seconds: integer('uptime_seconds').notNull(),
     timestamp: timestamp('timestamp', { withTimezone: true })
       .notNull()
@@ -2678,7 +2678,7 @@ export const clustersTable = pgTable(
     // Internal collector URL for proxying requests
     collector_url: text('collector_url'),
     // Cluster status
-    status: clusterStatusEnum('status').default('ACTIVE'),
+    status: clusterStatusEnum('status').default(ClusterStatus.ACTIVE),
     // Last time an alert was received from this cluster
     last_alert_at: timestamp('last_alert_at', { withTimezone: true }),
     // Last time we successfully communicated with the collector

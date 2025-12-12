@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
   agentLifecycleEventsTable,
+  agentsTable,
   AgentState,
 } from '@/db/schema';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../../auth';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
  * Apply rate limiting and return 429 response if exceeded.

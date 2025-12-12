@@ -23,7 +23,11 @@ import {
 } from '@/lib/pap-ui-utils';
 
 export default function AgentsArchivePage() {
-  const { data: agents, error, isLoading } = useSWR<Agent[]>('/api/agents', fetcher);
+  const { data: agents, error, isLoading } = useSWR('/api/agents', fetcher) as {
+    data: Agent[] | undefined;
+    error: any;
+    isLoading: boolean;
+  };
 
   // Filter to show only terminated and killed agents
   const archivedAgents = useMemo(() => {

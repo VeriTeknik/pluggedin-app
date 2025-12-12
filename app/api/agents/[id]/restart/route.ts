@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
   agentLifecycleEventsTable,
+  agentsTable,
   AgentState,
 } from '@/db/schema';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 import { authenticate } from '../../../auth';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
  * @swagger

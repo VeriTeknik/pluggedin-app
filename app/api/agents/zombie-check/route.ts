@@ -1,18 +1,18 @@
-import { and, eq, lt, isNotNull, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
   agentLifecycleEventsTable,
+  agentsTable,
   AgentState,
   HeartbeatMode,
 } from '@/db/schema';
 import {
-  HEARTBEAT_INTERVALS,
   DEFAULT_HEARTBEAT_INTERVAL,
-  ZOMBIE_GRACE_MULTIPLIER,
+  HEARTBEAT_INTERVALS,
   ZOMBIE_AUTO_DRAIN_MULTIPLIER,
+  ZOMBIE_GRACE_MULTIPLIER,
 } from '@/lib/pap-constants';
 
 // Map HeartbeatMode enum values to HEARTBEAT_INTERVALS keys
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
 
           // Only log event and count if update actually happened
           if (updateResult.length > 0) {
-            await db.insert(agentLifecycleEventsTable).values({
+            await db.insert(agentLifecycleEventsTable).values([{
               agent_uuid: agent.uuid,
               event_type: 'AUTO_DRAINING',
               from_state: AgentState.ACTIVE,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
                 last_heartbeat: new Date(lastHeartbeat).toISOString(),
                 reason: `Agent unresponsive for ${missedIntervals} intervals`,
               },
-            });
+            }]);
 
             drainedCount++;
             console.log(`[Zombie Check] Auto-draining agent ${agent.name} (${agent.uuid}) - ${missedIntervals} missed intervals`);
@@ -285,7 +285,7 @@ async function logUnhealthyEvent(
   reason: string,
   missedIntervals?: number
 ): Promise<void> {
-  await db.insert(agentLifecycleEventsTable).values({
+  await db.insert(agentLifecycleEventsTable).values([{
     agent_uuid: agentUuid,
     event_type: 'UNHEALTHY',
     from_state: AgentState.ACTIVE,
@@ -294,7 +294,7 @@ async function logUnhealthyEvent(
       triggered_by: 'zombie_detection',
       reason,
       missed_intervals: missedIntervals,
-      error_code: 480, // AGENT_UNHEALTHY per PAP-RFC-001 §10
+      error_code: '480', // AGENT_UNHEALTHY per PAP-RFC-001 §10
     },
-  });
+  }]);
 }

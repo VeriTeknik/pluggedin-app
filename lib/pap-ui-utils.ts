@@ -5,7 +5,6 @@
  * to reduce duplication and ensure consistency across agent management pages.
  */
 
-import { Badge } from '@/components/ui/badge';
 import { HEARTBEAT_INTERVALS as PAP_HEARTBEAT_INTERVALS } from '@/lib/pap-constants';
 
 // ============================================================================

@@ -7,9 +7,9 @@
  * Uses Service Account token for authentication (no Rancher dependency)
  */
 
-import * as https from 'https';
-import * as http from 'http';
 import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
 
 // Kubernetes API configuration (direct API with Service Account token)
 const K8S_API_URL = process.env.K8S_API_URL || 'https://127.0.0.1:6443';
@@ -211,7 +211,7 @@ async function k8sRequest(
     // Extract only safe error information from K8s response
     // K8s API returns structured errors with message, reason, code fields
     let safeErrorInfo = '';
-    let logMessage = `Kubernetes API error: ${response.status} ${response.statusText}`;
+    const logMessage = `Kubernetes API error: ${response.status} ${response.statusText}`;
 
     try {
       const errorBody = JSON.parse(response.body);

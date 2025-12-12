@@ -1,4 +1,4 @@
-import { count, eq, sql } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
@@ -103,17 +103,22 @@ export async function GET(request: Request) {
     // - Free tier: 10 agents
     // - Pro tier: 100 agents
     // - Enterprise: unlimited (-1)
-    const profileMetadata = auth.activeProfile.metadata as Record<string, unknown> | null;
-    const tier = (profileMetadata?.subscription_tier as string) || 'free';
+    // Metadata removed from schema, defaulting to free tier
+    const tier: string = 'free';
 
-    let maxAgents = 10; // Default: free tier
+    const maxAgents: number = 10; // Default: free tier
+    // Pro/Enterprise logic removed as profile metadata is missing
+    /*
     if (tier === 'pro') maxAgents = 100;
     if (tier === 'enterprise') maxAgents = -1; // unlimited
+    */
 
     // Allow override from profile metadata
+    /*
     if (profileMetadata?.max_agents !== undefined) {
       maxAgents = profileMetadata.max_agents as number;
     }
+    */
 
     const remaining = maxAgents === -1 ? -1 : Math.max(0, maxAgents - totalAgents);
     const canCreateMore = maxAgents === -1 || totalAgents < maxAgents;

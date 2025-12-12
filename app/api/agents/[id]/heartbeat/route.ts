@@ -3,20 +3,20 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
   agentHeartbeatsTable,
   agentLifecycleEventsTable,
+  agentsTable,
   AgentState,
 } from '@/db/schema';
-
-import { authenticate } from '../../../auth';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import {
-  HEARTBEAT_INTERVALS,
-  DEFAULT_HEARTBEAT_INTERVAL,
   CLOCK_SKEW_TOLERANCE_MS,
+  DEFAULT_HEARTBEAT_INTERVAL,
+  HEARTBEAT_INTERVALS,
   REPLAY_ATTACK_MULTIPLIER,
 } from '@/lib/pap-constants';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+
+import { authenticate } from '../../../auth';
 
 /**
  * @swagger

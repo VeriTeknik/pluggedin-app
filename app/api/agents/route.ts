@@ -1,23 +1,23 @@
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { count, desc, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import {
-  agentsTable,
-  agentTemplatesTable,
-  agentLifecycleEventsTable,
-  apiKeysTable,
-  AgentState,
   AccessLevel,
+  agentLifecycleEventsTable,
+  agentsTable,
+  AgentState,
+  agentTemplatesTable,
+  apiKeysTable,
 } from '@/db/schema';
+import { buildAgentEnv, validateContainerImage, validateEnvKey, validateResourceLimits } from '@/lib/agent-helpers';
+import { validateAgentName } from '@/lib/agent-name-policy';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { serializeForJson } from '@/lib/serialize-for-json';
+import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 import { authenticate } from '../auth';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
-import { serializeForJson } from '@/lib/serialize-for-json';
-import { validateAgentName } from '@/lib/agent-name-policy';
-import { buildAgentEnv, validateEnvKey, validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
  * Apply rate limiting and return 429 response if exceeded.
@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
     // SECURITY: Enforce agent quota before creating new agents
     const quotaCheck = await checkAgentQuota(
       auth.activeProfile.uuid,
-      auth.activeProfile.metadata as Record<string, unknown> | null
+      null // profile metadata removed from schema
     );
     if (!quotaCheck.allowed) return quotaCheck.error!;
 
@@ -358,7 +358,7 @@ export async function POST(request: NextRequest) {
         if (value !== null && value !== undefined) {
           const valueStr = String(value);
           // Check for control characters (except tab, newline, carriage return)
-          // eslint-disable-next-line no-control-regex
+           
           if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(valueStr)) {
             return NextResponse.json(
               { error: `Invalid characters in env_overrides value for key '${key}'` },
@@ -444,7 +444,7 @@ export async function POST(request: NextRequest) {
     try {
       const [insertedAgent] = await db
         .insert(agentsTable)
-        .values({
+        .values([{
           name: normalizedName,
           dns_name: dnsName,
           profile_uuid: auth.activeProfile.uuid,
@@ -463,7 +463,7 @@ export async function POST(request: NextRequest) {
             template_name: template ? `${template.namespace}/${template.name}` : undefined,
             template_version: template?.version,
           },
-        })
+        }])
         .returning();
       newAgent = insertedAgent;
     } catch (insertError: unknown) {

@@ -10,13 +10,13 @@
  *   - Requires session auth (admin only)
  */
 
-import { eq, desc, and } from 'drizzle-orm';
+import { and,desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { db } from '@/db';
-import { clustersTable, clusterAlertsTable, ClusterAlertType, AlertSeverity } from '@/db/schema';
 import { authenticate } from '@/app/api/auth';
+import { db } from '@/db';
+import { AlertSeverity,clusterAlertsTable, ClusterAlertType, clustersTable } from '@/db/schema';
 
 // Collector API key from environment
 const COLLECTOR_API_KEY = process.env.PAP_COLLECTOR_API_KEY;

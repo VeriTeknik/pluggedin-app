@@ -1,8 +1,8 @@
-import { and, eq, desc, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { agentTemplatesTable, agentsTable } from '@/db/schema';
+import { agentsTable,agentTemplatesTable } from '@/db/schema';
 
 /**
  * @swagger

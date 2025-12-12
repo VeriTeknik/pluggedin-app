@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
   agentLifecycleEventsTable,
+  agentsTable,
   AgentState,
 } from '@/db/schema';
+import { validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 import { authenticate } from '../../../auth';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
-import { validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
 
 /**
  * @swagger
@@ -213,7 +213,7 @@ export async function POST(
     }
 
     // Determine final image (download boot image if URL provided)
-    let finalImage = image;
+    const finalImage = image;
     if (boot_image_url && !image) {
       // TODO: Implement boot image download and import to container registry
       // For now, return error indicating this is not yet implemented

@@ -1,7 +1,8 @@
+import { eq } from 'drizzle-orm';
 import { MetadataRoute } from 'next';
+
 import { db } from '@/db';
 import { blogPostsTable, BlogPostStatus } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://plugged.in';

@@ -79,11 +79,15 @@ export default function MarketplacePage() {
     return `/api/agents/templates?${params.toString()}`;
   }, [searchQuery, category, showFeatured]);
 
-  const { data, error, isLoading } = useSWR<TemplatesResponse>(
+  const { data, error, isLoading } = useSWR(
     queryUrl,
     fetcher,
     SWR_MARKETPLACE_CONFIG
-  );
+  ) as {
+    data: TemplatesResponse | undefined;
+    error: any;
+    isLoading: boolean;
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

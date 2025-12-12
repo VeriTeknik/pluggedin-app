@@ -85,7 +85,12 @@ export default function AgentsPage() {
   const { toast } = useToast();
 
   // Agents data
-  const { data: agents, error: agentsError, isLoading: agentsLoading, mutate: mutateAgents } = useSWR<Agent[]>('/api/agents', fetcher);
+  const { data: agents, error: agentsError, isLoading: agentsLoading, mutate: mutateAgents } = useSWR('/api/agents', fetcher) as {
+    data: Agent[] | undefined;
+    error: any;
+    isLoading: boolean;
+    mutate: any;
+  };
 
   // Marketplace data
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -101,10 +106,14 @@ export default function AgentsPage() {
     return `/api/agents/templates?${params.toString()}`;
   }, [searchQuery, category, showFeatured]);
 
-  const { data: templatesData, error: templatesError, isLoading: templatesLoading } = useSWR<TemplatesResponse>(
+  const { data: templatesData, error: templatesError, isLoading: templatesLoading } = useSWR(
     activeTab === 'marketplace' ? queryUrl : null,
     fetcher
-  );
+  ) as {
+    data: TemplatesResponse | undefined;
+    error: any;
+    isLoading: boolean;
+  };
 
   // Filter out terminated and killed agents using centralized helper
   const activeAgents = useMemo(() => {
@@ -298,10 +307,10 @@ export default function AgentsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm">
-                      {agent.metadata?.template_name && (
+                      {(agent.metadata?.template_name as string | undefined) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Template:</span>
-                          <span className="text-xs font-mono">{agent.metadata.template_name}</span>
+                          <span className="text-xs font-mono">{agent.metadata?.template_name as string}</span>
                         </div>
                       )}
                       <div className="flex justify-between">

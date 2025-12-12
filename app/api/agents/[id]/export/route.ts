@@ -3,17 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
-  agentLifecycleEventsTable,
   agentHeartbeatsTable,
+  agentLifecycleEventsTable,
   agentMetricsTable,
+  agentsTable,
 } from '@/db/schema';
-
-import { authenticate } from '../../../auth';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
+import { redactSensitiveMetadata } from '@/lib/agent-helpers';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
-import { redactSensitiveMetadata } from '@/lib/agent-helpers';
+import { kubernetesService } from '@/lib/services/kubernetes-service';
+
+import { authenticate } from '../../../auth';
 
 /**
  * @swagger

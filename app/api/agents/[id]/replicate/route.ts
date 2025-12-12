@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
   agentLifecycleEventsTable,
+  agentsTable,
   AgentState,
 } from '@/db/schema';
+import { validateAgentName } from '@/lib/agent-name-policy';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 import { authenticate } from '../../../auth';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
-import { validateAgentName } from '@/lib/agent-name-policy';
 
 /**
  * @swagger
@@ -188,15 +188,17 @@ export async function POST(
     try {
       const [insertedAgent] = await db
         .insert(agentsTable)
-        .values({
+        .values([{
           name: normalizedName,
           dns_name: dnsName,
           profile_uuid: auth.activeProfile.uuid,
           state: AgentState.NEW,
-          description: description || `Replica of ${sourceAgent.name}`,
           kubernetes_namespace: sourceAgent.kubernetes_namespace || 'agents',
-          metadata: newMetadata,
-        })
+          metadata: {
+            ...newMetadata,
+            description: description || `Replica of ${sourceAgent.name}`,
+          },
+        }])
         .returning();
       newAgent = insertedAgent;
     } catch (insertError: unknown) {
@@ -256,11 +258,11 @@ export async function POST(
         image,
         resources: resources
           ? {
-              cpuRequest: resources.cpu_request,
-              memoryRequest: resources.memory_request,
-              cpuLimit: resources.cpu_limit,
-              memoryLimit: resources.memory_limit,
-            }
+            cpuRequest: resources.cpu_request,
+            memoryRequest: resources.memory_request,
+            cpuLimit: resources.cpu_limit,
+            memoryLimit: resources.memory_limit,
+          }
           : undefined,
       });
 

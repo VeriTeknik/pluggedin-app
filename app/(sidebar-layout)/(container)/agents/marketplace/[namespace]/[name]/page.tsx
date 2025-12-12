@@ -78,11 +78,15 @@ export default function TemplateDetailPage() {
   const namespace = params.namespace as string;
   const name = params.name as string;
 
-  const { data, error, isLoading } = useSWR<TemplateResponse>(
+  const { data, error, isLoading } = useSWR(
     `/api/agents/templates/${namespace}/${name}`,
     fetcher,
     SWR_MARKETPLACE_CONFIG
-  );
+  ) as {
+    data: TemplateResponse | undefined;
+    error: any;
+    isLoading: boolean;
+  };
 
   const [isDeployDialogOpen, setIsDeployDialogOpen] = useState(false);
   const [agentName, setAgentName] = useState('');

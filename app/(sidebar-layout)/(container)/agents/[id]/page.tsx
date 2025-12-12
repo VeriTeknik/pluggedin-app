@@ -158,11 +158,16 @@ export default function AgentDetailPage() {
   const id = params.id as string;
 
   // Auto-refresh every 10 seconds for real-time updates
-  const { data, error, isLoading, mutate } = useSWR<AgentDetailResponse>(
+  const { data, error, isLoading, mutate } = useSWR(
     `/api/agents/${id}`,
     fetcher,
     { refreshInterval: 10000 }
-  );
+  ) as {
+    data: AgentDetailResponse | undefined;
+    error: any;
+    isLoading: boolean;
+    mutate: any;
+  };
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -175,29 +180,38 @@ export default function AgentDetailPage() {
   const { toast } = useToast();
 
   // Fetch logs and events only when on the logs tab
-  const { data: eventsData, mutate: mutateEvents } = useSWR<EventsResponse>(
+  const { data: eventsData, mutate: mutateEvents } = useSWR(
     activeTab === 'logs' ? `/api/agents/${id}/events` : null,
     fetcher,
     { refreshInterval: 5000 }
-  );
+  ) as {
+    data: EventsResponse | undefined;
+    mutate: any;
+  };
 
-  const { data: logsData, mutate: mutateLogs } = useSWR<LogsResponse>(
+  const { data: logsData, mutate: mutateLogs } = useSWR(
     activeTab === 'logs' ? `/api/agents/${id}/logs?tail=200` : null,
     fetcher,
     { refreshInterval: 5000 }
-  );
+  ) as {
+    data: LogsResponse | undefined;
+    mutate: any;
+  };
 
   const agent = data?.agent;
 
   // Fetch heartbeat status from collector when on telemetry tab
   const clusterId = agent?.dns_name ? extractClusterId(agent.dns_name) : null;
-  const { data: collectorResponse, error: collectorError } = useSWR<CollectorResponse>(
+  const { data: collectorResponse, error: collectorError } = useSWR(
     activeTab === 'telemetry' && agent?.uuid && clusterId
       ? `/api/clusters/${clusterId}/agents/${agent.uuid}`
       : null,
     fetcher,
     { refreshInterval: 5000 }
-  );
+  ) as {
+    data: CollectorResponse | undefined;
+    error: any;
+  };
   const collectorData = collectorResponse?.agent;
   const recentHeartbeats = data?.recentHeartbeats || [];
   const recentMetrics = data?.recentMetrics || [];
@@ -829,9 +843,8 @@ export default function AgentDetailPage() {
                   {eventsData.events.map((event, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-start gap-3 p-3 rounded-lg border ${
-                        event.type === 'Warning' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-muted'
-                      }`}
+                      className={`flex items-start gap-3 p-3 rounded-lg border ${event.type === 'Warning' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-muted'
+                        }`}
                     >
                       {event.type === 'Warning' ? (
                         <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />

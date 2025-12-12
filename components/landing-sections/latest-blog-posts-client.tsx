@@ -1,11 +1,12 @@
 'use client';
 
+import { format } from 'date-fns';
+import { ArrowRight, Calendar, Clock, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, ArrowRight, Eye } from 'lucide-react';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface BlogPost {
   uuid: string;

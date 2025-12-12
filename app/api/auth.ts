@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { getServerSession } from 'next-auth/next';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
 
 import { trackApiKeyUsage } from '@/app/actions/api-keys';
 import { db } from '@/db';

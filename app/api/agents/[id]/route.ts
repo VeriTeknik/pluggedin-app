@@ -3,19 +3,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import {
-  agentsTable,
-  agentTemplatesTable,
-  agentLifecycleEventsTable,
-  agentHeartbeatsTable,
-  agentMetricsTable,
-  AgentState,
   AccessLevel,
+  agentHeartbeatsTable,
+  agentLifecycleEventsTable,
+  agentMetricsTable,
+  agentsTable,
+  AgentState,
 } from '@/db/schema';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { serializeForJson } from '@/lib/serialize-for-json';
+import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 import { authenticate } from '../../auth';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
-import { serializeForJson } from '@/lib/serialize-for-json';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
  * Apply rate limiting and return 429 response if exceeded.
