@@ -13,10 +13,18 @@
 -- ============================================================================
 -- Add FK with SET NULL to maintain referential integrity while preserving
 -- alert history after agent deletion (as noted in schema comment)
-ALTER TABLE "cluster_alerts"
-ADD CONSTRAINT "cluster_alerts_agent_uuid_agents_uuid_fk"
-FOREIGN KEY ("agent_uuid") REFERENCES "public"."agents"("uuid")
-ON DELETE SET NULL ON UPDATE NO ACTION;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'cluster_alerts_agent_uuid_agents_uuid_fk'
+    ) THEN
+        ALTER TABLE "cluster_alerts"
+        ADD CONSTRAINT "cluster_alerts_agent_uuid_agents_uuid_fk"
+        FOREIGN KEY ("agent_uuid") REFERENCES "public"."agents"("uuid")
+        ON DELETE SET NULL ON UPDATE NO ACTION;
+    END IF;
+END$$;
 --> statement-breakpoint
 
 -- ============================================================================
@@ -33,17 +41,33 @@ $$ LANGUAGE plpgsql;
 --> statement-breakpoint
 
 -- Add trigger to agent_templates
-CREATE TRIGGER agent_templates_updated_at_trigger
-    BEFORE UPDATE ON "agent_templates"
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'agent_templates_updated_at_trigger'
+    ) THEN
+        CREATE TRIGGER agent_templates_updated_at_trigger
+            BEFORE UPDATE ON "agent_templates"
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END$$;
 --> statement-breakpoint
 
 -- Add trigger to clusters
-CREATE TRIGGER clusters_updated_at_trigger
-    BEFORE UPDATE ON "clusters"
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'clusters_updated_at_trigger'
+    ) THEN
+        CREATE TRIGGER clusters_updated_at_trigger
+            BEFORE UPDATE ON "clusters"
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END$$;
 --> statement-breakpoint
 
 -- ============================================================================
@@ -52,22 +76,22 @@ CREATE TRIGGER clusters_updated_at_trigger
 -- Typical queries filter by agent AND time range, so composite indexes help
 
 -- agent_heartbeats: queries like "get heartbeats for agent X in last Y minutes"
-CREATE INDEX "agent_heartbeats_agent_timestamp_idx"
+CREATE INDEX IF NOT EXISTS "agent_heartbeats_agent_timestamp_idx"
 ON "agent_heartbeats" USING btree ("agent_uuid", "timestamp" DESC);
 --> statement-breakpoint
 
 -- agent_metrics: queries like "get metrics for agent X in last Y minutes"
-CREATE INDEX "agent_metrics_agent_timestamp_idx"
+CREATE INDEX IF NOT EXISTS "agent_metrics_agent_timestamp_idx"
 ON "agent_metrics" USING btree ("agent_uuid", "timestamp" DESC);
 --> statement-breakpoint
 
 -- agent_lifecycle_events: queries like "get events for agent X ordered by time"
-CREATE INDEX "agent_lifecycle_events_agent_timestamp_idx"
+CREATE INDEX IF NOT EXISTS "agent_lifecycle_events_agent_timestamp_idx"
 ON "agent_lifecycle_events" USING btree ("agent_uuid", "timestamp" DESC);
 --> statement-breakpoint
 
 -- cluster_alerts: queries like "get unacknowledged alerts for cluster X"
-CREATE INDEX "cluster_alerts_cluster_ack_created_idx"
+CREATE INDEX IF NOT EXISTS "cluster_alerts_cluster_ack_created_idx"
 ON "cluster_alerts" USING btree ("cluster_uuid", "acknowledged", "created_at" DESC);
 --> statement-breakpoint
 
@@ -75,7 +99,7 @@ ON "cluster_alerts" USING btree ("cluster_uuid", "acknowledged", "created_at" DE
 -- 4. INDEX ON LAST_HEARTBEAT_AT FOR ZOMBIE DETECTION
 -- ============================================================================
 -- Zombie detection queries: "find agents where last_heartbeat_at < threshold"
-CREATE INDEX "agents_last_heartbeat_at_idx"
+CREATE INDEX IF NOT EXISTS "agents_last_heartbeat_at_idx"
 ON "agents" USING btree ("last_heartbeat_at");
 --> statement-breakpoint
 
@@ -84,9 +108,17 @@ ON "agents" USING btree ("last_heartbeat_at");
 -- ============================================================================
 -- DNS labels must be lowercase alphanumeric or hyphens, max 63 chars
 -- Pattern: starts with letter, ends with alphanumeric, no consecutive hyphens
-ALTER TABLE "agents"
-ADD CONSTRAINT "agents_dns_name_valid"
-CHECK (dns_name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND LENGTH(dns_name) <= 63);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'agents_dns_name_valid'
+    ) THEN
+        ALTER TABLE "agents"
+        ADD CONSTRAINT "agents_dns_name_valid"
+        CHECK (dns_name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND LENGTH(dns_name) <= 63);
+    END IF;
+END$$;
 --> statement-breakpoint
 
 -- ============================================================================
@@ -118,7 +150,7 @@ CHECK (dns_name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND LENGTH(dns_name) <= 63);
 -- Ensure only one model can be marked as default per agent.
 -- This uses a partial unique index (PostgreSQL feature) that only applies
 -- when is_default = true.
-CREATE UNIQUE INDEX "agent_models_one_default_per_agent"
+CREATE UNIQUE INDEX IF NOT EXISTS "agent_models_one_default_per_agent"
 ON "agent_models" ("agent_uuid")
 WHERE "is_default" = true;
 --> statement-breakpoint
