@@ -2399,7 +2399,7 @@ export const agentsTable = pgTable(
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     name: text('name').notNull().unique(), // DNS-safe subdomain (e.g., 'oracle', 'my-compass')
-    dns_name: text('dns_name').notNull().unique(), // Full DNS: {name}.is.plugged.in
+    dns_name: text('dns_name').notNull().unique(), // DNS label only (e.g., 'oracle'), full FQDN constructed in Kubernetes
     profile_uuid: uuid('profile_uuid')
       .notNull()
       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),

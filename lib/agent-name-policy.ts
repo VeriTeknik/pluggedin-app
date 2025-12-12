@@ -107,12 +107,13 @@ export type NameValidationResult =
  * Validate and normalize an agent name for DNS compatibility.
  *
  * @param rawName - The raw name input from the user
- * @param domain - The domain suffix (default: 'is.plugged.in')
  * @returns Validation result with normalized name or error message
+ *
+ * Note: dns_name is now stored as just the subdomain label (e.g., "myagent")
+ * The full domain (e.g., "myagent.is.plugged.in") is constructed in Kubernetes Ingress
  */
 export function validateAgentName(
-  rawName: unknown,
-  domain: string = 'is.plugged.in'
+  rawName: unknown
 ): NameValidationResult {
   if (!rawName || typeof rawName !== 'string') {
     return { ok: false, message: 'Name is required' };
@@ -151,7 +152,7 @@ export function validateAgentName(
   return {
     ok: true,
     normalizedName,
-    dnsName: `${normalizedName}.${domain}`,
+    dnsName: normalizedName, // Store only subdomain, not full FQDN
   };
 }
 
