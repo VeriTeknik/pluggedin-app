@@ -546,9 +546,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Deploy to Kubernetes
+    // Note: dnsName in DB is just subdomain (e.g., "dev1"), but K8s Ingress needs full FQDN
+    const fullDnsName = `${dnsName}.is.plugged.in`;
     const deploymentResult = await kubernetesService.deployAgent({
       name: normalizedName,
-      dnsName,
+      dnsName: fullDnsName,
       namespace: 'agents',
       image: resolvedImage,
       containerPort: template?.container_port || 3000,

@@ -251,9 +251,11 @@ export async function POST(
       const resources =
         overrides?.resources || (sourceMetadata.resources as Record<string, string>);
 
+      // Note: dnsName in DB is just subdomain (e.g., "dev1"), but K8s Ingress needs full FQDN
+      const fullDnsName = `${dnsName}.is.plugged.in`;
       deploymentResult = await kubernetesService.deployAgent({
         name: normalizedName,
-        dnsName,
+        dnsName: fullDnsName,
         namespace: newAgent.kubernetes_namespace || 'agents',
         image,
         resources: resources
