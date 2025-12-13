@@ -140,6 +140,12 @@ describe('agent-helpers', () => {
         expect(env.PAP_AGENT_KEY).toBe('sk-test-key-123');
       });
 
+      it('should include PAP Collector URL for heartbeats', () => {
+        const env = buildAgentEnv(baseOpts);
+
+        expect(env.PAP_COLLECTOR_URL).toBe('http://pap-collector.agents.svc:8080');
+      });
+
       it('should include Plugged.in API vars', () => {
         const env = buildAgentEnv(baseOpts);
 

@@ -418,11 +418,16 @@ export function buildAgentEnv(opts: {
 
   // Base environment variables
   const env: Record<string, string> = {
-    // PAP Station connection
+    // PAP Station connection (fallback for direct communication)
     PAP_STATION_URL: `${baseUrl}/api/agents`,
     PAP_AGENT_ID: agentId,
     PAP_AGENT_DNS: dnsName,
     PAP_AGENT_KEY: apiKey,
+
+    // PAP Collector for heartbeats (local K8s service)
+    // Agents send heartbeats to local collector instead of central station
+    // See: PAP-RFC-001 §8.1 and docs/local-collector.md
+    PAP_COLLECTOR_URL: 'http://pap-collector.agents.svc:8080',
 
     // Plugged.in API access
     PLUGGEDIN_API_URL: `${baseUrl}/api`,
