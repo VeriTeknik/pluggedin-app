@@ -20,6 +20,11 @@ import { clustersTable } from '@/db/schema';
 const COLLECTOR_REQUEST_TIMEOUT_MS = 10_000;
 
 /**
+ * API key for authenticating with collectors.
+ */
+const COLLECTOR_API_KEY = process.env.PAP_COLLECTOR_API_KEY;
+
+/**
  * Maximum response size from collector in bytes (1MB).
  * Prevents memory exhaustion from malicious/misconfigured collectors.
  */
@@ -70,6 +75,7 @@ export async function GET(
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...(COLLECTOR_API_KEY && { 'X-Collector-Key': COLLECTOR_API_KEY }),
         },
         signal: AbortSignal.timeout(COLLECTOR_REQUEST_TIMEOUT_MS),
       }
