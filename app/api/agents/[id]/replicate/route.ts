@@ -6,7 +6,9 @@ import {
   agentLifecycleEventsTable,
   agentsTable,
   AgentState,
+  apiKeysTable,
 } from '@/db/schema';
+import { buildAgentEnv } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
@@ -253,6 +255,42 @@ export async function POST(
 
       // Note: dnsName in DB is just subdomain (e.g., "dev1"), but K8s Ingress needs full FQDN
       const fullDnsName = `${dnsName}.is.plugged.in`;
+
+      // Get or create API key for the replicated agent
+      const apiKeys = await db
+        .select()
+        .from(apiKeysTable)
+        .where(eq(apiKeysTable.project_uuid, auth.project.uuid))
+        .limit(1);
+
+      let agentApiKey = apiKeys[0]?.api_key;
+      if (!agentApiKey) {
+        // Create a new API key if none exists
+        const { customAlphabet } = await import('nanoid');
+        const nanoid = customAlphabet(
+          '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+          64
+        );
+        agentApiKey = `pg_in_${nanoid(64)}`;
+        await db.insert(apiKeysTable).values({
+          project_uuid: auth.project.uuid,
+          api_key: agentApiKey,
+          name: `Agent: ${normalizedName}`,
+        });
+      }
+
+      // Build environment variables using shared helper (with full FQDN)
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const agentEnv = buildAgentEnv({
+        baseUrl,
+        agentId: newAgent.uuid,
+        normalizedName,
+        dnsName: fullDnsName,
+        apiKey: agentApiKey,
+        template: null, // Replicated agents don't use templates
+        envOverrides: null,
+      });
+
       deploymentResult = await kubernetesService.deployAgent({
         name: normalizedName,
         dnsName: fullDnsName,
@@ -266,6 +304,7 @@ export async function POST(
             memoryLimit: resources.memory_limit,
           }
           : undefined,
+        env: agentEnv,
       });
 
       // Update state based on deployment result

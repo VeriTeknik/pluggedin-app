@@ -534,20 +534,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Build environment variables using shared helper
+    // Construct full FQDN for K8s Ingress and agent env vars
+    // Note: dnsName in DB is just subdomain (e.g., "dev1"), but agents need full FQDN
+    const fullDnsName = `${dnsName}.is.plugged.in`;
+
+    // Build environment variables using shared helper (with full FQDN)
     const agentEnv = buildAgentEnv({
       baseUrl,
       agentId: newAgent.uuid,
       normalizedName,
-      dnsName,
+      dnsName: fullDnsName,
       apiKey: agentApiKey,
       template,
       envOverrides: env_overrides,
     });
 
     // Deploy to Kubernetes
-    // Note: dnsName in DB is just subdomain (e.g., "dev1"), but K8s Ingress needs full FQDN
-    const fullDnsName = `${dnsName}.is.plugged.in`;
     const deploymentResult = await kubernetesService.deployAgent({
       name: normalizedName,
       dnsName: fullDnsName,
