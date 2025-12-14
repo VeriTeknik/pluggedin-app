@@ -2,12 +2,15 @@ import { relations, sql } from 'drizzle-orm';
 import {
   bigserial,
   boolean,
+  date,
+  decimal,
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   serial,
   text,
   timestamp,
@@ -2765,3 +2768,231 @@ export const clusterAlertsRelations = relations(clusterAlertsTable, ({ one }) =>
     references: [clustersTable.uuid],
   }),
 }));
+
+// ============================================================================
+// AI Models - Model Router Configuration
+// ============================================================================
+
+/**
+ * AI Model Provider enum
+ */
+export enum ModelProvider {
+  OPENAI = 'openai',
+  ANTHROPIC = 'anthropic',
+  GOOGLE = 'google',
+  XAI = 'xai',
+  DEEPSEEK = 'deepseek',
+}
+export const modelProviderEnum = pgEnum(
+  'model_provider',
+  enumToPgEnum(ModelProvider)
+);
+
+/**
+ * AI Models Table - Registry of available AI models
+ *
+ * Stores model configuration including:
+ * - Identity and provider
+ * - Pricing per million tokens
+ * - Capabilities (vision, streaming, function calling)
+ * - Admin controls (enable/disable, default selection)
+ */
+export const aiModelsTable = pgTable(
+  'ai_models',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Identity
+    model_id: text('model_id').notNull().unique(), // e.g., "gpt-4o", "claude-opus-4-5-20251101"
+    display_name: text('display_name').notNull(), // e.g., "GPT-4o", "Claude Opus 4.5"
+    provider: modelProviderEnum('provider').notNull(),
+
+    // Pricing (per 1M tokens in USD)
+    // Using real for simplicity; production could use decimal for precision
+    input_price: real('input_price').notNull(), // e.g., 2.50 = $2.50 per 1M input tokens
+    output_price: real('output_price').notNull(), // e.g., 10.00 = $10.00 per 1M output tokens
+
+    // Capabilities
+    context_length: integer('context_length').default(128000),
+    supports_streaming: boolean('supports_streaming').default(true),
+    supports_vision: boolean('supports_vision').default(false),
+    supports_function_calling: boolean('supports_function_calling').default(true),
+
+    // Configuration
+    is_enabled: boolean('is_enabled').default(true), // Admin can disable models
+    is_default: boolean('is_default').default(false), // Default for new agents
+    sort_order: integer('sort_order').default(0), // UI display order
+
+    // Aliases (for backwards compatibility with older model names)
+    aliases: text('aliases').array(), // e.g., ["gpt-4", "chatgpt"]
+
+    // Metadata
+    description: text('description'),
+    release_date: date('release_date'),
+    deprecated_at: timestamp('deprecated_at', { withTimezone: true }),
+
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    modelIdIdx: index('ai_models_model_id_idx').on(table.model_id),
+    providerIdx: index('ai_models_provider_idx').on(table.provider),
+    enabledIdx: index('ai_models_enabled_idx').on(table.is_enabled),
+    // Composite index for listing enabled models by provider
+    providerEnabledIdx: index('ai_models_provider_enabled_idx').on(
+      table.provider,
+      table.is_enabled,
+      table.sort_order
+    ),
+  })
+);
+
+/**
+ * Health Status Enum for Model Router Services
+ */
+export const serviceHealthStatusEnum = pgEnum('service_health_status', [
+  'healthy',
+  'unhealthy',
+  'degraded',
+  'unknown',
+]);
+
+/**
+ * Model Sync Status Enum
+ */
+export const modelSyncStatusEnum = pgEnum('model_sync_status', [
+  'synced',
+  'pending',
+  'partial',
+  'failed',
+]);
+
+/**
+ * Model Router Services Table
+ *
+ * Registry of model router microservices that can handle LLM requests.
+ * Services are registered via admin panel, health-checked periodically,
+ * and agents are routed to optimal services based on health/latency/load.
+ */
+export const modelRouterServicesTable = pgTable(
+  'model_router_services',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Identity
+    name: text('name').notNull(), // "US East Router", "Vision Router"
+    url: text('url').notNull().unique(), // "https://us-east.models.plugged.in"
+    region: text('region'), // "us-east", "eu-west", "asia-pacific"
+
+    // Endpoints (configurable per service)
+    health_endpoint: text('health_endpoint').default('/health'),
+    models_endpoint: text('models_endpoint').default('/v1/models'),
+    sync_endpoint: text('sync_endpoint').default('/v1/models/sync'),
+    metrics_endpoint: text('metrics_endpoint').default('/metrics'),
+
+    // Capabilities (what the service supports)
+    capabilities: text('capabilities').array(), // ['streaming', 'vision', 'function-calling']
+
+    // Authentication
+    auth_type: text('auth_type').default('jwt'), // 'jwt', 'api-key', 'mtls'
+    auth_secret_name: text('auth_secret_name'), // K8s secret name if api-key auth
+
+    // Health & Performance (updated by background health monitor)
+    is_enabled: boolean('is_enabled').default(true),
+    health_status: serviceHealthStatusEnum('health_status').default('unknown'),
+    last_health_check: timestamp('last_health_check', { withTimezone: true }),
+    last_health_error: text('last_health_error'),
+    avg_latency_ms: integer('avg_latency_ms'), // Rolling average from health checks
+    current_load_percent: integer('current_load_percent'), // From /metrics endpoint
+    success_rate_percent: real('success_rate_percent'), // Rolling success rate
+
+    // Routing configuration
+    priority: integer('priority').default(100), // Lower = higher priority
+    weight: integer('weight').default(100), // For weighted load balancing
+
+    // Model sync state
+    last_model_sync: timestamp('last_model_sync', { withTimezone: true }),
+    model_sync_status: modelSyncStatusEnum('model_sync_status').default('pending'),
+
+    // Metadata
+    description: text('description'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    urlIdx: index('model_router_services_url_idx').on(table.url),
+    regionIdx: index('model_router_services_region_idx').on(table.region),
+    healthIdx: index('model_router_services_health_idx').on(
+      table.is_enabled,
+      table.health_status
+    ),
+    enabledHealthyIdx: index('model_router_services_enabled_healthy_idx').on(
+      table.is_enabled,
+      table.health_status,
+      table.priority
+    ),
+  })
+);
+
+/**
+ * Model Service Mappings Table
+ *
+ * Junction table linking AI models to the router services that support them.
+ * Created when models are synced to a service. Used for routing decisions.
+ */
+export const modelServiceMappingsTable = pgTable(
+  'model_service_mappings',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Foreign keys
+    model_uuid: uuid('model_uuid')
+      .notNull()
+      .references(() => aiModelsTable.uuid, { onDelete: 'cascade' }),
+    service_uuid: uuid('service_uuid')
+      .notNull()
+      .references(() => modelRouterServicesTable.uuid, { onDelete: 'cascade' }),
+
+    // Per-mapping configuration
+    is_enabled: boolean('is_enabled').default(true),
+    priority: integer('priority').default(100), // Override service priority for this model
+
+    // Stats (per model-service pair, updated on requests)
+    requests_total: integer('requests_total').default(0),
+    errors_total: integer('errors_total').default(0),
+    avg_latency_ms: integer('avg_latency_ms'),
+
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    modelIdx: index('model_service_mappings_model_idx').on(table.model_uuid),
+    serviceIdx: index('model_service_mappings_service_idx').on(table.service_uuid),
+    // Unique constraint: one mapping per model-service pair
+    modelServiceUnique: uniqueIndex('model_service_mappings_unique_idx').on(
+      table.model_uuid,
+      table.service_uuid
+    ),
+    // For routing queries: find enabled mappings for a model
+    routingIdx: index('model_service_mappings_routing_idx').on(
+      table.model_uuid,
+      table.is_enabled,
+      table.priority
+    ),
+  })
+);
+
+// Type exports for new tables
+export type ModelRouterService = typeof modelRouterServicesTable.$inferSelect;
+export type NewModelRouterService = typeof modelRouterServicesTable.$inferInsert;
+export type ModelServiceMapping = typeof modelServiceMappingsTable.$inferSelect;
+export type NewModelServiceMapping = typeof modelServiceMappingsTable.$inferInsert;

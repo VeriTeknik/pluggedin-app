@@ -416,10 +416,15 @@ export function buildAgentEnv(opts: {
 }): Record<string, string> {
   const { baseUrl, agentId, normalizedName, dnsName, apiKey, template, envOverrides } = opts;
 
+  // Use public station URL for agent communication (agents are in K8s and need external URL)
+  // Falls back to baseUrl for local development
+  const publicStationUrl = process.env.PAP_PUBLIC_STATION_URL || baseUrl;
+
   // Base environment variables
   const env: Record<string, string> = {
-    // PAP Station connection (fallback for direct communication)
-    PAP_STATION_URL: `${baseUrl}/api/agents`,
+    // PAP Station connection for lifecycle/metrics reporting
+    // Uses public URL so agents in K8s can reach the station
+    PAP_STATION_URL: `${publicStationUrl}/api/agents`,
     PAP_AGENT_ID: agentId,
     PAP_AGENT_DNS: dnsName,
     PAP_AGENT_KEY: apiKey,
@@ -429,8 +434,9 @@ export function buildAgentEnv(opts: {
     // See: PAP-RFC-001 §8.1 and docs/local-collector.md
     PAP_COLLECTOR_URL: 'http://pap-collector.agents.svc:8080',
 
-    // Plugged.in API access
-    PLUGGEDIN_API_URL: `${baseUrl}/api`,
+    // Plugged.in API access (uses public URL for agent → station communication)
+    // Note: ModelRouter adds /api/v1/chat/completions, so baseUrl should NOT include /api
+    PLUGGEDIN_API_URL: publicStationUrl,
     PLUGGEDIN_API_KEY: apiKey,
 
     // Agent identity

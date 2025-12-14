@@ -26,9 +26,13 @@ export {
   routeChatCompletion,
   routeChatCompletionStreaming,
   calculateCost,
+  calculateCostAsync,
   getAvailableModels,
+  getAvailableModelsAsync,
   getProviderForModel,
+  getProviderForModelAsync,
   resolveModelAlias,
+  resolveModelAliasAsync,
 } from './providers';
 
 export {

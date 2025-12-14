@@ -2,8 +2,16 @@
  * Model Router Providers
  *
  * Handles routing chat completion requests to the appropriate
- * AI provider (OpenAI, Anthropic, Google).
+ * AI provider (OpenAI, Anthropic, Google, xAI, DeepSeek).
+ *
+ * Models are loaded from the database with caching, with fallback
+ * to hardcoded constants for safety.
  */
+
+import { eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { aiModelsTable } from '@/db/schema';
 
 import {
   ChatCompletionChunk,
@@ -16,22 +24,134 @@ import {
   ModelProvider,
 } from './types';
 
+// ============================================================================
+// Model Cache - Database-driven with TTL
+// ============================================================================
+
+interface CachedModel {
+  model_id: string;
+  provider: ModelProvider;
+  input_price: number;
+  output_price: number;
+  aliases: string[] | null;
+}
+
+let modelCache: Map<string, CachedModel> | null = null;
+let aliasCache: Map<string, string> | null = null;
+let cacheExpiry: number = 0;
+const CACHE_TTL_MS = 60000; // 1 minute cache
+
+/**
+ * Load models from database into cache
+ */
+async function loadModelsFromDatabase(): Promise<void> {
+  try {
+    const models = await db
+      .select({
+        model_id: aiModelsTable.model_id,
+        provider: aiModelsTable.provider,
+        input_price: aiModelsTable.input_price,
+        output_price: aiModelsTable.output_price,
+        aliases: aiModelsTable.aliases,
+      })
+      .from(aiModelsTable)
+      .where(eq(aiModelsTable.is_enabled, true));
+
+    modelCache = new Map();
+    aliasCache = new Map();
+
+    for (const model of models) {
+      const cachedModel: CachedModel = {
+        model_id: model.model_id,
+        provider: model.provider as ModelProvider,
+        input_price: model.input_price,
+        output_price: model.output_price,
+        aliases: model.aliases,
+      };
+      modelCache.set(model.model_id, cachedModel);
+
+      // Build alias cache
+      if (model.aliases) {
+        for (const alias of model.aliases) {
+          aliasCache.set(alias.toLowerCase(), model.model_id);
+        }
+      }
+    }
+
+    cacheExpiry = Date.now() + CACHE_TTL_MS;
+    console.log(`[ModelRouter] Loaded ${models.length} models from database`);
+  } catch (error) {
+    console.error('[ModelRouter] Failed to load models from database, using fallback:', error);
+    // Don't set cache on error - will use fallback
+  }
+}
+
+/**
+ * Get models from cache, refreshing if expired
+ */
+async function getModelCache(): Promise<Map<string, CachedModel>> {
+  if (!modelCache || Date.now() >= cacheExpiry) {
+    await loadModelsFromDatabase();
+  }
+  return modelCache || new Map();
+}
+
+/**
+ * Get alias cache, refreshing if expired
+ */
+async function getAliasCache(): Promise<Map<string, string>> {
+  if (!aliasCache || Date.now() >= cacheExpiry) {
+    await loadModelsFromDatabase();
+  }
+  return aliasCache || new Map();
+}
+
+// ============================================================================
+// Provider Configuration
+// ============================================================================
+
 // Provider base URLs
 const PROVIDER_URLS: Record<ModelProvider, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com/v1',
   google: 'https://generativelanguage.googleapis.com/v1beta',
+  xai: 'https://api.x.ai/v1',
+  deepseek: 'https://api.deepseek.com/v1',
 };
 
 /**
- * Resolve model alias to actual model ID
+ * Resolve model alias to actual model ID (sync version for backwards compatibility)
+ * Checks hardcoded aliases only - for database aliases, use resolveModelAliasAsync
  */
 export function resolveModelAlias(model: string): string {
   return MODEL_ALIASES[model.toLowerCase()] || model;
 }
 
 /**
- * Get provider for a model
+ * Resolve model alias to actual model ID (async version with database lookup)
+ * Checks database aliases first, falls back to hardcoded aliases
+ */
+export async function resolveModelAliasAsync(model: string): Promise<string> {
+  const lowerModel = model.toLowerCase();
+
+  // Check database alias cache first
+  const aliases = await getAliasCache();
+  if (aliases.has(lowerModel)) {
+    return aliases.get(lowerModel)!;
+  }
+
+  // Check database model IDs directly
+  const models = await getModelCache();
+  if (models.has(model)) {
+    return model;
+  }
+
+  // Fall back to hardcoded aliases
+  return MODEL_ALIASES[lowerModel] || model;
+}
+
+/**
+ * Get provider for a model (sync version for backwards compatibility)
  */
 export function getProviderForModel(model: string): ModelProvider {
   const resolvedModel = resolveModelAlias(model);
@@ -48,10 +168,55 @@ export function getProviderForModel(model: string): ModelProvider {
     if (resolvedModel.startsWith('gemini')) {
       return 'google';
     }
+    if (resolvedModel.startsWith('grok')) {
+      return 'xai';
+    }
+    if (resolvedModel.startsWith('deepseek')) {
+      return 'deepseek';
+    }
     throw new Error(`Unknown model: ${model}`);
   }
 
   return provider;
+}
+
+/**
+ * Get provider for a model (async version with database lookup)
+ */
+export async function getProviderForModelAsync(model: string): Promise<ModelProvider> {
+  const resolvedModel = await resolveModelAliasAsync(model);
+
+  // Check database first
+  const models = await getModelCache();
+  const cachedModel = models.get(resolvedModel);
+  if (cachedModel) {
+    return cachedModel.provider;
+  }
+
+  // Fall back to hardcoded mapping
+  const provider = MODEL_PROVIDERS[resolvedModel];
+  if (provider) {
+    return provider;
+  }
+
+  // Try to infer from model name
+  if (resolvedModel.startsWith('gpt-') || resolvedModel.startsWith('o1')) {
+    return 'openai';
+  }
+  if (resolvedModel.startsWith('claude')) {
+    return 'anthropic';
+  }
+  if (resolvedModel.startsWith('gemini')) {
+    return 'google';
+  }
+  if (resolvedModel.startsWith('grok')) {
+    return 'xai';
+  }
+  if (resolvedModel.startsWith('deepseek')) {
+    return 'deepseek';
+  }
+
+  throw new Error(`Unknown model: ${model}`);
 }
 
 /**
@@ -62,6 +227,8 @@ function getApiKey(provider: ModelProvider): string {
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
     google: process.env.GOOGLE_API_KEY,
+    xai: process.env.XAI_API_KEY,
+    deepseek: process.env.DEEPSEEK_API_KEY,
   };
 
   const key = keys[provider];
@@ -563,6 +730,149 @@ async function* callGoogleStreaming(
 }
 
 /**
+ * Call OpenAI-compatible API (used for xAI, DeepSeek, and other compatible providers)
+ * These providers implement the same API format as OpenAI, just with different base URLs
+ */
+async function callOpenAICompatible(
+  request: ChatCompletionRequest,
+  apiKey: string,
+  baseUrl: string,
+  providerName: string
+): Promise<ChatCompletionResponse> {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: resolveModelAlias(request.model),
+      messages: request.messages,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      n: request.n,
+      stream: false,
+      stop: request.stop,
+      max_tokens: request.max_tokens,
+      presence_penalty: request.presence_penalty,
+      frequency_penalty: request.frequency_penalty,
+      user: request.user,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, providerName, response.status));
+  }
+
+  return response.json();
+}
+
+/**
+ * Call OpenAI-compatible API with streaming
+ */
+async function* callOpenAICompatibleStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string,
+  baseUrl: string,
+  providerName: string
+): AsyncGenerator<ChatCompletionChunk> {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: resolveModelAlias(request.model),
+      messages: request.messages,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      n: request.n,
+      stream: true,
+      stop: request.stop,
+      max_tokens: request.max_tokens,
+      presence_penalty: request.presence_penalty,
+      frequency_penalty: request.frequency_penalty,
+      user: request.user,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, providerName, response.status));
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') return;
+        try {
+          yield JSON.parse(data) as ChatCompletionChunk;
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Call xAI (Grok) API - OpenAI-compatible
+ */
+async function callXAI(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  return callOpenAICompatible(request, apiKey, PROVIDER_URLS.xai, 'xAI');
+}
+
+/**
+ * Call xAI (Grok) API with streaming
+ */
+async function* callXAIStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  yield* callOpenAICompatibleStreaming(request, apiKey, PROVIDER_URLS.xai, 'xAI');
+}
+
+/**
+ * Call DeepSeek API - OpenAI-compatible
+ */
+async function callDeepSeek(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  return callOpenAICompatible(request, apiKey, PROVIDER_URLS.deepseek, 'DeepSeek');
+}
+
+/**
+ * Call DeepSeek API with streaming
+ */
+async function* callDeepSeekStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  yield* callOpenAICompatibleStreaming(request, apiKey, PROVIDER_URLS.deepseek, 'DeepSeek');
+}
+
+/**
  * Route chat completion request to appropriate provider
  */
 export async function routeChatCompletion(
@@ -578,6 +888,10 @@ export async function routeChatCompletion(
       return callAnthropic(request, apiKey);
     case 'google':
       return callGoogle(request, apiKey);
+    case 'xai':
+      return callXAI(request, apiKey);
+    case 'deepseek':
+      return callDeepSeek(request, apiKey);
     default:
       throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -602,13 +916,19 @@ export async function* routeChatCompletionStreaming(
     case 'google':
       yield* callGoogleStreaming(request, apiKey);
       break;
+    case 'xai':
+      yield* callXAIStreaming(request, apiKey);
+      break;
+    case 'deepseek':
+      yield* callDeepSeekStreaming(request, apiKey);
+      break;
     default:
       throw new Error(`Unsupported provider: ${provider}`);
   }
 }
 
 /**
- * Calculate cost for a chat completion
+ * Calculate cost for a chat completion (sync version)
  */
 export function calculateCost(
   model: string,
@@ -629,8 +949,85 @@ export function calculateCost(
 }
 
 /**
- * Get available models
+ * Calculate cost for a chat completion (async version with database lookup)
+ */
+export async function calculateCostAsync(
+  model: string,
+  promptTokens: number,
+  completionTokens: number
+): Promise<number> {
+  const resolvedModel = await resolveModelAliasAsync(model);
+
+  // Check database first
+  const models = await getModelCache();
+  const cachedModel = models.get(resolvedModel);
+
+  if (cachedModel) {
+    const inputCost = (promptTokens / 1_000_000) * cachedModel.input_price;
+    const outputCost = (completionTokens / 1_000_000) * cachedModel.output_price;
+    return inputCost + outputCost;
+  }
+
+  // Fall back to hardcoded pricing
+  const pricing = MODEL_PRICING[resolvedModel];
+  if (!pricing) {
+    return 0; // Unknown model, can't calculate cost
+  }
+
+  const inputCost = (promptTokens / 1_000_000) * pricing.input;
+  const outputCost = (completionTokens / 1_000_000) * pricing.output;
+
+  return inputCost + outputCost;
+}
+
+/**
+ * Get available models (sync version using hardcoded data)
  */
 export function getAvailableModels(): Array<{ id: string; provider: ModelProvider }> {
   return Object.entries(MODEL_PROVIDERS).map(([id, provider]) => ({ id, provider }));
+}
+
+/**
+ * Get available models from database
+ */
+export async function getAvailableModelsAsync(): Promise<
+  Array<{
+    id: string;
+    provider: ModelProvider;
+    displayName?: string;
+    inputPrice?: number;
+    outputPrice?: number;
+    contextLength?: number;
+    supportsVision?: boolean;
+  }>
+> {
+  try {
+    const models = await db
+      .select({
+        id: aiModelsTable.model_id,
+        provider: aiModelsTable.provider,
+        displayName: aiModelsTable.display_name,
+        inputPrice: aiModelsTable.input_price,
+        outputPrice: aiModelsTable.output_price,
+        contextLength: aiModelsTable.context_length,
+        supportsVision: aiModelsTable.supports_vision,
+      })
+      .from(aiModelsTable)
+      .where(eq(aiModelsTable.is_enabled, true))
+      .orderBy(aiModelsTable.sort_order, aiModelsTable.display_name);
+
+    return models.map((m) => ({
+      id: m.id,
+      provider: m.provider as ModelProvider,
+      displayName: m.displayName,
+      inputPrice: m.inputPrice,
+      outputPrice: m.outputPrice,
+      contextLength: m.contextLength ?? undefined,
+      supportsVision: m.supportsVision ?? undefined,
+    }));
+  } catch (error) {
+    console.error('[ModelRouter] Failed to get models from database:', error);
+    // Fall back to hardcoded
+    return Object.entries(MODEL_PROVIDERS).map(([id, provider]) => ({ id, provider }));
+  }
 }

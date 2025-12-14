@@ -42,8 +42,26 @@ export default async function AdminLayout({
           <h1 className="text-xl font-semibold">Admin Dashboard</h1>
           <nav className="ml-6 flex items-center space-x-4 lg:space-x-6">
             <a
-              href="/admin/emails"
+              href="/admin/models"
               className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Models
+            </a>
+            <a
+              href="/admin/model-services"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Model Services
+            </a>
+            <a
+              href="/admin/clusters"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Clusters
+            </a>
+            <a
+              href="/admin/emails"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               Email Management
             </a>

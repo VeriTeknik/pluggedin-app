@@ -5,8 +5,8 @@
  * for the unified Model Router API.
  */
 
-// Provider types
-export type ModelProvider = 'openai' | 'anthropic' | 'google';
+// Provider types (extended to include xAI and DeepSeek)
+export type ModelProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
 
 // Chat message role
 export type ChatMessageRole = 'system' | 'user' | 'assistant' | 'function' | 'tool';
