@@ -1,10 +1,32 @@
 -- AI Models Table Migration
 -- Model Router Configuration for multi-provider AI model management
+-- Made idempotent for safe re-runs
 
--- Create model provider enum
-CREATE TYPE "model_provider" AS ENUM('openai', 'anthropic', 'google', 'xai', 'deepseek');
+-- Create model provider enum (idempotent)
+DO $$ BEGIN
+ CREATE TYPE "model_provider" AS ENUM('openai', 'anthropic', 'google', 'xai', 'deepseek');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 
--- Create AI models table
+-- Create model sync status enum (idempotent)
+DO $$ BEGIN
+ CREATE TYPE "model_sync_status" AS ENUM('synced', 'pending', 'partial', 'failed');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+-- Create service health status enum (idempotent)
+DO $$ BEGIN
+ CREATE TYPE "service_health_status" AS ENUM('healthy', 'unhealthy', 'degraded', 'unknown');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+-- Create AI models table (idempotent)
 CREATE TABLE IF NOT EXISTS "ai_models" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	-- Identity
@@ -32,12 +54,95 @@ CREATE TABLE IF NOT EXISTS "ai_models" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 
--- Create indexes
-CREATE INDEX IF NOT EXISTS "ai_models_model_id_idx" ON "ai_models" ("model_id");
-CREATE INDEX IF NOT EXISTS "ai_models_provider_idx" ON "ai_models" ("provider");
-CREATE INDEX IF NOT EXISTS "ai_models_enabled_idx" ON "ai_models" ("is_enabled");
-CREATE INDEX IF NOT EXISTS "ai_models_provider_enabled_idx" ON "ai_models" ("provider", "is_enabled", "sort_order");
+-- Create model router services table (idempotent)
+CREATE TABLE IF NOT EXISTS "model_router_services" (
+	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"url" text NOT NULL,
+	"region" text,
+	"health_endpoint" text DEFAULT '/health',
+	"models_endpoint" text DEFAULT '/v1/models',
+	"sync_endpoint" text DEFAULT '/v1/models/sync',
+	"metrics_endpoint" text DEFAULT '/metrics',
+	"capabilities" text[],
+	"auth_type" text DEFAULT 'jwt',
+	"auth_secret_name" text,
+	"is_enabled" boolean DEFAULT true,
+	"health_status" "service_health_status" DEFAULT 'unknown',
+	"last_health_check" timestamp with time zone,
+	"last_health_error" text,
+	"avg_latency_ms" integer,
+	"current_load_percent" integer,
+	"success_rate_percent" real,
+	"priority" integer DEFAULT 100,
+	"weight" integer DEFAULT 100,
+	"last_model_sync" timestamp with time zone,
+	"model_sync_status" "model_sync_status" DEFAULT 'pending',
+	"description" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "model_router_services_url_unique" UNIQUE("url")
+);
+--> statement-breakpoint
+
+-- Create model service mappings table (idempotent)
+CREATE TABLE IF NOT EXISTS "model_service_mappings" (
+	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"model_uuid" uuid NOT NULL,
+	"service_uuid" uuid NOT NULL,
+	"is_enabled" boolean DEFAULT true,
+	"priority" integer DEFAULT 100,
+	"requests_total" integer DEFAULT 0,
+	"errors_total" integer DEFAULT 0,
+	"avg_latency_ms" integer,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+
+-- Add foreign key constraints (idempotent)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'model_service_mappings_model_uuid_ai_models_uuid_fk'
+    ) THEN
+        ALTER TABLE "model_service_mappings"
+        ADD CONSTRAINT "model_service_mappings_model_uuid_ai_models_uuid_fk"
+        FOREIGN KEY ("model_uuid") REFERENCES "public"."ai_models"("uuid")
+        ON DELETE CASCADE ON UPDATE NO ACTION;
+    END IF;
+END$$;
+--> statement-breakpoint
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'model_service_mappings_service_uuid_model_router_services_uuid_fk'
+    ) THEN
+        ALTER TABLE "model_service_mappings"
+        ADD CONSTRAINT "model_service_mappings_service_uuid_model_router_services_uuid_fk"
+        FOREIGN KEY ("service_uuid") REFERENCES "public"."model_router_services"("uuid")
+        ON DELETE CASCADE ON UPDATE NO ACTION;
+    END IF;
+END$$;
+--> statement-breakpoint
+
+-- Create indexes (idempotent)
+CREATE INDEX IF NOT EXISTS "ai_models_model_id_idx" ON "ai_models" ("model_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_models_provider_idx" ON "ai_models" ("provider");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_models_enabled_idx" ON "ai_models" ("is_enabled");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_models_provider_enabled_idx" ON "ai_models" ("provider","is_enabled","sort_order");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_router_services_url_idx" ON "model_router_services" ("url");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_router_services_region_idx" ON "model_router_services" ("region");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_router_services_health_idx" ON "model_router_services" ("is_enabled","health_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_router_services_enabled_healthy_idx" ON "model_router_services" ("is_enabled","health_status","priority");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_service_mappings_model_idx" ON "model_service_mappings" ("model_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_service_mappings_service_idx" ON "model_service_mappings" ("service_uuid");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "model_service_mappings_unique_idx" ON "model_service_mappings" ("model_uuid","service_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "model_service_mappings_routing_idx" ON "model_service_mappings" ("model_uuid","is_enabled","priority");--> statement-breakpoint
 
 -- Seed with initial models (December 2025 pricing from OpenRouter/providers)
 INSERT INTO "ai_models" (

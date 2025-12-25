@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, Copy } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +35,13 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 type ModelProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
+
+interface APIKeyStatus {
+  provider: ModelProvider;
+  configured: boolean;
+  envVar: string;
+  lastFourChars?: string;
+}
 
 interface AIModel {
   uuid: string;
@@ -77,6 +86,7 @@ function formatContext(length: number): string {
 
 export default function AdminModelsPage() {
   const [models, setModels] = useState<AIModel[]>([]);
+  const [apiKeys, setApiKeys] = useState<APIKeyStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [providerFilter, setProviderFilter] = useState<ModelProvider | 'all'>('all');
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
@@ -113,9 +123,21 @@ export default function AdminModelsPage() {
     }
   }, [toast]);
 
+  const fetchAPIKeys = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/api-keys');
+      if (!res.ok) throw new Error('Failed to fetch API keys');
+      const data = await res.json();
+      setApiKeys(data.apiKeys);
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchModels();
-  }, [fetchModels]);
+    fetchAPIKeys();
+  }, [fetchModels, fetchAPIKeys]);
 
   const toggleEnabled = async (model: AIModel) => {
     try {
@@ -268,6 +290,14 @@ export default function AdminModelsPage() {
     );
   }
 
+  const copyEnvVar = (envVar: string) => {
+    navigator.clipboard.writeText(envVar);
+    toast({
+      title: 'Copied',
+      description: `${envVar} copied to clipboard`,
+    });
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
@@ -279,6 +309,56 @@ export default function AdminModelsPage() {
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)}>+ Add Model</Button>
       </div>
+
+      {/* API Keys Status */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Provider API Keys</CardTitle>
+          <CardDescription>
+            Configure API keys in your environment variables (.env file). Server restart required after changes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {apiKeys.map((key) => (
+              <div
+                key={key.provider}
+                className="flex items-center justify-between p-4 border rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  {key.configured ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-orange-500" />
+                  )}
+                  <div>
+                    <div className="font-medium capitalize">{key.provider}</div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {key.configured ? `...${key.lastFourChars}` : 'Not configured'}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyEnvVar(key.envVar)}
+                  title={`Copy ${key.envVar}`}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 p-3 bg-muted rounded-md text-sm">
+            <p className="font-medium mb-1">How to configure API keys:</p>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+              <li>Click the copy icon to copy the environment variable name</li>
+              <li>Add it to your .env file with your API key value</li>
+              <li>Restart the server to apply changes</li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Provider Filter */}
       <div className="flex gap-2 mb-6">

@@ -150,7 +150,10 @@ export default function AgentsPage() {
       const response = await fetch('/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newAgentName }),
+        body: JSON.stringify({
+          name: newAgentName,
+          image: 'nginxinc/nginx-unprivileged:alpine', // Default image for custom agents
+        }),
       });
 
       if (!response.ok) {

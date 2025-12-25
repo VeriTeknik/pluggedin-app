@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import tailwindTypography from "@tailwindcss/typography";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
     darkMode: ["class"],
@@ -162,7 +163,7 @@ export default {
   	}
   },
   plugins: [
-    require("tailwindcss-animate"),
+    tailwindcssAnimate,
     tailwindTypography,
   ],
 } satisfies Config;
