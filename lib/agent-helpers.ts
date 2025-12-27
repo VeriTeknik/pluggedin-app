@@ -424,7 +424,8 @@ export function buildAgentEnv(opts: {
   const env: Record<string, string> = {
     // PAP Station connection for lifecycle/metrics reporting
     // Uses public URL so agents in K8s can reach the station
-    PAP_STATION_URL: `${publicStationUrl}/api/agents`,
+    // Note: compass-agent appends /api/agents path, so don't include it here
+    PAP_STATION_URL: publicStationUrl,
     PAP_AGENT_ID: agentId,
     PAP_AGENT_DNS: dnsName,
     PAP_AGENT_KEY: apiKey,
