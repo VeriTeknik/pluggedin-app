@@ -520,7 +520,7 @@ export interface DeploymentStatus {
 
 export class KubernetesService {
   private readonly defaultNamespace = DEFAULT_AGENT_NAMESPACE;
-  private readonly defaultImage = 'nginxinc/nginx-unprivileged:alpine';
+  private readonly defaultImage = 'ghcr.io/veriteknik/compass-agent:latest';
 
   /**
    * Deploy a new PAP agent to Kubernetes via Kubernetes API.

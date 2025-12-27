@@ -152,7 +152,7 @@ export default function AgentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newAgentName,
-          image: 'nginxinc/nginx-unprivileged:alpine', // Default image for custom agents
+          image: 'ghcr.io/veriteknik/compass-agent:latest', // Default image for custom agents
         }),
       });
 

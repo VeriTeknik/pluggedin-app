@@ -249,7 +249,7 @@ export async function POST(
     // Optionally deploy to Kubernetes
     if (deploy) {
       const image =
-        overrides?.image || (sourceMetadata.image as string) || 'nginxinc/nginx-unprivileged:alpine';
+        overrides?.image || (sourceMetadata.image as string) || 'ghcr.io/veriteknik/compass-agent:latest';
       const resources =
         overrides?.resources || (sourceMetadata.resources as Record<string, string>);
 
