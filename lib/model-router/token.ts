@@ -36,6 +36,7 @@ export async function generateModelRouterToken(
     .setIssuedAt()
     .setExpirationTime('365d') // 1 year, can be revoked manually
     .setIssuer('plugged.in')
+    .setAudience('model-router')
     .sign(secret);
 
   return token;
@@ -64,6 +65,7 @@ export async function verifyModelRouterToken(token: string): Promise<{
 
   const { payload } = await jose.jwtVerify(token, secret, {
     issuer: 'plugged.in',
+    audience: 'model-router',
   });
 
   return payload as any;

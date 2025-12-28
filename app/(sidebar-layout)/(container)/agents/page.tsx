@@ -305,7 +305,14 @@ export default function AgentsPage() {
                       </Badge>
                     </div>
                     <CardDescription className="font-mono text-xs">
-                      {agent.dns_name}.is.plugged.in
+                      <a
+                        href={`https://${agent.dns_name}.is.plugged.in`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline text-blue-600 dark:text-blue-400"
+                      >
+                        {agent.dns_name}.is.plugged.in
+                      </a>
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
