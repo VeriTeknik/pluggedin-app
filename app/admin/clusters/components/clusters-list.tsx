@@ -58,6 +58,7 @@ import {
 import {
   deleteAgent,
   killAgent,
+  resumeAgent,
   suspendAgent,
   terminateAgent,
 } from '../agent-actions';
@@ -121,7 +122,7 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
 
   // Agent management state
   const [agentAction, setAgentAction] = useState<{
-    type: 'suspend' | 'terminate' | 'kill' | 'delete';
+    type: 'suspend' | 'resume' | 'terminate' | 'kill' | 'delete';
     agentId: string;
     sendNotification: boolean;
     reason: string;
@@ -159,6 +160,9 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
       case 'suspend':
         result = await suspendAgent(agentAction.agentId, options);
         break;
+      case 'resume':
+        result = await resumeAgent(agentAction.agentId, options);
+        break;
       case 'terminate':
         result = await terminateAgent(agentAction.agentId, options);
         break;
@@ -171,9 +175,15 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
     }
 
     if (result.success) {
-      toast.success(
-        `Agent ${agentAction.type}${agentAction.type === 'delete' ? 'd' : agentAction.type === 'kill' ? 'ed' : agentAction.type === 'suspend' ? 'ed' : 'd'} successfully`
-      );
+      const actionPastTense = {
+        suspend: 'suspended',
+        resume: 'resumed',
+        terminate: 'terminated',
+        kill: 'killed',
+        delete: 'deleted',
+      }[agentAction.type];
+
+      toast.success(`Agent ${actionPastTense} successfully`);
       setAgentAction(null);
       router.refresh();
     } else {
@@ -220,8 +230,9 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
   // Stats
   const totalClusters = clusters.length;
   const activeClusters = clusters.filter((c) => c.status === 'ACTIVE').length;
-  const totalPods = pods.length;
-  const readyPods = pods.filter((p) => p.ready).length;
+  const totalAgents = agents.length;
+  const activeAgents = agents.filter((a) => a.state === 'ACTIVE').length;
+  const drainingAgents = agents.filter((a) => a.state === 'DRAINING').length;
 
   return (
     <>
@@ -241,20 +252,20 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kubernetes Pods</CardTitle>
+            <CardTitle className="text-sm font-medium">PAP Agents</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPods}</div>
+            <div className="text-2xl font-bold">{totalAgents}</div>
             <p className="text-xs text-muted-foreground">
-              {readyPods} ready
+              {activeAgents} active{drainingAgents > 0 && `, ${drainingAgents} draining`}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Health</CardTitle>
-            {readyPods === totalPods ? (
+            <CardTitle className="text-sm font-medium">Agent Health</CardTitle>
+            {activeAgents === totalAgents ? (
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             ) : (
               <AlertCircle className="h-4 w-4 text-yellow-500" />
@@ -262,10 +273,10 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalPods > 0 ? Math.round((readyPods / totalPods) * 100) : 0}%
+              {totalAgents > 0 ? Math.round((activeAgents / totalAgents) * 100) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              pod readiness
+              active agents
             </p>
           </CardContent>
         </Card>
@@ -384,27 +395,6 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
         </div>
       )}
 
-      {/* Pods Section */}
-      {pods.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Kubernetes Pods (agents namespace)</h2>
-          <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-4">
-            {pods.map((pod) => (
-              <Card key={pod.name} className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-sm truncate">{pod.name}</span>
-                  {pod.ready ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Agents Section */}
       {agents.length > 0 && (
         <div className="mt-8">
@@ -481,6 +471,24 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
                                   >
                                     <Pause className="mr-2 h-4 w-4" />
                                     Suspend (Drain)
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              {agent.state === 'DRAINING' && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setAgentAction({
+                                        type: 'resume',
+                                        agentId: agent.uuid,
+                                        sendNotification: false,
+                                        reason: '',
+                                      })
+                                    }
+                                  >
+                                    <Zap className="mr-2 h-4 w-4" />
+                                    Resume (Activate)
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                 </>
@@ -593,6 +601,7 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
             <AlertDialogHeader>
               <AlertDialogTitle>
                 {agentAction.type === 'suspend' && 'Suspend Agent (Drain)'}
+                {agentAction.type === 'resume' && 'Resume Agent (Activate)'}
                 {agentAction.type === 'terminate' && 'Terminate Agent'}
                 {agentAction.type === 'kill' && 'Kill Agent (Force)'}
                 {agentAction.type === 'delete' && 'Delete Agent Permanently'}
@@ -600,6 +609,8 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
               <AlertDialogDescription>
                 {agentAction.type === 'suspend' &&
                   'This will transition the agent to DRAINING state. It will gracefully stop accepting new requests.'}
+                {agentAction.type === 'resume' &&
+                  'This will reactivate the agent and transition it from DRAINING back to ACTIVE state. The agent will start accepting requests again.'}
                 {agentAction.type === 'terminate' &&
                   'This will cleanly shut down the agent and delete Kubernetes resources. The agent will be moved to TERMINATED state.'}
                 {agentAction.type === 'kill' &&
@@ -655,11 +666,13 @@ export function ClustersListClient({ clusters, pods, agents }: ClustersListClien
                   ? 'Processing...'
                   : agentAction.type === 'suspend'
                     ? 'Suspend'
-                    : agentAction.type === 'terminate'
-                      ? 'Terminate'
-                      : agentAction.type === 'kill'
-                        ? 'Kill'
-                        : 'Delete'}
+                    : agentAction.type === 'resume'
+                      ? 'Resume'
+                      : agentAction.type === 'terminate'
+                        ? 'Terminate'
+                        : agentAction.type === 'kill'
+                          ? 'Kill'
+                          : 'Delete'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

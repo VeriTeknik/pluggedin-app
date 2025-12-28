@@ -116,6 +116,89 @@ export async function getAgents(clusterNamespace?: string): Promise<ActionResult
 }
 
 /**
+ * Resume an agent (transition from DRAINING back to ACTIVE state)
+ * Optionally sends notification to agent owner
+ */
+export async function resumeAgent(
+  agentId: string,
+  options?: { sendNotification?: boolean; reason?: string }
+): Promise<ActionResult> {
+  try {
+    const admin = await checkAdminAuth();
+    if (!admin) {
+      return { success: false, error: 'Unauthorized - Admin access required' };
+    }
+
+    // Find the agent
+    const agent = await db.query.agentsTable.findFirst({
+      where: eq(agentsTable.uuid, agentId),
+    });
+
+    if (!agent) {
+      return { success: false, error: 'Agent not found' };
+    }
+
+    // Only allow resuming DRAINING agents
+    if (agent.state !== AgentState.DRAINING) {
+      return {
+        success: false,
+        error: `Cannot resume agent in ${agent.state} state. Only DRAINING agents can be resumed.`,
+      };
+    }
+
+    const previousState = agent.state;
+
+    // Update agent state to ACTIVE
+    await db
+      .update(agentsTable)
+      .set({
+        state: AgentState.ACTIVE,
+      })
+      .where(eq(agentsTable.uuid, agentId));
+
+    // Log lifecycle event
+    await db.insert(agentLifecycleEventsTable).values({
+      agent_uuid: agentId,
+      event_type: 'RESUMED',
+      from_state: previousState,
+      to_state: AgentState.ACTIVE,
+      metadata: {
+        triggered_by: admin.userId,
+        admin_email: admin.email,
+        reason: options?.reason || 'Admin resumed agent',
+      },
+    });
+
+    // Send notification if requested
+    if (options?.sendNotification) {
+      try {
+        await sendNotification({
+          userId: agent.profile_uuid,
+          title: `Agent Resumed: ${agent.name}`,
+          message: options?.reason
+            ? `Your agent "${agent.name}" has been resumed by an administrator. Reason: ${options.reason}`
+            : `Your agent "${agent.name}" has been resumed by an administrator.`,
+          type: 'success',
+          sendEmail: true,
+        });
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Continue even if notification fails
+      }
+    }
+
+    revalidatePath('/admin/clusters');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to resume agent:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to resume agent',
+    };
+  }
+}
+
+/**
  * Suspend an agent (transition to DRAINING state)
  * Optionally sends notification to agent owner
  */
