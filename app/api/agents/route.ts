@@ -10,9 +10,11 @@ import {
   AgentState,
   agentTemplatesTable,
   apiKeysTable,
+  modelRouterServicesTable,
 } from '@/db/schema';
 import { buildAgentEnv, validateContainerImage, validateEnvKey, validateResourceLimits } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
+import { generateModelRouterToken } from '@/lib/model-router/token';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
@@ -494,6 +496,41 @@ export async function POST(request: NextRequest) {
         .where(eq(agentTemplatesTable.uuid, template.uuid));
     }
 
+    // Assign model router and generate token
+    let modelRouterUrl = '';
+    let modelRouterToken = '';
+    try {
+      // Find enabled model router services, ordered by priority
+      const modelRouters = await db
+        .select()
+        .from(modelRouterServicesTable)
+        .where(eq(modelRouterServicesTable.is_enabled, true))
+        .orderBy(modelRouterServicesTable.priority)
+        .limit(1);
+
+      if (modelRouters.length > 0) {
+        const modelRouter = modelRouters[0];
+        modelRouterUrl = modelRouter.url;
+
+        // Generate JWT token for model router authentication
+        modelRouterToken = await generateModelRouterToken(newAgent.uuid, normalizedName);
+
+        // Update agent with model router assignment
+        await db
+          .update(agentsTable)
+          .set({
+            model_router_service_uuid: modelRouter.uuid,
+            model_router_token: modelRouterToken,
+            model_router_token_issued_at: new Date(),
+            model_router_token_revoked: false,
+          })
+          .where(eq(agentsTable.uuid, newAgent.uuid));
+      }
+    } catch (error) {
+      console.error('Failed to assign model router:', error);
+      // Continue agent creation even if model router assignment fails
+    }
+
     // Log lifecycle event
     await db.insert(agentLifecycleEventsTable).values({
       agent_uuid: newAgent.uuid,
@@ -547,6 +584,8 @@ export async function POST(request: NextRequest) {
       apiKey: agentApiKey,
       template,
       envOverrides: env_overrides,
+      modelRouterUrl,
+      modelRouterToken,
     });
 
     // Deploy to Kubernetes

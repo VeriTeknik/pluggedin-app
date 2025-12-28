@@ -2424,6 +2424,13 @@ export const agentsTable = pgTable(
     kubernetes_namespace: text('kubernetes_namespace').default('agents'),
     kubernetes_deployment: text('kubernetes_deployment'), // Deployment name in K8s
 
+    // Model Router assignment
+    model_router_service_uuid: uuid('model_router_service_uuid')
+      .references(() => modelRouterServicesTable.uuid, { onDelete: 'set null' }),
+    model_router_token: text('model_router_token'), // JWT token for model router auth
+    model_router_token_issued_at: timestamp('model_router_token_issued_at', { withTimezone: true }),
+    model_router_token_revoked: boolean('model_router_token_revoked').default(false),
+
     // Timestamps
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -2456,6 +2463,8 @@ export const agentsTable = pgTable(
     deploymentStatusIdx: index('agents_deployment_status_idx').on(table.deployment_status),
     // Index for zombie detection queries (agents with stale heartbeats)
     lastHeartbeatAtIdx: index('agents_last_heartbeat_at_idx').on(table.last_heartbeat_at),
+    // Index for model router queries
+    modelRouterServiceUuidIdx: index('agents_model_router_service_uuid_idx').on(table.model_router_service_uuid),
   })
 );
 

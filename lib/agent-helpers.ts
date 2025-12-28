@@ -413,8 +413,10 @@ export function buildAgentEnv(opts: {
     env_schema?: { defaults?: Record<string, unknown> } | null;
   } | null;
   envOverrides?: Record<string, string | number | boolean> | null;
+  modelRouterUrl?: string;
+  modelRouterToken?: string;
 }): Record<string, string> {
-  const { baseUrl, agentId, normalizedName, dnsName, apiKey, template, envOverrides } = opts;
+  const { baseUrl, agentId, normalizedName, dnsName, apiKey, template, envOverrides, modelRouterUrl, modelRouterToken } = opts;
 
   // Use public station URL for agent communication (agents are in K8s and need external URL)
   // Falls back to baseUrl for local development
@@ -439,6 +441,12 @@ export function buildAgentEnv(opts: {
     // Note: ModelRouter adds /api/v1/chat/completions, so baseUrl should NOT include /api
     PLUGGEDIN_API_URL: publicStationUrl,
     PLUGGEDIN_API_KEY: apiKey,
+
+    // Model Router for LLM access (if assigned)
+    ...(modelRouterUrl && modelRouterToken ? {
+      MODEL_ROUTER_URL: modelRouterUrl,
+      MODEL_ROUTER_TOKEN: modelRouterToken,
+    } : {}),
 
     // Agent identity
     AGENT_NAME: normalizedName,

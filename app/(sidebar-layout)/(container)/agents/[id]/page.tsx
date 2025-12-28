@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, Pause, Play, RefreshCw, RotateCw, Server, Terminal, Trash2, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, Key, Pause, Play, RefreshCw, RotateCw, Server, Shield, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
@@ -985,6 +985,66 @@ export default function AgentDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Model Router Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Model Router
+              </CardTitle>
+              <CardDescription>
+                LLM access configuration and authentication
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {agent.model_router_service_uuid ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <Badge variant={agent.model_router_token_revoked ? 'destructive' : 'default'}>
+                        {agent.model_router_token_revoked ? 'Revoked' : 'Active'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Token Issued</p>
+                      <p className="text-sm">
+                        {agent.model_router_token_issued_at
+                          ? formatDate(agent.model_router_token_issued_at)
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {agent.model_router_token && !agent.model_router_token_revoked && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                      <p className="text-sm text-green-800 dark:text-green-400">
+                        Agent has valid authentication token for Model Router
+                      </p>
+                    </div>
+                  )}
+
+                  {agent.model_router_token_revoked && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-md">
+                      <XCircle className="h-4 w-4 text-red-600 dark:text-red-500" />
+                      <p className="text-sm text-red-800 dark:text-red-400">
+                        Token has been revoked. Agent cannot access LLM services.
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-md">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+                  <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                    No model router assigned. Agent cannot access LLM services.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
