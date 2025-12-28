@@ -54,6 +54,12 @@ export default async function AdminLayout({
               Model Services
             </a>
             <a
+              href="/admin/model-routers"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Model Routers
+            </a>
+            <a
               href="/admin/clusters"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
