@@ -1,10 +1,12 @@
+import { getAgents } from '../agent-actions';
 import { getClusters, getClusterPods } from '../actions';
 import { ClustersListClient } from './clusters-list';
 
 export async function ClustersListServer() {
-  const [clustersResult, podsResult] = await Promise.all([
+  const [clustersResult, podsResult, agentsResult] = await Promise.all([
     getClusters(),
     getClusterPods('agents'),
+    getAgents(), // Fetch all agents
   ]);
 
   if (!clustersResult.success || !clustersResult.data) {
@@ -21,6 +23,7 @@ export async function ClustersListServer() {
     <ClustersListClient
       clusters={clustersResult.data}
       pods={podsResult.success ? podsResult.data || [] : []}
+      agents={agentsResult.success ? agentsResult.data || [] : []}
     />
   );
 }

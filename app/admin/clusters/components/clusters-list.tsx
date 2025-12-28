@@ -7,10 +7,14 @@ import {
   CheckCircle2,
   ExternalLink,
   MoreHorizontal,
+  Pause,
   Pencil,
   Plus,
+  Power,
   Server,
+  Skull,
   Trash2,
+  Zap,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -51,6 +55,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+import {
+  deleteAgent,
+  killAgent,
+  suspendAgent,
+  terminateAgent,
+} from '../agent-actions';
 import { deleteCluster } from '../actions';
 import { ClusterForm } from './cluster-form';
 
@@ -76,17 +86,47 @@ type Pod = {
   ready: boolean;
 };
 
+type AgentState = 'NEW' | 'PROVISIONED' | 'ACTIVE' | 'DRAINING' | 'TERMINATED' | 'KILLED';
+type DeploymentStatus = 'PENDING' | 'DEPLOYED' | 'FAILED' | 'UNDEPLOYED';
+
+type Agent = {
+  uuid: string;
+  name: string;
+  dns_name: string;
+  state: AgentState;
+  deployment_status: DeploymentStatus;
+  kubernetes_namespace: string | null;
+  kubernetes_deployment: string | null;
+  profile_uuid: string;
+  created_at: Date;
+  provisioned_at: Date | null;
+  activated_at: Date | null;
+  terminated_at: Date | null;
+  last_heartbeat_at: Date | null;
+  metadata: unknown;
+};
+
 type ClustersListClientProps = {
   clusters: Cluster[];
   pods: Pod[];
+  agents: Agent[];
 };
 
-export function ClustersListClient({ clusters, pods }: ClustersListClientProps) {
+export function ClustersListClient({ clusters, pods, agents }: ClustersListClientProps) {
   const router = useRouter();
   const [deleteUuid, setDeleteUuid] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editCluster, setEditCluster] = useState<Cluster | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Agent management state
+  const [agentAction, setAgentAction] = useState<{
+    type: 'suspend' | 'terminate' | 'kill' | 'delete';
+    agentId: string;
+    sendNotification: boolean;
+    reason: string;
+  } | null>(null);
+  const [processingAgent, setProcessingAgent] = useState(false);
 
   async function handleDelete() {
     if (!deleteUuid) return;
@@ -104,6 +144,45 @@ export function ClustersListClient({ clusters, pods }: ClustersListClientProps) 
     setDeleting(false);
   }
 
+  async function handleAgentAction() {
+    if (!agentAction) return;
+
+    setProcessingAgent(true);
+
+    let result;
+    const options = {
+      sendNotification: agentAction.sendNotification,
+      reason: agentAction.reason || undefined,
+    };
+
+    switch (agentAction.type) {
+      case 'suspend':
+        result = await suspendAgent(agentAction.agentId, options);
+        break;
+      case 'terminate':
+        result = await terminateAgent(agentAction.agentId, options);
+        break;
+      case 'kill':
+        result = await killAgent(agentAction.agentId, options);
+        break;
+      case 'delete':
+        result = await deleteAgent(agentAction.agentId, options);
+        break;
+    }
+
+    if (result.success) {
+      toast.success(
+        `Agent ${agentAction.type}${agentAction.type === 'delete' ? 'd' : agentAction.type === 'kill' ? 'ed' : agentAction.type === 'suspend' ? 'ed' : 'd'} successfully`
+      );
+      setAgentAction(null);
+      router.refresh();
+    } else {
+      toast.error(result.error || `Failed to ${agentAction.type} agent`);
+    }
+
+    setProcessingAgent(false);
+  }
+
   function getStatusBadgeVariant(status: ClusterStatus | null): 'default' | 'secondary' | 'outline' | 'destructive' {
     switch (status) {
       case 'ACTIVE':
@@ -114,6 +193,25 @@ export function ClustersListClient({ clusters, pods }: ClustersListClientProps) 
         return 'outline';
       default:
         return 'secondary';
+    }
+  }
+
+  function getAgentStateBadge(state: AgentState): { variant: 'default' | 'secondary' | 'outline' | 'destructive'; className?: string } {
+    switch (state) {
+      case 'ACTIVE':
+        return { variant: 'default', className: 'bg-green-600' };
+      case 'PROVISIONED':
+        return { variant: 'default', className: 'bg-blue-600' };
+      case 'NEW':
+        return { variant: 'secondary' };
+      case 'DRAINING':
+        return { variant: 'default', className: 'bg-yellow-600' };
+      case 'TERMINATED':
+        return { variant: 'outline' };
+      case 'KILLED':
+        return { variant: 'destructive' };
+      default:
+        return { variant: 'secondary' };
     }
   }
 
@@ -307,6 +405,147 @@ export function ClustersListClient({ clusters, pods }: ClustersListClientProps) 
         </div>
       )}
 
+      {/* Agents Section */}
+      {agents.length > 0 && (
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Agents</CardTitle>
+              <CardDescription>
+                Manage PAP agents across all clusters
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>DNS</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>Deployment</TableHead>
+                    <TableHead>Namespace</TableHead>
+                    <TableHead>Last Heartbeat</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {agents.map((agent) => {
+                    const stateBadge = getAgentStateBadge(agent.state);
+                    return (
+                      <TableRow key={agent.uuid}>
+                        <TableCell className="font-medium">
+                          {agent.name}
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-sm bg-muted px-2 py-1 rounded">
+                            {agent.dns_name}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={stateBadge.variant} className={stateBadge.className}>
+                            {agent.state}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {agent.deployment_status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {agent.kubernetes_namespace || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {agent.last_heartbeat_at
+                            ? format(new Date(agent.last_heartbeat_at), 'MMM d, HH:mm')
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {agent.state === 'ACTIVE' && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setAgentAction({
+                                        type: 'suspend',
+                                        agentId: agent.uuid,
+                                        sendNotification: false,
+                                        reason: '',
+                                      })
+                                    }
+                                  >
+                                    <Pause className="mr-2 h-4 w-4" />
+                                    Suspend (Drain)
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              {agent.state !== 'TERMINATED' && agent.state !== 'KILLED' && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setAgentAction({
+                                        type: 'terminate',
+                                        agentId: agent.uuid,
+                                        sendNotification: false,
+                                        reason: '',
+                                      })
+                                    }
+                                  >
+                                    <Power className="mr-2 h-4 w-4" />
+                                    Terminate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setAgentAction({
+                                        type: 'kill',
+                                        agentId: agent.uuid,
+                                        sendNotification: false,
+                                        reason: '',
+                                      })
+                                    }
+                                    className="text-destructive"
+                                  >
+                                    <Skull className="mr-2 h-4 w-4" />
+                                    Kill (Force)
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              {(agent.state === 'TERMINATED' || agent.state === 'KILLED') && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setAgentAction({
+                                      type: 'delete',
+                                      agentId: agent.uuid,
+                                      sendNotification: false,
+                                      reason: '',
+                                    })
+                                  }
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Permanently
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Create/Edit Form Dialog */}
       <ClusterForm
         open={showCreateForm || !!editCluster}
@@ -346,6 +585,86 @@ export function ClustersListClient({ clusters, pods }: ClustersListClientProps) 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Agent Action Confirmation Dialog */}
+      {agentAction && (
+        <AlertDialog open={!!agentAction} onOpenChange={() => setAgentAction(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {agentAction.type === 'suspend' && 'Suspend Agent (Drain)'}
+                {agentAction.type === 'terminate' && 'Terminate Agent'}
+                {agentAction.type === 'kill' && 'Kill Agent (Force)'}
+                {agentAction.type === 'delete' && 'Delete Agent Permanently'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {agentAction.type === 'suspend' &&
+                  'This will transition the agent to DRAINING state. It will gracefully stop accepting new requests.'}
+                {agentAction.type === 'terminate' &&
+                  'This will cleanly shut down the agent and delete Kubernetes resources. The agent will be moved to TERMINATED state.'}
+                {agentAction.type === 'kill' &&
+                  'This will forcefully terminate the agent immediately. The agent will be moved to KILLED state.'}
+                {agentAction.type === 'delete' &&
+                  'This will permanently delete the agent from the database. This action cannot be undone.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="send-notification"
+                  checked={agentAction.sendNotification}
+                  onChange={(e) =>
+                    setAgentAction({ ...agentAction, sendNotification: e.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <label
+                  htmlFor="send-notification"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Send notification to agent owner
+                </label>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="reason" className="text-sm font-medium">
+                  Reason (optional)
+                </label>
+                <textarea
+                  id="reason"
+                  value={agentAction.reason}
+                  onChange={(e) => setAgentAction({ ...agentAction, reason: e.target.value })}
+                  placeholder="Explain why this action is being taken..."
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                  disabled={processingAgent}
+                />
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={processingAgent}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleAgentAction}
+                disabled={processingAgent}
+                className={
+                  agentAction.type === 'kill' || agentAction.type === 'delete'
+                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    : ''
+                }
+              >
+                {processingAgent
+                  ? 'Processing...'
+                  : agentAction.type === 'suspend'
+                    ? 'Suspend'
+                    : agentAction.type === 'terminate'
+                      ? 'Terminate'
+                      : agentAction.type === 'kill'
+                        ? 'Kill'
+                        : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
