@@ -10,7 +10,7 @@ import { and, eq } from 'drizzle-orm';
 const COMPASS_TEMPLATE = {
   namespace: 'veriteknik',
   name: 'compass',
-  version: '1.0.0',
+  version: '1.1.0',
   display_name: 'Compass - AI Jury',
   description: 'Multi-model consensus agent for trusted research. Query GPT-4, Claude, and Gemini simultaneously and get a verified answer.',
   long_description: `# Compass - AI Jury/Oracle
@@ -57,7 +57,7 @@ Compass is fully PAP-RFC-001 compliant:
 `,
   icon_url: 'https://plugged.in/agents/compass/icon.png',
   banner_url: 'https://plugged.in/agents/compass/banner.png',
-  docker_image: 'ghcr.io/veriteknik/compass-agent:v1.0.0',
+  docker_image: 'ghcr.io/veriteknik/compass-agent:latest',
   container_port: 3000,
   health_endpoint: '/health',
   env_schema: {

@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAdminEmails } from '@/lib/admin-notifications';
 import { getAuthSession } from '@/lib/auth';
+import { AdminNav } from './components/admin-nav';
 
 export default async function AdminLayout({
   children,
@@ -40,56 +41,7 @@ export default async function AdminLayout({
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
           <h1 className="text-xl font-semibold">Admin Dashboard</h1>
-          <nav className="ml-6 flex items-center space-x-4 lg:space-x-6">
-            <a
-              href="/admin/models"
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              Models
-            </a>
-            <a
-              href="/admin/model-services"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Model Services
-            </a>
-            <a
-              href="/admin/model-routers"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Model Routers
-            </a>
-            <a
-              href="/admin/clusters"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Clusters
-            </a>
-            <a
-              href="/admin/emails"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Email Management
-            </a>
-            <a
-              href="/admin/emails/compose"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Compose
-            </a>
-            <a
-              href="/admin/emails/templates"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Templates
-            </a>
-            <a
-              href="/admin/emails/history"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              History
-            </a>
-          </nav>
+          <AdminNav />
         </div>
       </div>
       <main className="flex-1 space-y-4 p-8 pt-6">{children}</main>
