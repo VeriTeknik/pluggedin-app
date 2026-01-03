@@ -91,6 +91,7 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
       'wss:',
       'https://api.stripe.com',
       'wss://*.plugged.in',
+      'https://*.plugged.in', // Allow HTTPS connections to all Plugged.in services (Model Router, etc.)
       'https://*.ingest.sentry.io',
       'https://*.ingest.de.sentry.io',
       'https://api.github.com',

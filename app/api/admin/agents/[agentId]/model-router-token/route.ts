@@ -58,7 +58,7 @@ async function checkAdminAuth(): Promise<{ userId: string; email: string } | nul
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
     // Check admin authentication
@@ -70,6 +70,7 @@ export async function POST(
       );
     }
 
+    const params = await props.params;
     const { agentId } = params;
 
     // Find the agent
@@ -129,7 +130,7 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
     // Check admin authentication
@@ -141,6 +142,7 @@ export async function DELETE(
       );
     }
 
+    const params = await props.params;
     const { agentId } = params;
 
     // Find the agent

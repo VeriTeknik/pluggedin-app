@@ -326,6 +326,7 @@ export async function POST(
         apiKey: agentApiKey,
         template: null, // Replicated agents don't use templates
         envOverrides: null,
+        configValues: null, // Replicated agents don't use config values
         modelRouterUrl,
         modelRouterToken,
       });

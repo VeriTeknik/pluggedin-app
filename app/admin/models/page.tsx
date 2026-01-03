@@ -148,9 +148,24 @@ export default function AdminModelsPage() {
       });
       if (!res.ok) throw new Error('Failed to update model');
       await fetchModels();
+
+      // Sync to Model Router services
+      try {
+        await fetch('/api/model-router/sync', { method: 'POST' });
+      } catch (syncError) {
+        console.error('Model Router sync failed:', syncError);
+        // Don't block on sync failure - show warning toast
+        toast({
+          title: 'Warning',
+          description: 'Model updated but sync to Model Router failed',
+          variant: 'default',
+        });
+        return; // Skip success toast if sync failed
+      }
+
       toast({
         title: 'Success',
-        description: `Model ${model.is_enabled ? 'disabled' : 'enabled'}`,
+        description: `Model ${model.is_enabled ? 'disabled' : 'enabled'} and synced to Model Router`,
       });
     } catch (error) {
       toast({
@@ -170,9 +185,23 @@ export default function AdminModelsPage() {
       });
       if (!res.ok) throw new Error('Failed to update model');
       await fetchModels();
+
+      // Sync to Model Router services
+      try {
+        await fetch('/api/model-router/sync', { method: 'POST' });
+      } catch (syncError) {
+        console.error('Model Router sync failed:', syncError);
+        toast({
+          title: 'Warning',
+          description: 'Default set but sync to Model Router failed',
+          variant: 'default',
+        });
+        return; // Skip success toast if sync failed
+      }
+
       toast({
         title: 'Success',
-        description: `${model.display_name} set as default`,
+        description: `${model.display_name} set as default and synced to Model Router`,
       });
     } catch (error) {
       toast({
@@ -203,9 +232,23 @@ export default function AdminModelsPage() {
       if (!res.ok) throw new Error('Failed to update model');
       await fetchModels();
       setEditingModel(null);
+
+      // Sync to Model Router services
+      try {
+        await fetch('/api/model-router/sync', { method: 'POST' });
+      } catch (syncError) {
+        console.error('Model Router sync failed:', syncError);
+        toast({
+          title: 'Warning',
+          description: 'Model updated but sync to Model Router failed',
+          variant: 'default',
+        });
+        return; // Skip success toast if sync failed
+      }
+
       toast({
         title: 'Success',
-        description: 'Model updated successfully',
+        description: 'Model updated and synced to Model Router',
       });
     } catch (error) {
       toast({
@@ -242,9 +285,23 @@ export default function AdminModelsPage() {
         supports_vision: false,
         description: '',
       });
+
+      // Sync to Model Router services
+      try {
+        await fetch('/api/model-router/sync', { method: 'POST' });
+      } catch (syncError) {
+        console.error('Model Router sync failed:', syncError);
+        toast({
+          title: 'Warning',
+          description: 'Model created but sync to Model Router failed',
+          variant: 'default',
+        });
+        return; // Skip success toast if sync failed
+      }
+
       toast({
         title: 'Success',
-        description: 'Model created successfully',
+        description: 'Model created and synced to Model Router',
       });
     } catch (error) {
       toast({
@@ -265,9 +322,23 @@ export default function AdminModelsPage() {
       });
       if (!res.ok) throw new Error('Failed to delete model');
       await fetchModels();
+
+      // Sync to Model Router services (remove deprecated model)
+      try {
+        await fetch('/api/model-router/sync', { method: 'POST' });
+      } catch (syncError) {
+        console.error('Model Router sync failed:', syncError);
+        toast({
+          title: 'Warning',
+          description: 'Model deprecated but sync to Model Router failed',
+          variant: 'default',
+        });
+        return; // Skip success toast if sync failed
+      }
+
       toast({
         title: 'Success',
-        description: 'Model deprecated',
+        description: 'Model deprecated and synced to Model Router',
       });
     } catch (error) {
       toast({

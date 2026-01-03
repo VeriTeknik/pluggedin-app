@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,12 @@ import {
   SWR_MARKETPLACE_CONFIG,
   validateAgentName,
 } from '@/lib/pap-ui-utils';
+import { AgentConfigForm } from '@/components/agents/agent-config-form';
+import {
+  parseConfigurable,
+  getDefaultConfigValues,
+} from '@/lib/agent-config';
+import type { ConfigValues, TemplateConfigurable } from '@/lib/agent-config';
 
 interface TemplateVersion {
   version: string;
@@ -93,6 +99,17 @@ export default function TemplateDetailPage() {
   const [accessLevel, setAccessLevel] = useState('PRIVATE');
   const [isDeploying, setIsDeploying] = useState(false);
 
+  // Parse template's configurable section
+  const configurable: TemplateConfigurable | null = data?.template
+    ? parseConfigurable(data.template.configurable)
+    : null;
+
+  // Configuration form state - initialize with default values from template
+  const [configValues, setConfigValues] = useState<ConfigValues>(() => {
+    return configurable ? getDefaultConfigValues(configurable) : {};
+  });
+  const [isConfigValid, setIsConfigValid] = useState(true);
+
   // Compute validation once to avoid multiple calls per render
   const nameError = validateAgentName(agentName);
 
@@ -108,6 +125,7 @@ export default function TemplateDetailPage() {
           name: agentName,
           template_uuid: data.template.uuid,
           access_level: accessLevel,
+          config_values: configurable ? configValues : undefined,
         }),
       });
 
@@ -470,6 +488,24 @@ export default function TemplateDetailPage() {
                   : 'Only accessible with your Hub API key.'}
               </p>
             </div>
+
+            {/* Configuration Form - only show if template has configurable section */}
+            {configurable && Object.keys(configurable).length > 0 && (
+              <div className="grid gap-2">
+                <Label className="text-base font-semibold">Configuration</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Configure your agent's behavior and settings
+                </p>
+                <AgentConfigForm
+                  configurable={configurable}
+                  onChange={(values, isValid) => {
+                    setConfigValues(values);
+                    setIsConfigValid(isValid);
+                  }}
+                  className="border rounded-lg p-4 bg-muted/50"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -481,7 +517,7 @@ export default function TemplateDetailPage() {
             </Button>
             <Button
               onClick={handleDeploy}
-              disabled={!agentName || !!nameError || isDeploying}
+              disabled={!agentName || !!nameError || !isConfigValid || isDeploying}
             >
               {isDeploying ? 'Deploying...' : 'Deploy Agent'}
             </Button>

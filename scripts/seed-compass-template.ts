@@ -69,6 +69,27 @@ Compass is fully PAP-RFC-001 compliant:
       PORT: '3000',
     },
   },
+  // Template-driven configuration (ADL v0.2)
+  configurable: {
+    models: {
+      type: 'multi-select',
+      source: 'model-router',
+      multi_select_constraints: {
+        min: 2,
+        max: 4,
+      },
+      default: ['gpt-4o', 'claude-3-5-sonnet-20241022', 'gemini-1.5-flash'],
+      env_var: 'COMPASS_MODELS',
+      required: true,
+      ui: {
+        label: 'AI Models',
+        description: 'Select AI models for consensus voting (2-4 models)',
+        placeholder: 'Select models',
+        help_text: 'Choose 2 to 4 models for multi-perspective consensus analysis',
+        show_provider_icons: true,
+      },
+    },
+  },
   tags: ['ai', 'research', 'consensus', 'multi-model', 'fact-check', 'jury', 'oracle'],
   category: 'research',
   is_public: true,
@@ -112,6 +133,7 @@ async function seedCompassTemplate() {
           container_port: COMPASS_TEMPLATE.container_port,
           health_endpoint: COMPASS_TEMPLATE.health_endpoint,
           env_schema: COMPASS_TEMPLATE.env_schema,
+          configurable: COMPASS_TEMPLATE.configurable,
           // Presentation
           icon_url: COMPASS_TEMPLATE.icon_url,
           banner_url: COMPASS_TEMPLATE.banner_url,

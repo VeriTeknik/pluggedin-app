@@ -11,6 +11,8 @@ import { NextResponse } from 'next/server';
 import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
+import { configToEnvVars, parseConfigurable } from '@/lib/agent-config';
+import type { ConfigValues } from '@/lib/agent-config';
 import { MAX_CPU_CORES,MAX_MEMORY_GI } from '@/lib/pap-constants';
 
 /** Successful auth result type. */
@@ -411,12 +413,14 @@ export function buildAgentEnv(opts: {
   template?: {
     container_port?: number | null;
     env_schema?: { defaults?: Record<string, unknown> } | null;
+    configurable?: unknown;
   } | null;
   envOverrides?: Record<string, string | number | boolean> | null;
+  configValues?: ConfigValues | null;
   modelRouterUrl?: string;
   modelRouterToken?: string;
 }): Record<string, string> {
-  const { baseUrl, agentId, normalizedName, dnsName, apiKey, template, envOverrides, modelRouterUrl, modelRouterToken } = opts;
+  const { baseUrl, agentId, normalizedName, dnsName, apiKey, template, envOverrides, configValues, modelRouterUrl, modelRouterToken } = opts;
 
   // Use public station URL for agent communication (agents are in K8s and need external URL)
   // Falls back to baseUrl for local development
@@ -462,6 +466,21 @@ export function buildAgentEnv(opts: {
       // Skip if already set or key is protected
       if (!env[key] && validateEnvKey(key) === null) {
         env[key] = sanitizeEnvValue(value);
+      }
+    }
+  }
+
+  // Apply config values from template-driven configuration (ADL v0.2)
+  // Converts config_values to environment variables based on template.configurable
+  if (template?.configurable && configValues) {
+    const configurable = parseConfigurable(template.configurable);
+    if (configurable) {
+      const configEnvVars = configToEnvVars(configurable, configValues);
+      for (const [key, value] of Object.entries(configEnvVars)) {
+        // Skip if key is protected
+        if (validateEnvKey(key) === null) {
+          env[key] = value;
+        }
       }
     }
   }

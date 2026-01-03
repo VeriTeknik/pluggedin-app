@@ -14,6 +14,7 @@ import {
 } from '@/db/schema';
 import { buildAgentEnv, validateContainerImage, validateEnvKey, validateResourceLimits } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
+import { parseConfigurable, validateConfigValues } from '@/lib/agent-config';
 import { generateModelRouterToken } from '@/lib/model-router/token';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
@@ -306,7 +307,7 @@ export async function POST(request: NextRequest) {
     if (!quotaCheck.allowed) return quotaCheck.error!;
 
     const body = await request.json();
-    const { name, template_uuid, access_level, description, image, resources, env_overrides } = body;
+    const { name, template_uuid, access_level, description, image, resources, env_overrides, config_values } = body;
 
     // Validate resources if provided
     if (resources !== undefined) {
@@ -394,6 +395,31 @@ export async function POST(request: NextRequest) {
         );
       }
       template = templates[0];
+
+      // Validate config_values if provided and template has configurable section
+      if (config_values !== undefined && config_values !== null) {
+        const configurable = parseConfigurable(template.configurable);
+
+        if (configurable) {
+          // Validate config_values against template schema
+          const validation = validateConfigValues(configurable, config_values);
+          if (!validation.valid && validation.errors) {
+            return NextResponse.json(
+              {
+                error: 'Invalid configuration values',
+                details: validation.errors
+              },
+              { status: 400 }
+            );
+          }
+        } else if (Object.keys(config_values).length > 0) {
+          // Template has no configurable section but config_values were provided
+          return NextResponse.json(
+            { error: 'Template does not support configuration' },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Validate access_level if provided
@@ -455,6 +481,7 @@ export async function POST(request: NextRequest) {
           state: AgentState.NEW,
           kubernetes_namespace: 'agents',
           kubernetes_deployment: normalizedName,
+          config_values: config_values || {},
           metadata: {
             description: description || template?.description,
             image: resolvedImage,
@@ -584,6 +611,7 @@ export async function POST(request: NextRequest) {
       apiKey: agentApiKey,
       template,
       envOverrides: env_overrides,
+      configValues: config_values,
       modelRouterUrl,
       modelRouterToken,
     });

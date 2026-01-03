@@ -2363,6 +2363,9 @@ export const agentTemplatesTable = pgTable(
       defaults?: Record<string, string>;
     }>(),
 
+    // Template-driven configuration (ADL v0.2)
+    configurable: jsonb('configurable').$type<Record<string, any>>().default({}),
+
     // Metadata
     tags: text('tags').array(),                    // ['ai', 'research', 'consensus']
     category: text('category'),                    // 'research', 'productivity', etc.
@@ -2453,6 +2456,9 @@ export const agentsTable = pgTable(
       env_overrides?: Record<string, string>; // Custom env vars
       [key: string]: any;
     }>(),
+
+    // Template configuration values (user's selections from template.configurable)
+    config_values: jsonb('config_values').$type<Record<string, any>>().default({}),
   },
   (table) => ({
     profileUuidIdx: index('agents_profile_uuid_idx').on(table.profile_uuid),
