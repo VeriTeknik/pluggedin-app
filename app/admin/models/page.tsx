@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Copy, Loader2, Play, Star, StarOff } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Copy, Loader2, Play, RefreshCw, Star, StarOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -125,6 +125,9 @@ export default function AdminModelsPage() {
   // Track test results per model (pass/fail status)
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail'>>({});
 
+  // Sync to Model Router state
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const fetchModels = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/models');
@@ -166,6 +169,40 @@ export default function AdminModelsPage() {
     fetchModels();
     fetchAPIKeys();
   }, [fetchModels, fetchAPIKeys]);
+
+  // Manual sync to Model Routers
+  const syncToModelRouters = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/model-router/sync', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Sync failed');
+      }
+
+      if (data.failed_services?.length > 0) {
+        toast({
+          title: 'Partial Sync',
+          description: `Synced ${data.synced_services} services. Failed: ${data.failed_services.map((s: { name: string }) => s.name).join(', ')}`,
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Sync Complete',
+          description: `Successfully synced ${data.models_count} models to ${data.synced_services} Model Router service(s)`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Sync Failed',
+        description: error instanceof Error ? error.message : 'Failed to sync models to Model Routers',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const toggleEnabled = async (model: AIModel) => {
     try {
@@ -532,7 +569,26 @@ export default function AdminModelsPage() {
             Configure AI models, pricing, and availability
           </p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}>+ Add Model</Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={syncToModelRouters}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync to Routers
+              </>
+            )}
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>+ Add Model</Button>
+        </div>
       </div>
 
       {/* API Keys Status */}
