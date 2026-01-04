@@ -55,8 +55,8 @@ Compass is fully PAP-RFC-001 compliant:
 - ✅ DNS-based identity
 - ✅ Model Router integration (no direct API keys)
 `,
-  icon_url: 'https://plugged.in/agents/compass/icon.png',
-  banner_url: 'https://plugged.in/agents/compass/banner.png',
+  icon_url: 'https://raw.githubusercontent.com/VeriTeknik/compass-agent/main/icon.png',
+  banner_url: 'https://raw.githubusercontent.com/VeriTeknik/compass-agent/main/banner.png',
   docker_image: 'ghcr.io/veriteknik/compass-agent:latest',
   container_port: 3000,
   health_endpoint: '/health',
