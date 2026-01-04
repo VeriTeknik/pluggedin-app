@@ -55,6 +55,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+import { AgentState, DeploymentStatus } from '@/db/schema';
 import {
   deleteAgent,
   killAgent,
@@ -86,9 +87,6 @@ type Pod = {
   name: string;
   ready: boolean;
 };
-
-type AgentState = 'NEW' | 'PROVISIONED' | 'ACTIVE' | 'DRAINING' | 'TERMINATED' | 'KILLED';
-type DeploymentStatus = 'PENDING' | 'DEPLOYED' | 'FAILED' | 'UNDEPLOYED';
 
 type Agent = {
   uuid: string;

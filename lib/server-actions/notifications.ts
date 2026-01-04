@@ -4,9 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
-import type { NotificationSeverity, NotificationType } from '@/lib/types/notifications';
-
-import { createNotification } from '@/app/actions/notifications';
+import { createNotification, type NotificationSeverity, type NotificationType } from '@/app/actions/notifications';
 import { sendEmail } from '@/lib/email';
 
 interface SendNotificationOptions {
@@ -119,11 +117,13 @@ export async function sendNotification({
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
 
       // Determine email styling based on notification type
-      const typeColors = {
-        info: '#0070f3',
-        success: '#10b981',
-        warning: '#f59e0b',
-        error: '#ef4444',
+      const typeColors: Record<NotificationType, string> = {
+        INFO: '#0070f3',
+        SUCCESS: '#10b981',
+        WARNING: '#f59e0b',
+        ALERT: '#ef4444',
+        SYSTEM: '#6366f1',
+        CUSTOM: '#8b5cf6',
       };
       const color = typeColors[type] || '#0070f3';
 

@@ -31,6 +31,11 @@ export interface Agent {
   kubernetes_namespace?: string;
   kubernetes_deployment?: string;
   metadata?: Record<string, unknown>;
+  // Model Router integration
+  model_router_service_uuid?: string;
+  model_router_token?: string;
+  model_router_token_issued_at?: string;
+  model_router_token_revoked?: boolean;
 }
 
 /**
@@ -68,6 +73,7 @@ export interface AgentTemplateDetail extends AgentTemplate {
     optional?: string[];
     defaults?: Record<string, string>;
   };
+  configurable?: Record<string, unknown>;
   deployment_count?: number;
   updated_at: string;
 }

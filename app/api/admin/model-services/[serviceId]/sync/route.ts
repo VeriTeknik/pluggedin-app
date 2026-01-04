@@ -4,7 +4,7 @@
  * @route POST /api/admin/model-services/[serviceId]/sync - Push models to service
  */
 
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -82,18 +82,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get models to sync
-    let modelsQuery = db
+    const whereConditions = validated.model_uuids?.length
+      ? and(
+          eq(aiModelsTable.is_enabled, true),
+          inArray(aiModelsTable.uuid, validated.model_uuids)
+        )
+      : eq(aiModelsTable.is_enabled, true);
+
+    const models = await db
       .select()
       .from(aiModelsTable)
-      .where(eq(aiModelsTable.is_enabled, true));
-
-    if (validated.model_uuids?.length) {
-      modelsQuery = modelsQuery.where(
-        inArray(aiModelsTable.uuid, validated.model_uuids)
-      ) as typeof modelsQuery;
-    }
-
-    const models = await modelsQuery;
+      .where(whereConditions);
 
     if (models.length === 0) {
       return NextResponse.json(

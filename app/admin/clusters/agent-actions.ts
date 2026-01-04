@@ -178,7 +178,7 @@ export async function resumeAgent(
           message: options?.reason
             ? `Your agent "${agent.name}" has been resumed by an administrator. Reason: ${options.reason}`
             : `Your agent "${agent.name}" has been resumed by an administrator.`,
-          type: 'success',
+          type: 'SUCCESS',
           sendEmail: true,
         });
       } catch (notifError) {
@@ -261,7 +261,7 @@ export async function suspendAgent(
           message: options?.reason
             ? `Your agent "${agent.name}" has been suspended by an administrator. Reason: ${options.reason}`
             : `Your agent "${agent.name}" has been suspended by an administrator.`,
-          type: 'warning',
+          type: 'WARNING',
           sendEmail: true,
         });
       } catch (notifError) {
@@ -333,7 +333,7 @@ export async function terminateAgent(
       .set({
         state: AgentState.TERMINATED,
         terminated_at: new Date(),
-        deployment_status: DeploymentStatus.UNDEPLOYED,
+        deployment_status: DeploymentStatus.STOPPED,
       })
       .where(eq(agentsTable.uuid, agentId));
 
@@ -359,7 +359,7 @@ export async function terminateAgent(
           message: options?.reason
             ? `Your agent "${agent.name}" has been terminated by an administrator. Reason: ${options.reason}`
             : `Your agent "${agent.name}" has been terminated by an administrator.`,
-          type: 'error',
+          type: 'ALERT',
           sendEmail: true,
         });
       } catch (notifError) {
@@ -423,7 +423,7 @@ export async function killAgent(
       .set({
         state: AgentState.KILLED,
         terminated_at: new Date(),
-        deployment_status: DeploymentStatus.UNDEPLOYED,
+        deployment_status: DeploymentStatus.STOPPED,
       })
       .where(eq(agentsTable.uuid, agentId));
 
@@ -449,7 +449,7 @@ export async function killAgent(
           message: options?.reason
             ? `Your agent "${agent.name}" has been forcefully terminated by an administrator. Reason: ${options.reason}`
             : `Your agent "${agent.name}" has been forcefully terminated by an administrator.`,
-          type: 'error',
+          type: 'ALERT',
           sendEmail: true,
         });
       } catch (notifError) {
@@ -510,7 +510,7 @@ export async function deleteAgent(
           message: options?.reason
             ? `Your agent "${agent.name}" has been permanently deleted by an administrator. Reason: ${options.reason}`
             : `Your agent "${agent.name}" has been permanently deleted by an administrator.`,
-          type: 'error',
+          type: 'ALERT',
           sendEmail: true,
         });
       } catch (notifError) {

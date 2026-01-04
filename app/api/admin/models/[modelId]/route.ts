@@ -150,18 +150,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         .where(eq(aiModelsTable.is_default, true));
     }
 
-    // Build update object
+    // Build update object - exclude date fields that need conversion
+    const { deprecated_at, last_tested_at, release_date, ...restValidated } = validated;
     const updateData: Partial<typeof aiModelsTable.$inferInsert> = {
-      ...validated,
+      ...restValidated,
       updated_at: new Date(),
     };
 
     // Handle nullable timestamp fields
-    if (validated.deprecated_at !== undefined) {
-      updateData.deprecated_at = validated.deprecated_at ? new Date(validated.deprecated_at) : null;
+    if (deprecated_at !== undefined) {
+      updateData.deprecated_at = deprecated_at ? new Date(deprecated_at) : null;
     }
-    if (validated.last_tested_at !== undefined) {
-      updateData.last_tested_at = validated.last_tested_at ? new Date(validated.last_tested_at) : null;
+    if (last_tested_at !== undefined) {
+      updateData.last_tested_at = last_tested_at ? new Date(last_tested_at) : null;
+    }
+    if (release_date !== undefined) {
+      updateData.release_date = release_date;
     }
 
     // Update the model
