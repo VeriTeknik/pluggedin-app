@@ -235,6 +235,10 @@ function getApiKey(provider: ModelProvider): string {
   if (!key) {
     throw new Error(`API key not configured for provider: ${provider}`);
   }
+
+  // DEBUG: Log last 4 chars of key to verify correct key is being used
+  console.log(`[ModelRouter] Using ${provider} key ending in: ...${key.slice(-4)}`);
+
   return key;
 }
 
@@ -243,22 +247,50 @@ function getApiKey(provider: ModelProvider): string {
  * SECURITY: Removes sensitive information like API keys from error messages.
  */
 function sanitizeProviderError(
-  error: { error?: { message?: string } } | undefined,
+  error: { error?: { message?: string; type?: string; code?: string } } | undefined,
   provider: string,
   status: number
 ): string {
   const message = error?.error?.message || '';
+  const errorType = error?.error?.type || '';
+  const errorCode = error?.error?.code || '';
 
-  // Check for sensitive patterns that should be sanitized
+  // Handle specific HTTP status codes first
+  if (status === 401) {
+    return `${provider} authentication error: Invalid or missing API key`;
+  }
+
+  // Check for authentication-related error types/codes
+  if (
+    errorType === 'invalid_api_key' ||
+    errorCode === 'invalid_api_key' ||
+    errorType === 'authentication_error'
+  ) {
+    return `${provider} authentication error: Invalid API key`;
+  }
+
+  // Check for model not found errors
+  if (
+    errorCode === 'model_not_found' ||
+    errorType === 'invalid_request_error' ||
+    message.toLowerCase().includes('does not exist') ||
+    message.toLowerCase().includes('model not found') ||
+    message.toLowerCase().includes('invalid model')
+  ) {
+    // Safe to show model-related errors
+    if (message && message.length < 300) {
+      return message;
+    }
+    return `${provider} error: Model not found or invalid request`;
+  }
+
+  // Patterns that indicate actual sensitive data in the message
   const sensitivePatterns = [
-    /api[_-]?key/i,
-    /authorization/i,
-    /bearer/i,
-    /token/i,
-    /credential/i,
-    /secret/i,
     /sk-[a-zA-Z0-9]+/,  // OpenAI API key pattern
+    /AIza[a-zA-Z0-9-_]+/,  // Google API key pattern
     /x-goog-api-key/i,
+    /your api key/i,
+    /api key.*is/i,
   ];
 
   for (const pattern of sensitivePatterns) {
@@ -267,8 +299,8 @@ function sanitizeProviderError(
     }
   }
 
-  // Return sanitized message or generic error
-  if (message && message.length < 200) {
+  // Return the actual message for other errors (rate limits, etc.)
+  if (message && message.length < 300) {
     return message;
   }
 
@@ -328,25 +360,48 @@ async function callOpenAI(
   request: ChatCompletionRequest,
   apiKey: string
 ): Promise<ChatCompletionResponse> {
+  // Build request body, only including optional params if explicitly set
+  // Some models (like GPT-5) have restrictions on certain parameters
+  const requestBody: Record<string, unknown> = {
+    model: resolveModelAlias(request.model),
+    messages: request.messages,
+    stream: false,
+  };
+
+  // Only include optional parameters if they're explicitly set
+  if (request.max_tokens !== undefined) {
+    requestBody.max_completion_tokens = request.max_tokens;
+  }
+  if (request.temperature !== undefined && request.temperature !== 0.7) {
+    // Only send non-default temperature (some models only support default)
+    requestBody.temperature = request.temperature;
+  }
+  if (request.top_p !== undefined) {
+    requestBody.top_p = request.top_p;
+  }
+  if (request.n !== undefined && request.n !== 1) {
+    requestBody.n = request.n;
+  }
+  if (request.stop !== undefined) {
+    requestBody.stop = request.stop;
+  }
+  if (request.presence_penalty !== undefined && request.presence_penalty !== 0) {
+    requestBody.presence_penalty = request.presence_penalty;
+  }
+  if (request.frequency_penalty !== undefined && request.frequency_penalty !== 0) {
+    requestBody.frequency_penalty = request.frequency_penalty;
+  }
+  if (request.user !== undefined) {
+    requestBody.user = request.user;
+  }
+
   const response = await fetch(`${PROVIDER_URLS.openai}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: resolveModelAlias(request.model),
-      messages: request.messages,
-      temperature: request.temperature,
-      top_p: request.top_p,
-      n: request.n,
-      stream: false,
-      stop: request.stop,
-      max_tokens: request.max_tokens,
-      presence_penalty: request.presence_penalty,
-      frequency_penalty: request.frequency_penalty,
-      user: request.user,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -364,25 +419,48 @@ async function* callOpenAIStreaming(
   request: ChatCompletionRequest,
   apiKey: string
 ): AsyncGenerator<ChatCompletionChunk> {
+  // Build request body, only including optional params if explicitly set
+  // Some models (like GPT-5) have restrictions on certain parameters
+  const requestBody: Record<string, unknown> = {
+    model: resolveModelAlias(request.model),
+    messages: request.messages,
+    stream: true,
+  };
+
+  // Only include optional parameters if they're explicitly set
+  if (request.max_tokens !== undefined) {
+    requestBody.max_completion_tokens = request.max_tokens;
+  }
+  if (request.temperature !== undefined && request.temperature !== 0.7) {
+    // Only send non-default temperature (some models only support default)
+    requestBody.temperature = request.temperature;
+  }
+  if (request.top_p !== undefined) {
+    requestBody.top_p = request.top_p;
+  }
+  if (request.n !== undefined && request.n !== 1) {
+    requestBody.n = request.n;
+  }
+  if (request.stop !== undefined) {
+    requestBody.stop = request.stop;
+  }
+  if (request.presence_penalty !== undefined && request.presence_penalty !== 0) {
+    requestBody.presence_penalty = request.presence_penalty;
+  }
+  if (request.frequency_penalty !== undefined && request.frequency_penalty !== 0) {
+    requestBody.frequency_penalty = request.frequency_penalty;
+  }
+  if (request.user !== undefined) {
+    requestBody.user = request.user;
+  }
+
   const response = await fetch(`${PROVIDER_URLS.openai}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: resolveModelAlias(request.model),
-      messages: request.messages,
-      temperature: request.temperature,
-      top_p: request.top_p,
-      n: request.n,
-      stream: true,
-      stop: request.stop,
-      max_tokens: request.max_tokens,
-      presence_penalty: request.presence_penalty,
-      frequency_penalty: request.frequency_penalty,
-      user: request.user,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {

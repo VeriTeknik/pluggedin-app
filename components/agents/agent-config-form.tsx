@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Star, Eye } from 'lucide-react';
 
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -169,8 +169,17 @@ export function AgentConfigForm({
                   key={option.value}
                   value={option.value}
                   disabled={option.disabled}
+                  className={option.is_featured ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
                 >
-                  {option.label}
+                  <div className="flex items-center gap-2">
+                    {option.is_featured && (
+                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                    )}
+                    <span>{option.label}</span>
+                    {option.supports_vision && (
+                      <Eye className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" title="Supports Vision" />
+                    )}
+                  </div>
                   {option.description && (
                     <span className="text-xs text-muted-foreground ml-2">
                       {option.description}
@@ -192,8 +201,18 @@ export function AgentConfigForm({
               {selectedValues.map((val: string) => {
                 const option = options?.find((opt) => opt.value === val);
                 return (
-                  <Badge key={val} variant="secondary" className="gap-1">
+                  <Badge
+                    key={val}
+                    variant="secondary"
+                    className={`gap-1 ${option?.is_featured ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300' : ''}`}
+                  >
+                    {option?.is_featured && (
+                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                    )}
                     {option?.label || val}
+                    {option?.supports_vision && (
+                      <Eye className="h-3 w-3 text-blue-500" title="Supports Vision" />
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -226,8 +245,17 @@ export function AgentConfigForm({
                     key={option.value}
                     value={option.value}
                     disabled={option.disabled || selectedValues.includes(option.value)}
+                    className={option.is_featured ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
                   >
-                    {option.label}
+                    <div className="flex items-center gap-2">
+                      {option.is_featured && (
+                        <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                      )}
+                      <span>{option.label}</span>
+                      {option.supports_vision && (
+                        <Eye className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" title="Supports Vision" />
+                      )}
+                    </div>
                     {option.description && (
                       <span className="text-xs text-muted-foreground ml-2">
                         {option.description}

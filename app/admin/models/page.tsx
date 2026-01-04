@@ -1,7 +1,7 @@
 'use client';
 
+import { AlertCircle, CheckCircle2, Copy, Loader2, Play, Star, StarOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Copy } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 
 type ModelProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'deepseek';
@@ -56,11 +57,14 @@ interface AIModel {
   supports_function_calling: boolean;
   is_enabled: boolean;
   is_default: boolean;
+  is_featured: boolean;
   sort_order: number;
   aliases: string[] | null;
   description: string | null;
   release_date: string | null;
   deprecated_at: string | null;
+  last_test_status: 'pass' | 'fail' | null;
+  last_tested_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,12 +110,36 @@ export default function AdminModelsPage() {
     description: '',
   });
 
+  // Test dialog state
+  const [testingModel, setTestingModel] = useState<AIModel | null>(null);
+  const [testQuery, setTestQuery] = useState('What is 2 + 2? Reply with just the number.');
+  const [testResponse, setTestResponse] = useState('');
+  const [testError, setTestError] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testMetrics, setTestMetrics] = useState<{
+    responseTime?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+  } | null>(null);
+
+  // Track test results per model (pass/fail status)
+  const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail'>>({});
+
   const fetchModels = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/models');
       if (!res.ok) throw new Error('Failed to fetch models');
       const data = await res.json();
       setModels(data.models);
+
+      // Load persisted test results from database
+      const persistedResults: Record<string, 'pass' | 'fail'> = {};
+      for (const model of data.models) {
+        if (model.last_test_status) {
+          persistedResults[model.uuid] = model.last_test_status;
+        }
+      }
+      setTestResults(persistedResults);
     } catch (error) {
       toast({
         title: 'Error',
@@ -212,6 +240,131 @@ export default function AdminModelsPage() {
     }
   };
 
+  const toggleFeatured = async (model: AIModel) => {
+    try {
+      const res = await fetch(`/api/admin/models/${model.uuid}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_featured: !model.is_featured }),
+      });
+      if (!res.ok) throw new Error('Failed to update model');
+      await fetchModels();
+
+      // Sync to Model Router services
+      try {
+        await fetch('/api/model-router/sync', { method: 'POST' });
+      } catch (syncError) {
+        console.error('Model Router sync failed:', syncError);
+        toast({
+          title: 'Warning',
+          description: 'Model updated but sync to Model Router failed',
+          variant: 'default',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Success',
+        description: `${model.display_name} ${model.is_featured ? 'removed from' : 'added to'} featured models`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update model',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const testModel = (model: AIModel) => {
+    // Open test dialog
+    setTestingModel(model);
+    setTestResponse('');
+    setTestError('');
+    setTestMetrics(null);
+  };
+
+  // Helper to persist test status to database
+  const saveTestStatus = async (modelUuid: string, status: 'pass' | 'fail') => {
+    try {
+      await fetch(`/api/admin/models/${modelUuid}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          last_test_status: status,
+          last_tested_at: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to save test status:', error);
+    }
+  };
+
+  const executeTest = async () => {
+    if (!testingModel || !testQuery.trim()) return;
+
+    setIsTesting(true);
+    setTestResponse('');
+    setTestError('');
+    setTestMetrics(null);
+
+    const startTime = Date.now();
+
+    try {
+      const res = await fetch('/api/model-router/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: testingModel.model_id,
+          messages: [
+            { role: 'user', content: testQuery }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+        }),
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      // Extract response content
+      const content = data.choices?.[0]?.message?.content || 'No response content';
+      setTestResponse(content);
+
+      // Extract metrics if available
+      setTestMetrics({
+        responseTime,
+        inputTokens: data.usage?.prompt_tokens,
+        outputTokens: data.usage?.completion_tokens,
+      });
+
+      // Mark test as passed (local state + database)
+      setTestResults(prev => ({ ...prev, [testingModel.uuid]: 'pass' }));
+      saveTestStatus(testingModel.uuid, 'pass');
+
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Failed to test model');
+      // Mark test as failed (local state + database)
+      setTestResults(prev => ({ ...prev, [testingModel.uuid]: 'fail' }));
+      saveTestStatus(testingModel.uuid, 'fail');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const closeTestDialog = () => {
+    setTestingModel(null);
+    setTestResponse('');
+    setTestError('');
+    setTestMetrics(null);
+  };
+
   const saveModel = async () => {
     if (!editingModel) return;
     setSaving(true);
@@ -220,6 +373,7 @@ export default function AdminModelsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          model_id: editingModel.model_id,
           display_name: editingModel.display_name,
           input_price: editingModel.input_price,
           output_price: editingModel.output_price,
@@ -467,6 +621,7 @@ export default function AdminModelsPage() {
               <TableHead className="text-right">Context</TableHead>
               <TableHead className="text-center">Vision</TableHead>
               <TableHead className="text-center">Enabled</TableHead>
+              <TableHead className="text-center">Featured</TableHead>
               <TableHead className="text-center">Default</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -504,6 +659,17 @@ export default function AdminModelsPage() {
                   />
                 </TableCell>
                 <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleFeatured(model)}
+                    className={model.is_featured ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground hover:text-yellow-500'}
+                    title={model.is_featured ? 'Remove from featured' : 'Add to featured'}
+                  >
+                    {model.is_featured ? <Star className="h-4 w-4 fill-current" /> : <StarOff className="h-4 w-4" />}
+                  </Button>
+                </TableCell>
+                <TableCell className="text-center">
                   {model.is_default ? (
                     <Badge variant="default">Default</Badge>
                   ) : (
@@ -518,21 +684,44 @@ export default function AdminModelsPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingModel(model)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600"
-                    onClick={() => deleteModel(model)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    {/* Test status indicator */}
+                    {testResults[model.uuid] === 'pass' && (
+                      <span title="Test passed">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      </span>
+                    )}
+                    {testResults[model.uuid] === 'fail' && (
+                      <span title="Test failed">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => testModel(model)}
+                      disabled={!model.is_enabled}
+                      title="Test in Playground"
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingModel(model)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600"
+                      onClick={() => deleteModel(model)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -551,6 +740,19 @@ export default function AdminModelsPage() {
           </DialogHeader>
           {editingModel && (
             <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Model ID</Label>
+                <Input
+                  value={editingModel.model_id}
+                  onChange={(e) =>
+                    setEditingModel({ ...editingModel, model_id: e.target.value })
+                  }
+                  placeholder="e.g., claude-sonnet-4-5-20241022"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The exact model identifier used by the provider&apos;s API
+                </p>
+              </div>
               <div className="grid gap-2">
                 <Label>Display Name</Label>
                 <Input
@@ -771,6 +973,136 @@ export default function AdminModelsPage() {
               disabled={saving || !newModel.model_id || !newModel.display_name}
             >
               {saving ? 'Creating...' : 'Create Model'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Model Dialog */}
+      <Dialog open={!!testingModel} onOpenChange={closeTestDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5 text-blue-600" />
+              Test Model
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex items-center gap-2 mt-1">
+                {testingModel && (
+                  <>
+                    <Badge className={PROVIDER_COLORS[testingModel.provider]}>
+                      {testingModel.provider}
+                    </Badge>
+                    <span className="font-medium">{testingModel.display_name}</span>
+                    <span className="text-xs text-muted-foreground">({testingModel.model_id})</span>
+                  </>
+                )}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Query Input */}
+            <div className="space-y-2">
+              <Label htmlFor="test-query">Test Query</Label>
+              <Textarea
+                id="test-query"
+                value={testQuery}
+                onChange={(e) => setTestQuery(e.target.value)}
+                placeholder="Enter your test query..."
+                rows={3}
+                disabled={isTesting}
+              />
+            </div>
+
+            {/* Test Button */}
+            <Button
+              onClick={executeTest}
+              disabled={isTesting || !testQuery.trim()}
+              className="w-full"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  Send Test Query
+                </>
+              )}
+            </Button>
+
+            {/* Error Display */}
+            {testError && (
+              <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-red-800 dark:text-red-200">Test Failed</p>
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{testError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Response Display */}
+            {testResponse && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Response</Label>
+                  {testMetrics && (
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {testMetrics.responseTime && (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          {testMetrics.responseTime}ms
+                        </span>
+                      )}
+                      {testMetrics.inputTokens !== undefined && (
+                        <span>In: {testMetrics.inputTokens}</span>
+                      )}
+                      {testMetrics.outputTokens !== undefined && (
+                        <span>Out: {testMetrics.outputTokens}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 bg-muted rounded-lg">
+                  <pre className="whitespace-pre-wrap text-sm font-mono">{testResponse}</pre>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Test Prompts */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Quick Test Prompts</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'What is 2 + 2? Reply with just the number.',
+                  'Say "Hello World" in 5 different programming languages.',
+                  'Explain quantum computing in one sentence.',
+                  'Write a haiku about programming.',
+                ].map((prompt, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-auto py-1.5 px-2"
+                    onClick={() => setTestQuery(prompt)}
+                    disabled={isTesting}
+                  >
+                    {prompt.slice(0, 30)}...
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeTestDialog}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

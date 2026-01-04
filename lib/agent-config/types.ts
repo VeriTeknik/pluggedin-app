@@ -39,6 +39,8 @@ export interface FieldOption {
   icon?: string;
   disabled?: boolean;
   tier_required?: 'free' | 'pro' | 'enterprise';
+  is_featured?: boolean;
+  supports_vision?: boolean;
 }
 
 /**
@@ -143,6 +145,8 @@ export interface ModelRouterModel {
     input: number;
     output: number;
   };
+  is_featured?: boolean;
+  supports_vision?: boolean;
 }
 
 /**

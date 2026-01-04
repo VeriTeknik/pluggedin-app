@@ -2837,6 +2837,7 @@ export const aiModelsTable = pgTable(
     // Configuration
     is_enabled: boolean('is_enabled').default(true), // Admin can disable models
     is_default: boolean('is_default').default(false), // Default for new agents
+    is_featured: boolean('is_featured').default(false), // Featured models shown first in UI
     sort_order: integer('sort_order').default(0), // UI display order
 
     // Aliases (for backwards compatibility with older model names)
@@ -2846,6 +2847,10 @@ export const aiModelsTable = pgTable(
     description: text('description'),
     release_date: date('release_date'),
     deprecated_at: timestamp('deprecated_at', { withTimezone: true }),
+
+    // Test status (persisted across page reloads)
+    last_test_status: text('last_test_status'), // 'pass' | 'fail' | null
+    last_tested_at: timestamp('last_tested_at', { withTimezone: true }),
 
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()

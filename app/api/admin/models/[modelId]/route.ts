@@ -6,7 +6,7 @@
  * @route DELETE /api/admin/models/[modelId] - Delete a model
  */
 
-import { eq, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -45,6 +45,7 @@ async function checkAdminAuth(): Promise<{ userId: string; email: string } | nul
 
 // Model update schema (all fields optional)
 const updateModelSchema = z.object({
+  model_id: z.string().min(1).max(200).optional(), // Allow editing model_id
   display_name: z.string().min(1).max(200).optional(),
   provider: z.nativeEnum(ModelProvider).optional(),
   input_price: z.number().min(0).optional(),
@@ -55,11 +56,14 @@ const updateModelSchema = z.object({
   supports_function_calling: z.boolean().optional(),
   is_enabled: z.boolean().optional(),
   is_default: z.boolean().optional(),
+  is_featured: z.boolean().optional(),
   sort_order: z.number().int().optional(),
   aliases: z.array(z.string()).optional(),
   description: z.string().nullable().optional(),
   release_date: z.string().nullable().optional(),
   deprecated_at: z.string().nullable().optional(), // ISO timestamp
+  last_test_status: z.enum(['pass', 'fail']).nullable().optional(),
+  last_tested_at: z.string().nullable().optional(), // ISO timestamp
 });
 
 interface RouteParams {
@@ -152,9 +156,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updated_at: new Date(),
     };
 
-    // Handle nullable fields
+    // Handle nullable timestamp fields
     if (validated.deprecated_at !== undefined) {
       updateData.deprecated_at = validated.deprecated_at ? new Date(validated.deprecated_at) : null;
+    }
+    if (validated.last_tested_at !== undefined) {
+      updateData.last_tested_at = validated.last_tested_at ? new Date(validated.last_tested_at) : null;
     }
 
     // Update the model

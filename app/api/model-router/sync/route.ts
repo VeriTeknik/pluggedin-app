@@ -67,6 +67,7 @@ export async function POST() {
       supports_vision: model.supports_vision,
       supports_function_calling: model.supports_function_calling,
       is_default: model.is_default,
+      is_featured: model.is_featured,
       sort_order: model.sort_order,
       aliases: model.aliases,
       description: model.description,

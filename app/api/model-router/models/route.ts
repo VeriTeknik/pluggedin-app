@@ -41,6 +41,8 @@ export async function GET(request: Request) {
         input: model.input_price,
         output: model.output_price,
       },
+      is_featured: model.is_featured || false,
+      supports_vision: model.supports_vision || false,
     }));
 
     // Return in Model Router API format (expected by AgentConfigForm)

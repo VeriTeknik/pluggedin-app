@@ -617,6 +617,20 @@
       "when": 1766939894436,
       "tag": "0087_first_prodigy",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1767476883302,
+      "tag": "0088_yellow_cloak",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1767534860477,
+      "tag": "0089_eminent_mentallo",
+      "breakpoints": true
     }
   ]
 }

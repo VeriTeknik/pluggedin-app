@@ -279,16 +279,27 @@ export async function fetchModelRouterModels(
  * Convert Model Router models to field options
  *
  * @param models - Array of Model Router models
- * @returns Array of field options
+ * @returns Array of field options (featured models sorted first)
  */
 export function modelsToFieldOptions(models: ModelRouterModel[]): FieldOption[] {
-  return models.map((model) => ({
+  // Sort featured models first, then by name
+  const sortedModels = [...models].sort((a, b) => {
+    // Featured models first
+    if (a.is_featured && !b.is_featured) return -1;
+    if (!a.is_featured && b.is_featured) return 1;
+    // Then by name
+    return (a.name || a.id).localeCompare(b.name || b.id);
+  });
+
+  return sortedModels.map((model) => ({
     label: model.name || model.id,
     value: model.id,
     description: model.provider
       ? `Provider: ${model.provider} • Context: ${model.context_window?.toLocaleString() || 'N/A'}`
       : undefined,
     icon: model.provider?.toLowerCase(),
+    is_featured: model.is_featured,
+    supports_vision: model.supports_vision,
   }));
 }
 
