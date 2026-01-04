@@ -16,6 +16,7 @@ import {
   Zap,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -92,8 +93,8 @@ interface WizardStep {
 }
 
 // Format price for display
-function formatPrice(pricePerMillion: number): string {
-  if (pricePerMillion === 0) return 'Free';
+function formatPrice(pricePerMillion: number, freeLabel: string = 'Free'): string {
+  if (pricePerMillion === 0) return freeLabel;
   if (pricePerMillion < 0.01) return `$${pricePerMillion.toFixed(4)}`;
   if (pricePerMillion < 1) return `$${pricePerMillion.toFixed(3)}`;
   return `$${pricePerMillion.toFixed(2)}`;
@@ -119,6 +120,8 @@ export function AgentDeployWizard({
   onDeploy,
   isDeploying,
 }: AgentDeployWizardProps) {
+  const { t } = useTranslation('agents');
+
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -136,8 +139,8 @@ export function AgentDeployWizard({
     const wizardSteps: WizardStep[] = [
       {
         id: 'identity',
-        title: 'Identity & Access',
-        description: 'Name your agent and set access level',
+        title: t('deployWizard.steps.identity.title'),
+        description: t('deployWizard.steps.identity.description'),
         icon: <Zap className="h-4 w-4" />,
       },
     ];
@@ -158,13 +161,13 @@ export function AgentDeployWizard({
     // Add review step
     wizardSteps.push({
       id: 'review',
-      title: 'Review & Deploy',
-      description: 'Review your configuration',
+      title: t('deployWizard.steps.review.title'),
+      description: t('deployWizard.steps.review.description'),
       icon: <Rocket className="h-4 w-4" />,
     });
 
     return wizardSteps;
-  }, [configurable]);
+  }, [configurable, t]);
 
   // Load models when wizard opens and we have model-router fields
   useEffect(() => {
@@ -295,7 +298,7 @@ export function AgentDeployWizard({
               onValueChange={(v) => setConfigValues({ ...configValues, [fieldKey]: v })}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={field.ui?.placeholder || 'Select an option'} />
+                <SelectValue placeholder={field.ui?.placeholder || t('deployWizard.select.placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {field.options?.map((opt) => (
@@ -320,8 +323,10 @@ export function AgentDeployWizard({
             )}
             {field.multi_select_constraints && (
               <p className="text-xs text-muted-foreground">
-                Select {field.multi_select_constraints.min || 0} to{' '}
-                {field.multi_select_constraints.max || 'unlimited'} options
+                {t('deployWizard.multiSelect.selectRange', {
+                  min: field.multi_select_constraints.min || 0,
+                  max: field.multi_select_constraints.max || '∞',
+                })}
               </p>
             )}
             <div className="grid gap-2 max-h-60 overflow-y-auto">
@@ -424,7 +429,7 @@ export function AgentDeployWizard({
                 }`}
               >
                 <Check className={`h-5 w-5 mx-auto mb-2 ${value === true ? 'text-primary' : 'text-muted-foreground'}`} />
-                <div className="font-medium">Yes</div>
+                <div className="font-medium">{t('deployWizard.boolean.yes')}</div>
               </button>
               <button
                 type="button"
@@ -436,7 +441,7 @@ export function AgentDeployWizard({
                 }`}
               >
                 <div className={`h-5 w-5 mx-auto mb-2 border-2 rounded ${value === false ? 'border-primary' : 'border-muted-foreground'}`} />
-                <div className="font-medium">No</div>
+                <div className="font-medium">{t('deployWizard.boolean.no')}</div>
               </button>
             </div>
           </div>
@@ -515,13 +520,17 @@ export function AgentDeployWizard({
     return (
       <div className="space-y-4">
         <div>
-          <Label className="text-base">{field.ui?.label || 'Select Models'}</Label>
+          <Label className="text-base">{field.ui?.label || t('deployWizard.modelSelection.title')}</Label>
           {field.ui?.description && (
             <p className="text-sm text-muted-foreground mt-1">{field.ui.description}</p>
           )}
           {isMulti && constraints && (
             <p className="text-xs text-muted-foreground mt-2">
-              Selected: {selectedValues.length} / {constraints.min || 0}-{constraints.max || '∞'}
+              {t('deployWizard.modelSelection.selected', {
+                count: selectedValues.length,
+                min: constraints.min || 0,
+                max: constraints.max || '∞',
+              })}
             </p>
           )}
         </div>
@@ -530,15 +539,15 @@ export function AgentDeployWizard({
         <div className="flex items-center gap-4 text-xs text-muted-foreground pb-2 border-b">
           <div className="flex items-center gap-1">
             <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-            <span>Featured</span>
+            <span>{t('deployWizard.modelSelection.legend.featured')}</span>
           </div>
           <div className="flex items-center gap-1">
             <Eye className="h-3 w-3 text-blue-500" />
-            <span>Vision</span>
+            <span>{t('deployWizard.modelSelection.legend.vision')}</span>
           </div>
           <div className="flex items-center gap-1">
             <DollarSign className="h-3 w-3" />
-            <span>Price per 1M tokens</span>
+            <span>{t('deployWizard.modelSelection.legend.price')}</span>
           </div>
         </div>
 
@@ -555,10 +564,10 @@ export function AgentDeployWizard({
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10"></TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead className="text-right">Input</TableHead>
-                      <TableHead className="text-right">Output</TableHead>
-                      <TableHead className="w-16 text-center">Features</TableHead>
+                      <TableHead>{t('deployWizard.modelSelection.table.model')}</TableHead>
+                      <TableHead className="text-right">{t('deployWizard.modelSelection.table.input')}</TableHead>
+                      <TableHead className="text-right">{t('deployWizard.modelSelection.table.output')}</TableHead>
+                      <TableHead className="w-16 text-center">{t('deployWizard.modelSelection.table.features')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -612,7 +621,7 @@ export function AgentDeployWizard({
                                     <TooltipTrigger>
                                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                                     </TooltipTrigger>
-                                    <TooltipContent>Featured model</TooltipContent>
+                                    <TooltipContent>{t('deployWizard.tooltips.featured')}</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
@@ -622,7 +631,7 @@ export function AgentDeployWizard({
                                     <TooltipTrigger>
                                       <Eye className="h-4 w-4 text-blue-500" />
                                     </TooltipTrigger>
-                                    <TooltipContent>Supports vision</TooltipContent>
+                                    <TooltipContent>{t('deployWizard.tooltips.vision')}</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
@@ -641,7 +650,7 @@ export function AgentDeployWizard({
         {/* Selected models summary */}
         {selectedValues.length > 0 && (
           <div className="mt-4 p-3 rounded-lg bg-muted/50 border">
-            <div className="text-sm font-medium mb-2">Selected Models ({selectedValues.length})</div>
+            <div className="text-sm font-medium mb-2">{t('deployWizard.modelSelection.selectedModels', { count: selectedValues.length })}</div>
             <div className="flex flex-wrap gap-2">
               {selectedValues.map((id: string) => {
                 const model = models.find((m) => m.id === id);
@@ -675,11 +684,11 @@ export function AgentDeployWizard({
       {/* Agent Name */}
       <div className="space-y-3">
         <Label htmlFor="agentName" className="text-base">
-          Agent Name
+          {t('deployWizard.form.agentName.label')}
         </Label>
         <Input
           id="agentName"
-          placeholder="my-agent"
+          placeholder={t('deployWizard.form.agentName.placeholder')}
           value={agentName}
           onChange={(e) =>
             setAgentName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
@@ -692,18 +701,18 @@ export function AgentDeployWizard({
         ) : agentName ? (
           <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-lg border border-primary/20">
             <Globe className="h-4 w-4" />
-            <span className="font-mono">{agentName}.is.plugged.in</span>
+            <span className="font-mono">{t('deployWizard.form.agentName.urlPreview', { name: agentName })}</span>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Lowercase letters, numbers, and hyphens only
+            {t('deployWizard.form.agentName.hint')}
           </p>
         )}
       </div>
 
       {/* Access Level */}
       <div className="space-y-3">
-        <Label className="text-base">Access Control</Label>
+        <Label className="text-base">{t('deployWizard.form.accessControl.label')}</Label>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -720,8 +729,8 @@ export function AgentDeployWizard({
               }`}
             />
             <div className="text-center">
-              <div className="font-medium">Private</div>
-              <div className="text-xs text-muted-foreground">API Key Required</div>
+              <div className="font-medium">{t('deployWizard.form.accessControl.private.title')}</div>
+              <div className="text-xs text-muted-foreground">{t('deployWizard.form.accessControl.private.description')}</div>
             </div>
           </button>
           <button
@@ -739,8 +748,8 @@ export function AgentDeployWizard({
               }`}
             />
             <div className="text-center">
-              <div className="font-medium">Public</div>
-              <div className="text-xs text-muted-foreground">Link Sharing</div>
+              <div className="font-medium">{t('deployWizard.form.accessControl.public.title')}</div>
+              <div className="text-xs text-muted-foreground">{t('deployWizard.form.accessControl.public.description')}</div>
             </div>
           </button>
         </div>
@@ -748,7 +757,7 @@ export function AgentDeployWizard({
           <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
             <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-yellow-700 dark:text-yellow-500">
-              Anyone with the URL can access this agent. You pay for all usage.
+              {t('deployWizard.form.accessControl.public.warning')}
             </p>
           </div>
         )}
@@ -784,30 +793,30 @@ export function AgentDeployWizard({
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
             <Rocket className="h-8 w-8 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold">Ready to Deploy</h3>
-          <p className="text-muted-foreground">Review your configuration before deploying</p>
+          <h3 className="text-xl font-semibold">{t('deployWizard.review.readyTitle')}</h3>
+          <p className="text-muted-foreground">{t('deployWizard.review.readyDescription')}</p>
         </div>
 
         <div className="space-y-4 rounded-lg border p-4">
           {/* Agent Info */}
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Agent Name</span>
+            <span className="text-muted-foreground">{t('deployWizard.review.agentName')}</span>
             <span className="font-mono font-medium">{agentName}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">URL</span>
-            <span className="font-mono text-sm text-primary">{agentName}.is.plugged.in</span>
+            <span className="text-muted-foreground">{t('deployWizard.review.url')}</span>
+            <span className="font-mono text-sm text-primary">{t('deployWizard.form.agentName.urlPreview', { name: agentName })}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Access</span>
+            <span className="text-muted-foreground">{t('deployWizard.review.access')}</span>
             <Badge variant={accessLevel === 'PUBLIC' ? 'secondary' : 'outline'}>
               {accessLevel === 'PUBLIC' ? (
                 <>
-                  <Globe className="h-3 w-3 mr-1" /> Public
+                  <Globe className="h-3 w-3 mr-1" /> {t('deployWizard.form.accessControl.public.title')}
                 </>
               ) : (
                 <>
-                  <Lock className="h-3 w-3 mr-1" /> Private
+                  <Lock className="h-3 w-3 mr-1" /> {t('deployWizard.form.accessControl.private.title')}
                 </>
               )}
             </Badge>
@@ -828,7 +837,7 @@ export function AgentDeployWizard({
                   displayValue = value.join(', ');
                 }
               } else if (typeof value === 'boolean') {
-                displayValue = value ? 'Yes' : 'No';
+                displayValue = value ? t('deployWizard.boolean.yes') : t('deployWizard.boolean.no');
               } else if (value !== undefined && value !== null) {
                 if (field.source === 'model-router') {
                   displayValue = models.find((m) => m.id === value)?.name || String(value);
@@ -853,16 +862,16 @@ export function AgentDeployWizard({
           <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
             <div className="flex items-center gap-2 mb-3">
               <DollarSign className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">Estimated Cost</span>
+              <span className="font-medium">{t('deployWizard.review.estimatedCost.title')}</span>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <div className="text-muted-foreground">Avg. Input</div>
-                <div className="font-mono">{formatPrice(avgInputPrice)}/1M tokens</div>
+                <div className="text-muted-foreground">{t('deployWizard.review.estimatedCost.avgInput')}</div>
+                <div className="font-mono">{formatPrice(avgInputPrice, t('deployWizard.pricing.free'))}{t('deployWizard.review.estimatedCost.perMillion')}</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Avg. Output</div>
-                <div className="font-mono">{formatPrice(avgOutputPrice)}/1M tokens</div>
+                <div className="text-muted-foreground">{t('deployWizard.review.estimatedCost.avgOutput')}</div>
+                <div className="font-mono">{formatPrice(avgOutputPrice, t('deployWizard.pricing.free'))}{t('deployWizard.review.estimatedCost.perMillion')}</div>
               </div>
             </div>
           </div>
@@ -894,7 +903,7 @@ export function AgentDeployWizard({
               </div>
             )}
             <div>
-              <DialogTitle>Deploy {template.display_name}</DialogTitle>
+              <DialogTitle>{t('deployWizard.title', { name: template.display_name })}</DialogTitle>
               <DialogDescription className="text-xs mt-0.5">
                 v{template.version} by {template.namespace}
               </DialogDescription>
@@ -947,13 +956,13 @@ export function AgentDeployWizard({
           {currentStep > 0 && (
             <Button variant="outline" onClick={goBack} disabled={isDeploying}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {t('deployWizard.buttons.back')}
             </Button>
           )}
           <div className="flex-1" />
           {currentStep < steps.length - 1 ? (
             <Button onClick={goNext} disabled={!isCurrentStepValid()}>
-              Next
+              {t('deployWizard.buttons.next')}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
@@ -965,12 +974,12 @@ export function AgentDeployWizard({
               {isDeploying ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Deploying...
+                  {t('deployWizard.buttons.deploying')}
                 </>
               ) : (
                 <>
                   <Rocket className="h-4 w-4" />
-                  Deploy Agent
+                  {t('deployWizard.buttons.deploy')}
                 </>
               )}
             </Button>
