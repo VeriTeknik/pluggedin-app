@@ -252,10 +252,7 @@ async function seedOpenCodeChamberTemplate() {
           container_port: OPENCODE_CHAMBER_TEMPLATE.container_port,
           health_endpoint: OPENCODE_CHAMBER_TEMPLATE.health_endpoint,
           env_schema: OPENCODE_CHAMBER_TEMPLATE.env_schema,
-          configurable: {
-            ...OPENCODE_CHAMBER_TEMPLATE.configurable,
-            _multi_container: OPENCODE_CHAMBER_TEMPLATE._multi_container,
-          },
+          configurable: OPENCODE_CHAMBER_TEMPLATE.configurable,
           icon_url: OPENCODE_CHAMBER_TEMPLATE.icon_url,
           banner_url: OPENCODE_CHAMBER_TEMPLATE.banner_url,
           tags: OPENCODE_CHAMBER_TEMPLATE.tags,
@@ -275,10 +272,7 @@ async function seedOpenCodeChamberTemplate() {
       .insert(agentTemplatesTable)
       .values({
         ...OPENCODE_CHAMBER_TEMPLATE,
-        configurable: {
-          ...OPENCODE_CHAMBER_TEMPLATE.configurable,
-          _multi_container: OPENCODE_CHAMBER_TEMPLATE._multi_container,
-        },
+        configurable: OPENCODE_CHAMBER_TEMPLATE.configurable,
       })
       .returning();
 
