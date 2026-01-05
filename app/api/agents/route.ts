@@ -617,20 +617,58 @@ export async function POST(request: NextRequest) {
     });
 
     // Deploy to Kubernetes
-    const deploymentResult = await kubernetesService.deployAgent({
-      name: normalizedName,
-      dnsName: fullDnsName,
-      namespace: 'agents',
-      image: resolvedImage,
-      containerPort: template?.container_port || 3000,
-      resources: resources ? {
-        cpuRequest: resources.cpu_request,
-        memoryRequest: resources.memory_request,
-        cpuLimit: resources.cpu_limit,
-        memoryLimit: resources.memory_limit,
-      } : undefined,
-      env: agentEnv,
-    });
+    // Check if this is an OpenCode multi-container template
+    const isOpenCodeTemplate = template?.namespace === 'veriteknik' &&
+      (template.name === 'opencode-ide' || template.name === 'opencode-chamber');
+
+    let deploymentResult;
+
+    if (isOpenCodeTemplate) {
+      // OpenCode templates use multi-container deployment
+      const templateType = template.name === 'opencode-ide' ? 'opencode-ide' : 'opencode-chamber';
+
+      // Extract config values for OpenCode templates
+      const uiPassword = config_values?.ui_password || config_values?.password || '';
+      const defaultModel = config_values?.default_model || 'claude-sonnet-4-20250514';
+      const workspaceSize = config_values?.workspace_size || '10Gi';
+
+      if (!uiPassword || uiPassword.length < 8) {
+        return NextResponse.json(
+          { error: 'UI password is required and must be at least 8 characters' },
+          { status: 400 }
+        );
+      }
+
+      deploymentResult = await kubernetesService.deployOpenCodeAgent({
+        name: normalizedName,
+        dnsName: fullDnsName,
+        namespace: 'agents',
+        templateType,
+        agentUuid: newAgent.uuid,
+        uiPassword,
+        defaultModel,
+        modelRouterToken: modelRouterToken || '',
+        papApiKey: agentApiKey,
+        pluggedinApiKey: agentApiKey,
+        workspaceStorageSize: workspaceSize,
+      });
+    } else {
+      // Standard single-container deployment
+      deploymentResult = await kubernetesService.deployAgent({
+        name: normalizedName,
+        dnsName: fullDnsName,
+        namespace: 'agents',
+        image: resolvedImage,
+        containerPort: template?.container_port || 3000,
+        resources: resources ? {
+          cpuRequest: resources.cpu_request,
+          memoryRequest: resources.memory_request,
+          cpuLimit: resources.cpu_limit,
+          memoryLimit: resources.memory_limit,
+        } : undefined,
+        env: agentEnv,
+      });
+    }
 
     // Update agent state based on deployment result
     if (deploymentResult.success) {
