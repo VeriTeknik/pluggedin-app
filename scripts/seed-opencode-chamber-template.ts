@@ -157,8 +157,10 @@ OpenCode Chamber is designed to work well on mobile devices, making it perfect f
     },
   },
   // Multi-container configuration (custom for this template)
+  // Note: opencode-server is a SHARED service (opencode-server.agents.svc:4000)
   _multi_container: {
     template_type: 'opencode-chamber',
+    uses_shared_opencode_server: true, // All agents share one opencode-server instance
     containers: [
       {
         name: 'openchamber',
@@ -167,13 +169,7 @@ OpenCode Chamber is designed to work well on mobile devices, making it perfect f
         essential: false,
         idle_timeout: '30m',
       },
-      {
-        name: 'opencode-serve',
-        image: 'ghcr.io/veriteknik/opencode-server:latest',
-        port: 4000,
-        essential: false,
-        idle_timeout: '30m',
-      },
+      // Note: opencode-serve removed - using shared opencode-server service
       {
         name: 'ttyd',
         image: 'tsl0922/ttyd:alpine',
@@ -202,12 +198,12 @@ OpenCode Chamber is designed to work well on mobile devices, making it perfect f
     ],
     volumes: [
       { name: 'workspace', type: 'pvc', size: '10Gi' },
-      { name: 'opencode-config', type: 'configmap' },
+      { name: 'opencode-config', type: 'emptyDir' }, // Init writes here
     ],
     routing: {
       '/': { target: 'openchamber', port: 3000 },
       '/terminal': { target: 'ttyd', port: 7681 },
-      '/opencode': { target: 'opencode-serve', port: 4000 },
+      '/opencode': { target: 'opencode-server', port: 4000, shared: true }, // Shared service
       '/api': { target: 'agent-api', port: 8080 },
       '/health': { target: 'agent-api', port: 8080 },
       '/metrics': { target: 'agent-api', port: 9090 },
