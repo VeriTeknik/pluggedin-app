@@ -128,7 +128,7 @@ const PAP_CLIENT_CONTAINER: ContainerSpec = {
   essential: true,
   resources: {
     cpuRequest: '25m',
-    memoryRequest: '32Mi',
+    memoryRequest: '64Mi', // K8s minimum is 64Mi
     cpuLimit: '100m',
     memoryLimit: '128Mi',
   },
@@ -147,7 +147,7 @@ const AGENT_API_CONTAINER: ContainerSpec = {
   essential: true,
   resources: {
     cpuRequest: '25m',
-    memoryRequest: '32Mi',
+    memoryRequest: '64Mi', // K8s minimum is 64Mi
     cpuLimit: '100m',
     memoryLimit: '128Mi',
   },
