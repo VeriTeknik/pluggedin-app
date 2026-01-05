@@ -4,7 +4,12 @@
  * Generates Kubernetes manifests for multi-container OpenCode agent pods.
  * Supports two templates:
  * - opencode-ide: VSCode + OpenCode terminal integration
- * - opencode-chamber: Chat UI + OpenCode serve API
+ * - opencode-chamber: Chat UI with shared OpenCode server
+ *
+ * Architecture Note:
+ * The opencode-server runs as a SHARED service (opencode-server.agents.svc.cluster.local:4000)
+ * serving all opencode-chamber agents. This reduces resource usage significantly since the
+ * server image is ~300MB and doesn't need to be loaded per-agent.
  *
  * Both templates include essential containers (pap-client, agent-api) that
  * never shut down, and non-essential containers that scale down on idle.
@@ -211,6 +216,8 @@ function getOpenCodeIdeContainers(config: OpenCodeAgentConfig): ContainerSpec[] 
 }
 
 function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpec[] {
+  // Note: opencode-server is a shared service (opencode-server.agents.svc.cluster.local:4000)
+  // No per-agent opencode-serve container - all agents use the shared server
   return [
     // Main UI: OpenChamber (Chat)
     {
@@ -222,7 +229,8 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       idleTimeoutMinutes: 30,
       env: [
         ...COMMON_ENV(config),
-        { name: 'OPENCODE_PORT', value: '4000' }, // Connects to opencode-serve
+        // Connect to shared opencode-server service
+        { name: 'OPENCODE_URL', value: 'http://opencode-server.agents.svc.cluster.local:4000' },
         { name: 'UI_PASSWORD', valueFrom: { secretKeyRef: { name: config.secretName, key: 'ui-password' } } },
       ],
       resources: {
@@ -244,39 +252,6 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
         initialDelaySeconds: 5,
         periodSeconds: 10,
       },
-    },
-    // OpenCode serve API backend
-    {
-      name: 'opencode-serve',
-      image: 'ghcr.io/veriteknik/opencode-server:latest',
-      port: 4000,
-      portName: 'opencode',
-      essential: false,
-      idleTimeoutMinutes: 30,
-      env: [
-        ...COMMON_ENV(config),
-      ],
-      resources: {
-        cpuRequest: '200m',
-        memoryRequest: '512Mi',
-        cpuLimit: '1000m',
-        memoryLimit: '1536Mi',
-      },
-      volumeMounts: [
-        { name: 'workspace', mountPath: '/workspace' },
-        { name: 'opencode-config', mountPath: '/app/.opencode', readOnly: true },
-      ],
-      livenessProbe: {
-        httpGet: { path: '/global/health', port: 4000 },
-        initialDelaySeconds: 15,
-        periodSeconds: 30,
-      },
-      readinessProbe: {
-        httpGet: { path: '/global/health', port: 4000 },
-        initialDelaySeconds: 10,
-        periodSeconds: 10,
-      },
-      workingDir: '/workspace',
     },
     // Web terminal (ttyd)
     {
@@ -549,9 +524,10 @@ function buildIngressManifest(config: OpenCodeAgentConfig): object {
     ];
   } else {
     // opencode-chamber
+    // Note: /opencode routes to the shared opencode-server service
     paths = [
       { path: '/terminal', pathType: 'Prefix', serviceName: config.name, servicePort: 7681 },
-      { path: '/opencode', pathType: 'Prefix', serviceName: config.name, servicePort: 4000 },
+      { path: '/opencode', pathType: 'Prefix', serviceName: 'opencode-server', servicePort: 4000 },
       { path: '/api', pathType: 'Prefix', serviceName: config.name, servicePort: 8080 },
       { path: '/health', pathType: 'Prefix', serviceName: config.name, servicePort: 8080 },
       { path: '/metrics', pathType: 'Prefix', serviceName: config.name, servicePort: 9090 },
@@ -637,8 +613,8 @@ export function getContainerConfig(templateType: 'opencode-ide' | 'opencode-cham
       'agent-api': { essential: true },
     },
     'opencode-chamber': {
+      // Note: opencode-server is a shared service, not per-agent
       'openchamber': { essential: false, idleTimeout: '30m' },
-      'opencode-serve': { essential: false, idleTimeout: '30m' },
       'ttyd': { essential: false, idleTimeout: '15m' },
       'pap-client': { essential: true },
       'agent-api': { essential: true },
@@ -662,9 +638,10 @@ export function getResourceEstimates(templateType: 'opencode-ide' | 'opencode-ch
       sleep: { cpu: '50m', memory: '64Mi' },
     };
   }
+  // opencode-chamber is now lighter - uses shared opencode-server
   return {
-    active: { cpu: '450m', memory: '1.5Gi' },
-    idle: { cpu: '250m', memory: '768Mi' },
+    active: { cpu: '250m', memory: '512Mi' },
+    idle: { cpu: '150m', memory: '384Mi' },
     sleep: { cpu: '50m', memory: '64Mi' },
   };
 }
