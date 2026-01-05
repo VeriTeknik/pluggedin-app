@@ -1133,6 +1133,301 @@ export class KubernetesService {
       };
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Multi-Container OpenCode Template Support
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Deploy an OpenCode agent with multi-container support.
+   * Handles PVC, Secret, ConfigMap, Deployment, Service, and Ingress creation.
+   */
+  async deployOpenCodeAgent(config: {
+    name: string;
+    namespace?: string;
+    dnsName: string;
+    templateType: 'opencode-ide' | 'opencode-chamber';
+    agentUuid: string;
+    uiPassword: string;
+    defaultModel: string;
+    modelRouterToken: string;
+    papApiKey: string;
+    pluggedinApiKey: string;
+    workspaceStorageSize?: string;
+  }): Promise<{ success: boolean; message: string; deploymentName: string }> {
+    try {
+      return await withTimeout(
+        this._deployOpenCodeAgentInternal(config),
+        K8S_DEPLOY_TIMEOUT_MS * 2, // Double timeout for multi-container
+        `OpenCode agent deployment (${config.name})`
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        message: `Failed to deploy OpenCode agent: ${errorMessage}`,
+        deploymentName: config.name,
+      };
+    }
+  }
+
+  /**
+   * Internal OpenCode deployment logic.
+   */
+  private async _deployOpenCodeAgentInternal(config: {
+    name: string;
+    namespace?: string;
+    dnsName: string;
+    templateType: 'opencode-ide' | 'opencode-chamber';
+    agentUuid: string;
+    uiPassword: string;
+    defaultModel: string;
+    modelRouterToken: string;
+    papApiKey: string;
+    pluggedinApiKey: string;
+    workspaceStorageSize?: string;
+  }): Promise<{ success: boolean; message: string; deploymentName: string }> {
+    const namespace = config.namespace || this.defaultNamespace;
+
+    // Validate namespace
+    const namespaceError = validateNamespace(namespace);
+    if (namespaceError) {
+      return { success: false, message: namespaceError, deploymentName: config.name };
+    }
+
+    // Import manifest builder dynamically to avoid circular deps
+    const { buildOpenCodeManifests } = await import('../agents/opencode-manifests');
+
+    // Build manifests
+    const manifests = buildOpenCodeManifests({
+      name: config.name,
+      namespace,
+      dnsName: config.dnsName,
+      templateType: config.templateType,
+      secretName: `${config.name}-secrets`,
+      configMapName: `${config.name}-config`,
+      uiPassword: config.uiPassword,
+      defaultModel: config.defaultModel,
+      agentUuid: config.agentUuid,
+      modelRouterToken: config.modelRouterToken,
+      papApiKey: config.papApiKey,
+      pluggedinApiKey: config.pluggedinApiKey,
+      workspaceStorageSize: config.workspaceStorageSize,
+    });
+
+    const encodedNs = encodePathSegment(namespace);
+
+    // Step 1: Create PVC (must exist before deployment)
+    try {
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/persistentvolumeclaims`, {
+        method: 'POST',
+        body: manifests.pvc,
+      });
+    } catch (error) {
+      // PVC might already exist, continue
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        console.warn(`Warning: PVC creation issue: ${errMsg}`);
+      }
+    }
+
+    // Step 2: Create Secret
+    try {
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/secrets`, {
+        method: 'POST',
+        body: manifests.secret,
+      });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        console.warn(`Warning: Secret creation issue: ${errMsg}`);
+      }
+    }
+
+    // Step 3: Create ConfigMap
+    try {
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/configmaps`, {
+        method: 'POST',
+        body: manifests.configMap,
+      });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        console.warn(`Warning: ConfigMap creation issue: ${errMsg}`);
+      }
+    }
+
+    // Step 4: Create Deployment
+    await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments`, {
+      method: 'POST',
+      body: manifests.deployment,
+    });
+
+    // Step 5: Create Service and Ingress in parallel
+    try {
+      await Promise.all([
+        k8sJson(`/api/v1/namespaces/${encodedNs}/services`, {
+          method: 'POST',
+          body: manifests.service,
+        }),
+        k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses`, {
+          method: 'POST',
+          body: manifests.ingress,
+        }),
+      ]);
+    } catch (error) {
+      // Rollback deployment on Service/Ingress failure
+      console.error(`Failed to create Service/Ingress for ${config.name}, rolling back:`, error);
+      await this.deleteOpenCodeAgent(config.name, namespace);
+      throw error;
+    }
+
+    return {
+      success: true,
+      message: `OpenCode agent ${config.name} deployed successfully with ${config.templateType} template`,
+      deploymentName: config.name,
+    };
+  }
+
+  /**
+   * Delete an OpenCode agent and all associated resources.
+   */
+  async deleteOpenCodeAgent(name: string, namespace?: string): Promise<{
+    success: boolean;
+    message: string;
+    deletedResources?: string[];
+    failedResources?: string[];
+  }> {
+    const ns = namespace || this.defaultNamespace;
+
+    const namespaceError = validateNamespace(ns);
+    if (namespaceError) {
+      return { success: false, message: namespaceError };
+    }
+
+    const deleted: string[] = [];
+    const failed: string[] = [];
+
+    const encodedNs = encodePathSegment(ns);
+    const encodedName = encodePathSegment(name);
+
+    // Delete in reverse order of creation
+    const resources = [
+      { type: 'ingress', path: `/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}` },
+      { type: 'service', path: `/api/v1/namespaces/${encodedNs}/services/${encodedName}` },
+      { type: 'deployment', path: `/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}` },
+      { type: 'configmap', path: `/api/v1/namespaces/${encodedNs}/configmaps/${encodePathSegment(`${name}-config`)}` },
+      { type: 'secret', path: `/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-secrets`)}` },
+      { type: 'pvc', path: `/api/v1/namespaces/${encodedNs}/persistentvolumeclaims/${encodePathSegment(`${name}-workspace`)}` },
+      { type: 'tls-secret', path: `/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-tls`)}` },
+    ];
+
+    for (const resource of resources) {
+      try {
+        await k8sJson(resource.path, { method: 'DELETE' });
+        deleted.push(resource.type);
+      } catch (error) {
+        console.warn(`Warning: Could not delete ${resource.type} for ${name}:`, error);
+        failed.push(resource.type);
+      }
+    }
+
+    const allDeleted = failed.length === 0;
+    return {
+      success: allDeleted,
+      message: allDeleted
+        ? `OpenCode agent ${name} deleted successfully`
+        : `OpenCode agent ${name} partially deleted. Failed: ${failed.join(', ')}`,
+      deletedResources: deleted,
+      failedResources: failed.length > 0 ? failed : undefined,
+    };
+  }
+
+  /**
+   * Update OpenCode agent secret (e.g., rotate credentials).
+   */
+  async updateOpenCodeAgentSecret(
+    name: string,
+    secretData: Partial<{
+      uiPassword: string;
+      modelRouterToken: string;
+      papApiKey: string;
+      pluggedinApiKey: string;
+    }>,
+    namespace?: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const ns = namespace || this.defaultNamespace;
+      const encodedNs = encodePathSegment(ns);
+      const secretName = encodePathSegment(`${name}-secrets`);
+
+      // Build patch data (only include provided values)
+      const encode = (s: string) => Buffer.from(s).toString('base64');
+      const patchData: Record<string, string> = {};
+
+      if (secretData.uiPassword) patchData['ui-password'] = encode(secretData.uiPassword);
+      if (secretData.modelRouterToken) patchData['model-router-token'] = encode(secretData.modelRouterToken);
+      if (secretData.papApiKey) patchData['pap-api-key'] = encode(secretData.papApiKey);
+      if (secretData.pluggedinApiKey) patchData['pluggedin-api-key'] = encode(secretData.pluggedinApiKey);
+
+      if (Object.keys(patchData).length === 0) {
+        return { success: false, message: 'No secret data provided' };
+      }
+
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/secrets/${secretName}`, {
+        method: 'PATCH',
+        body: { data: patchData },
+      });
+
+      // Restart deployment to pick up new secrets
+      await this.restartDeployment(name, ns);
+
+      return {
+        success: true,
+        message: `Secret updated and agent ${name} restarted`,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        message: `Failed to update secret: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
+   * Get container statuses for a multi-container OpenCode pod.
+   */
+  async getOpenCodeContainerStatuses(name: string, namespace?: string): Promise<Array<{
+    name: string;
+    essential: boolean;
+    ready: boolean;
+    state: string;
+    stateReason?: string;
+    restartCount: number;
+  }>> {
+    const podStatuses = await this.getAgentPodStatus(name, namespace);
+
+    if (podStatuses.length === 0) {
+      return [];
+    }
+
+    // Get the first (and typically only) pod
+    const pod = podStatuses[0];
+
+    // Essential containers from annotations would be parsed here
+    // For now, we hardcode based on known container names
+    const essentialContainers = new Set(['pap-client', 'agent-api']);
+
+    return pod.containerStatuses.map((cs) => ({
+      name: cs.name,
+      essential: essentialContainers.has(cs.name),
+      ready: cs.ready,
+      state: cs.state,
+      stateReason: cs.stateReason,
+      restartCount: cs.restartCount,
+    }));
+  }
 }
 
 // Export singleton instance
