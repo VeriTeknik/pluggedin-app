@@ -491,7 +491,7 @@ function buildDeploymentManifest(config: OpenCodeAgentConfig): object {
             },
             {
               name: 'opencode-config',
-              configMap: { name: config.configMapName },
+              emptyDir: {}, // Init container writes here, main containers read
             },
           ],
         },
