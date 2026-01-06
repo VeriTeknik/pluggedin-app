@@ -197,7 +197,7 @@ function httpsRequest(
 // Helper function to make Kubernetes API requests (internal)
 async function k8sRequest(
   path: string,
-  options: { method?: string; body?: string; contentType?: string; rawResponse?: boolean } = {}
+  options: { method?: string; body?: string; contentType?: string; rawResponse?: boolean; suppressNotFound?: boolean } = {}
 ): Promise<unknown> {
   if (!K8S_SERVICE_ACCOUNT_TOKEN) {
     throw new Error('No Kubernetes authentication configured. Set K8S_SERVICE_ACCOUNT_TOKEN environment variable.');
@@ -254,11 +254,15 @@ async function k8sRequest(
     // SECURITY: Log error with appropriate detail level
     // Development: include K8s error details for debugging
     // Production: minimal logging to avoid leaking cluster topology
-    if (isDevelopment) {
-      console.error(`[K8s] ${logMessage} - ${safeErrorInfo}`);
-    } else {
-      // Production: only log HTTP status, no K8s-specific details
-      console.error(`[K8s] API error: ${response.status}`);
+    // Skip logging 404s when suppressNotFound is set (expected during delete operations)
+    const is404 = response.status === 404;
+    if (!is404 || !options.suppressNotFound) {
+      if (isDevelopment) {
+        console.error(`[K8s] ${logMessage} - ${safeErrorInfo}`);
+      } else {
+        // Production: only log HTTP status, no K8s-specific details
+        console.error(`[K8s] API error: ${response.status}`);
+      }
     }
 
     // Return sanitized error (never includes internal details)
@@ -283,7 +287,7 @@ async function k8sRequest(
  */
 async function k8sJson<T>(
   path: string,
-  options: { method?: string; body?: object; contentType?: string } = {}
+  options: { method?: string; body?: object; contentType?: string; suppressNotFound?: boolean } = {}
 ): Promise<T> {
   const result = await k8sRequest(path, {
     ...options,
@@ -697,6 +701,7 @@ export class KubernetesService {
       { type: 'ingressroute', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes/${encodedName}` },
       { type: 'middleware-opencode', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-opencode`)}` },
       { type: 'middleware-terminal', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-terminal`)}` },
+      { type: 'middleware-code', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-code`)}` },
       // cert-manager Certificate (OpenCode templates)
       { type: 'certificate', path: `/apis/cert-manager.io/v1/namespaces/${encodedNs}/certificates/${encodePathSegment(`${name}-tls`)}` },
       // Standard Kubernetes networking
@@ -714,7 +719,8 @@ export class KubernetesService {
 
     for (const resource of resources) {
       try {
-        await k8sJson(resource.path, { method: 'DELETE' });
+        // suppressNotFound: don't log 404s as errors (expected when resource doesn't exist)
+        await k8sJson(resource.path, { method: 'DELETE', suppressNotFound: true });
         deleted.push(resource.type);
       } catch (error) {
         // 404 means resource doesn't exist - that's fine, skip it
