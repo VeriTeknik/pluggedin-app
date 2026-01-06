@@ -1264,10 +1264,21 @@ export class KubernetesService {
     }
 
     // Step 4: Create Deployment
-    await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments`, {
-      method: 'POST',
-      body: manifests.deployment,
-    });
+    try {
+      await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments`, {
+        method: 'POST',
+        body: manifests.deployment,
+      });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        // Deployment creation failed (not a conflict), rollback PVC/Secret/ConfigMap
+        console.error(`Failed to create Deployment for ${config.name}, rolling back:`, error);
+        await this.deleteAgent(config.name, namespace);
+        throw error;
+      }
+      // 409 conflict means deployment exists, continue
+    }
 
     // Step 5: Create Service
     try {
@@ -1276,9 +1287,13 @@ export class KubernetesService {
         body: manifests.service,
       });
     } catch (error) {
-      console.error(`Failed to create Service for ${config.name}, rolling back:`, error);
-      await this.deleteAgent(config.name, namespace);
-      throw error;
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        console.error(`Failed to create Service for ${config.name}, rolling back:`, error);
+        await this.deleteAgent(config.name, namespace);
+        throw error;
+      }
+      // 409 conflict means service exists, continue
     }
 
     // Step 6: Create Middlewares (for strip-prefix routing)
@@ -1303,9 +1318,13 @@ export class KubernetesService {
         body: manifests.ingressRoute,
       });
     } catch (error) {
-      console.error(`Failed to create IngressRoute for ${config.name}, rolling back:`, error);
-      await this.deleteAgent(config.name, namespace);
-      throw error;
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        console.error(`Failed to create IngressRoute for ${config.name}, rolling back:`, error);
+        await this.deleteAgent(config.name, namespace);
+        throw error;
+      }
+      // 409 conflict means ingressroute exists, continue
     }
 
     return {
