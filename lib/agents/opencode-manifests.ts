@@ -692,7 +692,21 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
         middlewares: [{ name: `${config.name}-strip-terminal` }],
       },
       {
+        // /api routes go to openchamber (not agent-api) for frontend to work
+        // openchamber handles auth and proxies to opencode-serve
         match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/api\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 3000 }],
+      },
+      {
+        // /auth routes for openchamber session management
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/auth\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 3000 }],
+      },
+      {
+        // /pap-api for PAP protocol (agent-api)
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/pap-api\`)`,
         kind: 'Rule',
         services: [{ name: config.name, port: 8080 }],
       },
