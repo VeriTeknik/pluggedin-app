@@ -235,7 +235,9 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       // This avoids rebuilding the image when upstream updates
       command: ['/bin/sh', '-c'],
       args: [`
-        # Patch buildOpenCodeUrl to use ENV_CONFIGURED_OPENCODE_URL when available
+        # Patch buildOpenCodeUrl: fix the early throw check to allow external URL
+        sed -i '/^function buildOpenCodeUrl/,/^}$/s/if (!openCodePort) {/if (!openCodePort \\&\\& !ENV_CONFIGURED_OPENCODE_URL) {/' server/index.js &&
+        # Patch buildOpenCodeUrl: use external URL when available
         sed -i 's|return \\\`http://localhost:\\\${openCodePort}\\\${fullPath}\\\`;|if (ENV_CONFIGURED_OPENCODE_URL) { return \\\`\\\${ENV_CONFIGURED_OPENCODE_URL}\\\${fullPath}\\\`; } return \\\`http://localhost:\\\${openCodePort}\\\${fullPath}\\\`;|' server/index.js &&
         # Patch fetchProvidersSnapshot to allow external URL
         sed -i '/^async function fetchProvidersSnapshot/,/^}$/s/if (!openCodePort) {/if (!openCodePort \\&\\& !ENV_CONFIGURED_OPENCODE_URL) {/' server/index.js &&
