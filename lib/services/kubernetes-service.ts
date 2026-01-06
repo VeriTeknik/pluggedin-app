@@ -668,6 +668,7 @@ export class KubernetesService {
     success: boolean;
     message: string;
     deletedResources?: string[];
+    skippedResources?: string[];
     failedResources?: string[];
   }> {
     const ns = namespace || this.defaultNamespace;
@@ -682,55 +683,57 @@ export class KubernetesService {
     }
 
     const deleted: string[] = [];
+    const skipped: string[] = []; // Resources that didn't exist (404) - that's fine
     const failed: string[] = [];
 
     // SECURITY: Encode path segments
     const encodedNs = encodePathSegment(ns);
     const encodedName = encodePathSegment(name);
 
-    // Delete deployment
-    try {
-      await k8sJson(`/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}`, { method: 'DELETE' });
-      deleted.push('deployment');
-    } catch (error) {
-      console.warn(`Warning: Could not delete deployment ${name}:`, error);
-      failed.push('deployment');
+    // Unified resource list - covers both single-container and multi-container templates
+    // Delete in reverse order of creation (networking first, then compute, then storage)
+    const resources = [
+      // Traefik CRDs (OpenCode templates)
+      { type: 'ingressroute', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes/${encodedName}` },
+      { type: 'middleware-opencode', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-opencode`)}` },
+      { type: 'middleware-terminal', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-terminal`)}` },
+      // Standard Kubernetes networking
+      { type: 'ingress', path: `/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}` },
+      { type: 'service', path: `/api/v1/namespaces/${encodedNs}/services/${encodedName}` },
+      // Compute
+      { type: 'deployment', path: `/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}` },
+      // Config and secrets
+      { type: 'configmap', path: `/api/v1/namespaces/${encodedNs}/configmaps/${encodePathSegment(`${name}-config`)}` },
+      { type: 'secret', path: `/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-secrets`)}` },
+      { type: 'tls-secret', path: `/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-tls`)}` },
+      // Storage (OpenCode templates)
+      { type: 'pvc', path: `/api/v1/namespaces/${encodedNs}/persistentvolumeclaims/${encodePathSegment(`${name}-workspace`)}` },
+    ];
+
+    for (const resource of resources) {
+      try {
+        await k8sJson(resource.path, { method: 'DELETE' });
+        deleted.push(resource.type);
+      } catch (error) {
+        // 404 means resource doesn't exist - that's fine, skip it
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+          skipped.push(resource.type);
+        } else {
+          console.warn(`Warning: Could not delete ${resource.type} for ${name}:`, error);
+          failed.push(resource.type);
+        }
+      }
     }
 
-    // Delete service
-    try {
-      await k8sJson(`/api/v1/namespaces/${encodedNs}/services/${encodedName}`, { method: 'DELETE' });
-      deleted.push('service');
-    } catch (error) {
-      console.warn(`Warning: Could not delete service ${name}:`, error);
-      failed.push('service');
-    }
-
-    // Delete ingress
-    try {
-      await k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}`, { method: 'DELETE' });
-      deleted.push('ingress');
-    } catch (error) {
-      console.warn(`Warning: Could not delete ingress ${name}:`, error);
-      failed.push('ingress');
-    }
-
-    // Delete TLS secret
-    try {
-      await k8sJson(`/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-tls`)}`, { method: 'DELETE' });
-      deleted.push('tls-secret');
-    } catch (error) {
-      console.warn(`Warning: Could not delete TLS secret for ${name}:`, error);
-      failed.push('tls-secret');
-    }
-
-    const allDeleted = failed.length === 0;
+    const success = failed.length === 0;
     return {
-      success: allDeleted,
-      message: allDeleted
-        ? `Agent ${name} deleted successfully`
+      success,
+      message: success
+        ? `Agent ${name} deleted successfully (${deleted.length} resources deleted, ${skipped.length} skipped)`
         : `Agent ${name} partially deleted. Failed: ${failed.join(', ')}`,
-      deletedResources: deleted,
+      deletedResources: deleted.length > 0 ? deleted : undefined,
+      skippedResources: skipped.length > 0 ? skipped : undefined,
       failedResources: failed.length > 0 ? failed : undefined,
     };
   }
@@ -1274,7 +1277,7 @@ export class KubernetesService {
       });
     } catch (error) {
       console.error(`Failed to create Service for ${config.name}, rolling back:`, error);
-      await this.deleteOpenCodeAgent(config.name, namespace);
+      await this.deleteAgent(config.name, namespace);
       throw error;
     }
 
@@ -1301,7 +1304,7 @@ export class KubernetesService {
       });
     } catch (error) {
       console.error(`Failed to create IngressRoute for ${config.name}, rolling back:`, error);
-      await this.deleteOpenCodeAgent(config.name, namespace);
+      await this.deleteAgent(config.name, namespace);
       throw error;
     }
 
@@ -1309,65 +1312,6 @@ export class KubernetesService {
       success: true,
       message: `OpenCode agent ${config.name} deployed successfully with ${config.templateType} template`,
       deploymentName: config.name,
-    };
-  }
-
-  /**
-   * Delete an OpenCode agent and all associated resources.
-   */
-  async deleteOpenCodeAgent(name: string, namespace?: string): Promise<{
-    success: boolean;
-    message: string;
-    deletedResources?: string[];
-    failedResources?: string[];
-  }> {
-    const ns = namespace || this.defaultNamespace;
-
-    const namespaceError = validateNamespace(ns);
-    if (namespaceError) {
-      return { success: false, message: namespaceError };
-    }
-
-    const deleted: string[] = [];
-    const failed: string[] = [];
-
-    const encodedNs = encodePathSegment(ns);
-    const encodedName = encodePathSegment(name);
-
-    // Delete in reverse order of creation
-    const resources = [
-      // Traefik IngressRoute and Middlewares (new)
-      { type: 'ingressroute', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes/${encodedName}` },
-      { type: 'middleware-opencode', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-opencode`)}` },
-      { type: 'middleware-terminal', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-terminal`)}` },
-      // Legacy ingress (for backwards compatibility)
-      { type: 'ingress', path: `/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}` },
-      { type: 'service', path: `/api/v1/namespaces/${encodedNs}/services/${encodedName}` },
-      { type: 'deployment', path: `/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}` },
-      { type: 'configmap', path: `/api/v1/namespaces/${encodedNs}/configmaps/${encodePathSegment(`${name}-config`)}` },
-      { type: 'secret', path: `/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-secrets`)}` },
-      { type: 'pvc', path: `/api/v1/namespaces/${encodedNs}/persistentvolumeclaims/${encodePathSegment(`${name}-workspace`)}` },
-      { type: 'tls-secret', path: `/api/v1/namespaces/${encodedNs}/secrets/${encodePathSegment(`${name}-tls`)}` },
-    ];
-
-    for (const resource of resources) {
-      try {
-        await k8sJson(resource.path, { method: 'DELETE' });
-        deleted.push(resource.type);
-      } catch (error) {
-        console.warn(`Warning: Could not delete ${resource.type} for ${name}:`, error);
-        failed.push(resource.type);
-      }
-    }
-
-    const allDeleted = failed.length === 0;
-    return {
-      success: allDeleted,
-      message: allDeleted
-        ? `OpenCode agent ${name} deleted successfully`
-        : `OpenCode agent ${name} partially deleted. Failed: ${failed.join(', ')}`,
-      deletedResources: deleted,
-      failedResources: failed.length > 0 ? failed : undefined,
     };
   }
 

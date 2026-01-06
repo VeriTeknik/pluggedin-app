@@ -254,8 +254,8 @@ export async function DELETE(
 
     const agent = agents[0];
 
-    // Delete from Kubernetes
-    let kubernetesResult = { success: true, message: 'No Kubernetes deployment' };
+    // Delete from Kubernetes (unified delete handles all template types)
+    let kubernetesResult: { success: boolean; message: string } = { success: true, message: 'No Kubernetes deployment' };
     if (agent.kubernetes_deployment) {
       kubernetesResult = await kubernetesService.deleteAgent(
         agent.kubernetes_deployment,
