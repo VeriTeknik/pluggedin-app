@@ -1150,6 +1150,7 @@ export class KubernetesService {
     agentUuid: string;
     uiPassword: string;
     defaultModel: string;
+    modelRouterUrl: string; // Region-specific Model Router URL
     modelRouterToken: string;
     papApiKey: string;
     pluggedinApiKey: string;
@@ -1182,6 +1183,7 @@ export class KubernetesService {
     agentUuid: string;
     uiPassword: string;
     defaultModel: string;
+    modelRouterUrl: string; // Region-specific Model Router URL
     modelRouterToken: string;
     papApiKey: string;
     pluggedinApiKey: string;
@@ -1209,6 +1211,7 @@ export class KubernetesService {
       uiPassword: config.uiPassword,
       defaultModel: config.defaultModel,
       agentUuid: config.agentUuid,
+      modelRouterUrl: config.modelRouterUrl,
       modelRouterToken: config.modelRouterToken,
       papApiKey: config.papApiKey,
       pluggedinApiKey: config.pluggedinApiKey,
@@ -1263,21 +1266,41 @@ export class KubernetesService {
       body: manifests.deployment,
     });
 
-    // Step 5: Create Service and Ingress in parallel
+    // Step 5: Create Service
     try {
-      await Promise.all([
-        k8sJson(`/api/v1/namespaces/${encodedNs}/services`, {
-          method: 'POST',
-          body: manifests.service,
-        }),
-        k8sJson(`/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses`, {
-          method: 'POST',
-          body: manifests.ingress,
-        }),
-      ]);
+      await k8sJson(`/api/v1/namespaces/${encodedNs}/services`, {
+        method: 'POST',
+        body: manifests.service,
+      });
     } catch (error) {
-      // Rollback deployment on Service/Ingress failure
-      console.error(`Failed to create Service/Ingress for ${config.name}, rolling back:`, error);
+      console.error(`Failed to create Service for ${config.name}, rolling back:`, error);
+      await this.deleteOpenCodeAgent(config.name, namespace);
+      throw error;
+    }
+
+    // Step 6: Create Middlewares (for strip-prefix routing)
+    for (const middleware of manifests.middlewares) {
+      try {
+        await k8sJson(`/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares`, {
+          method: 'POST',
+          body: middleware,
+        });
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : '';
+        if (!errMsg.includes('409')) {
+          console.warn(`Warning: Middleware creation issue: ${errMsg}`);
+        }
+      }
+    }
+
+    // Step 7: Create IngressRoute (Traefik CRD)
+    try {
+      await k8sJson(`/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes`, {
+        method: 'POST',
+        body: manifests.ingressRoute,
+      });
+    } catch (error) {
+      console.error(`Failed to create IngressRoute for ${config.name}, rolling back:`, error);
       await this.deleteOpenCodeAgent(config.name, namespace);
       throw error;
     }
@@ -1313,6 +1336,11 @@ export class KubernetesService {
 
     // Delete in reverse order of creation
     const resources = [
+      // Traefik IngressRoute and Middlewares (new)
+      { type: 'ingressroute', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes/${encodedName}` },
+      { type: 'middleware-opencode', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-opencode`)}` },
+      { type: 'middleware-terminal', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-terminal`)}` },
+      // Legacy ingress (for backwards compatibility)
       { type: 'ingress', path: `/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}` },
       { type: 'service', path: `/api/v1/namespaces/${encodedNs}/services/${encodedName}` },
       { type: 'deployment', path: `/apis/apps/v1/namespaces/${encodedNs}/deployments/${encodedName}` },

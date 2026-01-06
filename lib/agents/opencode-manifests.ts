@@ -4,12 +4,12 @@
  * Generates Kubernetes manifests for multi-container OpenCode agent pods.
  * Supports two templates:
  * - opencode-ide: VSCode + OpenCode terminal integration
- * - opencode-chamber: Chat UI with shared OpenCode server
+ * - opencode-chamber: Chat UI with per-pod OpenCode server
  *
  * Architecture Note:
- * The opencode-server runs as a SHARED service (opencode-server.agents.svc.cluster.local:4000)
- * serving all opencode-chamber agents. This reduces resource usage significantly since the
- * server image is ~300MB and doesn't need to be loaded per-agent.
+ * Each agent gets its own opencode-serve container for full tenant isolation.
+ * This ensures session data, conversation history, and credentials are
+ * completely isolated between tenants.
  *
  * Both templates include essential containers (pap-client, agent-api) that
  * never shut down, and non-essential containers that scale down on idle.
@@ -77,13 +77,6 @@ export interface VolumeSpec {
   secretName?: string;
 }
 
-export interface IngressPath {
-  path: string;
-  pathType: 'Prefix' | 'Exact';
-  serviceName: string;
-  servicePort: number;
-}
-
 export interface OpenCodeAgentConfig {
   name: string;
   namespace: string;
@@ -100,6 +93,7 @@ export interface OpenCodeAgentConfig {
 
   // Environment from PAP
   agentUuid: string;
+  modelRouterUrl: string; // Region-specific Model Router URL
   modelRouterToken: string;
   papApiKey: string;
   pluggedinApiKey: string;
@@ -116,11 +110,22 @@ const COMMON_ENV = (config: OpenCodeAgentConfig): Array<{ name: string; value?: 
   { name: 'AGENT_NAME', value: config.name },
   { name: 'AGENT_UUID', value: config.agentUuid },
   { name: 'AGENT_DOMAIN', value: config.dnsName },
+  // PAP identity and auth (same as PAP_AGENT_* for compatibility)
+  { name: 'PAP_AGENT_ID', value: config.agentUuid },
+  { name: 'PAP_AGENT_DNS', value: config.dnsName },
   { name: 'PAP_STATION_URL', value: 'https://plugged.in' },
   { name: 'PAP_API_KEY', valueFrom: { secretKeyRef: { name: config.secretName, key: 'pap-api-key' } } },
-  { name: 'MODEL_ROUTER_URL', value: 'https://models.plugged.in' },
-  { name: 'MODEL_ROUTER_TOKEN', valueFrom: { secretKeyRef: { name: config.secretName, key: 'model-router-token' } } },
+  { name: 'PAP_AGENT_KEY', valueFrom: { secretKeyRef: { name: config.secretName, key: 'pap-api-key' } } },
+  // PAP Collector for heartbeats (local K8s service)
+  // Agents send heartbeats to local collector instead of central station
+  { name: 'PAP_COLLECTOR_URL', value: 'http://pap-collector.agents.svc:8080' },
+  // Plugged.in API access
+  { name: 'PLUGGEDIN_API_URL', value: 'https://plugged.in' },
   { name: 'PLUGGEDIN_API_KEY', valueFrom: { secretKeyRef: { name: config.secretName, key: 'pluggedin-api-key' } } },
+  // Model Router for LLM access
+  { name: 'MODEL_ROUTER_URL', value: config.modelRouterUrl },
+  { name: 'MODEL_ROUTER_TOKEN', valueFrom: { secretKeyRef: { name: config.secretName, key: 'model-router-token' } } },
+  // MCP Proxy for tool access
   { name: 'MCP_PROXY_URL', value: 'https://mcp.plugged.in/mcp' },
 ];
 
@@ -194,7 +199,7 @@ function getOpenCodeIdeContainers(config: OpenCodeAgentConfig): ContainerSpec[] 
       },
       volumeMounts: [
         { name: 'workspace', mountPath: '/workspace' },
-        { name: 'opencode-config', mountPath: '/home/coder/.opencode', readOnly: true },
+        { name: 'opencode-config', mountPath: '/home/coder/.opencode' },
       ],
       livenessProbe: {
         httpGet: { path: '/healthz', port: 8443 },
@@ -216,8 +221,7 @@ function getOpenCodeIdeContainers(config: OpenCodeAgentConfig): ContainerSpec[] 
 }
 
 function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpec[] {
-  // Note: opencode-server is a shared service (opencode-server.agents.svc.cluster.local:4000)
-  // No per-agent opencode-serve container - all agents use the shared server
+  // Each agent gets its own opencode-serve container for full tenant isolation
   return [
     // Main UI: OpenChamber (Chat)
     {
@@ -229,8 +233,8 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       idleTimeoutMinutes: 30,
       env: [
         ...COMMON_ENV(config),
-        // Connect to shared opencode-server service
-        { name: 'OPENCODE_URL', value: 'http://opencode-server.agents.svc.cluster.local:4000' },
+        // Connect to local opencode-serve container (localhost in same pod)
+        { name: 'OPENCODE_URL', value: 'http://localhost:4000' },
         { name: 'UI_PASSWORD', valueFrom: { secretKeyRef: { name: config.secretName, key: 'ui-password' } } },
       ],
       resources: {
@@ -251,6 +255,43 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
         httpGet: { path: '/', port: 3000 },
         initialDelaySeconds: 5,
         periodSeconds: 10,
+      },
+    },
+    // OpenCode API server (per-pod for tenant isolation)
+    {
+      name: 'opencode-serve',
+      image: 'ghcr.io/veriteknik/opencode-server:latest',
+      port: 4000,
+      portName: 'opencode',
+      essential: false,
+      idleTimeoutMinutes: 30,
+      env: [
+        ...COMMON_ENV(config),
+        { name: 'PORT', value: '4000' },
+        { name: 'HOST', value: '0.0.0.0' },
+      ],
+      resources: {
+        cpuRequest: '200m',
+        memoryRequest: '512Mi',
+        cpuLimit: '1000m',
+        memoryLimit: '1536Mi',
+      },
+      volumeMounts: [
+        { name: 'workspace', mountPath: '/workspace' },
+        { name: 'opencode-config', mountPath: '/home/opencode/.opencode' },
+      ],
+      workingDir: '/workspace',
+      livenessProbe: {
+        httpGet: { path: '/global/health', port: 4000 },
+        initialDelaySeconds: 15,
+        periodSeconds: 30,
+        timeoutSeconds: 5,
+      },
+      readinessProbe: {
+        httpGet: { path: '/global/health', port: 4000 },
+        initialDelaySeconds: 10,
+        periodSeconds: 10,
+        timeoutSeconds: 5,
       },
     },
     // Web terminal (ttyd)
@@ -333,7 +374,7 @@ function buildConfigMapManifest(config: OpenCodeAgentConfig): object {
     provider: {
       pluggedin: {
         name: 'Plugged.in Model Router',
-        baseURL: 'https://models.plugged.in/v1',
+        baseURL: `${config.modelRouterUrl}/v1`,
         apiKey: '{env:MODEL_ROUTER_TOKEN}',
         // Models are dynamically fetched from Model Router
         models: {},
@@ -380,7 +421,7 @@ function buildDeploymentManifest(config: OpenCodeAgentConfig): object {
       env: [
         { name: 'AGENT_NAME', value: config.name },
         { name: 'AGENT_UUID', value: config.agentUuid },
-        { name: 'MODEL_ROUTER_URL', value: 'https://models.plugged.in' },
+        { name: 'MODEL_ROUTER_URL', value: config.modelRouterUrl },
         { name: 'MODEL_ROUTER_TOKEN', valueFrom: { secretKeyRef: { name: config.secretName, key: 'model-router-token' } } },
         { name: 'DEFAULT_MODEL', value: config.defaultModel },
       ],
@@ -512,64 +553,123 @@ function buildServiceManifest(config: OpenCodeAgentConfig): object {
   };
 }
 
-function buildIngressManifest(config: OpenCodeAgentConfig): object {
-  let paths: IngressPath[];
+function buildMiddlewaresManifest(config: OpenCodeAgentConfig): object[] {
+  // Only opencode-chamber needs strip-prefix middlewares
+  if (config.templateType !== 'opencode-chamber') {
+    return [];
+  }
+
+  return [
+    {
+      apiVersion: 'traefik.io/v1alpha1',
+      kind: 'Middleware',
+      metadata: {
+        name: `${config.name}-strip-opencode`,
+        namespace: config.namespace,
+        labels: { app: config.name, 'pap-agent': 'true' },
+      },
+      spec: {
+        stripPrefix: {
+          prefixes: ['/opencode'],
+        },
+      },
+    },
+    {
+      apiVersion: 'traefik.io/v1alpha1',
+      kind: 'Middleware',
+      metadata: {
+        name: `${config.name}-strip-terminal`,
+        namespace: config.namespace,
+        labels: { app: config.name, 'pap-agent': 'true' },
+      },
+      spec: {
+        stripPrefix: {
+          prefixes: ['/terminal'],
+        },
+      },
+    },
+  ];
+}
+
+function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
+  let routes: object[];
 
   if (config.templateType === 'opencode-ide') {
-    paths = [
-      { path: '/api', pathType: 'Prefix', serviceName: config.name, servicePort: 8080 },
-      { path: '/health', pathType: 'Prefix', serviceName: config.name, servicePort: 8080 },
-      { path: '/metrics', pathType: 'Prefix', serviceName: config.name, servicePort: 9090 },
-      { path: '/', pathType: 'Prefix', serviceName: config.name, servicePort: 8443 },
+    routes = [
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/api\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 8080 }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/health\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 8080 }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/metrics\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 9090 }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 8443 }],
+      },
     ];
   } else {
-    // opencode-chamber
-    // Note: /opencode routes to the shared opencode-server service
-    paths = [
-      { path: '/terminal', pathType: 'Prefix', serviceName: config.name, servicePort: 7681 },
-      { path: '/opencode', pathType: 'Prefix', serviceName: 'opencode-server', servicePort: 4000 },
-      { path: '/api', pathType: 'Prefix', serviceName: config.name, servicePort: 8080 },
-      { path: '/health', pathType: 'Prefix', serviceName: config.name, servicePort: 8080 },
-      { path: '/metrics', pathType: 'Prefix', serviceName: config.name, servicePort: 9090 },
-      { path: '/', pathType: 'Prefix', serviceName: config.name, servicePort: 3000 },
+    // opencode-chamber - routes with strip-prefix middlewares
+    routes = [
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/opencode\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 4000 }],
+        middlewares: [{ name: `${config.name}-strip-opencode` }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/terminal\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 7681 }],
+        middlewares: [{ name: `${config.name}-strip-terminal` }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/api\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 8080 }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/health\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 8080 }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/metrics\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 9090 }],
+      },
+      {
+        match: `Host(\`${config.dnsName}\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 3000 }],
+      },
     ];
   }
 
   return {
-    apiVersion: 'networking.k8s.io/v1',
-    kind: 'Ingress',
+    apiVersion: 'traefik.io/v1alpha1',
+    kind: 'IngressRoute',
     metadata: {
       name: config.name,
       namespace: config.namespace,
       labels: { app: config.name, 'pap-agent': 'true' },
-      annotations: {
-        'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
-        'traefik.ingress.kubernetes.io/router.entrypoints': 'web,websecure',
-        'traefik.ingress.kubernetes.io/router.tls': 'true',
-        // WebSocket support for terminal and OpenCode
-        'traefik.ingress.kubernetes.io/router.middlewares': '',
-      },
     },
     spec: {
-      ingressClassName: 'traefik',
-      tls: [{ hosts: [config.dnsName], secretName: `${config.name}-tls` }],
-      rules: [
-        {
-          host: config.dnsName,
-          http: {
-            paths: paths.map((p) => ({
-              path: p.path,
-              pathType: p.pathType,
-              backend: {
-                service: {
-                  name: p.serviceName,
-                  port: { number: p.servicePort },
-                },
-              },
-            })),
-          },
-        },
-      ],
+      entryPoints: ['web', 'websecure'],
+      routes,
+      tls: {
+        secretName: `${config.name}-tls`,
+        domains: [{ main: config.dnsName }],
+      },
     },
   };
 }
@@ -584,7 +684,8 @@ export interface OpenCodeManifests {
   configMap: object;
   deployment: object;
   service: object;
-  ingress: object;
+  middlewares: object[];
+  ingressRoute: object;
 }
 
 /**
@@ -597,7 +698,8 @@ export function buildOpenCodeManifests(config: OpenCodeAgentConfig): OpenCodeMan
     configMap: buildConfigMapManifest(config),
     deployment: buildDeploymentManifest(config),
     service: buildServiceManifest(config),
-    ingress: buildIngressManifest(config),
+    middlewares: buildMiddlewaresManifest(config),
+    ingressRoute: buildIngressRouteManifest(config),
   };
 }
 
@@ -613,8 +715,8 @@ export function getContainerConfig(templateType: 'opencode-ide' | 'opencode-cham
       'agent-api': { essential: true },
     },
     'opencode-chamber': {
-      // Note: opencode-server is a shared service, not per-agent
       'openchamber': { essential: false, idleTimeout: '30m' },
+      'opencode-serve': { essential: false, idleTimeout: '30m' },
       'ttyd': { essential: false, idleTimeout: '15m' },
       'pap-client': { essential: true },
       'agent-api': { essential: true },
@@ -638,10 +740,10 @@ export function getResourceEstimates(templateType: 'opencode-ide' | 'opencode-ch
       sleep: { cpu: '50m', memory: '64Mi' },
     };
   }
-  // opencode-chamber is now lighter - uses shared opencode-server
+  // opencode-chamber with per-pod opencode-serve for tenant isolation
   return {
-    active: { cpu: '250m', memory: '512Mi' },
-    idle: { cpu: '150m', memory: '384Mi' },
+    active: { cpu: '450m', memory: '1.5Gi' },
+    idle: { cpu: '250m', memory: '768Mi' },
     sleep: { cpu: '50m', memory: '64Mi' },
   };
 }

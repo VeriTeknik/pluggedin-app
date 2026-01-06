@@ -647,6 +647,7 @@ export async function POST(request: NextRequest) {
         agentUuid: newAgent.uuid,
         uiPassword,
         defaultModel,
+        modelRouterUrl: modelRouterUrl || '', // Region-specific Model Router URL
         modelRouterToken: modelRouterToken || '',
         papApiKey: agentApiKey,
         pluggedinApiKey: agentApiKey,

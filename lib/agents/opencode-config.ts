@@ -115,7 +115,7 @@ export async function generateOpenCodeConfig(options: {
     agentName,
     agentUuid,
     defaultModel,
-    modelRouterUrl = 'https://models.plugged.in',
+    modelRouterUrl, // Required - region-specific URL
     modelRouterToken,
     mcpProxyUrl = 'https://mcp.plugged.in/mcp',
     pluggedinApiKey,
