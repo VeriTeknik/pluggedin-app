@@ -697,6 +697,8 @@ export class KubernetesService {
       { type: 'ingressroute', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes/${encodedName}` },
       { type: 'middleware-opencode', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-opencode`)}` },
       { type: 'middleware-terminal', path: `/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/middlewares/${encodePathSegment(`${name}-strip-terminal`)}` },
+      // cert-manager Certificate (OpenCode templates)
+      { type: 'certificate', path: `/apis/cert-manager.io/v1/namespaces/${encodedNs}/certificates/${encodePathSegment(`${name}-tls`)}` },
       // Standard Kubernetes networking
       { type: 'ingress', path: `/apis/networking.k8s.io/v1/namespaces/${encodedNs}/ingresses/${encodedName}` },
       { type: 'service', path: `/api/v1/namespaces/${encodedNs}/services/${encodedName}` },
@@ -1311,7 +1313,21 @@ export class KubernetesService {
       }
     }
 
-    // Step 7: Create IngressRoute (Traefik CRD)
+    // Step 7: Create Certificate (cert-manager) - must exist before IngressRoute
+    try {
+      await k8sJson(`/apis/cert-manager.io/v1/namespaces/${encodedNs}/certificates`, {
+        method: 'POST',
+        body: manifests.certificate,
+      });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : '';
+      if (!errMsg.includes('409')) {
+        console.warn(`Warning: Certificate creation issue: ${errMsg}`);
+      }
+      // 409 conflict means certificate exists, continue
+    }
+
+    // Step 8: Create IngressRoute (Traefik CRD)
     try {
       await k8sJson(`/apis/traefik.io/v1alpha1/namespaces/${encodedNs}/ingressroutes`, {
         method: 'POST',

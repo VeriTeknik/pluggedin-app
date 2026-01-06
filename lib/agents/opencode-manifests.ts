@@ -591,6 +591,28 @@ function buildMiddlewaresManifest(config: OpenCodeAgentConfig): object[] {
   ];
 }
 
+function buildCertificateManifest(config: OpenCodeAgentConfig): object {
+  return {
+    apiVersion: 'cert-manager.io/v1',
+    kind: 'Certificate',
+    metadata: {
+      name: `${config.name}-tls`,
+      namespace: config.namespace,
+      labels: { app: config.name, 'pap-agent': 'true' },
+    },
+    spec: {
+      secretName: `${config.name}-tls`,
+      dnsNames: [config.dnsName],
+      issuerRef: {
+        name: 'letsencrypt-prod',
+        kind: 'ClusterIssuer',
+        group: 'cert-manager.io',
+      },
+      usages: ['digital signature', 'key encipherment'],
+    },
+  };
+}
+
 function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
   let routes: object[];
 
@@ -685,6 +707,7 @@ export interface OpenCodeManifests {
   deployment: object;
   service: object;
   middlewares: object[];
+  certificate: object;
   ingressRoute: object;
 }
 
@@ -699,6 +722,7 @@ export function buildOpenCodeManifests(config: OpenCodeAgentConfig): OpenCodeMan
     deployment: buildDeploymentManifest(config),
     service: buildServiceManifest(config),
     middlewares: buildMiddlewaresManifest(config),
+    certificate: buildCertificateManifest(config),
     ingressRoute: buildIngressRouteManifest(config),
   };
 }
