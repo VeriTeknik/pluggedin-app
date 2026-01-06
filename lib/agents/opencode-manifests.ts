@@ -231,11 +231,24 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       portName: 'http',
       essential: false,
       idleTimeoutMinutes: 30,
+      // Patch openchamber to use external OPENCODE_URL (fixes model loading with external opencode-serve)
+      // This avoids rebuilding the image when upstream updates
+      command: ['/bin/sh', '-c'],
+      args: [`
+        # Patch buildOpenCodeUrl to use ENV_CONFIGURED_OPENCODE_URL when available
+        sed -i 's|return \\\`http://localhost:\\\${openCodePort}\\\${fullPath}\\\`;|if (ENV_CONFIGURED_OPENCODE_URL) { return \\\`\\\${ENV_CONFIGURED_OPENCODE_URL}\\\${fullPath}\\\`; } return \\\`http://localhost:\\\${openCodePort}\\\${fullPath}\\\`;|' server/index.js &&
+        # Patch fetchProvidersSnapshot to allow external URL
+        sed -i '/^async function fetchProvidersSnapshot/,/^}$/s/if (!openCodePort) {/if (!openCodePort \\&\\& !ENV_CONFIGURED_OPENCODE_URL) {/' server/index.js &&
+        # Patch fetchModelsSnapshot to allow external URL
+        sed -i '/^async function fetchModelsSnapshot/,/^}$/s/if (!openCodePort) {/if (!openCodePort \\&\\& !ENV_CONFIGURED_OPENCODE_URL) {/' server/index.js &&
+        # Start the server
+        exec bun run server/index.js --port 3000
+      `],
       env: [
         ...COMMON_ENV(config),
-        // Connect to local opencode-serve container (localhost in same pod)
-        { name: 'OPENCODE_URL', value: 'http://localhost:4000' },
-        { name: 'UI_PASSWORD', valueFrom: { secretKeyRef: { name: config.secretName, key: 'ui-password' } } },
+        // Connect to opencode-serve via Kubernetes service DNS (localhost has IPv4/IPv6 issues)
+        { name: 'OPENCODE_URL', value: `http://${config.name}.${config.namespace}.svc.cluster.local:4000` },
+        { name: 'OPENCHAMBER_UI_PASSWORD', valueFrom: { secretKeyRef: { name: config.secretName, key: 'ui-password' } } },
       ],
       resources: {
         cpuRequest: '100m',
@@ -588,6 +601,20 @@ function buildMiddlewaresManifest(config: OpenCodeAgentConfig): object[] {
         },
       },
     },
+    {
+      apiVersion: 'traefik.io/v1alpha1',
+      kind: 'Middleware',
+      metadata: {
+        name: `${config.name}-strip-code`,
+        namespace: config.namespace,
+        labels: { app: config.name, 'pap-agent': 'true' },
+      },
+      spec: {
+        stripPrefix: {
+          prefixes: ['/code'],
+        },
+      },
+    },
   ];
 }
 
@@ -641,7 +668,15 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
     ];
   } else {
     // opencode-chamber - routes with strip-prefix middlewares
+    // /code → openchamber (AI chat interface)
+    // / → openchamber (default, will be replaced by user's custom page later)
     routes = [
+      {
+        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/code\`)`,
+        kind: 'Rule',
+        services: [{ name: config.name, port: 3000 }],
+        middlewares: [{ name: `${config.name}-strip-code` }],
+      },
       {
         match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/opencode\`)`,
         kind: 'Rule',
