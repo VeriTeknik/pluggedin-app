@@ -122,9 +122,9 @@ export async function generateOpenCodeConfig(options: {
     workspace = '/workspace',
   } = options;
 
-  // Fetch models from Model Router if token provided
+  // Fetch models from Model Router if URL and token provided
   let models: Record<string, OpenCodeProviderModel> = {};
-  if (modelRouterToken) {
+  if (modelRouterUrl && modelRouterToken) {
     const routerModels = await fetchModelsFromRouter(modelRouterUrl, modelRouterToken);
     models = transformModels(routerModels);
   }

@@ -15,8 +15,8 @@ import { SignJWT } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { agentsTable, profilesTable, projectsTable } from '@/db/schema';
-import { auth } from '@/lib/auth';
+import { agentsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 
 // Token expires in 5 minutes (sufficient for redirect + validation)
@@ -32,14 +32,14 @@ const getSecretKey = () => {
 };
 
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: agentId } = await params;
 
     // Verify user is authenticated
-    const session = await auth();
+    const session = await getAuthSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },

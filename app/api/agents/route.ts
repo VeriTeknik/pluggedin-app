@@ -623,7 +623,7 @@ export async function POST(request: NextRequest) {
 
     let deploymentResult;
 
-    if (isOpenCodeTemplate) {
+    if (isOpenCodeTemplate && template) {
       // OpenCode templates use multi-container deployment
       const templateType = template.name === 'opencode-ide' ? 'opencode-ide' : 'opencode-chamber';
 
