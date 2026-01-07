@@ -139,7 +139,7 @@ export function LandingOpenSourceSection() {
                       <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20">
                         <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                         <span className="text-sm font-semibold text-yellow-500">
-                          {stars !== null ? stars.toLocaleString() : '...'}
+                          {typeof stars === 'number' ? stars.toLocaleString() : '...'}
                         </span>
                       </div>
                     </div>
