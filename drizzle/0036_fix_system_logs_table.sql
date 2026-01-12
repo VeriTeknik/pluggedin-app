@@ -18,19 +18,19 @@ BEGIN
     -- Add created_at if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name = 'system_logs' AND column_name = 'created_at') THEN
-        ALTER TABLE "system_logs" ADD COLUMN "created_at" timestamp with time zone NOT NULL DEFAULT now();
+        ALTER TABLE "system_logs" ADD COLUMN IF NOT EXISTS "created_at" timestamp with time zone NOT NULL DEFAULT now();
     END IF;
     
     -- Add details if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name = 'system_logs' AND column_name = 'details') THEN
-        ALTER TABLE "system_logs" ADD COLUMN "details" jsonb;
+        ALTER TABLE "system_logs" ADD COLUMN IF NOT EXISTS "details" jsonb;
     END IF;
     
     -- Ensure source column exists (from earlier migration)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name = 'system_logs' AND column_name = 'source') THEN
-        ALTER TABLE "system_logs" ADD COLUMN "source" text NOT NULL DEFAULT 'UNKNOWN';
+        ALTER TABLE "system_logs" ADD COLUMN IF NOT EXISTS "source" text NOT NULL DEFAULT 'UNKNOWN';
     END IF;
     
     -- Drop columns that are not in schema.ts

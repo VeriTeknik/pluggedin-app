@@ -1,4 +1,4 @@
-CREATE TABLE "clipboards" (
+CREATE TABLE IF NOT EXISTS "clipboards" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"profile_uuid" uuid NOT NULL,
 	"name" varchar(255),
@@ -19,6 +19,6 @@ CREATE TABLE "clipboards" (
 );
 --> statement-breakpoint
 ALTER TABLE "clipboards" ADD CONSTRAINT "clipboards_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "clipboards_profile_uuid_idx" ON "clipboards" USING btree ("profile_uuid");--> statement-breakpoint
-CREATE INDEX "clipboards_expires_at_idx" ON "clipboards" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "clipboards_content_type_idx" ON "clipboards" USING btree ("content_type");
+CREATE INDEX IF NOT EXISTS "clipboards_profile_uuid_idx" ON "clipboards" USING btree ("profile_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "clipboards_expires_at_idx" ON "clipboards" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "clipboards_content_type_idx" ON "clipboards" USING btree ("content_type");

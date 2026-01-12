@@ -575,6 +575,13 @@
       "when": 1764560442385,
       "tag": "0081_chief_electro",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1764685724038,
+      "tag": "0082_robust_charles_xavier",
+      "breakpoints": true
     }
   ]
 }

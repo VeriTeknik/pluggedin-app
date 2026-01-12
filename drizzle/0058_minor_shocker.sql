@@ -1,1 +1,1 @@
-ALTER TABLE "docs" ADD COLUMN "upload_metadata" jsonb;
+ALTER TABLE "docs" ADD COLUMN IF NOT EXISTS "upload_metadata" jsonb;

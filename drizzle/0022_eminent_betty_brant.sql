@@ -1,4 +1,4 @@
-CREATE TABLE "resources" (
+CREATE TABLE IF NOT EXISTS "resources" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"mcp_server_uuid" uuid NOT NULL,
 	"uri" text NOT NULL,
@@ -11,5 +11,5 @@ CREATE TABLE "resources" (
 );
 --> statement-breakpoint
 ALTER TABLE "resources" ADD CONSTRAINT "resources_mcp_server_uuid_mcp_servers_uuid_fk" FOREIGN KEY ("mcp_server_uuid") REFERENCES "public"."mcp_servers"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "resources_mcp_server_uuid_idx" ON "resources" USING btree ("mcp_server_uuid");--> statement-breakpoint
-CREATE INDEX "resources_status_idx" ON "resources" USING btree ("status");
+CREATE INDEX IF NOT EXISTS "resources_mcp_server_uuid_idx" ON "resources" USING btree ("mcp_server_uuid");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "resources_status_idx" ON "resources" USING btree ("status");

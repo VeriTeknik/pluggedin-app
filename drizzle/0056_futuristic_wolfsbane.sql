@@ -1,4 +1,4 @@
-CREATE TABLE "email_templates" (
+CREATE TABLE IF NOT EXISTS "email_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"subject" text NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE "email_templates" (
 --> statement-breakpoint
 ALTER TABLE "email_templates" ADD CONSTRAINT "email_templates_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_templates" ADD CONSTRAINT "email_templates_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "idx_email_templates_category" ON "email_templates" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_email_templates_active" ON "email_templates" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_email_templates_created_by" ON "email_templates" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX "idx_email_templates_parent_id" ON "email_templates" USING btree ("parent_id");
+CREATE INDEX IF NOT EXISTS "idx_email_templates_category" ON "email_templates" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_email_templates_active" ON "email_templates" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_email_templates_created_by" ON "email_templates" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_email_templates_parent_id" ON "email_templates" USING btree ("parent_id");

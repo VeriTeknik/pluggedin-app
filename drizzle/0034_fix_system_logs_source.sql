@@ -7,7 +7,7 @@ BEGIN
         WHERE table_name = 'system_logs' 
         AND column_name = 'source'
     ) THEN
-        ALTER TABLE "system_logs" ADD COLUMN "source" text NOT NULL DEFAULT 'UNKNOWN';
+        ALTER TABLE "system_logs" ADD COLUMN IF NOT EXISTS "source" text NOT NULL DEFAULT 'UNKNOWN';
         
         -- Create index on source column if it doesn't exist
         CREATE INDEX IF NOT EXISTS "system_logs_source_idx" ON "system_logs" ("source");

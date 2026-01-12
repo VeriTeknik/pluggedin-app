@@ -15,12 +15,12 @@ CREATE TABLE IF NOT EXISTS "search_cache" (
 --> statement-breakpoint
 DO $$ BEGIN
     IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'mcp_servers' AND column_name = 'source') THEN
-        ALTER TABLE "mcp_servers" ADD COLUMN "source" "mcp_server_source" DEFAULT 'PLUGGEDIN' NOT NULL;
+        ALTER TABLE "mcp_servers" ADD COLUMN IF NOT EXISTS "source" "mcp_server_source" DEFAULT 'PLUGGEDIN' NOT NULL;
     END IF;
 END $$;--> statement-breakpoint
 DO $$ BEGIN
     IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'mcp_servers' AND column_name = 'external_id') THEN
-        ALTER TABLE "mcp_servers" ADD COLUMN "external_id" text;
+        ALTER TABLE "mcp_servers" ADD COLUMN IF NOT EXISTS "external_id" text;
     END IF;
 END $$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "search_cache_source_query_idx" ON "search_cache" USING btree ("source","query");--> statement-breakpoint
