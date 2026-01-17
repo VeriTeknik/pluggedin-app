@@ -15,7 +15,7 @@ import {
   ResourceTemplate,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -130,8 +130,13 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Check if a command is available on the system
 async function isCommandAvailable(command: string): Promise<boolean> {
   try {
-    // Try using 'command -v' which is more portable than 'which'
-    execSync(`command -v ${command}`, { stdio: 'ignore' });
+    // Validate command name (alphanumeric, dash, underscore, dot only)
+    if (!/^[a-zA-Z0-9._-]+$/.test(command)) {
+      return false;
+    }
+
+    // Use execFileSync with fixed command and args array to prevent command injection
+    execFileSync('command', ['-v', command], { stdio: 'ignore' });
     return true;
   } catch {
     // Fallback: check common binary locations
@@ -144,7 +149,7 @@ async function isCommandAvailable(command: string): Promise<boolean> {
       `${process.env.HOME || os.homedir()}/.local/bin/${command}`,
       `${process.env.HOME}/.local/bin/${command}`,
     ];
-    
+
     for (const path of commonPaths) {
       try {
         await fs.promises.access(path, fs.constants.X_OK);
@@ -153,7 +158,7 @@ async function isCommandAvailable(command: string): Promise<boolean> {
         // Continue checking other paths
       }
     }
-    
+
     return false;
   }
 }
@@ -281,7 +286,7 @@ export function createBubblewrapConfig(
   // Try to find pnpm in the system
   let pnpmPath = '';
   try {
-    const pnpmLocation = execSync('which pnpm', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    const pnpmLocation = execFileSync('which', ['pnpm'], { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (pnpmLocation) {
       pnpmPath = path.dirname(pnpmLocation);
     }
@@ -426,7 +431,7 @@ export function createFirejailConfig(
   // Try to find pnpm in the system for firejail
   let pnpmPathFirejail = '';
   try {
-    const pnpmLocation = execSync('which pnpm', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    const pnpmLocation = execFileSync('which', ['pnpm'], { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (pnpmLocation) {
       pnpmPathFirejail = path.dirname(pnpmLocation);
     }

@@ -76,8 +76,18 @@ export class OAuthProcessManager extends EventEmitter {
       
       // Clear existing OAuth tokens to force fresh authentication
       await this.clearExistingTokens(serverName, isolatedMcpAuthDir);
-      
-      // Spawn the OAuth process with isolated HOME
+
+      // Validate command to prevent injection attacks
+      if (!/^[a-zA-Z0-9._/-]+$/.test(command)) {
+        throw new Error('Invalid command: contains unsafe characters');
+      }
+
+      // Validate args array
+      if (!Array.isArray(args)) {
+        throw new Error('Arguments must be an array');
+      }
+
+      // Spawn the OAuth process with isolated HOME and shell: false for security
       const childProcess = spawn(command, args, {
         env: {
           ...process.env,
@@ -87,7 +97,8 @@ export class OAuthProcessManager extends EventEmitter {
           // Ensure OAuth callback port is set if provided
           ...(options.callbackPort && { OAUTH_CALLBACK_PORT: options.callbackPort.toString() })
         },
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: false // Explicitly disable shell execution to prevent command injection
       });
       
       this.processes.set(serverName, childProcess);
