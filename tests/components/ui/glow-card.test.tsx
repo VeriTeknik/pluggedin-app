@@ -34,7 +34,7 @@ describe('GlowCard', () => {
     expect(card).toHaveClass('custom-class');
   });
 
-  it('has glow effect classes', () => {
+  it('has gradient effect classes', () => {
     const { container } = render(
       <GlowCard>
         Content
@@ -43,29 +43,32 @@ describe('GlowCard', () => {
 
     const card = container.firstChild as HTMLElement;
     expect(card).toHaveClass('relative');
-    expect(card.className).toContain('glow');
+    expect(card).toHaveClass('group');
+    expect(card).toHaveClass('rounded-xl');
+    expect(card.className).toContain('gradient');
   });
 
   it('renders with hover effect', () => {
     const { container } = render(
-      <GlowCard hover>
+      <GlowCard>
         Content
       </GlowCard>
     );
 
     const card = container.firstChild as HTMLElement;
     expect(card).toHaveClass('transition-all');
+    expect(card).toHaveClass('duration-300');
   });
 
-  it('accepts intensity prop', () => {
+  it('has animation classes', () => {
     const { container } = render(
-      <GlowCard intensity="high">
+      <GlowCard>
         Content
       </GlowCard>
     );
 
     const card = container.firstChild as HTMLElement;
-    // Check that intensity affects the glow
+    expect(card).toHaveClass('animate-gradient-shift');
     expect(card).toBeInTheDocument();
   });
 

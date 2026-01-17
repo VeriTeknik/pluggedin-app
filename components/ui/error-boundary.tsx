@@ -150,7 +150,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     // Track with Web Vitals if critical error
-    if (typeof window !== 'undefined' && error.message.includes('Critical')) {
+    if (typeof window !== 'undefined' && error.message?.includes('Critical')) {
       // This will be picked up by Web Vitals reporter
       window.dispatchEvent(new CustomEvent('critical-error', {
         detail: { error: error.message, errorId }
