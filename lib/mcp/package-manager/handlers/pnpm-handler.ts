@@ -4,6 +4,7 @@ import path from 'path';
 import { promisify } from 'util';
 
 import { PackageManagerConfig } from '../config';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
 const execAsync = promisify(exec);
@@ -19,9 +20,9 @@ export class PnpmHandler extends BasePackageHandler {
     
     // Ensure directory exists
     await this.ensureDirectory(installDir);
-    
+
     // Create minimal package.json if not exists
-    const packageJsonPath = path.join(installDir, 'package.json');
+    const packageJsonPath = buildSecurePath(installDir, 'package.json');
     if (!(await this.fileExists(packageJsonPath))) {
       await fs.writeFile(
         packageJsonPath,
@@ -53,33 +54,37 @@ export class PnpmHandler extends BasePackageHandler {
       if (stderr && !stderr.includes('WARN')) {
         console.warn(`[pnpm] Installation warnings for ${packageName}:`, stderr);
       }
-      
+
       // Get the binary path
-      const binaryPath = path.join(installDir, 'node_modules', '.bin', packageName);
+      // Validate packageName to prevent path traversal
+      validatePathComponent(packageName);
+      const binaryPath = buildSecurePath(installDir, 'node_modules', '.bin', packageName);
       let foundBinaryPath: string | null = null;
-      
+
       // Verify the binary exists
       if (await this.fileExists(binaryPath)) {
         foundBinaryPath = binaryPath;
       } else {
         // Try to find the actual binary name from package.json
-        const packageJsonPath = path.join(installDir, 'node_modules', packageName, 'package.json');
+        const packageJsonPath = buildSecurePath(installDir, 'node_modules', packageName, 'package.json');
         if (await this.fileExists(packageJsonPath)) {
           const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
           if (packageJson.bin) {
-            const binName = typeof packageJson.bin === 'string' 
-              ? packageName 
+            const binName = typeof packageJson.bin === 'string'
+              ? packageName
               : Object.keys(packageJson.bin)[0];
-            const altBinaryPath = path.join(installDir, 'node_modules', '.bin', binName);
+            // Validate binName to prevent path traversal
+            validatePathComponent(binName);
+            const altBinaryPath = buildSecurePath(installDir, 'node_modules', '.bin', binName);
             if (await this.fileExists(altBinaryPath)) {
               foundBinaryPath = altBinaryPath;
             }
           }
         }
       }
-      
+
       // Get installed version
-      const installedPackageJson = path.join(installDir, 'node_modules', packageName, 'package.json');
+      const installedPackageJson = buildSecurePath(installDir, 'node_modules', packageName, 'package.json');
       let installedVersion = version;
       if (await this.fileExists(installedPackageJson)) {
         const packageData = JSON.parse(await fs.readFile(installedPackageJson, 'utf-8'));
@@ -120,15 +125,18 @@ export class PnpmHandler extends BasePackageHandler {
   
   async getBinaryPath(serverUuid: string, packageName: string): Promise<string | null> {
     const installDir = this.getServerInstallDir(serverUuid);
-    
+
+    // Validate packageName to prevent path traversal
+    validatePathComponent(packageName);
+
     // First check if the package is installed at all
-    const packageJsonPath = path.join(installDir, 'node_modules', packageName, 'package.json');
+    const packageJsonPath = buildSecurePath(installDir, 'node_modules', packageName, 'package.json');
     if (!(await this.fileExists(packageJsonPath))) {
       return null; // Package not installed
     }
-    
+
     // Check for binary in .bin directory
-    const binaryPath = path.join(installDir, 'node_modules', '.bin', packageName);
+    const binaryPath = buildSecurePath(installDir, 'node_modules', '.bin', packageName);
     if (await this.fileExists(binaryPath)) {
       return binaryPath;
     }
@@ -137,10 +145,12 @@ export class PnpmHandler extends BasePackageHandler {
     try {
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
       if (packageJson.bin) {
-        const binName = typeof packageJson.bin === 'string' 
-          ? packageName 
+        const binName = typeof packageJson.bin === 'string'
+          ? packageName
           : Object.keys(packageJson.bin)[0];
-        const altBinaryPath = path.join(installDir, 'node_modules', '.bin', binName);
+        // Validate binName to prevent path traversal
+        validatePathComponent(binName);
+        const altBinaryPath = buildSecurePath(installDir, 'node_modules', '.bin', binName);
         if (await this.fileExists(altBinaryPath)) {
           return altBinaryPath;
         }
@@ -175,15 +185,15 @@ export class PnpmHandler extends BasePackageHandler {
     if (!PackageManagerConfig.PREWARM_COMMON_PACKAGES) {
       return;
     }
-    
-    const baseLayerDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'overlays', 'base', 'node_modules');
+
+    const baseLayerDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'overlays', 'base', 'node_modules');
     await this.ensureDirectory(baseLayerDir);
-    
+
     // Create a temporary package.json for base layer
-    const tempDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'temp-prewarm');
+    const tempDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'temp-prewarm');
     await this.ensureDirectory(tempDir);
-    
-    const packageJsonPath = path.join(tempDir, 'package.json');
+
+    const packageJsonPath = buildSecurePath(tempDir, 'package.json');
     await fs.writeFile(
       packageJsonPath,
       JSON.stringify({
@@ -214,14 +224,16 @@ export class PnpmHandler extends BasePackageHandler {
     }
     
     // Move node_modules to base layer
+    const tempNodeModulesDir = buildSecurePath(tempDir, 'node_modules');
     try {
-      await fs.rename(
-        path.join(tempDir, 'node_modules'),
-        baseLayerDir
-      );
+      await fs.rename(tempNodeModulesDir, baseLayerDir);
     } catch (error) {
-      // If rename fails, try copy
-      await execAsync(`cp -r ${path.join(tempDir, 'node_modules')}/* ${baseLayerDir}/`);
+      // If rename fails, try copy without using shell command (prevents command injection)
+      try {
+        await fs.cp(tempNodeModulesDir, baseLayerDir, { recursive: true });
+      } catch (copyError) {
+        console.warn('Failed to copy node_modules to base layer after rename failure:', copyError);
+      }
     }
     
     // Cleanup temp directory

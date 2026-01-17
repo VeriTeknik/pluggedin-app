@@ -59,6 +59,27 @@ vi.mock('lucide-react', () => ({
   Star: vi.fn(({ className }) => <div className={className}>Star Icon</div>),
 }));
 
+// Mock useMetrics hook
+vi.mock('@/contexts/metrics-context', () => ({
+  useMetrics: () => ({
+    metrics: {
+      totalApiCalls: 14000,
+      activeServers: 460,
+      totalProjects: 650,
+      totalDocuments: 87,
+    },
+  }),
+}));
+
+// Mock AnimatedMetric component
+vi.mock('@/components/ui/animated-metric', () => ({
+  AnimatedMetric: vi.fn(({ value, label, suffix, prefix }) => (
+    <div className="animated-metric">
+      {prefix}{value}{suffix} - {label}
+    </div>
+  )),
+}));
+
 describe('TrustIndicatorsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -3,6 +3,7 @@ import path from 'path';
 import { z } from 'zod';
 
 import { PackageManagerConfig } from '../config';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 
 const serverUuidSchema = z.string().uuid('Invalid server UUID provided to package handler.');
 
@@ -66,7 +67,8 @@ export abstract class BasePackageHandler {
    */
   protected getServerInstallDir(serverUuid: string): string {
     const sanitizedServerUuid = serverUuidSchema.parse(serverUuid);
-    return path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', sanitizedServerUuid, this.packageManagerName);
+    validatePathComponent(this.packageManagerName);
+    return buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', sanitizedServerUuid, this.packageManagerName);
   }
   
   /**
@@ -89,10 +91,12 @@ export abstract class BasePackageHandler {
     
     try {
       const files = await fs.readdir(dirPath, { withFileTypes: true });
-      
+
       for (const file of files) {
-        const fullPath = path.join(dirPath, file.name);
-        
+        // Validate file name to prevent path traversal
+        validatePathComponent(file.name);
+        const fullPath = buildSecurePath(dirPath, file.name);
+
         if (file.isDirectory()) {
           totalSize += await this.getDirectorySize(fullPath);
         } else {

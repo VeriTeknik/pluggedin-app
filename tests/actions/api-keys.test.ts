@@ -135,7 +135,7 @@ describe('API Keys Actions', () => {
     });
 
     it('should throw error for invalid project UUID', async () => {
-      await expect(createApiKey('invalid-uuid')).rejects.toThrow();
+      await expect(createApiKey('invalid-uuid')).rejects.toThrow('Invalid UUID format');
     });
 
     it('should throw error for empty API key name', async () => {
@@ -497,9 +497,9 @@ describe('API Keys Actions', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should throw error for invalid UUID', () => {
-      // Track API key usage validates UUID synchronously before setting timeout
-      expect(() => trackApiKeyUsage('invalid-uuid')).toThrow('Invalid UUID format');
+    it('should throw error for invalid UUID', async () => {
+      // Track API key usage validates UUID before updating
+      await expect(trackApiKeyUsage('invalid-uuid')).rejects.toThrow();
     });
 
     it('should reduce database writes by ~80% under load', async () => {

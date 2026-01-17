@@ -4,18 +4,91 @@ import path from 'path';
 import { promisify } from 'util';
 
 import { PackageManagerConfig } from '../config';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
 const execAsync = promisify(exec);
 
 export class UvHandler extends BasePackageHandler {
   protected packageManagerName = 'uv';
-  
+
+  /**
+   * Resolves the binary path for a package in the given bin directory.
+   * Tries multiple name variations and validates all paths to prevent traversal.
+   */
+  private async resolveBinaryPath(binDir: string, packageName: string): Promise<string | null> {
+    // Validate packageName to prevent path traversal
+    validatePathComponent(packageName);
+    let binaryPath = buildSecurePath(binDir, packageName);
+
+    // Some Python packages install with different binary names
+    if (!(await this.fileExists(binaryPath))) {
+      // Try common variations
+      const variations = [
+        packageName.replace(/-/g, '_'),
+        packageName.replace(/_/g, '-'),
+        packageName.toLowerCase(),
+        packageName.toUpperCase(),
+      ];
+
+      for (const variant of variations) {
+        // Validate variant to prevent path traversal
+        validatePathComponent(variant);
+        const variantPath = buildSecurePath(binDir, variant);
+        if (await this.fileExists(variantPath)) {
+          binaryPath = variantPath;
+          break;
+        }
+      }
+
+      // If still not found, look for any executable in bin
+      if (!(await this.fileExists(binaryPath))) {
+        const files = await fs.readdir(binDir);
+        const executables = [];
+
+        for (const file of files) {
+          // Validate file name to prevent path traversal
+          validatePathComponent(file);
+          const filePath = buildSecurePath(binDir, file);
+          const stats = await fs.stat(filePath);
+          if (stats.isFile() && (stats.mode & 0o111)) { // Check if executable
+            executables.push(file);
+          }
+        }
+
+        if (executables.length === 1) {
+          // Validate executable name to prevent path traversal
+          validatePathComponent(executables[0]);
+          binaryPath = buildSecurePath(binDir, executables[0]);
+        } else if (executables.length > 1) {
+          // Try to find the most likely match
+          const match = executables.find(exe =>
+            exe.toLowerCase().includes(packageName.toLowerCase()) ||
+            packageName.toLowerCase().includes(exe.toLowerCase())
+          );
+          if (match) {
+            // Validate match to prevent path traversal
+            validatePathComponent(match);
+            binaryPath = buildSecurePath(binDir, match);
+          } else {
+            throw new Error(
+              `Multiple executables found for ${packageName}: ${executables.join(', ')}`
+            );
+          }
+        } else {
+          return null;
+        }
+      }
+    }
+
+    return binaryPath;
+  }
+
   async install(options: InstallOptions): Promise<PackageInfo> {
     const { serverUuid, packageName, version } = options;
     const installDir = this.getServerInstallDir(serverUuid);
-    const venvDir = path.join(installDir, '.venv');
-    
+    const venvDir = buildSecurePath(installDir, '.venv');
+
     this.log('Installing Python package', { serverUuid, packageName, version, installDir });
     
     // Ensure directory exists
@@ -58,61 +131,13 @@ export class UvHandler extends BasePackageHandler {
       if (stderr && !stderr.includes('WARNING')) {
         console.warn(`[uv] Installation warnings for ${packageName}:`, stderr);
       }
-      
+
       // Find the installed binary
-      const binDir = path.join(venvDir, 'bin');
-      let binaryPath = path.join(binDir, packageName);
-      
-      // Some Python packages install with different binary names
-      if (!(await this.fileExists(binaryPath))) {
-        // Try common variations
-        const variations = [
-          packageName.replace(/-/g, '_'),
-          packageName.replace(/_/g, '-'),
-          packageName.toLowerCase(),
-          packageName.toUpperCase(),
-        ];
-        
-        for (const variant of variations) {
-          const variantPath = path.join(binDir, variant);
-          if (await this.fileExists(variantPath)) {
-            binaryPath = variantPath;
-            break;
-          }
-        }
-        
-        // If still not found, look for any executable in bin
-        if (!(await this.fileExists(binaryPath))) {
-          const files = await fs.readdir(binDir);
-          const executables = [];
-          
-          for (const file of files) {
-            const filePath = path.join(binDir, file);
-            const stats = await fs.stat(filePath);
-            if (stats.isFile() && (stats.mode & 0o111)) { // Check if executable
-              executables.push(file);
-            }
-          }
-          
-          if (executables.length === 1) {
-            binaryPath = path.join(binDir, executables[0]);
-          } else if (executables.length > 1) {
-            // Try to find the most likely match
-            const match = executables.find(exe => 
-              exe.toLowerCase().includes(packageName.toLowerCase()) ||
-              packageName.toLowerCase().includes(exe.toLowerCase())
-            );
-            if (match) {
-              binaryPath = path.join(binDir, match);
-            } else {
-              throw new Error(
-                `Multiple executables found for ${packageName}: ${executables.join(', ')}`
-              );
-            }
-          } else {
-            throw new Error(`No executable found for ${packageName}`);
-          }
-        }
+      const binDir = buildSecurePath(venvDir, 'bin');
+      const binaryPath = await this.resolveBinaryPath(binDir, packageName);
+
+      if (!binaryPath) {
+        throw new Error(`No executable found for ${packageName}`);
       }
       
       // Get installed version
@@ -161,8 +186,8 @@ export class UvHandler extends BasePackageHandler {
   
   async isInstalled(serverUuid: string, packageName: string): Promise<boolean> {
     const installDir = this.getServerInstallDir(serverUuid);
-    const venvDir = path.join(installDir, '.venv');
-    
+    const venvDir = buildSecurePath(installDir, '.venv');
+
     if (!(await this.fileExists(venvDir))) {
       return false;
     }
@@ -187,28 +212,14 @@ export class UvHandler extends BasePackageHandler {
   
   async getBinaryPath(serverUuid: string, packageName: string): Promise<string | null> {
     const installDir = this.getServerInstallDir(serverUuid);
-    const venvDir = path.join(installDir, '.venv');
-    const binDir = path.join(venvDir, 'bin');
-    
+    const venvDir = buildSecurePath(installDir, '.venv');
+    const binDir = buildSecurePath(venvDir, 'bin');
+
     if (!(await this.fileExists(binDir))) {
       return null;
     }
-    
-    // Check common binary paths
-    const possiblePaths = [
-      path.join(binDir, packageName),
-      path.join(binDir, packageName.replace(/-/g, '_')),
-      path.join(binDir, packageName.replace(/_/g, '-')),
-      path.join(binDir, packageName.toLowerCase()),
-    ];
-    
-    for (const binaryPath of possiblePaths) {
-      if (await this.fileExists(binaryPath)) {
-        return binaryPath;
-      }
-    }
-    
-    return null;
+
+    return this.resolveBinaryPath(binDir, packageName);
   }
   
   async cleanup(serverUuid: string): Promise<void> {
@@ -232,15 +243,15 @@ export class UvHandler extends BasePackageHandler {
     if (!PackageManagerConfig.PREWARM_COMMON_PACKAGES) {
       return;
     }
-    
-    const baseLayerDir = path.join(
-      PackageManagerConfig.PACKAGE_STORE_DIR, 
-      'overlays', 
-      'base', 
+
+    const baseLayerDir = buildSecurePath(
+      PackageManagerConfig.PACKAGE_STORE_DIR,
+      'overlays',
+      'base',
       'python'
     );
-    const venvDir = path.join(baseLayerDir, '.venv');
-    
+    const venvDir = buildSecurePath(baseLayerDir, '.venv');
+
     await this.ensureDirectory(baseLayerDir);
     
     this.log('Pre-warming Python packages', { count: packages.length });
