@@ -71,6 +71,15 @@ vi.mock('@/contexts/metrics-context', () => ({
   }),
 }));
 
+// Mock AnimatedMetric component
+vi.mock('@/components/ui/animated-metric', () => ({
+  AnimatedMetric: vi.fn(({ value, label, suffix, prefix }) => (
+    <div className="animated-metric">
+      {prefix}{value}{suffix} - {label}
+    </div>
+  )),
+}));
+
 describe('TrustIndicatorsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
