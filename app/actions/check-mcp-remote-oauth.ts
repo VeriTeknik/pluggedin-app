@@ -9,6 +9,7 @@ import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 
 const checkOAuthSchema = z.object({
   serverUuid: z.string().uuid(),
@@ -67,23 +68,25 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
     }
 
     // Check OAuth directory for tokens
-    const oauthDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth', '.mcp-auth');
-    
+    const oauthDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth', '.mcp-auth');
+
     // Also check without .mcp-auth subdirectory (some versions store directly in oauth/)
-    const oauthDirAlt = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth');
-    
+    const oauthDirAlt = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth');
+
     let hasTokens = false;
     
     // Check primary location - mcp-remote stores tokens in subdirectories
     try {
       await fs.access(oauthDir);
       const entries = await fs.readdir(oauthDir);
-      
+
       // Check subdirectories for token files
       for (const entry of entries) {
-        const entryPath = path.join(oauthDir, entry);
+        // Validate entry name to prevent path traversal
+        validatePathComponent(entry);
+        const entryPath = buildSecurePath(oauthDir, entry);
         const stat = await fs.stat(entryPath);
-        
+
         if (stat.isDirectory()) {
           // Check inside subdirectory for token files
           const subFiles = await fs.readdir(entryPath);
@@ -102,19 +105,21 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
       try {
         await fs.access(oauthDirAlt);
         const files = await fs.readdir(oauthDirAlt);
-        
+
         // Check for .mcp-auth directory
         if (files.includes('.mcp-auth')) {
-          const mcpAuthPath = path.join(oauthDirAlt, '.mcp-auth');
+          const mcpAuthPath = buildSecurePath(oauthDirAlt, '.mcp-auth');
           const stat = await fs.stat(mcpAuthPath);
-          
+
           if (stat.isDirectory()) {
             // Check subdirectories in .mcp-auth
             const mcpAuthEntries = await fs.readdir(mcpAuthPath);
             for (const entry of mcpAuthEntries) {
-              const entryPath = path.join(mcpAuthPath, entry);
+              // Validate entry name to prevent path traversal
+              validatePathComponent(entry);
+              const entryPath = buildSecurePath(mcpAuthPath, entry);
               const entryStat = await fs.stat(entryPath);
-              
+
               if (entryStat.isDirectory()) {
                 const subFiles = await fs.readdir(entryPath);
                 const tokenFile = subFiles.find(f => f.includes('_tokens.json'));
@@ -126,7 +131,7 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
             }
           }
         }
-        
+
       } catch (error) {
       }
     }
