@@ -24,6 +24,7 @@ import path from 'path';
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+import { buildSecurePath } from '@/lib/secure-path-builder';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
@@ -126,6 +127,24 @@ async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serv
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Validate UUID format to prevent path traversal
+ */
+function validateUUID(uuid: string | undefined): void {
+  if (!uuid) return;
+
+  // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (!uuidRegex.test(uuid)) {
+    throw new Error('Invalid UUID format');
+  }
+
+  // Additional safety: ensure no path traversal characters
+  if (uuid.includes('..') || uuid.includes('/') || uuid.includes('\\')) {
+    throw new Error('UUID contains invalid characters');
+  }
+}
 
 // Check if a command is available on the system
 async function isCommandAvailable(command: string): Promise<boolean> {
@@ -175,16 +194,21 @@ export function createBubblewrapConfig(
   // Read paths from environment variables with fallbacks
   // Use actual home directory as fallback instead of hardcoded /home/pluggedin
   const actualHome = process.env.HOME || os.homedir() || '/app';
-  
+
   // Use server-specific directories for all MCP operations
   // This ensures OAuth tokens, workspace files, and other data are isolated per server
-  const serverSpecificHome = serverConfig.uuid
-    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace')
-    : path.join(actualHome, 'mcp-workspace');
+  let serverSpecificHome: string;
+  if (serverConfig.uuid) {
+    // Validate UUID to prevent path traversal
+    validateUUID(serverConfig.uuid);
+    serverSpecificHome = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace');
+  } else {
+    serverSpecificHome = buildSecurePath(actualHome, 'mcp-workspace');
+  }
   
   const paths: PathConfig = {
     userHome: process.env.FIREJAIL_USER_HOME ?? serverSpecificHome,
-    localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
+    localBin: process.env.FIREJAIL_LOCAL_BIN ?? buildSecurePath(actualHome, '.local', 'bin'),
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
     mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? serverSpecificHome
   };
@@ -216,11 +240,10 @@ export function createBubblewrapConfig(
     
     // For servers with OAuth, ensure OAuth directory is accessible
     // Mount the parent servers directory to allow access to oauth subdirectory
-    ...(serverConfig.uuid ? [
-      '--bind', 
-      path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid),
-      path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid)
-    ] : []),
+    ...(serverConfig.uuid ? (() => {
+      const serverDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid!);
+      return ['--bind', serverDir, serverDir];
+    })() : []),
     
     // Read-only system directories
     '--ro-bind', '/usr', '/usr',
@@ -342,16 +365,21 @@ export function createFirejailConfig(
   // Read paths from environment variables with fallbacks
   // Use actual home directory as fallback instead of hardcoded /home/pluggedin
   const actualHome = process.env.HOME || os.homedir() || '/app';
-  
+
   // Use server-specific directories for all MCP operations
   // This ensures OAuth tokens, workspace files, and other data are isolated per server
-  const serverSpecificHome = serverConfig.uuid
-    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace')
-    : path.join(actualHome, 'mcp-workspace');
+  let serverSpecificHome: string;
+  if (serverConfig.uuid) {
+    // Validate UUID to prevent path traversal
+    validateUUID(serverConfig.uuid);
+    serverSpecificHome = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace');
+  } else {
+    serverSpecificHome = buildSecurePath(actualHome, 'mcp-workspace');
+  }
   
   const paths: PathConfig = {
     userHome: process.env.FIREJAIL_USER_HOME ?? serverSpecificHome,
-    localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
+    localBin: process.env.FIREJAIL_LOCAL_BIN ?? buildSecurePath(actualHome, '.local', 'bin'),
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
     mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? serverSpecificHome
   };
@@ -551,7 +579,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         // Even in discovery mode, we need to set up proper environment for uvx
         if (serverConfig.command === 'uvx') {
           const serverUuid = serverConfig.uuid || serverConfig.name;
-          const installDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'uv');
+          validateUUID(serverUuid);
+          const installDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'uv');
           packageManagerEnv = {
             UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,

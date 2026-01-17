@@ -6,6 +6,7 @@ import path from 'path';
 
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 
 export interface OAuthProcessResult {
   success: boolean;
@@ -58,10 +59,12 @@ export class OAuthProcessManager extends EventEmitter {
       let isolatedMcpAuthDir: string;
       
       if (serverUuid) {
+        // Validate serverUuid to prevent path traversal
+        validatePathComponent(serverUuid);
         // Use server-specific OAuth directory
-        oauthHome = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'oauth');
+        oauthHome = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'oauth');
         await fs.mkdir(oauthHome, { recursive: true });
-        isolatedMcpAuthDir = path.join(oauthHome, '.mcp-auth');
+        isolatedMcpAuthDir = buildSecurePath(oauthHome, '.mcp-auth');
       } else {
         // Fallback to default behavior
         oauthHome = os.homedir();
@@ -437,16 +440,20 @@ export class OAuthProcessManager extends EventEmitter {
         // Look for mcp-remote-* directories
         for (const entry of entries) {
           if (entry.startsWith('mcp-remote-')) {
-            const subDir = path.join(mcpAuthDir, entry);
+            // Validate entry name to prevent path traversal
+            validatePathComponent(entry);
+            const subDir = buildSecurePath(mcpAuthDir, entry);
             const stat = await fs.stat(subDir);
-            
+
             if (stat.isDirectory()) {
               const files = await fs.readdir(subDir);
-              
+
               // Look for *_tokens.json files
               for (const file of files) {
                 if (file.endsWith('_tokens.json')) {
-                  const filepath = path.join(subDir, file);
+                  // Validate file name to prevent path traversal
+                  validatePathComponent(file);
+                  const filepath = buildSecurePath(subDir, file);
                   try {
                     const content = await fs.readFile(filepath, 'utf-8');
                     const data = JSON.parse(content);
@@ -492,8 +499,10 @@ export class OAuthProcessManager extends EventEmitter {
       ];
       
       for (const filename of possibleFiles) {
-        const filepath = path.join(mcpAuthDir, filename);
-        
+        // Validate filename to prevent path traversal
+        validatePathComponent(filename);
+        const filepath = buildSecurePath(mcpAuthDir, filename);
+
         try {
           const content = await fs.readFile(filepath, 'utf-8');
           const data = JSON.parse(content);
@@ -525,14 +534,18 @@ export class OAuthProcessManager extends EventEmitter {
       
       // Also check for server-specific subdirectories
       try {
-        const serverDir = path.join(mcpAuthDir, serverName);
+        // Validate serverName to prevent path traversal
+        validatePathComponent(serverName);
+        const serverDir = buildSecurePath(mcpAuthDir, serverName);
         const stats = await fs.stat(serverDir);
-        
+
         if (stats.isDirectory()) {
           const files = await fs.readdir(serverDir);
           for (const file of files) {
             if (file.endsWith('.json')) {
-              const filepath = path.join(serverDir, file);
+              // Validate file name to prevent path traversal
+              validatePathComponent(file);
+              const filepath = buildSecurePath(serverDir, file);
               const content = await fs.readFile(filepath, 'utf-8');
               const data = JSON.parse(content);
               
@@ -567,7 +580,9 @@ export class OAuthProcessManager extends EventEmitter {
         ];
         
         for (const filename of hashFiles) {
-          const filepath = path.join(mcpAuthDir, filename);
+          // Validate filename to prevent path traversal
+          validatePathComponent(filename);
+          const filepath = buildSecurePath(mcpAuthDir, filename);
           try {
             const content = await fs.readFile(filepath, 'utf-8');
             const data = JSON.parse(content);
@@ -634,17 +649,21 @@ export class OAuthProcessManager extends EventEmitter {
       ];
       
       for (const filename of possibleFiles) {
-        const filepath = path.join(mcpAuthDir, filename);
+        // Validate filename to prevent path traversal
+        validatePathComponent(filename);
+        const filepath = buildSecurePath(mcpAuthDir, filename);
         try {
           await fs.unlink(filepath);
         } catch (_e) {
           // File doesn't exist, that's ok
         }
       }
-      
+
       // Also clear server-specific subdirectories
       try {
-        const serverDir = path.join(mcpAuthDir, serverName);
+        // Validate serverName to prevent path traversal
+        validatePathComponent(serverName);
+        const serverDir = buildSecurePath(mcpAuthDir, serverName);
         await fs.rm(serverDir, { recursive: true, force: true });
       } catch (_e) {
         // Directory doesn't exist, that's ok
