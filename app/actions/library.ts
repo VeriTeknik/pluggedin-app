@@ -4,7 +4,6 @@ import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
-import { join } from 'path';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -732,7 +731,7 @@ export async function deleteDoc(
 
     // Delete file from disk (using same base directory as uploads)
     try {
-      const fullPath = join(UPLOADS_BASE_DIR, doc.file_path);
+      const fullPath = buildSecurePath(UPLOADS_BASE_DIR, doc.file_path);
       await unlink(fullPath);
     } catch (fileError) {
       console.warn('Failed to delete file from disk:', fileError);
