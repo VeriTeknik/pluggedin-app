@@ -79,6 +79,10 @@ vi.mock('lucide-react', () => ({
   Zap: vi.fn(({ className }) => <svg className={className}>Zap</svg>),
   Globe: vi.fn(({ className }) => <svg className={className}>Globe</svg>),
   CheckCircle: vi.fn(() => <svg>Check</svg>),
+  BookOpen: vi.fn(({ className }) => <svg className={className}>BookOpen</svg>),
+  Bot: vi.fn(({ className }) => <svg className={className}>Bot</svg>),
+  Database: vi.fn(({ className }) => <svg className={className}>Database</svg>),
+  Wrench: vi.fn(({ className }) => <svg className={className}>Wrench</svg>),
 }));
 
 describe('LandingHeroEnterpriseSection', () => {
