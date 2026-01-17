@@ -224,14 +224,16 @@ export class PnpmHandler extends BasePackageHandler {
     }
     
     // Move node_modules to base layer
+    const tempNodeModulesDir = buildSecurePath(tempDir, 'node_modules');
     try {
-      await fs.rename(
-        buildSecurePath(tempDir, 'node_modules'),
-        baseLayerDir
-      );
+      await fs.rename(tempNodeModulesDir, baseLayerDir);
     } catch (error) {
-      // If rename fails, try copy
-      await execAsync(`cp -r ${buildSecurePath(tempDir, 'node_modules')}/* ${baseLayerDir}/`);
+      // If rename fails, try copy without using shell command (prevents command injection)
+      try {
+        await fs.cp(tempNodeModulesDir, baseLayerDir, { recursive: true });
+      } catch (copyError) {
+        console.warn('Failed to copy node_modules to base layer after rename failure:', copyError);
+      }
     }
     
     // Cleanup temp directory

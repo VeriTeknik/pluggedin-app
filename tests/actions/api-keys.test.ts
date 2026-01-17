@@ -135,7 +135,7 @@ describe('API Keys Actions', () => {
     });
 
     it('should throw error for invalid project UUID', async () => {
-      await expect(createApiKey('invalid-uuid')).rejects.toThrow();
+      await expect(createApiKey('invalid-uuid')).rejects.toThrow('Invalid UUID format');
     });
 
     it('should throw error for empty API key name', async () => {

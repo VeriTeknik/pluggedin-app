@@ -81,8 +81,10 @@ export class OAuthProcessManager extends EventEmitter {
       await this.clearExistingTokens(serverName, isolatedMcpAuthDir);
 
       // Validate command to prevent injection attacks
-      if (!/^[a-zA-Z0-9._/-]+$/.test(command)) {
-        throw new Error('Invalid command: contains unsafe characters');
+      // Since spawn is used with shell: false, we only need to block shell metacharacters
+      // Allow paths with spaces, colons (Windows), backslashes, etc.
+      if (/[;&|`$()<>]/.test(command)) {
+        throw new Error('Invalid command: contains shell metacharacters');
       }
 
       // Validate args array

@@ -75,7 +75,7 @@ describe('AnimatedMetric', () => {
     expect(screen.getByText('Response Time')).toBeInTheDocument();
   });
 
-  it('renders with description when provided', () => {
+  it('renders metric with label', () => {
     const { container } = render(
       <AnimatedMetric
         value={500}

@@ -24,7 +24,7 @@ import path from 'path';
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
-import { buildSecurePath } from '@/lib/secure-path-builder';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
@@ -133,16 +133,12 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function validateUUID(uuid: string | undefined): void {
   if (!uuid) return;
 
-  // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  // UUID format validation (any version): xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  // Accepts any UUID-shaped string (hex digits and dashes in correct positions)
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   if (!uuidRegex.test(uuid)) {
     throw new Error('Invalid UUID format');
-  }
-
-  // Additional safety: ensure no path traversal characters
-  if (uuid.includes('..') || uuid.includes('/') || uuid.includes('\\')) {
-    throw new Error('UUID contains invalid characters');
   }
 }
 
@@ -154,8 +150,10 @@ async function isCommandAvailable(command: string): Promise<boolean> {
       return false;
     }
 
-    // Use execFileSync with fixed command and args array to prevent command injection
-    execFileSync('command', ['-v', command], { stdio: 'ignore' });
+    // Use which/where to check command availability (works cross-platform)
+    // 'which' is POSIX standard, 'where' is Windows equivalent
+    const whichCommand = process.platform === 'win32' ? 'where' : 'which';
+    execFileSync(whichCommand, [command], { stdio: 'ignore' });
     return true;
   } catch {
     // Fallback: check common binary locations
@@ -579,7 +577,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         // Even in discovery mode, we need to set up proper environment for uvx
         if (serverConfig.command === 'uvx') {
           const serverUuid = serverConfig.uuid || serverConfig.name;
-          validateUUID(serverUuid);
+          // Use validatePathComponent since serverUuid could be a name (not necessarily UUID)
+          validatePathComponent(serverUuid);
           const installDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'uv');
           packageManagerEnv = {
             UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
