@@ -19,12 +19,21 @@ export async function getReviewsForServer(
       return [];
     }
 
-    const response = await fetch(
-      `https://registry.plugged.in/v0/servers/${externalId}/reviews`,
-      {
-        next: { revalidate: 60 }, // Cache for 60 seconds
-      }
+    // Build URL safely using URL constructor to prevent SSRF
+    const targetUrl = new URL(
+      `/v0/servers/${encodeURIComponent(externalId)}/reviews`,
+      'https://registry.plugged.in'
     );
+
+    // Validate the constructed URL points to expected host and path
+    if (targetUrl.hostname !== 'registry.plugged.in' || !targetUrl.pathname.startsWith('/v0/servers/')) {
+      console.error('[reviews] URL validation failed - unexpected hostname or path');
+      return [];
+    }
+
+    const response = await fetch(targetUrl.toString(), {
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
 
     if (!response.ok) {
       console.error(`Failed to fetch reviews: ${response.status} ${response.statusText}`);
