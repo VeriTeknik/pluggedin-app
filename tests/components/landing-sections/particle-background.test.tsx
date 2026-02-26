@@ -39,10 +39,12 @@ describe('ParticleBackground', () => {
       dispatchEvent: vi.fn(),
     }));
 
-    // Mock requestAnimationFrame to run immediately
+    // Mock requestAnimationFrame - don't run callback immediately to avoid infinite loops
+    let rafId = 0;
     mockRequestAnimationFrame.mockImplementation((callback: FrameRequestCallback) => {
-      callback(16); // Simulate 60fps timing
-      return 1;
+      // Schedule callback for next tick instead of running immediately
+      setTimeout(() => callback(16), 0);
+      return ++rafId;
     });
 
     mockCancelAnimationFrame.mockImplementation(() => {});

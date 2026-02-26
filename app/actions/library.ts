@@ -4,13 +4,13 @@ import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
-import { join } from 'path';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
+import { buildSecurePath, validatePathComponent, getSecureBaseUploadDir } from '@/lib/secure-path-builder';
 import type {
   Doc,
   DocDeleteResponse,
@@ -20,49 +20,15 @@ import type {
 
 // Create uploads directory if it doesn't exist
 // Use environment variable or fallback to platform-specific paths
-const getDefaultUploadsDir = () => {
-  if (process.platform === 'win32') {
-    // Windows: Use temp directory
-    return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
-  } else {
-    // macOS/Linux/Docker: Use project's uploads directory
-    // In Docker, process.cwd() is /app, so this becomes /app/uploads
-    return join(process.cwd(), 'uploads');
-  }
-};
-
-const UPLOADS_BASE_DIR = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+const UPLOADS_BASE_DIR = getSecureBaseUploadDir();
 
 /**
  * Sanitize path components to prevent path injection attacks
- * Removes dangerous characters and prevents directory traversal
+ * Uses centralized validatePathComponent for consistent security
  */
 function sanitizePath(pathComponent: string): string {
-  if (!pathComponent || typeof pathComponent !== 'string') {
-    throw new Error('Invalid path component');
-  }
-
-  // Remove null bytes and other dangerous characters
-  let sanitized = pathComponent.replace(/[\x00-\x1f\x80-\x9f]/g, '');
-  
-  // Remove or replace path traversal sequences
-  sanitized = sanitized.replace(/\.\./g, '');
-  sanitized = sanitized.replace(/[\/\\]/g, '_');
-  
-  // Remove leading/trailing dots and spaces
-  sanitized = sanitized.replace(/^[\.\s]+|[\.\s]+$/g, '');
-  
-  // Ensure it's not empty after sanitization
-  if (!sanitized) {
-    throw new Error('Path component becomes empty after sanitization');
-  }
-  
-  // Limit length to prevent buffer overflow
-  if (sanitized.length > 255) {
-    sanitized = sanitized.substring(0, 255);
-  }
-  
-  return sanitized;
+  // Use centralized validation which is stricter than custom sanitization
+  return validatePathComponent(pathComponent);
 }
 
 /**
@@ -84,10 +50,10 @@ function isSubPath(parent: string, child: string): boolean {
 function createSafeFilePath(userId: string, fileName: string): { userDir: string; filePath: string; relativePath: string } {
   const sanitizedUserId = sanitizePath(userId);
   const sanitizedFileName = sanitizePath(fileName);
-  
-  // Create paths
-  const userDir = join(UPLOADS_BASE_DIR, sanitizedUserId);
-  const filePath = join(userDir, sanitizedFileName);
+
+  // Create paths using secure path builder
+  const userDir = buildSecurePath(UPLOADS_BASE_DIR, sanitizedUserId);
+  const filePath = buildSecurePath(userDir, sanitizedFileName);
   const relativePath = `${sanitizedUserId}/${sanitizedFileName}`;
 
   // Use cached resolved uploads directory from startup
@@ -120,8 +86,8 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   try {
     // Resolve user directory with symlink resolution to detect attacks
     resolvedUserDir = realpathSync(userDir);
-    // Build file path from resolved user directory
-    resolvedFilePath = join(resolvedUserDir, sanitizedFileName);
+    // Build file path from resolved user directory using secure path builder
+    resolvedFilePath = buildSecurePath(resolvedUserDir, sanitizedFileName);
   } catch (err) {
     // Log sanitized error internally
     console.error('Error resolving paths');
@@ -765,7 +731,7 @@ export async function deleteDoc(
 
     // Delete file from disk (using same base directory as uploads)
     try {
-      const fullPath = join(UPLOADS_BASE_DIR, doc.file_path);
+      const fullPath = buildSecurePath(UPLOADS_BASE_DIR, doc.file_path);
       await unlink(fullPath);
     } catch (fileError) {
       console.warn('Failed to delete file from disk:', fileError);

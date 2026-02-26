@@ -2,6 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { buildSecurePath } from '@/lib/secure-path-builder';
+
 export class PackageManagerConfig {
   // Resource limits from environment
   static readonly CPU_CORES_MAX = parseFloat(process.env.MCP_CPU_CORES_MAX || '0.5');
@@ -20,7 +22,7 @@ export class PackageManagerConfig {
       return '/tmp/mcp-packages';
     } else if (platform === 'win32') {
       // Windows: Use %TEMP% or %LOCALAPPDATA%
-      return path.join(os.tmpdir(), 'mcp-packages');
+      return buildSecurePath(os.tmpdir(), 'mcp-packages');
     } else {
       // Linux and others: Use /var/mcp-packages if writable, otherwise ~/.cache
       try {
@@ -29,15 +31,15 @@ export class PackageManagerConfig {
         return '/var/mcp-packages';
       } catch {
         // Fallback to user's cache directory
-        return path.join(os.homedir(), '.cache', 'mcp-packages');
+        return buildSecurePath(os.homedir(), '.cache', 'mcp-packages');
       }
     }
   }
   
   // Package management
   static readonly PACKAGE_STORE_DIR = process.env.MCP_PACKAGE_STORE_DIR || this.getDefaultStoreDir();
-  static readonly PNPM_STORE_DIR = process.env.MCP_PNPM_STORE_DIR || path.join(this.PACKAGE_STORE_DIR, 'pnpm-store');
-  static readonly UV_CACHE_DIR = process.env.MCP_UV_CACHE_DIR || path.join(this.PACKAGE_STORE_DIR, 'uv-cache');
+  static readonly PNPM_STORE_DIR = process.env.MCP_PNPM_STORE_DIR || buildSecurePath(this.PACKAGE_STORE_DIR, 'pnpm-store');
+  static readonly UV_CACHE_DIR = process.env.MCP_UV_CACHE_DIR || buildSecurePath(this.PACKAGE_STORE_DIR, 'uv-cache');
   static readonly PACKAGE_CACHE_DAYS = parseInt(process.env.MCP_PACKAGE_CACHE_DAYS || '30');
   static readonly PREWARM_COMMON_PACKAGES = process.env.MCP_PREWARM_COMMON_PACKAGES === 'true';
   

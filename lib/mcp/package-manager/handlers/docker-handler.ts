@@ -4,6 +4,7 @@ import path from 'path';
 import { promisify } from 'util';
 
 import { PackageManagerConfig } from '../config';
+import { buildSecurePath } from '@/lib/secure-path-builder';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
 const execAsync = promisify(exec);
@@ -144,7 +145,7 @@ export class DockerHandler extends BasePackageHandler {
   
   private createDockerWrapper(serverUuid: string, containerTag: string): string {
     const installDir = this.getServerInstallDir(serverUuid);
-    const wrapperPath = path.join(installDir, 'docker-wrapper.sh');
+    const wrapperPath = buildSecurePath(installDir, 'docker-wrapper.sh');
     
     // Create a shell script that runs the Docker container
     const wrapperContent = `#!/bin/bash

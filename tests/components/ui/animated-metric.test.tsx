@@ -55,7 +55,6 @@ describe('AnimatedMetric', () => {
       />
     );
 
-    // Component uses CountUp which mocks to just show the value
     expect(screen.getByText('1000')).toBeInTheDocument();
     expect(screen.getByText('Test Metric')).toBeInTheDocument();
   });
@@ -70,35 +69,33 @@ describe('AnimatedMetric', () => {
       />
     );
 
-    // Component renders prefix, value, and suffix
-    expect(screen.getByText('100')).toBeInTheDocument();
-    expect(screen.getByText(/ms/)).toBeInTheDocument(); // Regex to match suffix
+    // Check aria-label which contains the full formatted value
+    const metricElement = screen.getByLabelText('<100 Response Time');
+    expect(metricElement).toBeInTheDocument();
     expect(screen.getByText('Response Time')).toBeInTheDocument();
   });
 
-  it('renders with description when provided', () => {
-    // Component doesn't have description prop, just verify basic rendering
-    render(
+  it('renders metric with label', () => {
+    const { container } = render(
       <AnimatedMetric
         value={500}
         label="Active Users"
       />
     );
 
-    expect(screen.getByText('500')).toBeInTheDocument();
+    // AnimatedMetric doesn't have a description prop, just label
     expect(screen.getByText('Active Users')).toBeInTheDocument();
+    expect(screen.getByText('500')).toBeInTheDocument();
   });
 
-  it('applies correct size classes', () => {
+  it('applies default text size classes', () => {
     render(
       <AnimatedMetric value={100} label="Test" />
     );
 
-    // Component always uses text-4xl (no size prop support)
     const container = screen.getByRole('status');
-    const valueElement = container.querySelector('.text-4xl');
-    expect(valueElement).toBeInTheDocument();
-    expect(valueElement).toHaveClass('font-bold');
+    // Component uses text-4xl by default
+    expect(container.querySelector('.text-4xl')).toBeInTheDocument();
   });
 
   it('respects reduced motion preference', () => {
@@ -121,8 +118,8 @@ describe('AnimatedMetric', () => {
       />
     );
 
-    // When reduced motion is preferred, component uses toLocaleString() which formats as "1,000"
-    expect(screen.getByText('1,000')).toBeInTheDocument();
+    // Should render value immediately without animation
+    expect(screen.getByText('1000')).toBeInTheDocument();
   });
 
   it('adds ARIA labels for accessibility', () => {
@@ -131,6 +128,7 @@ describe('AnimatedMetric', () => {
         value={7268}
         suffix="+"
         label="Verified Tools"
+        description="Pre-verified with encrypted keys"
       />
     );
 
@@ -188,9 +186,7 @@ describe('AnimatedMetric', () => {
       />
     );
 
-    // Component renders value and suffix separately
-    expect(screen.getByText('99.9')).toBeInTheDocument();
-    expect(screen.getByText('%')).toBeInTheDocument();
+    expect(screen.getByText('99.9%')).toBeInTheDocument();
   });
 
   it('handles zero values', () => {

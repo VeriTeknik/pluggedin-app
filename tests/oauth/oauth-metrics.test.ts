@@ -330,21 +330,21 @@ describe('OAuth Metrics', () => {
 
       mockCounter.inc.mockClear();
 
-      // High severity
+      // High severity - recordIntegrityViolation calls inc() twice
       recordIntegrityViolation('hash_mismatch');
-      expect(mockCounter.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ severity: 'high' }),
-        undefined
-      );
+      // First call: integrityViolationsTotal.inc({ violation_type })
+      expect(mockCounter.inc).toHaveBeenNthCalledWith(1, { violation_type: 'hash_mismatch' });
+      // Second call: securityEventsTotal.inc({ event_type, severity })
+      expect(mockCounter.inc).toHaveBeenNthCalledWith(2, { event_type: 'integrity_violation', severity: 'high' });
 
       mockCounter.inc.mockClear();
 
-      // Critical severity
+      // Critical severity - recordCodeInjectionAttempt calls inc() twice
       recordCodeInjectionAttempt();
-      expect(mockCounter.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ severity: 'critical' }),
-        undefined
-      );
+      // First call: codeInjectionAttemptsTotal.inc() - no parameters
+      expect(mockCounter.inc).toHaveBeenNthCalledWith(1);
+      // Second call: securityEventsTotal.inc({ event_type, severity })
+      expect(mockCounter.inc).toHaveBeenNthCalledWith(2, { event_type: 'code_injection', severity: 'critical' });
 
       mockCounter.inc.mockClear();
 

@@ -6,10 +6,11 @@ import path from 'path';
 
 import { db } from '@/db';
 import { auditLogsTable, logRetentionPoliciesTable } from '@/db/schema';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 
 // Define paths as private constants
-const LOG_DIR_PATH = process.env.MCP_LOG_DIR || path.join(process.cwd(), 'logs');
-const MCP_SERVER_LOG_DIR_PATH = path.join(LOG_DIR_PATH, 'mcp-servers');
+const LOG_DIR_PATH = process.env.MCP_LOG_DIR || buildSecurePath(process.cwd(), 'logs');
+const MCP_SERVER_LOG_DIR_PATH = buildSecurePath(LOG_DIR_PATH, 'mcp-servers');
 
 // Export functions to get the paths
 export async function getLogDir() {
@@ -149,7 +150,9 @@ export async function cleanupMcpServerLogs(profileUuid: string, maxAgeDays = 7) 
         continue; // Skip files not matching the profile prefix
       }
 
-      const filePath = path.join(MCP_SERVER_LOG_DIR_PATH, file);
+      // Validate file name to prevent path traversal
+      validatePathComponent(file);
+      const filePath = buildSecurePath(MCP_SERVER_LOG_DIR_PATH, file);
 
       // Use a closure to capture filePath and file for error reporting
       const deletePromise = (async () => {
