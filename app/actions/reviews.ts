@@ -4,6 +4,8 @@ import { McpServerSource } from '@/db/schema';
 import { validateExternalIdWithLogging } from '@/lib/validation-utils';
 import { ServerReview } from '@/types/review';
 
+const REGISTRY_BASE_URL = 'https://registry.plugged.in';
+
 export async function getReviewsForServer(
   source: McpServerSource,
   externalId: string
@@ -19,17 +21,11 @@ export async function getReviewsForServer(
       return [];
     }
 
-    // Build URL safely using URL constructor to prevent SSRF
+    // Build URL safely using URL constructor with fixed base to prevent SSRF
     const targetUrl = new URL(
       `/v0/servers/${encodeURIComponent(externalId)}/reviews`,
-      'https://registry.plugged.in'
+      REGISTRY_BASE_URL
     );
-
-    // Validate the constructed URL points to expected host and path
-    if (targetUrl.hostname !== 'registry.plugged.in' || !targetUrl.pathname.startsWith('/v0/servers/')) {
-      console.error('[reviews] URL validation failed - unexpected hostname or path');
-      return [];
-    }
 
     const response = await fetch(targetUrl.toString(), {
       next: { revalidate: 60 }, // Cache for 60 seconds
