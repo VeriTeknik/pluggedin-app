@@ -157,7 +157,7 @@ export function EditTemplateDialog({
                   variant="outline"
                   size="sm"
                   onClick={handleFetchVersions}
-                  disabled={fetchingVersions || !currentDockerImage.includes('ghcr.io')}
+                  disabled={fetchingVersions || !currentDockerImage.startsWith('ghcr.io/')}
                 >
                   {fetchingVersions ? (
                     <>

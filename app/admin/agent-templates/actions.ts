@@ -121,11 +121,18 @@ export async function fetchDockerImageVersions(
       };
     }
 
-    // GitHub Packages API endpoint
+    // Validate owner/package contain only safe characters (alphanumeric, hyphens, underscores, dots, slashes)
+    const safeNamePattern = /^[a-zA-Z0-9._-]+$/;
+    if (!safeNamePattern.test(parsed.owner) || !safeNamePattern.test(parsed.package)) {
+      return { success: false, error: 'Invalid characters in docker image name' };
+    }
+
+    // GitHub Packages API endpoint - build URLs safely using URL constructor
     // Try both org and user endpoints since we don't know which one it is
+    const GITHUB_API_BASE = 'https://api.github.com';
     const endpoints = [
-      `https://api.github.com/orgs/${parsed.owner}/packages/container/${parsed.package}/versions`,
-      `https://api.github.com/users/${parsed.owner}/packages/container/${parsed.package}/versions`,
+      new URL(`/orgs/${encodeURIComponent(parsed.owner)}/packages/container/${encodeURIComponent(parsed.package)}/versions`, GITHUB_API_BASE),
+      new URL(`/users/${encodeURIComponent(parsed.owner)}/packages/container/${encodeURIComponent(parsed.package)}/versions`, GITHUB_API_BASE),
     ];
 
     const headers: HeadersInit = {
@@ -151,7 +158,7 @@ export async function fetchDockerImageVersions(
     // Try both endpoints
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint, { headers });
+        const response = await fetch(endpoint.toString(), { headers });
 
         if (response.ok) {
           versions = await response.json();
