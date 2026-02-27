@@ -17,6 +17,7 @@ import {
 } from '@/db/schema';
 import { getAdminEmails } from '@/lib/admin-notifications';
 import { getAuthSession } from '@/lib/auth';
+import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
  * Check if the current user is an admin.
@@ -126,7 +127,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let syncError: string | undefined;
 
     try {
-      const response = await fetch(`${service.url}${service.sync_endpoint}`, {
+      // Validate URL to prevent SSRF (e.g., requests to cloud metadata endpoints)
+      const syncUrl = validateServiceUrl(service.url, service.sync_endpoint || '/v1/models/sync');
+
+      const response = await fetch(syncUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

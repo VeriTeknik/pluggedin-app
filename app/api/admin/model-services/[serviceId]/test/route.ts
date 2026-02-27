@@ -11,6 +11,7 @@ import { db } from '@/db';
 import { modelRouterServicesTable, users } from '@/db/schema';
 import { getAdminEmails } from '@/lib/admin-notifications';
 import { getAuthSession } from '@/lib/auth';
+import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
  * Check if the current user is an admin.
@@ -75,14 +76,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let success = false;
 
     try {
+      // Validate URLs to prevent SSRF (e.g., requests to cloud metadata endpoints)
+      const healthUrl = validateServiceUrl(service.url, service.health_endpoint || '/health');
+
       // Test health endpoint
-      const healthResponse = await fetch(
-        `${service.url}${service.health_endpoint}`,
-        {
-          method: 'GET',
-          signal: AbortSignal.timeout(10000),
-        }
-      );
+      const healthResponse = await fetch(healthUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000),
+      });
 
       if (healthResponse.ok) {
         health = await healthResponse.json();
@@ -94,13 +95,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // Try to discover models
       if (success) {
         try {
-          const modelsResponse = await fetch(
-            `${service.url}${service.models_endpoint}`,
-            {
-              method: 'GET',
-              signal: AbortSignal.timeout(10000),
-            }
-          );
+          const modelsUrl = validateServiceUrl(service.url, service.models_endpoint || '/v1/models');
+          const modelsResponse = await fetch(modelsUrl, {
+            method: 'GET',
+            signal: AbortSignal.timeout(10000),
+          });
 
           if (modelsResponse.ok) {
             const modelsData = await modelsResponse.json();

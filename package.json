@@ -87,7 +87,7 @@
     "dotenv": "^17.2.3",
     "feed": "^5.1.0",
     "framer-motion": "^12.23.25",
-    "hono": "^4.11.4",
+    "hono": "^4.11.7",
     "i18next": "^25.7.1",
     "i18next-browser-languagedetector": "^8.2.0",
     "ioredis": "^5.8.2",

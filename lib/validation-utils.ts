@@ -73,3 +73,47 @@ export function validateExternalIdWithLogging(
 
   return true;
 }
+
+/**
+ * Blocked hostnames for SSRF prevention.
+ * These cover cloud metadata services and link-local addresses.
+ */
+const BLOCKED_HOSTNAMES = [
+  '169.254.169.254',          // AWS/GCP/Azure IMDS
+  'metadata.google.internal', // GCP metadata
+];
+
+/**
+ * Validates a service URL to prevent SSRF attacks.
+ *
+ * Checks:
+ * - URL is parseable
+ * - Protocol is http: or https:
+ * - Hostname is not a cloud metadata endpoint or link-local address
+ *
+ * @param baseUrl - The base URL of the service (e.g., "https://models.example.com")
+ * @param path - The path to append (e.g., "/health")
+ * @returns The validated full URL string
+ * @throws Error if the URL fails validation
+ */
+export function validateServiceUrl(baseUrl: string, path: string): string {
+  const fullUrl = new URL(path, baseUrl);
+
+  if (fullUrl.protocol !== 'https:' && fullUrl.protocol !== 'http:') {
+    throw new Error(`Invalid URL protocol: ${fullUrl.protocol} — only http: and https: are allowed`);
+  }
+
+  const hostname = fullUrl.hostname.toLowerCase();
+  for (const blocked of BLOCKED_HOSTNAMES) {
+    if (hostname === blocked) {
+      throw new Error(`Blocked URL: requests to ${hostname} are not allowed`);
+    }
+  }
+
+  // Block link-local IPv4 range (169.254.0.0/16)
+  if (hostname.startsWith('169.254.')) {
+    throw new Error(`Blocked URL: requests to link-local addresses are not allowed`);
+  }
+
+  return fullUrl.toString();
+}
