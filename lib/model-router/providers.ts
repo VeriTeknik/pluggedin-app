@@ -1,0 +1,1111 @@
+/**
+ * Model Router Providers
+ *
+ * Handles routing chat completion requests to the appropriate
+ * AI provider (OpenAI, Anthropic, Google, xAI, DeepSeek).
+ *
+ * Models are loaded from the database with caching, with fallback
+ * to hardcoded constants for safety.
+ */
+
+import { eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { aiModelsTable } from '@/db/schema';
+
+import {
+  ChatCompletionChunk,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ChatMessage,
+  MODEL_ALIASES,
+  MODEL_PRICING,
+  MODEL_PROVIDERS,
+  ModelProvider,
+} from './types';
+
+// ============================================================================
+// Model Cache - Database-driven with TTL
+// ============================================================================
+
+interface CachedModel {
+  model_id: string;
+  provider: ModelProvider;
+  input_price: number;
+  output_price: number;
+  aliases: string[] | null;
+}
+
+let modelCache: Map<string, CachedModel> | null = null;
+let aliasCache: Map<string, string> | null = null;
+let cacheExpiry: number = 0;
+const CACHE_TTL_MS = 60000; // 1 minute cache
+
+/**
+ * Load models from database into cache
+ */
+async function loadModelsFromDatabase(): Promise<void> {
+  try {
+    const models = await db
+      .select({
+        model_id: aiModelsTable.model_id,
+        provider: aiModelsTable.provider,
+        input_price: aiModelsTable.input_price,
+        output_price: aiModelsTable.output_price,
+        aliases: aiModelsTable.aliases,
+      })
+      .from(aiModelsTable)
+      .where(eq(aiModelsTable.is_enabled, true));
+
+    modelCache = new Map();
+    aliasCache = new Map();
+
+    for (const model of models) {
+      const cachedModel: CachedModel = {
+        model_id: model.model_id,
+        provider: model.provider as ModelProvider,
+        input_price: model.input_price,
+        output_price: model.output_price,
+        aliases: model.aliases,
+      };
+      modelCache.set(model.model_id, cachedModel);
+
+      // Build alias cache
+      if (model.aliases) {
+        for (const alias of model.aliases) {
+          aliasCache.set(alias.toLowerCase(), model.model_id);
+        }
+      }
+    }
+
+    cacheExpiry = Date.now() + CACHE_TTL_MS;
+    console.log(`[ModelRouter] Loaded ${models.length} models from database`);
+  } catch (error) {
+    console.error('[ModelRouter] Failed to load models from database, using fallback:', error);
+    // Don't set cache on error - will use fallback
+  }
+}
+
+/**
+ * Get models from cache, refreshing if expired
+ */
+async function getModelCache(): Promise<Map<string, CachedModel>> {
+  if (!modelCache || Date.now() >= cacheExpiry) {
+    await loadModelsFromDatabase();
+  }
+  return modelCache || new Map();
+}
+
+/**
+ * Get alias cache, refreshing if expired
+ */
+async function getAliasCache(): Promise<Map<string, string>> {
+  if (!aliasCache || Date.now() >= cacheExpiry) {
+    await loadModelsFromDatabase();
+  }
+  return aliasCache || new Map();
+}
+
+// ============================================================================
+// Provider Configuration
+// ============================================================================
+
+// Provider base URLs
+const PROVIDER_URLS: Record<ModelProvider, string> = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com/v1',
+  google: 'https://generativelanguage.googleapis.com/v1beta',
+  xai: 'https://api.x.ai/v1',
+  deepseek: 'https://api.deepseek.com/v1',
+};
+
+/**
+ * Resolve model alias to actual model ID (sync version for backwards compatibility)
+ * Checks hardcoded aliases only - for database aliases, use resolveModelAliasAsync
+ */
+export function resolveModelAlias(model: string): string {
+  return MODEL_ALIASES[model.toLowerCase()] || model;
+}
+
+/**
+ * Resolve model alias to actual model ID (async version with database lookup)
+ * Checks database aliases first, falls back to hardcoded aliases
+ */
+export async function resolveModelAliasAsync(model: string): Promise<string> {
+  const lowerModel = model.toLowerCase();
+
+  // Check database alias cache first
+  const aliases = await getAliasCache();
+  if (aliases.has(lowerModel)) {
+    return aliases.get(lowerModel)!;
+  }
+
+  // Check database model IDs directly
+  const models = await getModelCache();
+  if (models.has(model)) {
+    return model;
+  }
+
+  // Fall back to hardcoded aliases
+  return MODEL_ALIASES[lowerModel] || model;
+}
+
+/**
+ * Get provider for a model (sync version for backwards compatibility)
+ */
+export function getProviderForModel(model: string): ModelProvider {
+  const resolvedModel = resolveModelAlias(model);
+  const provider = MODEL_PROVIDERS[resolvedModel];
+
+  if (!provider) {
+    // Try to infer from model name
+    if (resolvedModel.startsWith('gpt-') || resolvedModel.startsWith('o1')) {
+      return 'openai';
+    }
+    if (resolvedModel.startsWith('claude')) {
+      return 'anthropic';
+    }
+    if (resolvedModel.startsWith('gemini')) {
+      return 'google';
+    }
+    if (resolvedModel.startsWith('grok')) {
+      return 'xai';
+    }
+    if (resolvedModel.startsWith('deepseek')) {
+      return 'deepseek';
+    }
+    throw new Error(`Unknown model: ${model}`);
+  }
+
+  return provider;
+}
+
+/**
+ * Get provider for a model (async version with database lookup)
+ */
+export async function getProviderForModelAsync(model: string): Promise<ModelProvider> {
+  const resolvedModel = await resolveModelAliasAsync(model);
+
+  // Check database first
+  const models = await getModelCache();
+  const cachedModel = models.get(resolvedModel);
+  if (cachedModel) {
+    return cachedModel.provider;
+  }
+
+  // Fall back to hardcoded mapping
+  const provider = MODEL_PROVIDERS[resolvedModel];
+  if (provider) {
+    return provider;
+  }
+
+  // Try to infer from model name
+  if (resolvedModel.startsWith('gpt-') || resolvedModel.startsWith('o1')) {
+    return 'openai';
+  }
+  if (resolvedModel.startsWith('claude')) {
+    return 'anthropic';
+  }
+  if (resolvedModel.startsWith('gemini')) {
+    return 'google';
+  }
+  if (resolvedModel.startsWith('grok')) {
+    return 'xai';
+  }
+  if (resolvedModel.startsWith('deepseek')) {
+    return 'deepseek';
+  }
+
+  throw new Error(`Unknown model: ${model}`);
+}
+
+/**
+ * Get API key for provider from environment
+ */
+function getApiKey(provider: ModelProvider): string {
+  const keys: Record<ModelProvider, string | undefined> = {
+    openai: process.env.OPENAI_API_KEY,
+    anthropic: process.env.ANTHROPIC_API_KEY,
+    google: process.env.GOOGLE_API_KEY,
+    xai: process.env.XAI_API_KEY,
+    deepseek: process.env.DEEPSEEK_API_KEY,
+  };
+
+  const key = keys[provider];
+  if (!key) {
+    throw new Error(`API key not configured for provider: ${provider}`);
+  }
+
+  // DEBUG: Log last 4 chars of key to verify correct key is being used
+  console.log(`[ModelRouter] Using ${provider} key ending in: ...${key.slice(-4)}`);
+
+  return key;
+}
+
+/**
+ * Sanitize provider error messages to prevent information disclosure.
+ * SECURITY: Removes sensitive information like API keys from error messages.
+ */
+function sanitizeProviderError(
+  error: { error?: { message?: string; type?: string; code?: string } } | undefined,
+  provider: string,
+  status: number
+): string {
+  const message = error?.error?.message || '';
+  const errorType = error?.error?.type || '';
+  const errorCode = error?.error?.code || '';
+
+  // Handle specific HTTP status codes first
+  if (status === 401) {
+    return `${provider} authentication error: Invalid or missing API key`;
+  }
+
+  // Check for authentication-related error types/codes
+  if (
+    errorType === 'invalid_api_key' ||
+    errorCode === 'invalid_api_key' ||
+    errorType === 'authentication_error'
+  ) {
+    return `${provider} authentication error: Invalid API key`;
+  }
+
+  // Check for model not found errors
+  if (
+    errorCode === 'model_not_found' ||
+    errorType === 'invalid_request_error' ||
+    message.toLowerCase().includes('does not exist') ||
+    message.toLowerCase().includes('model not found') ||
+    message.toLowerCase().includes('invalid model')
+  ) {
+    // Safe to show model-related errors
+    if (message && message.length < 300) {
+      return message;
+    }
+    return `${provider} error: Model not found or invalid request`;
+  }
+
+  // Patterns that indicate actual sensitive data in the message
+  const sensitivePatterns = [
+    /sk-[a-zA-Z0-9]+/,  // OpenAI API key pattern
+    /AIza[a-zA-Z0-9-_]+/,  // Google API key pattern
+    /x-goog-api-key/i,
+    /your api key/i,
+    /api key.*is/i,
+  ];
+
+  for (const pattern of sensitivePatterns) {
+    if (pattern.test(message)) {
+      return `${provider} authentication error`;
+    }
+  }
+
+  // Return the actual message for other errors (rate limits, etc.)
+  if (message && message.length < 300) {
+    return message;
+  }
+
+  return `${provider} API error: ${status}`;
+}
+
+/**
+ * Convert messages to Anthropic format
+ */
+function convertToAnthropicMessages(
+  messages: ChatMessage[]
+): { system?: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> } {
+  let systemPrompt: string | undefined;
+  const anthropicMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      systemPrompt = (systemPrompt || '') + (msg.content || '');
+    } else if (msg.role === 'user' || msg.role === 'assistant') {
+      anthropicMessages.push({
+        role: msg.role,
+        content: msg.content || '',
+      });
+    }
+  }
+
+  return { system: systemPrompt, messages: anthropicMessages };
+}
+
+/**
+ * Convert messages to Google (Gemini) format
+ */
+function convertToGoogleMessages(
+  messages: ChatMessage[]
+): { systemInstruction?: { parts: { text: string }[] }; contents: Array<{ role: string; parts: { text: string }[] }> } {
+  let systemInstruction: { parts: { text: string }[] } | undefined;
+  const contents: Array<{ role: string; parts: { text: string }[] }> = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      systemInstruction = { parts: [{ text: msg.content || '' }] };
+    } else {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content || '' }],
+      });
+    }
+  }
+
+  return { systemInstruction, contents };
+}
+
+/**
+ * Call OpenAI API
+ */
+async function callOpenAI(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  // Build request body, only including optional params if explicitly set
+  // Some models (like GPT-5) have restrictions on certain parameters
+  const requestBody: Record<string, unknown> = {
+    model: resolveModelAlias(request.model),
+    messages: request.messages,
+    stream: false,
+  };
+
+  // Only include optional parameters if they're explicitly set
+  if (request.max_tokens !== undefined) {
+    requestBody.max_completion_tokens = request.max_tokens;
+  }
+  if (request.temperature !== undefined && request.temperature !== 0.7) {
+    // Only send non-default temperature (some models only support default)
+    requestBody.temperature = request.temperature;
+  }
+  if (request.top_p !== undefined) {
+    requestBody.top_p = request.top_p;
+  }
+  if (request.n !== undefined && request.n !== 1) {
+    requestBody.n = request.n;
+  }
+  if (request.stop !== undefined) {
+    requestBody.stop = request.stop;
+  }
+  if (request.presence_penalty !== undefined && request.presence_penalty !== 0) {
+    requestBody.presence_penalty = request.presence_penalty;
+  }
+  if (request.frequency_penalty !== undefined && request.frequency_penalty !== 0) {
+    requestBody.frequency_penalty = request.frequency_penalty;
+  }
+  if (request.user !== undefined) {
+    requestBody.user = request.user;
+  }
+
+  const response = await fetch(`${PROVIDER_URLS.openai}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, 'OpenAI', response.status));
+  }
+
+  return response.json();
+}
+
+/**
+ * Call OpenAI API with streaming
+ */
+async function* callOpenAIStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  // Build request body, only including optional params if explicitly set
+  // Some models (like GPT-5) have restrictions on certain parameters
+  const requestBody: Record<string, unknown> = {
+    model: resolveModelAlias(request.model),
+    messages: request.messages,
+    stream: true,
+  };
+
+  // Only include optional parameters if they're explicitly set
+  if (request.max_tokens !== undefined) {
+    requestBody.max_completion_tokens = request.max_tokens;
+  }
+  if (request.temperature !== undefined && request.temperature !== 0.7) {
+    // Only send non-default temperature (some models only support default)
+    requestBody.temperature = request.temperature;
+  }
+  if (request.top_p !== undefined) {
+    requestBody.top_p = request.top_p;
+  }
+  if (request.n !== undefined && request.n !== 1) {
+    requestBody.n = request.n;
+  }
+  if (request.stop !== undefined) {
+    requestBody.stop = request.stop;
+  }
+  if (request.presence_penalty !== undefined && request.presence_penalty !== 0) {
+    requestBody.presence_penalty = request.presence_penalty;
+  }
+  if (request.frequency_penalty !== undefined && request.frequency_penalty !== 0) {
+    requestBody.frequency_penalty = request.frequency_penalty;
+  }
+  if (request.user !== undefined) {
+    requestBody.user = request.user;
+  }
+
+  const response = await fetch(`${PROVIDER_URLS.openai}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, 'OpenAI', response.status));
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') return;
+        try {
+          yield JSON.parse(data) as ChatCompletionChunk;
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Call Anthropic API
+ */
+async function callAnthropic(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  const { system, messages } = convertToAnthropicMessages(request.messages);
+  const resolvedModel = resolveModelAlias(request.model);
+
+  const response = await fetch(`${PROVIDER_URLS.anthropic}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: resolvedModel,
+      system,
+      messages,
+      max_tokens: request.max_tokens || 4096,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      stop_sequences: Array.isArray(request.stop) ? request.stop : request.stop ? [request.stop] : undefined,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, 'Anthropic', response.status));
+  }
+
+  const anthropicResponse = await response.json();
+
+  // Convert Anthropic response to OpenAI format
+  return {
+    id: anthropicResponse.id,
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: anthropicResponse.model,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: anthropicResponse.content[0]?.text || '',
+        },
+        finish_reason: anthropicResponse.stop_reason === 'end_turn' ? 'stop' : anthropicResponse.stop_reason,
+      },
+    ],
+    usage: {
+      prompt_tokens: anthropicResponse.usage?.input_tokens || 0,
+      completion_tokens: anthropicResponse.usage?.output_tokens || 0,
+      total_tokens: (anthropicResponse.usage?.input_tokens || 0) + (anthropicResponse.usage?.output_tokens || 0),
+    },
+  };
+}
+
+/**
+ * Call Anthropic API with streaming
+ */
+async function* callAnthropicStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  const { system, messages } = convertToAnthropicMessages(request.messages);
+  const resolvedModel = resolveModelAlias(request.model);
+
+  const response = await fetch(`${PROVIDER_URLS.anthropic}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: resolvedModel,
+      system,
+      messages,
+      max_tokens: request.max_tokens || 4096,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      stop_sequences: Array.isArray(request.stop) ? request.stop : request.stop ? [request.stop] : undefined,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, 'Anthropic', response.status));
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const messageId = `chatcmpl-${Date.now()}`;
+  const created = Math.floor(Date.now() / 1000);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6);
+        try {
+          const event = JSON.parse(data);
+          if (event.type === 'content_block_delta' && event.delta?.text) {
+            yield {
+              id: messageId,
+              object: 'chat.completion.chunk',
+              created,
+              model: resolvedModel,
+              choices: [
+                {
+                  index: 0,
+                  delta: { content: event.delta.text },
+                  finish_reason: null,
+                },
+              ],
+            };
+          } else if (event.type === 'message_stop') {
+            yield {
+              id: messageId,
+              object: 'chat.completion.chunk',
+              created,
+              model: resolvedModel,
+              choices: [
+                {
+                  index: 0,
+                  delta: {},
+                  finish_reason: 'stop',
+                },
+              ],
+            };
+          }
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Call Google (Gemini) API
+ */
+async function callGoogle(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  const { systemInstruction, contents } = convertToGoogleMessages(request.messages);
+  const resolvedModel = resolveModelAlias(request.model);
+
+  const url = `${PROVIDER_URLS.google}/models/${resolvedModel}:generateContent`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction,
+      contents,
+      generationConfig: {
+        temperature: request.temperature,
+        topP: request.top_p,
+        maxOutputTokens: request.max_tokens,
+        stopSequences: Array.isArray(request.stop) ? request.stop : request.stop ? [request.stop] : undefined,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, 'Google', response.status));
+  }
+
+  const googleResponse = await response.json();
+  const candidate = googleResponse.candidates?.[0];
+
+  // Convert Google response to OpenAI format
+  return {
+    id: `chatcmpl-${Date.now()}`,
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: resolvedModel,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: candidate?.content?.parts?.[0]?.text || '',
+        },
+        finish_reason: candidate?.finishReason === 'STOP' ? 'stop' : 'stop',
+      },
+    ],
+    usage: {
+      prompt_tokens: googleResponse.usageMetadata?.promptTokenCount || 0,
+      completion_tokens: googleResponse.usageMetadata?.candidatesTokenCount || 0,
+      total_tokens: googleResponse.usageMetadata?.totalTokenCount || 0,
+    },
+  };
+}
+
+/**
+ * Call Google (Gemini) API with streaming
+ */
+async function* callGoogleStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  const { systemInstruction, contents } = convertToGoogleMessages(request.messages);
+  const resolvedModel = resolveModelAlias(request.model);
+
+  const url = `${PROVIDER_URLS.google}/models/${resolvedModel}:streamGenerateContent?alt=sse`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction,
+      contents,
+      generationConfig: {
+        temperature: request.temperature,
+        topP: request.top_p,
+        maxOutputTokens: request.max_tokens,
+        stopSequences: Array.isArray(request.stop) ? request.stop : request.stop ? [request.stop] : undefined,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, 'Google', response.status));
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const messageId = `chatcmpl-${Date.now()}`;
+  const created = Math.floor(Date.now() / 1000);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6);
+        try {
+          const event = JSON.parse(data);
+          const text = event.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            yield {
+              id: messageId,
+              object: 'chat.completion.chunk',
+              created,
+              model: resolvedModel,
+              choices: [
+                {
+                  index: 0,
+                  delta: { content: text },
+                  finish_reason: null,
+                },
+              ],
+            };
+          }
+          if (event.candidates?.[0]?.finishReason) {
+            yield {
+              id: messageId,
+              object: 'chat.completion.chunk',
+              created,
+              model: resolvedModel,
+              choices: [
+                {
+                  index: 0,
+                  delta: {},
+                  finish_reason: 'stop',
+                },
+              ],
+            };
+          }
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Call OpenAI-compatible API (used for xAI, DeepSeek, and other compatible providers)
+ * These providers implement the same API format as OpenAI, just with different base URLs
+ */
+async function callOpenAICompatible(
+  request: ChatCompletionRequest,
+  apiKey: string,
+  baseUrl: string,
+  providerName: string
+): Promise<ChatCompletionResponse> {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: resolveModelAlias(request.model),
+      messages: request.messages,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      n: request.n,
+      stream: false,
+      stop: request.stop,
+      max_tokens: request.max_tokens,
+      presence_penalty: request.presence_penalty,
+      frequency_penalty: request.frequency_penalty,
+      user: request.user,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, providerName, response.status));
+  }
+
+  return response.json();
+}
+
+/**
+ * Call OpenAI-compatible API with streaming
+ */
+async function* callOpenAICompatibleStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string,
+  baseUrl: string,
+  providerName: string
+): AsyncGenerator<ChatCompletionChunk> {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: resolveModelAlias(request.model),
+      messages: request.messages,
+      temperature: request.temperature,
+      top_p: request.top_p,
+      n: request.n,
+      stream: true,
+      stop: request.stop,
+      max_tokens: request.max_tokens,
+      presence_penalty: request.presence_penalty,
+      frequency_penalty: request.frequency_penalty,
+      user: request.user,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(sanitizeProviderError(error, providerName, response.status));
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') return;
+        try {
+          yield JSON.parse(data) as ChatCompletionChunk;
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Call xAI (Grok) API - OpenAI-compatible
+ */
+async function callXAI(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  return callOpenAICompatible(request, apiKey, PROVIDER_URLS.xai, 'xAI');
+}
+
+/**
+ * Call xAI (Grok) API with streaming
+ */
+async function* callXAIStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  yield* callOpenAICompatibleStreaming(request, apiKey, PROVIDER_URLS.xai, 'xAI');
+}
+
+/**
+ * Call DeepSeek API - OpenAI-compatible
+ */
+async function callDeepSeek(
+  request: ChatCompletionRequest,
+  apiKey: string
+): Promise<ChatCompletionResponse> {
+  return callOpenAICompatible(request, apiKey, PROVIDER_URLS.deepseek, 'DeepSeek');
+}
+
+/**
+ * Call DeepSeek API with streaming
+ */
+async function* callDeepSeekStreaming(
+  request: ChatCompletionRequest,
+  apiKey: string
+): AsyncGenerator<ChatCompletionChunk> {
+  yield* callOpenAICompatibleStreaming(request, apiKey, PROVIDER_URLS.deepseek, 'DeepSeek');
+}
+
+/**
+ * Route chat completion request to appropriate provider
+ */
+export async function routeChatCompletion(
+  request: ChatCompletionRequest
+): Promise<ChatCompletionResponse> {
+  const provider = request.provider || getProviderForModel(request.model);
+  const apiKey = getApiKey(provider);
+
+  switch (provider) {
+    case 'openai':
+      return callOpenAI(request, apiKey);
+    case 'anthropic':
+      return callAnthropic(request, apiKey);
+    case 'google':
+      return callGoogle(request, apiKey);
+    case 'xai':
+      return callXAI(request, apiKey);
+    case 'deepseek':
+      return callDeepSeek(request, apiKey);
+    default:
+      throw new Error(`Unsupported provider: ${provider}`);
+  }
+}
+
+/**
+ * Route chat completion request with streaming
+ */
+export async function* routeChatCompletionStreaming(
+  request: ChatCompletionRequest
+): AsyncGenerator<ChatCompletionChunk> {
+  const provider = request.provider || getProviderForModel(request.model);
+  const apiKey = getApiKey(provider);
+
+  switch (provider) {
+    case 'openai':
+      yield* callOpenAIStreaming(request, apiKey);
+      break;
+    case 'anthropic':
+      yield* callAnthropicStreaming(request, apiKey);
+      break;
+    case 'google':
+      yield* callGoogleStreaming(request, apiKey);
+      break;
+    case 'xai':
+      yield* callXAIStreaming(request, apiKey);
+      break;
+    case 'deepseek':
+      yield* callDeepSeekStreaming(request, apiKey);
+      break;
+    default:
+      throw new Error(`Unsupported provider: ${provider}`);
+  }
+}
+
+/**
+ * Calculate cost for a chat completion (sync version)
+ */
+export function calculateCost(
+  model: string,
+  promptTokens: number,
+  completionTokens: number
+): number {
+  const resolvedModel = resolveModelAlias(model);
+  const pricing = MODEL_PRICING[resolvedModel];
+
+  if (!pricing) {
+    return 0; // Unknown model, can't calculate cost
+  }
+
+  const inputCost = (promptTokens / 1_000_000) * pricing.input;
+  const outputCost = (completionTokens / 1_000_000) * pricing.output;
+
+  return inputCost + outputCost;
+}
+
+/**
+ * Calculate cost for a chat completion (async version with database lookup)
+ */
+export async function calculateCostAsync(
+  model: string,
+  promptTokens: number,
+  completionTokens: number
+): Promise<number> {
+  const resolvedModel = await resolveModelAliasAsync(model);
+
+  // Check database first
+  const models = await getModelCache();
+  const cachedModel = models.get(resolvedModel);
+
+  if (cachedModel) {
+    const inputCost = (promptTokens / 1_000_000) * cachedModel.input_price;
+    const outputCost = (completionTokens / 1_000_000) * cachedModel.output_price;
+    return inputCost + outputCost;
+  }
+
+  // Fall back to hardcoded pricing
+  const pricing = MODEL_PRICING[resolvedModel];
+  if (!pricing) {
+    return 0; // Unknown model, can't calculate cost
+  }
+
+  const inputCost = (promptTokens / 1_000_000) * pricing.input;
+  const outputCost = (completionTokens / 1_000_000) * pricing.output;
+
+  return inputCost + outputCost;
+}
+
+/**
+ * Get available models (sync version using hardcoded data)
+ */
+export function getAvailableModels(): Array<{ id: string; provider: ModelProvider }> {
+  return Object.entries(MODEL_PROVIDERS).map(([id, provider]) => ({ id, provider }));
+}
+
+/**
+ * Get available models from database
+ */
+export async function getAvailableModelsAsync(): Promise<
+  Array<{
+    id: string;
+    provider: ModelProvider;
+    displayName?: string;
+    inputPrice?: number;
+    outputPrice?: number;
+    contextLength?: number;
+    supportsVision?: boolean;
+  }>
+> {
+  try {
+    const models = await db
+      .select({
+        id: aiModelsTable.model_id,
+        provider: aiModelsTable.provider,
+        displayName: aiModelsTable.display_name,
+        inputPrice: aiModelsTable.input_price,
+        outputPrice: aiModelsTable.output_price,
+        contextLength: aiModelsTable.context_length,
+        supportsVision: aiModelsTable.supports_vision,
+      })
+      .from(aiModelsTable)
+      .where(eq(aiModelsTable.is_enabled, true))
+      .orderBy(aiModelsTable.sort_order, aiModelsTable.display_name);
+
+    return models.map((m) => ({
+      id: m.id,
+      provider: m.provider as ModelProvider,
+      displayName: m.displayName,
+      inputPrice: m.inputPrice,
+      outputPrice: m.outputPrice,
+      contextLength: m.contextLength ?? undefined,
+      supportsVision: m.supportsVision ?? undefined,
+    }));
+  } catch (error) {
+    console.error('[ModelRouter] Failed to get models from database:', error);
+    // Fall back to hardcoded
+    return Object.entries(MODEL_PROVIDERS).map(([id, provider]) => ({ id, provider }));
+  }
+}

@@ -1,4 +1,5 @@
 import { getFeaturedBlogPosts } from '@/app/blog/actions';
+
 import { LatestBlogPostsClient } from './latest-blog-posts-client';
 
 export async function LatestBlogPostsSection() {

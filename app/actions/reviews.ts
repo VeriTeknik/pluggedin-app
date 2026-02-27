@@ -4,6 +4,8 @@ import { McpServerSource } from '@/db/schema';
 import { validateExternalIdWithLogging } from '@/lib/validation-utils';
 import { ServerReview } from '@/types/review';
 
+const REGISTRY_BASE_URL = 'https://registry.plugged.in';
+
 export async function getReviewsForServer(
   source: McpServerSource,
   externalId: string
@@ -19,12 +21,15 @@ export async function getReviewsForServer(
       return [];
     }
 
-    const response = await fetch(
-      `https://registry.plugged.in/v0/servers/${externalId}/reviews`,
-      {
-        next: { revalidate: 60 }, // Cache for 60 seconds
-      }
+    // Build URL safely using URL constructor with fixed base to prevent SSRF
+    const targetUrl = new URL(
+      `/v0/servers/${encodeURIComponent(externalId)}/reviews`,
+      REGISTRY_BASE_URL
     );
+
+    const response = await fetch(targetUrl.toString(), {
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
 
     if (!response.ok) {
       console.error(`Failed to fetch reviews: ${response.status} ${response.statusText}`);

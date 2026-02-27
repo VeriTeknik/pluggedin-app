@@ -1,14 +1,15 @@
 'use server';
 
-import { db } from '@/db';
-import { blogPostsTable, blogPostTranslationsTable, users, BlogPostStatus, BlogPostCategory } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { writeFile, unlink, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { desc,eq } from 'drizzle-orm';
+import { mkdir,unlink, writeFile } from 'fs/promises';
 import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
+import { join } from 'path';
+import { z } from 'zod';
+
+import { db } from '@/db';
+import { BlogPostCategory,blogPostsTable, BlogPostStatus, blogPostTranslationsTable, users } from '@/db/schema';
+import { authOptions } from '@/lib/auth';
 
 // Constants
 const WORDS_PER_MINUTE = 200; // Average reading speed

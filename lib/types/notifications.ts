@@ -1,4 +1,5 @@
 // Notification metadata types for enhanced tracking
+// Note: NotificationType and NotificationSeverity are defined in @/app/actions/notifications
 
 /**
  * Centralized allowed values for how a notification was completed.

@@ -1,12 +1,14 @@
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { format } from 'date-fns';
-import { Clock, Eye, Calendar, ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Eye, User } from 'lucide-react';
+import { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BlogContent } from './blog-content';
+
 import { getBlogPostBySlug } from '../actions';
+import { BlogContent } from './blog-content';
 
 type Props = {
   params: Promise<{ slug: string }>;

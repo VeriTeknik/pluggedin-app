@@ -18,6 +18,7 @@ export const isRTL = (locale: string): boolean => {
 };
 
 // Import chunk types
+import enAgents from '../public/locales/en/agents.json';
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enBlog from '../public/locales/en/blog.json';
@@ -44,6 +45,7 @@ import enWhatsNew from '../public/locales/en/whatsNew.json';
 
 // Define namespaces
 export const namespaces = [
+  'agents',
   'apiKeys',
   'auth',
   'blog',
@@ -74,6 +76,7 @@ type Namespace = typeof namespaces[number];
 
 // Define messages type for each namespace
 type Messages = {
+  agents: typeof enAgents;
   apiKeys: typeof enApiKeys;
   auth: typeof enAuth;
   blog: typeof enBlog;

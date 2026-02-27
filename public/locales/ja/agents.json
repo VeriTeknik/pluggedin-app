@@ -1,0 +1,87 @@
+{
+  "deployWizard": {
+    "title": "Deploy {{name}}",
+    "steps": {
+      "identity": {
+        "title": "Identity & Access",
+        "description": "Name your agent and set access level"
+      },
+      "review": {
+        "title": "Review & Deploy",
+        "description": "Review your configuration"
+      }
+    },
+    "form": {
+      "agentName": {
+        "label": "Agent Name",
+        "placeholder": "my-agent",
+        "hint": "Lowercase letters, numbers, and hyphens only",
+        "urlPreview": "{{name}}.is.plugged.in"
+      },
+      "accessControl": {
+        "label": "Access Control",
+        "private": {
+          "title": "Private",
+          "description": "API Key Required"
+        },
+        "public": {
+          "title": "Public",
+          "description": "Link Sharing",
+          "warning": "Anyone with the URL can access this agent. You pay for all usage."
+        }
+      }
+    },
+    "modelSelection": {
+      "title": "Select Models",
+      "selected": "Selected: {{count}} / {{min}}-{{max}}",
+      "legend": {
+        "featured": "Featured",
+        "vision": "Vision",
+        "price": "Price per 1M tokens"
+      },
+      "table": {
+        "model": "Model",
+        "input": "Input",
+        "output": "Output",
+        "features": "Features"
+      },
+      "selectedModels": "Selected Models ({{count}})"
+    },
+    "pricing": {
+      "free": "Free"
+    },
+    "multiSelect": {
+      "selectRange": "Select {{min}} to {{max}} options"
+    },
+    "boolean": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "select": {
+      "placeholder": "Select an option"
+    },
+    "review": {
+      "readyTitle": "Ready to Deploy",
+      "readyDescription": "Review your configuration before deploying",
+      "agentName": "Agent Name",
+      "url": "URL",
+      "access": "Access",
+      "estimatedCost": {
+        "title": "Estimated Cost",
+        "avgInput": "Avg. Input",
+        "avgOutput": "Avg. Output",
+        "perMillion": "/1M tokens"
+      }
+    },
+    "buttons": {
+      "back": "Back",
+      "next": "Next",
+      "deploy": "Deploy Agent",
+      "deploying": "Deploying..."
+    },
+    "tooltips": {
+      "featured": "Featured model",
+      "vision": "Supports vision"
+    }
+  }
+}

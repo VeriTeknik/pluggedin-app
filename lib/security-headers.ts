@@ -124,6 +124,7 @@ function generateCSP(isDevelopment: boolean, nonce: string): string {
       "'self'",
       isDevelopment ? 'ws:' : '',
       'wss://*.plugged.in',
+      'https://*.plugged.in', // Allow HTTPS connections to all Plugged.in services (Model Router, etc.)
       'https://api.stripe.com',
       'https://*.ingest.sentry.io',
       'https://api.github.com',

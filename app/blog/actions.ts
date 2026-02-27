@@ -1,8 +1,9 @@
 'use server';
 
+import { and, desc, eq, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
-import { blogPostsTable, blogPostTranslationsTable, BlogPostStatus, BlogPostCategory } from '@/db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { BlogPostCategory,blogPostsTable, BlogPostStatus } from '@/db/schema';
 import type { Locale } from '@/i18n/config';
 
 /**

@@ -12,7 +12,6 @@ import {
   FlaskConical,
   Newspaper,
   Plus,
-  Server,
   Trash2,
   Unplug,
   Users,
