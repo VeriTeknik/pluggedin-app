@@ -46,7 +46,7 @@ export function wrapEmailLayout(
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <meta name="color-scheme" content="light" />
   <meta name="supported-color-schemes" content="light" />
 </head>
@@ -59,7 +59,7 @@ export function wrapEmailLayout(
           <!-- Header with Logo -->
           <tr>
             <td style="text-align: center; background-color: #ffffff; padding: 30px 20px; border-bottom: 2px solid #f3f4f6;">
-              <img src="${logoUrl}" alt="${appName}" style="height: 50px; max-width: 200px; display: inline-block;" />
+              <img src="${logoUrl}" alt="${escapeHtml(appName)}" style="height: 50px; max-width: 200px; display: inline-block;" />
             </td>
           </tr>
 
@@ -71,10 +71,10 @@ export function wrapEmailLayout(
             <td style="padding: 30px 40px; background-color: #f3f4f6; text-align: center; color: #6b7280; font-size: 14px;">
               <p style="margin: 0 0 10px 0; font-weight: 500; color: #374151;">
                 Thanks,<br/>
-                The ${appName} Team
+                The ${escapeHtml(appName)} Team
               </p>
               <p style="margin: 10px 0 0 0; font-size: 12px; color: #9ca3af;">
-                © ${year} ${appName}. All rights reserved.
+                © ${year} ${escapeHtml(appName)}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -137,7 +137,7 @@ export function createWarningBox(message: string): string {
   return `
     <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
       <p style="margin: 0; font-weight: 600; color: #92400e; font-size: 14px;">
-        ⚠️ ${message}
+        ⚠️ ${escapeHtml(message)}
       </p>
     </div>`;
 }
@@ -150,11 +150,13 @@ export function createWarningBox(message: string): string {
  * @returns HTML for styled button
  */
 export function createActionButton(url: string, text: string): string {
+  // Only allow http/https URLs to prevent javascript: URI injection
+  const safeUrl = /^https?:\/\//i.test(url) ? url : '#';
   return `
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${url}"
+      <a href="${escapeHtml(safeUrl)}"
          style="display: inline-block; padding: 12px 30px; background-color: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
-        ${text}
+        ${escapeHtml(text)}
       </a>
     </div>`;
 }
