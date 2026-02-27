@@ -4,6 +4,7 @@ import {
   createActionButton,
   createSecurityInfoBox,
   createWarningBox,
+  escapeHtml,
   wrapEmailLayout,
 } from './email-layout';
 
@@ -284,14 +285,14 @@ export function generatePasswordRemovedEmail(
 
               <div style="background-color: #e7f3ff; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
                 <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Remaining Login Methods:</p>
-                <p style="margin: 0; line-height: 1.6; font-size: 14px;">${methodsList}</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;">${escapeHtml(methodsList)}</p>
               </div>
 
               <div style="background-color: #f8f9fa; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
                 <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Security Details:</p>
                 <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>Date:</strong> ${formattedDate}</p>
-                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${ipAddress}</p>
-                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${userAgent}</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${escapeHtml(ipAddress)}</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${escapeHtml(userAgent)}</p>
               </div>
 
               <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
@@ -364,8 +365,8 @@ export function generatePasswordChangedEmail(
               <div style="background-color: #f8f9fa; border-left: 4px solid #0070f3; padding: 15px; margin: 20px 0;">
                 <p style="margin: 0 0 10px; font-weight: bold; color: #333;">Security Details:</p>
                 <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>Date:</strong> ${formattedDate}</p>
-                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${ipAddress}</p>
-                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${userAgent}</p>
+                <p style="margin: 0 0 5px; line-height: 1.6; font-size: 14px;"><strong>IP Address:</strong> ${escapeHtml(ipAddress)}</p>
+                <p style="margin: 0; line-height: 1.6; font-size: 14px;"><strong>Device:</strong> ${escapeHtml(userAgent)}</p>
               </div>
 
               <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">

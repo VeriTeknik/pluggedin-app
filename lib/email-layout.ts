@@ -4,6 +4,19 @@
  * Provides reusable HTML email scaffolding to DRY up email templates
  */
 
+/**
+ * Escapes HTML special characters to prevent XSS in email templates.
+ * Must be used for any user-controlled values (IP address, user agent, etc.)
+ */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Default logo as base64 (small Plugged.in logo)
 const DEFAULT_LOGO_BASE64 = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjUwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjUiIHk9IjM1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMzAiIGZpbGw9IiMzMzMiPnBsdWdnZWQuaW48L3RleHQ+PC9zdmc+`;
 
@@ -103,11 +116,11 @@ export function createSecurityInfoBox(
         </tr>
         <tr>
           <td style="padding: 4px 0; font-weight: 500;">IP Address:</td>
-          <td style="padding: 4px 0; font-family: monospace;">${ipAddress}</td>
+          <td style="padding: 4px 0; font-family: monospace;">${escapeHtml(ipAddress)}</td>
         </tr>
         <tr>
           <td style="padding: 4px 0; font-weight: 500;">Device:</td>
-          <td style="padding: 4px 0; word-break: break-word;">${userAgent}</td>
+          <td style="padding: 4px 0; word-break: break-word;">${escapeHtml(userAgent)}</td>
         </tr>
       </table>
     </div>`;
@@ -153,7 +166,7 @@ export function createActionButton(url: string, text: string): string {
  */
 export function createProviderList(providers: string[]): string {
   const listItems = providers
-    .map(provider => `<li style="margin: 5px 0;">${provider}</li>`)
+    .map(provider => `<li style="margin: 5px 0;">${escapeHtml(provider)}</li>`)
     .join('');
 
   return `
