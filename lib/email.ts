@@ -257,6 +257,7 @@ export function generatePasswordRemovedEmail(
     dateStyle: 'full',
     timeStyle: 'long',
   });
+  // methodsList is plain text (e.g. "Github, Google") — no HTML markup. Escaped below via escapeHtml().
   const methodsList = remainingLoginMethods.map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(', ');
 
   return {

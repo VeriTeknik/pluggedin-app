@@ -32,7 +32,7 @@ describe('escapeHtml', () => {
     expect(escapeHtml("O'Hara")).toBe('O&#39;Hara');
   });
 
-  it('should not double-escape already-escaped entities', () => {
+  it('should treat pre-escaped entities as plain text (no special handling)', () => {
     expect(escapeHtml('&amp;')).toBe('&amp;amp;');
   });
 

@@ -59,7 +59,7 @@ export function wrapEmailLayout(
           <!-- Header with Logo -->
           <tr>
             <td style="text-align: center; background-color: #ffffff; padding: 30px 20px; border-bottom: 2px solid #f3f4f6;">
-              <img src="${logoUrl}" alt="${escapeHtml(appName)}" style="height: 50px; max-width: 200px; display: inline-block;" />
+              <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(appName)}" style="height: 50px; max-width: 200px; display: inline-block;" />
             </td>
           </tr>
 
