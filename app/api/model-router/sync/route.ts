@@ -1,15 +1,18 @@
-import { NextResponse } from 'next/server';
-
-import { db } from '@/db';
-import { aiModelsTable, modelRouterServicesTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import * as jose from 'jose';
+import { NextResponse } from 'next/server';
+
+import { authenticate } from '@/app/api/auth';
+import { db } from '@/db';
+import { aiModelsTable, modelRouterServicesTable } from '@/db/schema';
+import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
  * POST /api/model-router/sync
  *
  * Syncs enabled models from database to all enabled Model Router services.
  * Called automatically when admin changes models (add/edit/toggle).
+ * Requires authentication.
  *
  * Flow:
  * 1. Fetch all enabled models from aiModelsTable
@@ -22,7 +25,11 @@ import * as jose from 'jose';
  * - synced_services: number (how many services were synced)
  * - failed_services: array of service names that failed
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const auth = await authenticate(request);
+  if ('error' in auth) {
+    return auth.error;
+  }
   try {
     // 1. Fetch all enabled models
     const enabledModels = await db
@@ -77,7 +84,7 @@ export async function POST() {
     // 4. Sync to each service
     const syncResults = await Promise.allSettled(
       services.map(async (service) => {
-        const syncUrl = `${service.url}${service.sync_endpoint || '/admin/sync'}`;
+        const syncUrl = validateServiceUrl(service.url, service.sync_endpoint || '/admin/sync');
 
         // Generate admin JWT token for this sync operation
         const MODEL_ROUTER_JWT_SECRET = process.env.MODEL_ROUTER_JWT_SECRET;
@@ -130,10 +137,11 @@ export async function POST() {
     // 5. Collect results
     const successCount = syncResults.filter((r) => r.status === 'fulfilled').length;
     const failedServices = syncResults
-      .filter((r) => r.status === 'rejected')
-      .map((r, idx) => ({
-        name: services[idx].name,
-        error: r.status === 'rejected' ? r.reason.message : 'Unknown error',
+      .map((r, idx) => ({ result: r, service: services[idx] }))
+      .filter(({ result }) => result.status === 'rejected')
+      .map(({ result, service }) => ({
+        name: service.name,
+        error: result.status === 'rejected' ? result.reason?.message : 'Unknown error',
       }));
 
     // Update failed services in database

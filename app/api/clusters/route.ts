@@ -133,8 +133,14 @@ const createClusterSchema = z.object({
  * GET /api/clusters
  *
  * List all registered clusters.
+ * Requires authentication.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await authenticate(request);
+  if ('error' in auth) {
+    return auth.error;
+  }
+
   try {
     const clusters = await db
       .select()
@@ -163,7 +169,7 @@ export async function GET() {
 export async function POST(request: Request) {
   // Authenticate the request
   const auth = await authenticate(request);
-  if (auth.error) {
+  if ('error' in auth) {
     return auth.error;
   }
 

@@ -76,12 +76,38 @@ export function validateExternalIdWithLogging(
 
 /**
  * Blocked hostnames for SSRF prevention.
- * These cover cloud metadata services and link-local addresses.
+ * Covers localhost aliases, cloud metadata services, and Kubernetes internal DNS.
  */
 const BLOCKED_HOSTNAMES = [
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+  '::1',
+  '[::1]',
   '169.254.169.254',          // AWS/GCP/Azure IMDS
   'metadata.google.internal', // GCP metadata
+  'metadata.goog',            // GCP metadata alias
+  'kubernetes.default',       // Kubernetes internal
+  'kubernetes.default.svc',   // Kubernetes internal
 ];
+
+/**
+ * Check if hostname is a private/internal IP address.
+ * Covers RFC 1918, link-local, CGNAT, and IPv6 private ranges.
+ */
+function isPrivateNetwork(hostname: string): boolean {
+  const privatePatterns = [
+    /^10\./,                              // 10.0.0.0/8
+    /^172\.(1[6-9]|2[0-9]|3[01])\./,     // 172.16.0.0/12
+    /^192\.168\./,                        // 192.168.0.0/16
+    /^169\.254\./,                        // Link-local
+    /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./, // CGNAT
+    /^fe80:/i,                            // IPv6 link-local
+    /^fc00:/i,                            // IPv6 unique local
+    /^fd[0-9a-f]{2}:/i,                   // IPv6 unique local
+  ];
+  return privatePatterns.some((p) => p.test(hostname));
+}
 
 /**
  * Validates a service URL to prevent SSRF attacks.
@@ -89,7 +115,9 @@ const BLOCKED_HOSTNAMES = [
  * Checks:
  * - URL is parseable
  * - Protocol is http: or https:
- * - Hostname is not a cloud metadata endpoint or link-local address
+ * - Hostname is not a blocked host (localhost, metadata, K8s internal)
+ * - Hostname is not in a private/internal IP range (RFC 1918, link-local, CGNAT)
+ *   (private IPs allowed in development mode)
  *
  * @param baseUrl - The base URL of the service (e.g., "https://models.example.com")
  * @param path - The path to append (e.g., "/health")
@@ -104,15 +132,16 @@ export function validateServiceUrl(baseUrl: string, path: string): string {
   }
 
   const hostname = fullUrl.hostname.toLowerCase();
-  for (const blocked of BLOCKED_HOSTNAMES) {
-    if (hostname === blocked) {
-      throw new Error(`Blocked URL: requests to ${hostname} are not allowed`);
-    }
+
+  // Block known dangerous hostnames
+  if (BLOCKED_HOSTNAMES.includes(hostname)) {
+    throw new Error(`Blocked URL: requests to ${hostname} are not allowed`);
   }
 
-  // Block link-local IPv4 range (169.254.0.0/16)
-  if (hostname.startsWith('169.254.')) {
-    throw new Error(`Blocked URL: requests to link-local addresses are not allowed`);
+  // Block private/internal IP ranges (except in development)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  if (!isDevelopment && isPrivateNetwork(hostname)) {
+    throw new Error(`Blocked URL: requests to private network addresses are not allowed`);
   }
 
   return fullUrl.toString();
