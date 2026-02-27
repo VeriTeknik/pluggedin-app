@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
-    "@h1deya/langchain-mcp-tools": "^0.3.8",
+    "@h1deya/langchain-mcp-tools": "^0.4.1",
     "@hookform/resolvers": "^5.2.2",
     "@langchain/anthropic": "^1.3.21",
     "@langchain/core": "^1.1.29",
