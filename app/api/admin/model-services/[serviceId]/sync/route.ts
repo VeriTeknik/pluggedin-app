@@ -10,9 +10,9 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import {
+  aiModelsTable,
   modelRouterServicesTable,
   modelServiceMappingsTable,
-  aiModelsTable,
   users,
 } from '@/db/schema';
 import { getAdminEmails } from '@/lib/admin-notifications';
