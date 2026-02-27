@@ -8,7 +8,8 @@
  * Escapes HTML special characters to prevent XSS in email templates.
  * Must be used for any user-controlled values (IP address, user agent, etc.)
  */
-export function escapeHtml(str: string): string {
+export function escapeHtml(value: string | null | undefined): string {
+  const str = String(value ?? '');
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
