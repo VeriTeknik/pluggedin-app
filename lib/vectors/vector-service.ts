@@ -86,29 +86,37 @@ const DOMAIN_FIELDS: Record<VectorDomain, ConstructorParameters<typeof ZVecColle
   ],
 };
 
+function createCollection(collectionPath: string, domain: VectorDomain, fields: (typeof DOMAIN_FIELDS)[VectorDomain]): ZVecCollection {
+  const fs = require('fs');
+  if (fs.existsSync(collectionPath)) {
+    fs.rmSync(collectionPath, { recursive: true });
+  }
+  const schema = new ZVecCollectionSchema({
+    name: domain,
+    vectors: EMBEDDING_VECTOR_CONFIG,
+    fields,
+  });
+  return ZVecCreateAndOpen(collectionPath, schema);
+}
+
 function getCollection(domain: VectorDomain): ZVecCollection {
   if (collections[domain]) return collections[domain];
 
   ensureInitialized();
 
-  const fs = require('fs');
   const collectionPath = path.join(ZVEC_DATA_DIR, domain);
   const fields = DOMAIN_FIELDS[domain];
-  const dirExists = fs.existsSync(collectionPath);
 
-  if (dirExists) {
-    // Directory exists - try to open the existing collection.
-    // Do NOT delete on failure (could be locked by another process).
+  try {
     collections[domain] = ZVecOpen(collectionPath);
-  } else {
-    // Directory doesn't exist - create a new collection.
-    fs.mkdirSync(collectionPath, { recursive: true });
-    const schema = new ZVecCollectionSchema({
-      name: domain,
-      vectors: EMBEDDING_VECTOR_CONFIG,
-      fields,
-    });
-    collections[domain] = ZVecCreateAndOpen(collectionPath, schema);
+  } catch (openErr: any) {
+    const msg = openErr?.message || '';
+    // Lock held by another process - don't destroy data, propagate error
+    if (msg.includes('lock hold by') || msg.includes('No locks available')) {
+      throw openErr;
+    }
+    // Invalid or missing collection - safe to (re)create
+    collections[domain] = createCollection(collectionPath, domain, fields);
   }
 
   return collections[domain];
