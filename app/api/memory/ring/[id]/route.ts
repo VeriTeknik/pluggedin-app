@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { memoryRingTable } from '@/db/schema';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
 
 import { authenticate } from '../../../auth';
 
@@ -109,6 +110,11 @@ export async function DELETE(
         { success: false, error: 'Memory not found' },
         { status: 404 }
       );
+    }
+
+    // Clean up zvec vector to prevent ghost vectors
+    for (const row of result) {
+      deleteMemoryRingVector(row.uuid);
     }
 
     return NextResponse.json({ success: true });

@@ -11,8 +11,7 @@
  * - Low success scores accelerate decay
  */
 
-import { ChatOpenAI } from '@langchain/openai';
-import { and, eq, lt, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { memoryRingTable } from '@/db/schema';
@@ -35,6 +34,7 @@ import {
   ACCESS_WEIGHT,
   BASE_WEIGHT,
 } from './constants';
+import { createMemoryLLM } from './llm-factory';
 import { generateEmbedding } from './embedding-service';
 import { deleteMemoryRingVector, upsertMemoryRingVector } from './vector-service';
 import type { DecayStage, MemoryResult } from './types';
@@ -43,12 +43,8 @@ import type { DecayStage, MemoryResult } from './types';
 // LLM Compression
 // ============================================================================
 
-function getCompressionLLM(): ChatOpenAI {
-  return new ChatOpenAI({
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: process.env.MEMORY_COMPRESSION_MODEL || 'gpt-4o-mini',
-    temperature: 0.1,
-  });
+function getCompressionLLM() {
+  return createMemoryLLM('compression');
 }
 
 const COMPRESSION_PROMPTS: Record<string, string> = {
@@ -78,6 +74,111 @@ async function compressContent(
   return typeof response.content === 'string'
     ? response.content
     : JSON.stringify(response.content);
+}
+
+// ============================================================================
+// Per-Memory Decay Helpers
+// ============================================================================
+
+type MemoryRow = typeof memoryRingTable.$inferSelect;
+
+/**
+ * Mark a memory as forgotten and remove its vector
+ */
+async function markMemoryForgotten(memory: MemoryRow): Promise<void> {
+  await db
+    .update(memoryRingTable)
+    .set({
+      current_decay_stage: 'forgotten',
+      current_token_count: 0,
+      updated_at: new Date(),
+      metadata: appendDecayHistory(memory.metadata, memory.current_decay_stage, 'forgotten'),
+    })
+    .where(eq(memoryRingTable.uuid, memory.uuid));
+
+  deleteMemoryRingVector(memory.uuid);
+}
+
+/**
+ * Generate an embedding, returning null on failure (non-fatal)
+ */
+async function safeGenerateEmbedding(content: string): Promise<number[] | null> {
+  try {
+    return await generateEmbedding(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Upsert a memory ring vector, ignoring errors (non-fatal)
+ */
+function safeUpsertVector(memory: MemoryRow, embedding: number[]): void {
+  try {
+    upsertMemoryRingVector(
+      memory.uuid,
+      embedding,
+      memory.profile_uuid,
+      memory.ring_type,
+      memory.agent_uuid
+    );
+  } catch {
+    // Non-fatal
+  }
+}
+
+/**
+ * Apply compression update to a memory: compress content, update DB, update vector
+ */
+async function applyCompressionUpdate(memory: MemoryRow, nextStage: DecayStage): Promise<void> {
+  const currentContent = getCurrentContent(memory);
+  if (!currentContent) {
+    throw new Error('No content available for compression');
+  }
+
+  const compressedContent = await compressContent(currentContent, nextStage);
+  const newEmbedding = await safeGenerateEmbedding(compressedContent);
+  const nextDecayAt = calculateNextDecayDate(memory, nextStage);
+
+  const updateData: Record<string, unknown> = {
+    current_decay_stage: nextStage,
+    current_token_count: Math.ceil(compressedContent.length / 4),
+    next_decay_at: nextDecayAt,
+    updated_at: new Date(),
+    metadata: appendDecayHistory(memory.metadata, memory.current_decay_stage, nextStage),
+  };
+
+  if (nextStage === 'compressed') updateData.content_compressed = compressedContent;
+  if (nextStage === 'summary') updateData.content_summary = compressedContent;
+  if (nextStage === 'essence') updateData.content_essence = compressedContent;
+
+  await db
+    .update(memoryRingTable)
+    .set(updateData)
+    .where(eq(memoryRingTable.uuid, memory.uuid));
+
+  if (newEmbedding) {
+    safeUpsertVector(memory, newEmbedding);
+  }
+}
+
+/**
+ * Decay a single memory to its next stage. Returns 'forgotten' | 'compressed' | 'error'.
+ */
+async function decayOneMemory(memory: MemoryRow): Promise<'forgotten' | 'compressed' | 'error'> {
+  const nextStage = NEXT_DECAY_STAGE[memory.current_decay_stage];
+
+  if (nextStage === 'forgotten' || nextStage === null) {
+    await markMemoryForgotten(memory);
+    return 'forgotten';
+  }
+
+  try {
+    await applyCompressionUpdate(memory, nextStage);
+    return 'compressed';
+  } catch {
+    return 'error';
+  }
 }
 
 // ============================================================================
@@ -111,97 +212,18 @@ export async function processDecay(profileUuid?: string): Promise<MemoryResult<{
       conditions.push(eq(memoryRingTable.profile_uuid, profileUuid));
     }
 
-    const duForDecay = await db
+    const dueForDecay = await db
       .select()
       .from(memoryRingTable)
       .where(and(...conditions))
       .limit(100); // Process in batches
 
-    for (const memory of duForDecay) {
-      try {
-        processed++;
-
-        const nextStage = NEXT_DECAY_STAGE[memory.current_decay_stage];
-
-        if (nextStage === 'forgotten' || nextStage === null) {
-          // Mark as forgotten (will be cleaned up later)
-          await db
-            .update(memoryRingTable)
-            .set({
-              current_decay_stage: 'forgotten',
-              current_token_count: 0,
-              updated_at: new Date(),
-              metadata: appendDecayHistory(memory.metadata, memory.current_decay_stage, 'forgotten'),
-            })
-            .where(eq(memoryRingTable.uuid, memory.uuid));
-
-          // Remove vector from zvec
-          deleteMemoryRingVector(memory.uuid);
-
-          forgotten++;
-          continue;
-        }
-
-        // Get current content at the active stage
-        const currentContent = getCurrentContent(memory);
-        if (!currentContent) {
-          errors++;
-          continue;
-        }
-
-        // Compress to next stage
-        const compressedContent = await compressContent(currentContent, nextStage);
-
-        // Generate new embedding for compressed content
-        let newEmbedding: number[] | null = null;
-        try {
-          newEmbedding = await generateEmbedding(compressedContent);
-        } catch {
-          // Keep old embedding if new one fails
-        }
-
-        // Calculate next decay date with multipliers
-        const nextDecayAt = calculateNextDecayDate(memory, nextStage);
-
-        // Build update based on target stage
-        const updateData: Record<string, unknown> = {
-          current_decay_stage: nextStage,
-          current_token_count: Math.ceil(compressedContent.length / 4),
-          next_decay_at: nextDecayAt,
-          updated_at: new Date(),
-          metadata: appendDecayHistory(memory.metadata, memory.current_decay_stage, nextStage),
-        };
-
-        // Set content at the appropriate stage
-        if (nextStage === 'compressed') updateData.content_compressed = compressedContent;
-        if (nextStage === 'summary') updateData.content_summary = compressedContent;
-        if (nextStage === 'essence') updateData.content_essence = compressedContent;
-
-        await db
-          .update(memoryRingTable)
-          .set(updateData)
-          .where(eq(memoryRingTable.uuid, memory.uuid));
-
-        // Update embedding in zvec with compressed content
-        if (newEmbedding) {
-          try {
-            upsertMemoryRingVector(
-              memory.uuid,
-              newEmbedding,
-              memory.profile_uuid,
-              memory.ring_type,
-              memory.agent_uuid
-            );
-          } catch {
-            // Non-fatal
-          }
-        }
-
-        compressed++;
-      } catch (error) {
-        console.error(`Failed to decay memory ${memory.uuid}:`, error);
-        errors++;
-      }
+    for (const memory of dueForDecay) {
+      processed++;
+      const result = await decayOneMemory(memory);
+      if (result === 'forgotten') forgotten++;
+      else if (result === 'compressed') compressed++;
+      else errors++;
     }
 
     return {
@@ -295,9 +317,7 @@ export async function runNaturalSelection(
         const uuids = toDelete.map(d => d.uuid);
         await db
           .delete(memoryRingTable)
-          .where(
-            sql`${memoryRingTable.uuid} = ANY(${uuids})`
-          );
+          .where(inArray(memoryRingTable.uuid, uuids));
         // Clean up zvec vectors
         for (const u of uuids) {
           deleteMemoryRingVector(u);

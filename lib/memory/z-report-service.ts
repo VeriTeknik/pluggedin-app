@@ -6,9 +6,8 @@
  * structured summary stored in memory_sessions.z_report.
  */
 
-import { ChatOpenAI } from '@langchain/openai';
-
-import { Z_REPORT_MAX_TOKENS, Z_REPORT_MAX_OBSERVATIONS } from './constants';
+import { Z_REPORT_MAX_OBSERVATIONS } from './constants';
+import { createMemoryLLM } from './llm-factory';
 import { extractResponseText, parseJsonFromResponse } from './llm-utils';
 import { addObservation, getSessionObservations } from './observation-service';
 import { getSessionByUuid, getSessionHistory, storeZReport } from './session-service';
@@ -40,13 +39,8 @@ Respond ONLY in this JSON format (no other text):
   "success_rate": 0.85
 }`;
 
-function getZReportLLM(): ChatOpenAI {
-  return new ChatOpenAI({
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: process.env.MEMORY_ZREPORT_MODEL || 'gpt-4o-mini',
-    temperature: 0.2,
-    maxTokens: Z_REPORT_MAX_TOKENS,
-  });
+function getZReportLLM() {
+  return createMemoryLLM('zreport');
 }
 
 /**

@@ -10,13 +10,13 @@
  */
 
 import { createHash } from 'crypto';
-import { ChatOpenAI } from '@langchain/openai';
 import { eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { gutPatternsTable, memoryRingTable } from '@/db/schema';
 
 import { GUT_K_ANONYMITY_THRESHOLD, GUT_MAX_PATTERN_TOKENS } from './constants';
+import { createMemoryLLM } from './llm-factory';
 import { generateEmbedding } from './embedding-service';
 import { extractResponseText, parseJsonFromResponse } from './llm-utils';
 import { searchGutPatterns, upsertGutPatternVector } from './vector-service';
@@ -52,13 +52,8 @@ Respond ONLY in this JSON format (no other text):
   "compressed_pattern": "Normalized pattern (max ${GUT_MAX_PATTERN_TOKENS} tokens)"
 }`;
 
-function getPatternLLM(): ChatOpenAI {
-  return new ChatOpenAI({
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: process.env.MEMORY_PATTERN_MODEL || 'gpt-4o-mini',
-    temperature: 0.1,
-    maxTokens: 300,
-  });
+function getPatternLLM() {
+  return createMemoryLLM('pattern');
 }
 
 /**
@@ -153,10 +148,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
         sql`${memoryRingTable.reinforcement_count} >= 2
           AND (${memoryRingTable.success_score} IS NULL OR ${memoryRingTable.success_score} >= 0.5)
           AND ${memoryRingTable.current_decay_stage} != 'forgotten'
-          AND NOT EXISTS (
-            SELECT 1 FROM jsonb_extract_path_text(${memoryRingTable.metadata}::jsonb, 'gut_processed')
-            WHERE jsonb_extract_path_text(${memoryRingTable.metadata}::jsonb, 'gut_processed') = 'true'
-          )`
+          AND COALESCE(${memoryRingTable.metadata}::jsonb->>'gut_processed', 'false') <> 'true'`
       )
       .limit(100);
 
@@ -182,6 +174,25 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
         const isNewProfile = !((existing.metadata as Record<string, unknown>)?.profile_hashes as string[] ?? [])
           .includes(hashPattern(memory.profileUuid));
 
+        const profileHash = hashPattern(memory.profileUuid);
+
+        // Build metadata update: always set last_seen, append profile hash if new
+        const metadataUpdate = isNewProfile
+          ? sql`jsonb_set(
+              jsonb_set(
+                COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
+                '{last_seen}',
+                ${JSON.stringify(new Date().toISOString())}::jsonb
+              ),
+              '{profile_hashes}',
+              (COALESCE(${gutPatternsTable.metadata}->'profile_hashes', '[]'::jsonb) || ${JSON.stringify(profileHash)}::jsonb)
+            )`
+          : sql`jsonb_set(
+              COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
+              '{last_seen}',
+              ${JSON.stringify(new Date().toISOString())}::jsonb
+            )`;
+
         await db
           .update(gutPatternsTable)
           .set({
@@ -192,11 +203,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
               : gutPatternsTable.unique_profile_count,
             confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
             updated_at: new Date(),
-            metadata: sql`jsonb_set(
-              COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
-              '{last_seen}',
-              ${JSON.stringify(new Date().toISOString())}::jsonb
-            )`,
+            metadata: metadataUpdate,
           })
           .where(eq(gutPatternsTable.uuid, existing.uuid));
 
@@ -310,9 +317,9 @@ export async function queryIntuition(
     // Build score map for merging
     const scoreMap = new Map(vectorResults.map(r => [r.uuid, r.score]));
 
-    // Only return patterns that meet k-anonymity threshold
+    // Only return patterns that meet k-anonymity threshold (unique profiles, not occurrence count)
     const filtered = patterns.filter(p =>
-      (p.occurrence_count ?? 0) >= GUT_K_ANONYMITY_THRESHOLD
+      (p.unique_profile_count ?? 0) >= GUT_K_ANONYMITY_THRESHOLD
     );
 
     return {

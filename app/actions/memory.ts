@@ -35,6 +35,7 @@ import { generateZReport, getZReports as getZReportsService } from '@/lib/memory
 import { classifyBatch } from '@/lib/memory/analytics-agent';
 import { processDecay } from '@/lib/memory/decay-engine';
 import { aggregatePatterns, queryIntuition } from '@/lib/memory/gut-agent';
+import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -49,6 +50,28 @@ function formatError<T = unknown>(error: unknown): MemoryResult<T> {
   return {
     success: false,
     error: error instanceof Error ? error.message : 'Unknown error',
+  };
+}
+
+/**
+ * Higher-order helper to DRY up profile-scoped server actions.
+ * Handles: validate input → resolve profile → execute handler → catch errors.
+ */
+function createProfileAction<I, O = unknown>(
+  schema: z.ZodSchema<I>,
+  handler: (parsed: I, profileUuid: string) => Promise<MemoryResult<O>>
+): (userId: string, input: unknown) => Promise<MemoryResult<O>> {
+  return async (userId: string, input: unknown): Promise<MemoryResult<O>> => {
+    try {
+      const parsed = schema.parse(input);
+      const profileUuid = await getActiveProfileUuid(userId);
+      if (!profileUuid) {
+        return { success: false, error: 'No active profile found' };
+      }
+      return handler(parsed, profileUuid);
+    } catch (error) {
+      return formatError(error);
+    }
   };
 }
 
@@ -299,82 +322,56 @@ export async function getSessionObservations(
 // Memory Retrieval (Progressive Disclosure)
 // ============================================================================
 
+const _searchMemories = createProfileAction(
+  searchMemoriesSchema,
+  async (parsed, profileUuid) =>
+    searchMemoriesService({
+      ...parsed,
+      ringTypes: parsed.ringTypes as RingType[] | undefined,
+      profileUuid,
+    })
+);
+
 export async function searchMemories(
   userId: string,
   params: z.infer<typeof searchMemoriesSchema>
 ): Promise<MemoryResult> {
-  try {
-    const parsed = searchMemoriesSchema.parse(params);
-
-    const profileUuid = await getActiveProfileUuid(userId);
-    if (!profileUuid) {
-      return { success: false, error: 'No active profile found' };
-    }
-
-    return searchMemoriesService({
-      ...parsed,
-      ringTypes: parsed.ringTypes as RingType[] | undefined,
-      profileUuid,
-    });
-  } catch (error) {
-    return formatError(error);
-  }
+  return _searchMemories(userId, params);
 }
+
+const _getMemoryTimeline = createProfileAction(
+  memoryUuidsSchema,
+  async (parsed, profileUuid) =>
+    getMemoryTimelineService(parsed.memoryUuids, profileUuid)
+);
 
 export async function getMemoryTimeline(
   userId: string,
   memoryUuids: string[]
 ): Promise<MemoryResult> {
-  try {
-    const parsed = memoryUuidsSchema.parse({ memoryUuids });
-
-    // Enforce profile scoping to prevent IDOR
-    const profileUuid = await getActiveProfileUuid(userId);
-    if (!profileUuid) {
-      return { success: false, error: 'No active profile found' };
-    }
-
-    return getMemoryTimelineService(parsed.memoryUuids, profileUuid);
-  } catch (error) {
-    return formatError(error);
-  }
+  return _getMemoryTimeline(userId, { memoryUuids });
 }
+
+const _getMemoryDetails = createProfileAction(
+  memoryUuidsSchema,
+  async (parsed, profileUuid) =>
+    getMemoryDetailsService(parsed.memoryUuids, profileUuid)
+);
 
 export async function getMemoryDetails(
   userId: string,
   memoryUuids: string[]
 ): Promise<MemoryResult> {
-  try {
-    const parsed = memoryUuidsSchema.parse({ memoryUuids });
-
-    // Enforce profile scoping to prevent IDOR
-    const profileUuid = await getActiveProfileUuid(userId);
-    if (!profileUuid) {
-      return { success: false, error: 'No active profile found' };
-    }
-
-    return getMemoryDetailsService(parsed.memoryUuids, profileUuid);
-  } catch (error) {
-    return formatError(error);
-  }
+  return _getMemoryDetails(userId, { memoryUuids });
 }
 
 // ============================================================================
 // Memory Ring
 // ============================================================================
 
-export async function getMemoryRing(
-  userId: string,
-  options?: { ringType?: RingType; limit?: number; offset?: number; agentUuid?: string }
-): Promise<MemoryResult> {
-  try {
-    const parsed = getMemoryRingSchema.parse(options);
-
-    const profileUuid = await getActiveProfileUuid(userId);
-    if (!profileUuid) {
-      return { success: false, error: 'No active profile found' };
-    }
-
+const _getMemoryRing = createProfileAction(
+  getMemoryRingSchema,
+  async (parsed, profileUuid) => {
     const conditions = [eq(memoryRingTable.profile_uuid, profileUuid)];
 
     if (parsed?.ringType) {
@@ -393,37 +390,44 @@ export async function getMemoryRing(
       .limit(parsed?.limit ?? 50)
       .offset(parsed?.offset ?? 0);
 
-    return { success: true, data: memories };
-  } catch (error) {
-    return formatError(error);
+    return { success: true as const, data: memories };
   }
+);
+
+export async function getMemoryRing(
+  userId: string,
+  options?: { ringType?: RingType; limit?: number; offset?: number; agentUuid?: string }
+): Promise<MemoryResult> {
+  return _getMemoryRing(userId, options);
 }
 
-export async function deleteMemory(
-  userId: string,
-  memoryUuid: string
-): Promise<MemoryResult> {
-  try {
-    const parsed = deleteMemorySchema.parse({ memoryUuid });
-
-    const profileUuid = await getActiveProfileUuid(userId);
-    if (!profileUuid) {
-      return { success: false, error: 'No active profile found' };
-    }
-
-    await db
+const _deleteMemory = createProfileAction(
+  deleteMemorySchema,
+  async (parsed, profileUuid) => {
+    const deleted = await db
       .delete(memoryRingTable)
       .where(
         and(
           eq(memoryRingTable.uuid, parsed.memoryUuid),
           eq(memoryRingTable.profile_uuid, profileUuid)
         )
-      );
+      )
+      .returning({ uuid: memoryRingTable.uuid });
 
-    return { success: true };
-  } catch (error) {
-    return formatError(error);
+    // Clean up zvec vector to prevent ghost vectors
+    for (const row of deleted) {
+      deleteMemoryRingVector(row.uuid);
+    }
+
+    return { success: true as const };
   }
+);
+
+export async function deleteMemory(
+  userId: string,
+  memoryUuid: string
+): Promise<MemoryResult> {
+  return _deleteMemory(userId, { memoryUuid });
 }
 
 // ============================================================================

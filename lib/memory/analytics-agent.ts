@@ -11,7 +11,6 @@
  * - SHOCKS: Critical failure, security breach, data loss (bypass decay)
  */
 
-import { ChatOpenAI } from '@langchain/openai';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -23,6 +22,7 @@ import {
   DECAY_SCHEDULE_DAYS,
   LONGTERM_SUCCESS_GATE,
 } from './constants';
+import { createMemoryLLM } from './llm-factory';
 import { generateEmbedding } from './embedding-service';
 import { extractResponseText, parseJsonFromResponse } from './llm-utils';
 import { getUnclassifiedObservations, markClassified } from './observation-service';
@@ -63,13 +63,8 @@ Respond ONLY in this JSON format (no other text):
   "shock_severity": null
 }`;
 
-function getClassificationLLM(): ChatOpenAI {
-  return new ChatOpenAI({
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: process.env.MEMORY_CLASSIFICATION_MODEL || 'gpt-4o-mini',
-    temperature: 0.1,
-    maxTokens: 200,
-  });
+function getClassificationLLM() {
+  return createMemoryLLM('classification');
 }
 
 /** Valid ring types for classification output validation */

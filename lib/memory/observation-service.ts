@@ -179,24 +179,34 @@ export async function cleanupExpiredFreshMemory(profileUuid?: string): Promise<n
  * Get fresh memory stats for a profile
  */
 export async function getFreshMemoryStats(profileUuid: string) {
-  const [stats] = await db
+  const [counts] = await db
     .select({
       total: sql<number>`count(*)`,
       unclassified: sql<number>`count(*) filter (where ${freshMemoryTable.classified} = false)`,
-      byType: sql<Record<string, number>>`jsonb_object_agg(
-        ${freshMemoryTable.observation_type},
-        type_count
-      ) FROM (
-        SELECT ${freshMemoryTable.observation_type}, count(*) as type_count
-        FROM ${freshMemoryTable}
-        WHERE ${freshMemoryTable.profile_uuid} = ${profileUuid}
-        GROUP BY ${freshMemoryTable.observation_type}
-      ) sub`,
     })
     .from(freshMemoryTable)
     .where(eq(freshMemoryTable.profile_uuid, profileUuid));
 
-  return stats;
+  // Separate query for type breakdown
+  const typeCounts = await db
+    .select({
+      type: freshMemoryTable.observation_type,
+      count: sql<number>`count(*)`,
+    })
+    .from(freshMemoryTable)
+    .where(eq(freshMemoryTable.profile_uuid, profileUuid))
+    .groupBy(freshMemoryTable.observation_type);
+
+  const byType: Record<string, number> = {};
+  for (const row of typeCounts) {
+    byType[row.type] = row.count;
+  }
+
+  return {
+    total: counts?.total ?? 0,
+    unclassified: counts?.unclassified ?? 0,
+    byType,
+  };
 }
 
 /**
