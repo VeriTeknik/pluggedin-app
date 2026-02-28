@@ -24,12 +24,14 @@ export async function POST(request: NextRequest) {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    // Run all maintenance tasks
+    const profileUuid = auth.activeProfile.uuid;
+
+    // Run maintenance tasks scoped to the authenticated user's profile
     const [decayResult, forgottenCount, expiredCount, abandonedCount] = await Promise.all([
-      processDecay(),
-      cleanupForgotten(),
-      cleanupExpiredFreshMemory(),
-      abandonStaleSessions(),
+      processDecay(profileUuid),
+      cleanupForgotten(profileUuid),
+      cleanupExpiredFreshMemory(profileUuid),
+      abandonStaleSessions(profileUuid),
     ]);
 
     return NextResponse.json({

@@ -26,8 +26,29 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const ringType = searchParams.get('ring_type');
     const agentUuid = searchParams.get('agent_uuid');
-    const limit = parseInt(searchParams.get('limit') ?? '50', 10);
-    const offset = parseInt(searchParams.get('offset') ?? '0', 10);
+    const limitRaw = parseInt(searchParams.get('limit') ?? '50', 10);
+    const offsetRaw = parseInt(searchParams.get('offset') ?? '0', 10);
+
+    // Validate pagination bounds
+    const limit = isNaN(limitRaw) || limitRaw < 1 ? 50 : Math.min(limitRaw, 200);
+    const offset = isNaN(offsetRaw) || offsetRaw < 0 ? 0 : offsetRaw;
+
+    // Validate ring_type enum
+    const validRingTypes = ['procedures', 'practice', 'longterm', 'shocks'];
+    if (ringType && !validRingTypes.includes(ringType)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid ring_type. Must be one of: procedures, practice, longterm, shocks' },
+        { status: 400 }
+      );
+    }
+
+    // Validate agent_uuid format if provided
+    if (agentUuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(agentUuid)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid agent_uuid format' },
+        { status: 400 }
+      );
+    }
 
     const conditions = [eq(memoryRingTable.profile_uuid, auth.activeProfile.uuid)];
 

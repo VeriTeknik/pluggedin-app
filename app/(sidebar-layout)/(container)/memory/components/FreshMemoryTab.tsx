@@ -83,9 +83,6 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
     if (!sessionObservations[sessionUuid]) {
       setLoadingObs(sessionUuid);
       try {
-        const { getSessionObservations } = await import('@/app/actions/memory');
-        const { useSafeSession } = await import('@/hooks/use-safe-session');
-        // We'll fetch from the API directly since we can't use hooks in callbacks
         const response = await fetch(`/api/memory/sessions/${sessionUuid}/observations`);
         if (response.ok) {
           const data = await response.json();

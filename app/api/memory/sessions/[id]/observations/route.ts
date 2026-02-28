@@ -42,6 +42,14 @@ export async function GET(
 
     const { id } = await params;
 
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session ID format' },
+        { status: 400 }
+      );
+    }
+
     // Verify session ownership
     const session = await getSessionByUuid(id);
     if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
@@ -52,8 +60,12 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') ?? '100', 10);
-    const offset = parseInt(searchParams.get('offset') ?? '0', 10);
+    const limitRaw = parseInt(searchParams.get('limit') ?? '100', 10);
+    const offsetRaw = parseInt(searchParams.get('offset') ?? '0', 10);
+
+    // Validate pagination bounds to prevent abuse
+    const limit = isNaN(limitRaw) || limitRaw < 1 ? 100 : Math.min(limitRaw, 500);
+    const offset = isNaN(offsetRaw) || offsetRaw < 0 ? 0 : offsetRaw;
 
     const observations = await getSessionObservations(id, { limit, offset });
 
@@ -86,6 +98,14 @@ export async function POST(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify session ownership
     const session = await getSessionByUuid(id);

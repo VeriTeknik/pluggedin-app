@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 
 import { useMemoryRing } from '../hooks/useMemoryRing';
 import { useMemorySearch } from '../hooks/useMemorySearch';
+import { getDecayColor } from '../utils';
 
 interface ProceduresTabProps {
   onRefresh?: () => void;
@@ -83,16 +84,6 @@ export function ProceduresTab({ onRefresh }: ProceduresTabProps) {
       // Error handled by hook
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const getDecayColor = (stage: string) => {
-    switch (stage) {
-      case 'full': return 'bg-green-500/10 text-green-600';
-      case 'compressed': return 'bg-yellow-500/10 text-yellow-600';
-      case 'summary': return 'bg-orange-500/10 text-orange-600';
-      case 'essence': return 'bg-red-500/10 text-red-600';
-      default: return 'bg-gray-500/10 text-gray-600';
     }
   };
 

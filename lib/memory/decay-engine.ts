@@ -85,9 +85,10 @@ async function compressContent(
 // ============================================================================
 
 /**
- * Process all memories due for decay
+ * Process memories due for decay
+ * @param profileUuid - When provided, only process memories belonging to this profile. When omitted (cron job), processes all.
  */
-export async function processDecay(): Promise<MemoryResult<{
+export async function processDecay(profileUuid?: string): Promise<MemoryResult<{
   processed: number;
   compressed: number;
   forgotten: number;
@@ -100,16 +101,20 @@ export async function processDecay(): Promise<MemoryResult<{
     let errors = 0;
 
     // Find memories due for decay (not shocks, not already forgotten)
+    const conditions = [
+      eq(memoryRingTable.is_shock, false),
+      ne(memoryRingTable.current_decay_stage, 'forgotten'),
+      lt(memoryRingTable.next_decay_at, new Date()),
+    ];
+
+    if (profileUuid) {
+      conditions.push(eq(memoryRingTable.profile_uuid, profileUuid));
+    }
+
     const duForDecay = await db
       .select()
       .from(memoryRingTable)
-      .where(
-        and(
-          eq(memoryRingTable.is_shock, false),
-          ne(memoryRingTable.current_decay_stage, 'forgotten'),
-          lt(memoryRingTable.next_decay_at, new Date())
-        )
-      )
+      .where(and(...conditions))
       .limit(100); // Process in batches
 
     for (const memory of duForDecay) {
@@ -126,13 +131,7 @@ export async function processDecay(): Promise<MemoryResult<{
               current_decay_stage: 'forgotten',
               current_token_count: 0,
               updated_at: new Date(),
-              metadata: {
-                ...(memory.metadata as Record<string, unknown> ?? {}),
-                decay_history: [
-                  ...(((memory.metadata as Record<string, unknown>)?.decay_history ?? []) as Array<{ from: string; to: string; at: string }>),
-                  { from: memory.current_decay_stage, to: 'forgotten', at: new Date().toISOString() },
-                ],
-              },
+              metadata: appendDecayHistory(memory.metadata, memory.current_decay_stage, 'forgotten'),
             })
             .where(eq(memoryRingTable.uuid, memory.uuid));
 
@@ -170,13 +169,7 @@ export async function processDecay(): Promise<MemoryResult<{
           current_token_count: Math.ceil(compressedContent.length / 4),
           next_decay_at: nextDecayAt,
           updated_at: new Date(),
-          metadata: {
-            ...(memory.metadata as Record<string, unknown> ?? {}),
-            decay_history: [
-              ...(((memory.metadata as Record<string, unknown>)?.decay_history ?? []) as Array<{ from: string; to: string; at: string }>),
-              { from: memory.current_decay_stage, to: nextStage, at: new Date().toISOString() },
-            ],
-          },
+          metadata: appendDecayHistory(memory.metadata, memory.current_decay_stage, nextStage),
         };
 
         // Set content at the appropriate stage
@@ -363,11 +356,17 @@ export async function reinforceMemory(memoryUuid: string): Promise<void> {
 
 /**
  * Clean up forgotten memories
+ * @param profileUuid - When provided, only clean up memories belonging to this profile. When omitted (cron job), cleans all.
  */
-export async function cleanupForgotten(): Promise<number> {
+export async function cleanupForgotten(profileUuid?: string): Promise<number> {
+  const conditions = [eq(memoryRingTable.current_decay_stage, 'forgotten')];
+  if (profileUuid) {
+    conditions.push(eq(memoryRingTable.profile_uuid, profileUuid));
+  }
+
   const result = await db
     .delete(memoryRingTable)
-    .where(eq(memoryRingTable.current_decay_stage, 'forgotten'))
+    .where(and(...conditions))
     .returning({ uuid: memoryRingTable.uuid });
 
   // Clean up zvec vectors
@@ -381,6 +380,22 @@ export async function cleanupForgotten(): Promise<number> {
 // ============================================================================
 // Helpers
 // ============================================================================
+
+function appendDecayHistory(
+  metadata: unknown,
+  fromStage: string,
+  toStage: string
+): Record<string, unknown> {
+  const existing = (metadata as Record<string, unknown>) ?? {};
+  const history = (existing.decay_history ?? []) as Array<{ from: string; to: string; at: string }>;
+  return {
+    ...existing,
+    decay_history: [
+      ...history,
+      { from: fromStage, to: toStage, at: new Date().toISOString() },
+    ],
+  };
+}
 
 function getCurrentContent(memory: typeof memoryRingTable.$inferSelect): string | null {
   switch (memory.current_decay_stage) {

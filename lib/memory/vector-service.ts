@@ -55,117 +55,61 @@ function ensureInitialized(): void {
 
 const collections: Record<string, ZVecCollection> = {};
 
-function getCollectionPath(name: string): string {
-  return path.join(ZVEC_DATA_DIR, name);
+const INVERT_INDEX = { indexType: ZVecIndexType.INVERT } as const;
+
+const EMBEDDING_VECTOR_CONFIG = {
+  name: 'embedding',
+  dataType: ZVecDataType.VECTOR_FP32,
+  dimension: EMBEDDING_DIMENSIONS,
+  indexParams: {
+    indexType: ZVecIndexType.HNSW,
+    metricType: ZVecMetricType.COSINE,
+  },
+} as const;
+
+function getOrCreateCollection(
+  name: string,
+  fields: ConstructorParameters<typeof ZVecCollectionSchema>[0]['fields']
+): ZVecCollection {
+  if (collections[name]) return collections[name];
+
+  ensureInitialized();
+
+  const collectionPath = path.join(ZVEC_DATA_DIR, name);
+
+  try {
+    collections[name] = ZVecOpen(collectionPath);
+  } catch {
+    const schema = new ZVecCollectionSchema({
+      name,
+      vectors: EMBEDDING_VECTOR_CONFIG,
+      fields,
+    });
+    collections[name] = ZVecCreateAndOpen(collectionPath, schema);
+  }
+
+  return collections[name];
 }
 
-/**
- * Get or create the fresh_memory zvec collection
- */
 function getFreshMemoryCollection(): ZVecCollection {
-  if (collections.fresh_memory) return collections.fresh_memory;
-
-  ensureInitialized();
-
-  const collectionPath = getCollectionPath('fresh_memory');
-
-  try {
-    collections.fresh_memory = ZVecOpen(collectionPath);
-  } catch {
-    // Collection doesn't exist yet, create it
-    const schema = new ZVecCollectionSchema({
-      name: 'fresh_memory',
-      vectors: {
-        name: 'embedding',
-        dataType: ZVecDataType.VECTOR_FP32,
-        dimension: EMBEDDING_DIMENSIONS,
-        indexParams: {
-          indexType: ZVecIndexType.HNSW,
-          metricType: ZVecMetricType.COSINE,
-        },
-      },
-      fields: [
-        { name: 'profile_uuid', dataType: ZVecDataType.STRING, indexParams: { indexType: ZVecIndexType.INVERT } },
-        { name: 'agent_uuid', dataType: ZVecDataType.STRING, nullable: true, indexParams: { indexType: ZVecIndexType.INVERT } },
-      ],
-    });
-
-    collections.fresh_memory = ZVecCreateAndOpen(collectionPath, schema);
-  }
-
-  return collections.fresh_memory;
+  return getOrCreateCollection('fresh_memory', [
+    { name: 'profile_uuid', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
+    { name: 'agent_uuid', dataType: ZVecDataType.STRING, nullable: true, indexParams: INVERT_INDEX },
+  ]);
 }
 
-/**
- * Get or create the memory_ring zvec collection
- */
 function getMemoryRingCollection(): ZVecCollection {
-  if (collections.memory_ring) return collections.memory_ring;
-
-  ensureInitialized();
-
-  const collectionPath = getCollectionPath('memory_ring');
-
-  try {
-    collections.memory_ring = ZVecOpen(collectionPath);
-  } catch {
-    const schema = new ZVecCollectionSchema({
-      name: 'memory_ring',
-      vectors: {
-        name: 'embedding',
-        dataType: ZVecDataType.VECTOR_FP32,
-        dimension: EMBEDDING_DIMENSIONS,
-        indexParams: {
-          indexType: ZVecIndexType.HNSW,
-          metricType: ZVecMetricType.COSINE,
-        },
-      },
-      fields: [
-        { name: 'profile_uuid', dataType: ZVecDataType.STRING, indexParams: { indexType: ZVecIndexType.INVERT } },
-        { name: 'agent_uuid', dataType: ZVecDataType.STRING, nullable: true, indexParams: { indexType: ZVecIndexType.INVERT } },
-        { name: 'ring_type', dataType: ZVecDataType.STRING, indexParams: { indexType: ZVecIndexType.INVERT } },
-      ],
-    });
-
-    collections.memory_ring = ZVecCreateAndOpen(collectionPath, schema);
-  }
-
-  return collections.memory_ring;
+  return getOrCreateCollection('memory_ring', [
+    { name: 'profile_uuid', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
+    { name: 'agent_uuid', dataType: ZVecDataType.STRING, nullable: true, indexParams: INVERT_INDEX },
+    { name: 'ring_type', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
+  ]);
 }
 
-/**
- * Get or create the gut_patterns zvec collection
- */
 function getGutPatternsCollection(): ZVecCollection {
-  if (collections.gut_patterns) return collections.gut_patterns;
-
-  ensureInitialized();
-
-  const collectionPath = getCollectionPath('gut_patterns');
-
-  try {
-    collections.gut_patterns = ZVecOpen(collectionPath);
-  } catch {
-    const schema = new ZVecCollectionSchema({
-      name: 'gut_patterns',
-      vectors: {
-        name: 'embedding',
-        dataType: ZVecDataType.VECTOR_FP32,
-        dimension: EMBEDDING_DIMENSIONS,
-        indexParams: {
-          indexType: ZVecIndexType.HNSW,
-          metricType: ZVecMetricType.COSINE,
-        },
-      },
-      fields: [
-        { name: 'pattern_type', dataType: ZVecDataType.STRING, indexParams: { indexType: ZVecIndexType.INVERT } },
-      ],
-    });
-
-    collections.gut_patterns = ZVecCreateAndOpen(collectionPath, schema);
-  }
-
-  return collections.gut_patterns;
+  return getOrCreateCollection('gut_patterns', [
+    { name: 'pattern_type', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
+  ]);
 }
 
 // ============================================================================
@@ -271,12 +215,17 @@ export function deleteGutPatternVector(uuid: string): void {
 // ============================================================================
 
 /**
- * Build a zvec filter expression string
+ * Build a zvec filter expression string.
+ * Values are sanitized by removing double quotes to prevent filter expression injection.
  */
 function buildFilter(conditions: Array<[string, string] | null>): string | undefined {
   const parts = conditions
     .filter((c): c is [string, string] => c !== null && c[1] !== '')
-    .map(([field, value]) => `${field} = "${value}"`);
+    .map(([field, value]) => {
+      // Sanitize value: remove double quotes and backslashes to prevent filter injection
+      const sanitized = value.replace(/["\\]/g, '');
+      return `${field} = "${sanitized}"`;
+    });
 
   return parts.length > 0 ? parts.join(' AND ') : undefined;
 }

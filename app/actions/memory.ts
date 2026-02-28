@@ -1,6 +1,7 @@
 'use server';
 
 import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import {
@@ -8,14 +9,13 @@ import {
   gutPatternsTable,
   memoryRingTable,
   memorySessionsTable,
+  projectsTable,
 } from '@/db/schema';
 import type {
-  AddObservationParams,
   DecayStage,
   MemoryResult,
   MemoryStats,
   RingType,
-  SearchMemoriesParams,
 } from '@/lib/memory/types';
 import {
   startSession as startSessionService,
@@ -31,20 +31,104 @@ import {
   getMemoryTimeline as getMemoryTimelineService,
   getMemoryDetails as getMemoryDetailsService,
 } from '@/lib/memory/retrieval-service';
-import { generateZReport } from '@/lib/memory/z-report-service';
+import { generateZReport, getZReports as getZReportsService } from '@/lib/memory/z-report-service';
 import { classifyBatch } from '@/lib/memory/analytics-agent';
-import { processDecay, runNaturalSelection } from '@/lib/memory/decay-engine';
+import { processDecay } from '@/lib/memory/decay-engine';
 import { aggregatePatterns, queryIntuition } from '@/lib/memory/gut-agent';
 
 import { getProjectActiveProfile } from './profiles';
+
+// ============================================================================
+// Shared Helpers
+// ============================================================================
+
+function formatError<T = unknown>(error: unknown): MemoryResult<T> {
+  if (error instanceof z.ZodError) {
+    return { success: false, error: error.errors[0].message };
+  }
+  return {
+    success: false,
+    error: error instanceof Error ? error.message : 'Unknown error',
+  };
+}
+
+// ============================================================================
+// Validation Schemas
+// ============================================================================
+
+const startSessionSchema = z.object({
+  contentSessionId: z.string().min(1, 'Content session ID is required'),
+  agentUuid: z.string().uuid().optional(),
+});
+
+const endSessionSchema = z.object({
+  memorySessionId: z.string().min(1, 'Memory session ID is required'),
+});
+
+const getSessionsSchema = z.object({
+  agentUuid: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).optional(),
+}).optional();
+
+const addObservationSchema = z.object({
+  sessionUuid: z.string().uuid('Invalid session UUID'),
+  agentUuid: z.string().uuid().optional(),
+  type: z.enum([
+    'tool_call', 'tool_result', 'user_preference', 'error_pattern',
+    'decision', 'success_pattern', 'failure_pattern', 'workflow_step',
+    'insight', 'context_switch',
+  ]),
+  content: z.string().min(1, 'Content is required').max(50000),
+  outcome: z.enum(['success', 'failure', 'neutral']).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+const getSessionObservationsSchema = z.object({
+  sessionUuid: z.string().uuid('Invalid session UUID'),
+  limit: z.number().int().min(1).max(500).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
+const searchMemoriesSchema = z.object({
+  query: z.string().min(1, 'Query is required').max(2000),
+  ringTypes: z.array(z.enum(['procedures', 'practice', 'longterm', 'shocks'])).optional(),
+  agentUuid: z.string().uuid().optional(),
+  topK: z.number().int().min(1).max(50).optional(),
+  includeGut: z.boolean().optional(),
+  threshold: z.number().min(0).max(1).optional(),
+});
+
+const memoryUuidsSchema = z.object({
+  memoryUuids: z.array(z.string().uuid()).min(1).max(50),
+});
+
+const getMemoryRingSchema = z.object({
+  ringType: z.enum(['procedures', 'practice', 'longterm', 'shocks']).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).optional(),
+  agentUuid: z.string().uuid().optional(),
+}).optional();
+
+const deleteMemorySchema = z.object({
+  memoryUuid: z.string().uuid('Invalid memory UUID'),
+});
+
+const getZReportsSchema = z.object({
+  agentUuid: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+}).optional();
+
+const queryGutSchema = z.object({
+  query: z.string().min(1, 'Query is required').max(2000),
+  topK: z.number().int().min(1).max(20).optional(),
+});
 
 // ============================================================================
 // Helper: Get Profile UUID
 // ============================================================================
 
 async function getActiveProfileUuid(userId: string): Promise<string | null> {
-  const { projectsTable } = await import('@/db/schema');
-
   const project = await db
     .select({ uuid: projectsTable.uuid })
     .from(projectsTable)
@@ -66,6 +150,8 @@ export async function startMemorySession(
   params: { contentSessionId: string; agentUuid?: string }
 ): Promise<MemoryResult<{ uuid: string; memorySessionId: string }>> {
   try {
+    const parsed = startSessionSchema.parse(params);
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -73,14 +159,11 @@ export async function startMemorySession(
 
     return startSessionService({
       profileUuid,
-      agentUuid: params.agentUuid,
-      contentSessionId: params.contentSessionId,
+      agentUuid: parsed.agentUuid,
+      contentSessionId: parsed.contentSessionId,
     });
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -89,20 +172,40 @@ export async function endMemorySession(
   memorySessionId: string
 ): Promise<MemoryResult<{ uuid: string }>> {
   try {
-    const result = await endSessionService(memorySessionId);
+    const parsed = endSessionSchema.parse({ memorySessionId });
+
+    // Verify session ownership before ending it
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    // Check that the session belongs to the calling user's profile
+    const [sessionCheck] = await db
+      .select({ uuid: memorySessionsTable.uuid })
+      .from(memorySessionsTable)
+      .where(
+        and(
+          eq(memorySessionsTable.memory_session_id, parsed.memorySessionId),
+          eq(memorySessionsTable.profile_uuid, profileUuid)
+        )
+      )
+      .limit(1);
+
+    if (!sessionCheck) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    const result = await endSessionService(parsed.memorySessionId);
 
     // Trigger Z-report generation if session ended successfully
     if (result.success && result.data) {
-      // Fire and forget - Z-report generation is async
       generateZReport(result.data.uuid).catch(console.error);
     }
 
     return result;
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -111,18 +214,17 @@ export async function getMemorySessions(
   options?: { agentUuid?: string; limit?: number; offset?: number }
 ): Promise<MemoryResult> {
   try {
+    const parsed = getSessionsSchema.parse(options);
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
 
-    const sessions = await getSessionHistory(profileUuid, options);
+    const sessions = await getSessionHistory(profileUuid, parsed);
     return { success: true, data: sessions };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -132,23 +234,22 @@ export async function getMemorySessions(
 
 export async function addObservation(
   userId: string,
-  params: Omit<AddObservationParams, 'profileUuid'>
+  params: z.infer<typeof addObservationSchema>
 ): Promise<MemoryResult<{ uuid: string }>> {
   try {
+    const parsed = addObservationSchema.parse(params);
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
 
     return addObservationService({
-      ...params,
+      ...parsed,
       profileUuid,
     });
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -158,13 +259,39 @@ export async function getSessionObservations(
   options?: { limit?: number; offset?: number }
 ): Promise<MemoryResult> {
   try {
-    const observations = await getSessionObservationsService(sessionUuid, options);
+    const parsed = getSessionObservationsSchema.parse({
+      sessionUuid,
+      ...options,
+    });
+
+    // Verify session ownership before returning observations
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    const [sessionCheck] = await db
+      .select({ uuid: memorySessionsTable.uuid })
+      .from(memorySessionsTable)
+      .where(
+        and(
+          eq(memorySessionsTable.uuid, parsed.sessionUuid),
+          eq(memorySessionsTable.profile_uuid, profileUuid)
+        )
+      )
+      .limit(1);
+
+    if (!sessionCheck) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    const observations = await getSessionObservationsService(
+      parsed.sessionUuid,
+      { limit: parsed.limit, offset: parsed.offset }
+    );
     return { success: true, data: observations };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -174,20 +301,23 @@ export async function getSessionObservations(
 
 export async function searchMemories(
   userId: string,
-  params: Omit<SearchMemoriesParams, 'profileUuid'>
+  params: z.infer<typeof searchMemoriesSchema>
 ): Promise<MemoryResult> {
   try {
+    const parsed = searchMemoriesSchema.parse(params);
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
 
-    return searchMemoriesService({ ...params, profileUuid });
+    return searchMemoriesService({
+      ...parsed,
+      ringTypes: parsed.ringTypes as RingType[] | undefined,
+      profileUuid,
+    });
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -196,12 +326,17 @@ export async function getMemoryTimeline(
   memoryUuids: string[]
 ): Promise<MemoryResult> {
   try {
-    return getMemoryTimelineService(memoryUuids);
+    const parsed = memoryUuidsSchema.parse({ memoryUuids });
+
+    // Enforce profile scoping to prevent IDOR
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    return getMemoryTimelineService(parsed.memoryUuids, profileUuid);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -210,12 +345,17 @@ export async function getMemoryDetails(
   memoryUuids: string[]
 ): Promise<MemoryResult> {
   try {
-    return getMemoryDetailsService(memoryUuids);
+    const parsed = memoryUuidsSchema.parse({ memoryUuids });
+
+    // Enforce profile scoping to prevent IDOR
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    return getMemoryDetailsService(parsed.memoryUuids, profileUuid);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -228,6 +368,8 @@ export async function getMemoryRing(
   options?: { ringType?: RingType; limit?: number; offset?: number; agentUuid?: string }
 ): Promise<MemoryResult> {
   try {
+    const parsed = getMemoryRingSchema.parse(options);
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -235,12 +377,12 @@ export async function getMemoryRing(
 
     const conditions = [eq(memoryRingTable.profile_uuid, profileUuid)];
 
-    if (options?.ringType) {
-      conditions.push(eq(memoryRingTable.ring_type, options.ringType));
+    if (parsed?.ringType) {
+      conditions.push(eq(memoryRingTable.ring_type, parsed.ringType));
     }
 
-    if (options?.agentUuid) {
-      conditions.push(eq(memoryRingTable.agent_uuid, options.agentUuid));
+    if (parsed?.agentUuid) {
+      conditions.push(eq(memoryRingTable.agent_uuid, parsed.agentUuid));
     }
 
     const memories = await db
@@ -248,15 +390,12 @@ export async function getMemoryRing(
       .from(memoryRingTable)
       .where(and(...conditions))
       .orderBy(desc(memoryRingTable.relevance_score))
-      .limit(options?.limit ?? 50)
-      .offset(options?.offset ?? 0);
+      .limit(parsed?.limit ?? 50)
+      .offset(parsed?.offset ?? 0);
 
     return { success: true, data: memories };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -265,6 +404,8 @@ export async function deleteMemory(
   memoryUuid: string
 ): Promise<MemoryResult> {
   try {
+    const parsed = deleteMemorySchema.parse({ memoryUuid });
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -274,17 +415,14 @@ export async function deleteMemory(
       .delete(memoryRingTable)
       .where(
         and(
-          eq(memoryRingTable.uuid, memoryUuid),
+          eq(memoryRingTable.uuid, parsed.memoryUuid),
           eq(memoryRingTable.profile_uuid, profileUuid)
         )
       );
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -368,10 +506,7 @@ export async function getMemoryStats(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -384,19 +519,17 @@ export async function getZReports(
   options?: { agentUuid?: string; limit?: number }
 ): Promise<MemoryResult> {
   try {
+    const parsed = getZReportsSchema.parse(options);
+
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
 
-    const { getZReports: getZReportsService } = await import('@/lib/memory/z-report-service');
-    const reports = await getZReportsService(profileUuid, options);
+    const reports = await getZReportsService(profileUuid, parsed);
     return { success: true, data: reports };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
@@ -415,33 +548,27 @@ export async function triggerClassification(
 
     return classifyBatch(profileUuid);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
-export async function triggerDecay(): Promise<MemoryResult> {
+export async function triggerDecay(userId: string): Promise<MemoryResult> {
   try {
-    return processDecay();
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    return processDecay(profileUuid);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }
 
 export async function triggerGutAggregation(): Promise<MemoryResult> {
-  try {
-    return aggregatePatterns();
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  // Gut aggregation is a cross-profile operation that should only
+  // be triggered by cron jobs, not by regular users via server actions.
+  return { success: false, error: 'Gut aggregation can only be triggered via the cron API endpoint' };
 }
 
 export async function queryGutIntuition(
@@ -449,11 +576,9 @@ export async function queryGutIntuition(
   topK?: number
 ): Promise<MemoryResult> {
   try {
-    return queryIntuition(query, topK);
+    const parsed = queryGutSchema.parse({ query, topK });
+    return queryIntuition(parsed.query, parsed.topK);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return formatError(error);
   }
 }

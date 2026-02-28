@@ -38,9 +38,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+import type { RingType } from '@/lib/memory/types';
+
 import { useMemoryRing } from '../hooks/useMemoryRing';
 import { useMemorySearch } from '../hooks/useMemorySearch';
-import type { RingType } from '@/lib/memory/types';
+import { getDecayColor, getRingColor } from '../utils';
 
 interface LongTermTabProps {
   onRefresh?: () => void;
@@ -114,26 +116,6 @@ export function LongTermTab({ onRefresh }: LongTermTabProps) {
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const getRingColor = (ringType: string) => {
-    switch (ringType) {
-      case 'procedures': return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
-      case 'practice': return 'bg-purple-500/10 text-purple-600 border-purple-500/30';
-      case 'longterm': return 'bg-green-500/10 text-green-600 border-green-500/30';
-      case 'shocks': return 'bg-red-500/10 text-red-600 border-red-500/30';
-      default: return 'bg-gray-500/10 text-gray-600 border-gray-500/30';
-    }
-  };
-
-  const getDecayBadge = (stage: string) => {
-    const variants: Record<string, string> = {
-      full: 'bg-green-500/10 text-green-600',
-      compressed: 'bg-yellow-500/10 text-yellow-600',
-      summary: 'bg-orange-500/10 text-orange-600',
-      essence: 'bg-red-500/10 text-red-600',
-    };
-    return variants[stage] || 'bg-gray-500/10 text-gray-600';
   };
 
   if (isLoading) {
@@ -229,7 +211,7 @@ export function LongTermTab({ onRefresh }: LongTermTabProps) {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={`text-xs ${getDecayBadge(memory.current_decay_stage)}`}>
+                  <Badge variant="outline" className={`text-xs ${getDecayColor(memory.current_decay_stage)}`}>
                     {memory.current_decay_stage}
                   </Badge>
                 </TableCell>
@@ -274,7 +256,7 @@ export function LongTermTab({ onRefresh }: LongTermTabProps) {
                   <Badge variant="outline" className={getRingColor(previewMemory.ring_type)}>
                     {previewMemory.ring_type}
                   </Badge>
-                  <Badge variant="outline" className={getDecayBadge(previewMemory.current_decay_stage)}>
+                  <Badge variant="outline" className={getDecayColor(previewMemory.current_decay_stage)}>
                     {previewMemory.current_decay_stage}
                   </Badge>
                   {previewMemory.is_shock && (

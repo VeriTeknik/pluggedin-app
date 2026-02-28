@@ -29,6 +29,15 @@ export async function GET(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session ID format' },
+        { status: 400 }
+      );
+    }
+
     const session = await getSessionByUuid(id);
 
     if (!session) {
@@ -40,8 +49,8 @@ export async function GET(
 
     if (session.profile_uuid !== auth.activeProfile.uuid) {
       return NextResponse.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
+        { success: false, error: 'Session not found' },
+        { status: 404 }
       );
     }
 
@@ -74,6 +83,14 @@ export async function PATCH(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify ownership
     const session = await getSessionByUuid(id);

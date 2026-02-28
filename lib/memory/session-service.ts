@@ -63,7 +63,7 @@ export async function endSession(
     const [session] = await db
       .update(memorySessionsTable)
       .set({
-        status: 'completed' as MemorySessionStatus,
+        status: 'completed',
         ended_at: new Date(),
       })
       .where(eq(memorySessionsTable.memory_session_id, memorySessionId))
@@ -226,25 +226,32 @@ export async function incrementObservationCount(
 
 /**
  * Abandon stale sessions (no activity for > threshold hours)
+ * @param profileUuid - When provided, only abandon sessions belonging to this profile. When omitted (cron job), processes all.
+ * @param staleThresholdHours - Number of hours of inactivity before a session is considered stale (default: 24)
  */
 export async function abandonStaleSessions(
+  profileUuid?: string,
   staleThresholdHours: number = 24
 ): Promise<number> {
   const threshold = new Date();
   threshold.setHours(threshold.getHours() - staleThresholdHours);
 
+  const conditions = [
+    eq(memorySessionsTable.status, 'active'),
+    sql`${memorySessionsTable.started_at} < ${threshold}`,
+  ];
+
+  if (profileUuid) {
+    conditions.push(eq(memorySessionsTable.profile_uuid, profileUuid));
+  }
+
   const result = await db
     .update(memorySessionsTable)
     .set({
-      status: 'abandoned' as MemorySessionStatus,
+      status: 'abandoned',
       ended_at: new Date(),
     })
-    .where(
-      and(
-        eq(memorySessionsTable.status, 'active'),
-        sql`${memorySessionsTable.started_at} < ${threshold}`
-      )
-    )
+    .where(and(...conditions))
     .returning({ uuid: memorySessionsTable.uuid });
 
   return result.length;

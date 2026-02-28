@@ -6,6 +6,8 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../../../auth';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * GET /api/memory/sessions/[id]/z-report - Get Z-report for a session
  */
@@ -26,6 +28,15 @@ export async function GET(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session ID format' },
+        { status: 400 }
+      );
+    }
+
     const session = await getSessionByUuid(id);
 
     if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
@@ -71,6 +82,15 @@ export async function POST(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session ID format' },
+        { status: 400 }
+      );
+    }
+
     const session = await getSessionByUuid(id);
 
     if (!session || session.profile_uuid !== auth.activeProfile.uuid) {

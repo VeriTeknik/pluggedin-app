@@ -72,6 +72,9 @@ console-log-backup-*/
 # User uploads
 uploads/
 
+# Memory system vector data (contains user embeddings - NEVER commit)
+data/memory-vectors/
+
 CLAUDE.md
 # Sentry Config File
 .env.sentry-build-plugin

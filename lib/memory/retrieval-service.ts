@@ -133,9 +133,11 @@ export async function searchMemories(
 
 /**
  * Get timeline view for selected memories
+ * @param profileUuid - Required for authorization: only returns memories belonging to this profile
  */
 export async function getMemoryTimeline(
-  memoryUuids: string[]
+  memoryUuids: string[],
+  profileUuid: string
 ): Promise<MemoryResult<MemoryTimelineEntry[]>> {
   try {
     if (memoryUuids.length === 0) {
@@ -163,7 +165,12 @@ export async function getMemoryTimeline(
         memorySessionsTable,
         eq(memoryRingTable.source_session_uuid, memorySessionsTable.uuid)
       )
-      .where(inArray(memoryRingTable.uuid, memoryUuids))
+      .where(
+        and(
+          inArray(memoryRingTable.uuid, memoryUuids),
+          eq(memoryRingTable.profile_uuid, profileUuid)
+        )
+      )
       .orderBy(desc(memoryRingTable.created_at));
 
     const results: MemoryTimelineEntry[] = memories.map(m => ({
@@ -197,9 +204,11 @@ export async function getMemoryTimeline(
 
 /**
  * Get full details for selected memories (highest token cost)
+ * @param profileUuid - Required for authorization: only returns memories belonging to this profile
  */
 export async function getMemoryDetails(
-  memoryUuids: string[]
+  memoryUuids: string[],
+  profileUuid: string
 ): Promise<MemoryResult<MemoryFullDetail[]>> {
   try {
     if (memoryUuids.length === 0) {
@@ -209,7 +218,12 @@ export async function getMemoryDetails(
     const memories = await db
       .select()
       .from(memoryRingTable)
-      .where(inArray(memoryRingTable.uuid, memoryUuids));
+      .where(
+        and(
+          inArray(memoryRingTable.uuid, memoryUuids),
+          eq(memoryRingTable.profile_uuid, profileUuid)
+        )
+      );
 
     // Record access for each retrieved memory
     await Promise.all(

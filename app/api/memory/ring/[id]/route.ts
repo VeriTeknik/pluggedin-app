@@ -7,6 +7,8 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../../auth';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * GET /api/memory/ring/[id] - Get memory details
  */
@@ -27,6 +29,15 @@ export async function GET(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid memory ID format' },
+        { status: 400 }
+      );
+    }
+
     const [memory] = await db
       .select()
       .from(memoryRingTable)
@@ -74,6 +85,15 @@ export async function DELETE(
     if (auth.error) return auth.error;
 
     const { id } = await params;
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid memory ID format' },
+        { status: 400 }
+      );
+    }
+
     const result = await db
       .delete(memoryRingTable)
       .where(

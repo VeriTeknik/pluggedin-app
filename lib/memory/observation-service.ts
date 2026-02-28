@@ -150,16 +150,21 @@ export async function getObservationByUuid(uuid: string) {
 
 /**
  * Cleanup expired fresh memories
+ * @param profileUuid - When provided, only clean up memories belonging to this profile. When omitted (cron job), cleans all.
  */
-export async function cleanupExpiredFreshMemory(): Promise<number> {
+export async function cleanupExpiredFreshMemory(profileUuid?: string): Promise<number> {
+  const conditions = [
+    sql`${freshMemoryTable.expires_at} IS NOT NULL`,
+    sql`${freshMemoryTable.expires_at} < NOW()`,
+  ];
+
+  if (profileUuid) {
+    conditions.push(eq(freshMemoryTable.profile_uuid, profileUuid));
+  }
+
   const result = await db
     .delete(freshMemoryTable)
-    .where(
-      and(
-        sql`${freshMemoryTable.expires_at} IS NOT NULL`,
-        sql`${freshMemoryTable.expires_at} < NOW()`
-      )
-    )
+    .where(and(...conditions))
     .returning({ uuid: freshMemoryTable.uuid });
 
   // Clean up corresponding zvec vectors

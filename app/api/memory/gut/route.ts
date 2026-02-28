@@ -29,16 +29,30 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
-    const topK = searchParams.get('top_k');
+    const topKParam = searchParams.get('top_k');
 
-    if (!query) {
+    // Validate query parameter
+    if (!query || query.length === 0 || query.length > 1000) {
       return NextResponse.json(
-        { success: false, error: 'query parameter is required' },
+        { success: false, error: 'query parameter is required and must be 1-1000 characters' },
         { status: 400 }
       );
     }
 
-    const result = await queryIntuition(query, topK ? parseInt(topK, 10) : undefined);
+    // Validate top_k parameter
+    let topK: number | undefined;
+    if (topKParam) {
+      const parsed = parseInt(topKParam, 10);
+      if (isNaN(parsed) || parsed < 1 || parsed > 20) {
+        return NextResponse.json(
+          { success: false, error: 'top_k must be an integer between 1 and 20' },
+          { status: 400 }
+        );
+      }
+      topK = parsed;
+    }
+
+    const result = await queryIntuition(query, topK);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
@@ -50,7 +64,9 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/memory/gut - Trigger gut pattern aggregation
- * Designed to be called by a weekly cron job
+ * Designed to be called by a weekly cron job.
+ * Restricted: requires CRON_SECRET header for authorization since this
+ * is a cross-profile operation that should not be triggered by regular users.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +80,18 @@ export async function POST(request: NextRequest) {
 
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
+
+    // This is a global cross-profile operation designed for cron jobs.
+    // Require CRON_SECRET header to prevent regular users from triggering it.
+    const cronSecret = request.headers.get('x-cron-secret');
+    const expectedSecret = process.env.CRON_SECRET;
+
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: this endpoint requires cron authorization' },
+        { status: 403 }
+      );
+    }
 
     const result = await aggregatePatterns();
     return NextResponse.json(result);

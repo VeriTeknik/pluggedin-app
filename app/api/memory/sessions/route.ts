@@ -32,9 +32,27 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const agentUuid = searchParams.get('agent_uuid') ?? undefined;
-    const limit = parseInt(searchParams.get('limit') ?? '20', 10);
-    const offset = parseInt(searchParams.get('offset') ?? '0', 10);
-    const status = searchParams.get('status') as 'active' | 'completed' | 'abandoned' | undefined;
+    const limitRaw = parseInt(searchParams.get('limit') ?? '20', 10);
+    const offsetRaw = parseInt(searchParams.get('offset') ?? '0', 10);
+    const statusRaw = searchParams.get('status') ?? undefined;
+
+    // Validate pagination bounds
+    const limit = isNaN(limitRaw) || limitRaw < 1 ? 20 : Math.min(limitRaw, 100);
+    const offset = isNaN(offsetRaw) || offsetRaw < 0 ? 0 : offsetRaw;
+
+    // Validate status enum
+    const validStatuses = ['active', 'completed', 'abandoned'] as const;
+    const status = statusRaw && validStatuses.includes(statusRaw as typeof validStatuses[number])
+      ? (statusRaw as 'active' | 'completed' | 'abandoned')
+      : undefined;
+
+    // Validate agent_uuid format if provided
+    if (agentUuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(agentUuid)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid agent_uuid format' },
+        { status: 400 }
+      );
+    }
 
     const sessions = await getSessionHistory(auth.activeProfile.uuid, {
       agentUuid,

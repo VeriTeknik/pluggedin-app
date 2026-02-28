@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await getMemoryTimeline(parsed.data.memory_uuids);
+    const result = await getMemoryTimeline(parsed.data.memory_uuids, auth.activeProfile.uuid);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
