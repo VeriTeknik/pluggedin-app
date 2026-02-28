@@ -97,6 +97,11 @@ function getCollection(domain: VectorDomain): ZVecCollection {
   try {
     collections[domain] = ZVecOpen(collectionPath);
   } catch {
+    // If the directory exists but isn't a valid collection, remove it first
+    const fs = require('fs');
+    if (fs.existsSync(collectionPath)) {
+      fs.rmSync(collectionPath, { recursive: true });
+    }
     const schema = new ZVecCollectionSchema({
       name: domain,
       vectors: EMBEDDING_VECTOR_CONFIG,
