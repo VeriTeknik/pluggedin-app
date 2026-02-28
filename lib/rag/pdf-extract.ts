@@ -1,13 +1,14 @@
 /**
- * Server-side PDF text extraction using pdf-parse.
+ * Server-side PDF text extraction using unpdf.
  *
- * Designed for Node.js server-side usage (no web workers needed).
+ * unpdf ships a serverless-optimized PDF.js build, avoiding
+ * webpack bundling issues with pdfjs-dist in Next.js server actions.
  */
 
-import { PDFParse } from 'pdf-parse';
+import { extractText, getDocumentProxy } from 'unpdf';
 
 export async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  const result = await parser.getText();
-  return result.text;
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const { text } = await extractText(pdf, { mergePages: true });
+  return text as string;
 }
