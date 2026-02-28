@@ -530,7 +530,9 @@ async function processRagUpload(
       // Set rag_document_id to the document UUID for future lookups
       await updateDocRagId(docRecord.uuid, docRecord.uuid, userId);
       ragService.invalidateStorageCache(ragIdentifier);
-      return { ragProcessed: true, ragError: undefined, upload_id: result.uploadId };
+      // Don't return upload_id - processing is now synchronous (embedded zvec),
+      // so there's nothing to poll. The client handles ragProcessed=true directly.
+      return { ragProcessed: true, ragError: undefined, upload_id: undefined };
     } else {
       throw new Error(result.error || 'RAG processing failed');
     }
