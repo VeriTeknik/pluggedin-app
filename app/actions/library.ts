@@ -517,18 +517,25 @@ async function processRagUpload(
   try {
     // Use projectUuid for project-specific RAG, fallback to userId for legacy
     const ragIdentifier = projectUuid || userId;
-    
-    const result = await ragService.uploadDocument(file, ragIdentifier);
+
+    // Process document directly with embedded zvec (no HTTP)
+    const result = await ragService.processDocument(
+      docRecord.uuid,
+      ragIdentifier,
+      textContent,
+      file.name,
+    );
 
     if (result.success) {
-      // Invalidate storage cache after uploading document
+      // Set rag_document_id to the document UUID for future lookups
+      await updateDocRagId(docRecord.uuid, docRecord.uuid, userId);
       ragService.invalidateStorageCache(ragIdentifier);
-      return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
+      return { ragProcessed: true, ragError: undefined, upload_id: result.uploadId };
     } else {
-      throw new Error(result.error || 'RAG upload failed');
+      throw new Error(result.error || 'RAG processing failed');
     }
   } catch (ragErr) {
-    console.error('Failed to send document to RAG API:', ragErr);
+    console.error('Failed to process document for RAG:', ragErr);
     const ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
     // Continue with success even if RAG fails
     return { ragProcessed: false, ragError, upload_id: undefined };
