@@ -191,7 +191,7 @@ export class RagService {
         };
       }
 
-      const chunks = await db
+      const chunkRows = await db
         .select({
           uuid: documentChunksTable.uuid,
           chunk_text: documentChunksTable.chunk_text,
@@ -200,7 +200,13 @@ export class RagService {
         .from(documentChunksTable)
         .where(inArray(documentChunksTable.uuid, chunkUuids));
 
-      // Build context from chunks
+      // Re-order chunks by vector search score (highest relevance first)
+      const chunkMap = new Map(chunkRows.map((c) => [c.uuid, c]));
+      const chunks = chunkUuids
+        .map((uuid) => chunkMap.get(uuid))
+        .filter(Boolean) as typeof chunkRows;
+
+      // Build context from score-ordered chunks
       const context = chunks.map((c) => c.chunk_text).join('\n\n---\n\n');
 
       // Get unique document names
