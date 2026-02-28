@@ -113,6 +113,41 @@ function getCollection(domain: VectorDomain): ZVecCollection {
   return collections[domain];
 }
 
+// ─── Filter Helpers ───────────────────────────────────────────────────
+
+/** Allowed field names for zvec filter expressions to prevent field injection */
+const ALLOWED_FILTER_FIELDS: ReadonlySet<string> = new Set([
+  'project_uuid', 'document_uuid', 'chunk_uuid',
+  'profile_uuid', 'agent_uuid', 'ring_type', 'pattern_type',
+]);
+
+/**
+ * Sanitize a value for use in zvec filter expressions.
+ * Removes double quotes and backslashes to prevent filter injection.
+ */
+function sanitizeFilterValue(value: string): string {
+  return value.replace(/["\\]/g, '');
+}
+
+/**
+ * Build a safe zvec filter expression from field/value pairs.
+ * Field names are validated against an allowlist and values are sanitized.
+ */
+export function buildFilter(
+  conditions: Array<[field: string, value: string] | null>
+): string | undefined {
+  const parts = conditions
+    .filter((c): c is [string, string] => c !== null && c[1] !== '')
+    .map(([field, value]) => {
+      if (!ALLOWED_FILTER_FIELDS.has(field)) {
+        throw new Error(`Invalid filter field: ${field}`);
+      }
+      return `${field} = "${sanitizeFilterValue(value)}"`;
+    });
+
+  return parts.length > 0 ? parts.join(' AND ') : undefined;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────
 
 /**

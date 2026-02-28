@@ -24,6 +24,7 @@ import {
   generateEmbeddings,
 } from './vectors/embedding-service';
 import {
+  buildFilter,
   deleteVectorsByFilter,
   getVectorStats,
   searchVectors,
@@ -160,7 +161,7 @@ export class RagService {
         embedding,
         domain: 'rag',
         topK: 5,
-        filter: `project_uuid = "${ragIdentifier}"`,
+        filter: buildFilter([['project_uuid', ragIdentifier]]),
       });
 
       if (results.length === 0) {
@@ -347,7 +348,7 @@ export class RagService {
       // Delete vectors from zvec
       deleteVectorsByFilter({
         domain: 'rag',
-        filter: `document_uuid = "${documentId}"`,
+        filter: buildFilter([['document_uuid', documentId]])!,
       });
 
       // Delete chunks from PostgreSQL (also handled by CASCADE on doc delete)
