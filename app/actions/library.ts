@@ -641,9 +641,10 @@ export async function createDoc(
         const arrayBuffer = await file.arrayBuffer();
         textContent = new TextDecoder().decode(arrayBuffer);
       } else if (file.type === 'application/pdf') {
-        // For PDFs, we'd need a library like pdf-parse
-        // For now, just use the description as placeholder
-        textContent = description || 'PDF content extraction not implemented';
+        // Extract text from PDF using pdfjs-dist
+        const { extractTextFromPdf } = await import('@/lib/rag/pdf-extract');
+        const arrayBuffer = await file.arrayBuffer();
+        textContent = await extractTextFromPdf(arrayBuffer);
       }
       
       // Process RAG upload
