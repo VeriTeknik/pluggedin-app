@@ -91,17 +91,18 @@ function getCollection(domain: VectorDomain): ZVecCollection {
 
   ensureInitialized();
 
+  const fs = require('fs');
   const collectionPath = path.join(ZVEC_DATA_DIR, domain);
   const fields = DOMAIN_FIELDS[domain];
+  const dirExists = fs.existsSync(collectionPath);
 
-  try {
+  if (dirExists) {
+    // Directory exists - try to open the existing collection.
+    // Do NOT delete on failure (could be locked by another process).
     collections[domain] = ZVecOpen(collectionPath);
-  } catch {
-    // If the directory exists but isn't a valid collection, remove it first
-    const fs = require('fs');
-    if (fs.existsSync(collectionPath)) {
-      fs.rmSync(collectionPath, { recursive: true });
-    }
+  } else {
+    // Directory doesn't exist - create a new collection.
+    fs.mkdirSync(collectionPath, { recursive: true });
     const schema = new ZVecCollectionSchema({
       name: domain,
       vectors: EMBEDDING_VECTOR_CONFIG,
