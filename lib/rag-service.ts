@@ -1,11 +1,36 @@
 /**
- * Shared RAG (Retrieval-Augmented Generation) service
- * Consolidates RAG API interactions to avoid duplication across modules
+ * RAG (Retrieval-Augmented Generation) Service
+ *
+ * Embedded vector search using zvec via the shared vector infrastructure.
+ * Replaces the old HTTP-based plugged_in_v3_server integration.
+ *
+ * Uses:
+ * - lib/vectors/vector-service for vector storage and search
+ * - lib/vectors/embedding-service for text → vector conversion
+ * - lib/rag/chunking for document splitting
+ * - document_chunks table for chunk text storage
  */
 
+import { randomUUID } from 'crypto';
+
 import { LRUCache } from './lru-cache';
-import { estimateStorageFromDocumentCount } from './rag-storage-utils';
-import { validateExternalUrl } from './url-validator';
+import { splitTextIntoChunks } from './rag/chunking';
+import {
+  calculateStorageFromVectorCount,
+  estimateStorageFromDocumentCount,
+} from './rag-storage-utils';
+import {
+  generateEmbedding,
+  generateEmbeddings,
+} from './vectors/embedding-service';
+import {
+  deleteVectorsByFilter,
+  getVectorStats,
+  searchVectors,
+  upsertVectors,
+} from './vectors/vector-service';
+
+// ─── Public Interfaces (backward compatible) ────────────────────────
 
 export interface RagQueryResponse {
   success: boolean;
@@ -71,694 +96,362 @@ export interface RAGDocumentRequest {
   };
 }
 
-class RagService {
-  private readonly ragApiUrl: string;
+// ─── Upload Progress Tracking ────────────────────────────────────────
+
+const uploadProgressCache = new LRUCache<UploadProgress>(1000, 15 * 60 * 1000); // 15 min TTL
+
+// ─── Helpers ─────────────────────────────────────────────────────────
+
+function makeProgress(
+  status: UploadProgress['status'],
+  step: string,
+  percentage: number,
+  message: string,
+  documentId?: string,
+): UploadProgress {
+  return {
+    status,
+    progress: {
+      current: percentage,
+      total: 100,
+      step,
+      step_progress: { percentage },
+    },
+    message,
+    document_id: documentId,
+  };
+}
+
+// ─── RAG Service Class ──────────────────────────────────────────────
+
+export class RagService {
   private storageStatsCache: LRUCache<RagStorageStatsResponse>;
-  private readonly CACHE_TTL: number;
-  private readonly MAX_CACHE_SIZE = 1000; // Maximum number of cache entries
 
   constructor() {
-    // Make cache TTL configurable via environment variable (default: 1 minute)
-    this.CACHE_TTL = parseInt(process.env.RAG_CACHE_TTL_MS || '60000', 10);
-    const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    // Validate URL to prevent SSRF attacks
-    try {
-      const validatedUrl = validateExternalUrl(ragUrl, {
-        allowLocalhost: process.env.NODE_ENV === 'development'
-      });
-      // Remove trailing slash if present
-      this.ragApiUrl = validatedUrl.toString().replace(/\/$/, '');
-    } catch (error) {
-      console.error('Invalid RAG_API_URL:', error);
-      // Use the default if validation fails
-      this.ragApiUrl = 'https://api.plugged.in';
-    }
-
-    // Initialize LRU cache with configurable size and TTL
-    this.storageStatsCache = new LRUCache<RagStorageStatsResponse>(
-      this.MAX_CACHE_SIZE,
-      this.CACHE_TTL
-    );
+    const cacheTtl = parseInt(process.env.RAG_CACHE_TTL_MS || '60000', 10);
+    this.storageStatsCache = new LRUCache<RagStorageStatsResponse>(1000, cacheTtl);
   }
 
-  private isConfigured(): boolean {
-    return !!this.ragApiUrl;
+  isEnabled(): boolean {
+    return process.env.ENABLE_RAG === 'true';
   }
 
-  /**
-   * Helper function to retry API calls with exponential backoff
-   */
-  private async retryWithBackoff<T>(
-    operation: () => Promise<T>,
-    operationName: string,
-    maxRetries: number = 3
-  ): Promise<T> {
-    let lastError: any;
-    const initialDelay = 1000; // 1 second
+  // ─── Query Methods ─────────────────────────────────────────────────
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error;
-
-        // Don't retry on client errors (4xx) except 429 (rate limit)
-        if (error instanceof Error &&
-            error.message.includes('status: 4') &&
-            !error.message.includes('status: 429')) {
-          throw error;
-        }
-
-        // Check if we should retry
-        if (attempt < maxRetries - 1) {
-          const delay = initialDelay * Math.pow(2, attempt);
-          const jitter = Math.random() * 0.3 * delay; // Add 30% jitter
-          const totalDelay = Math.floor(delay + jitter);
-
-          console.log(`[RAG Service] Retrying ${operationName} after ${totalDelay}ms (attempt ${attempt + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, totalDelay));
-        }
-      }
-    }
-
-    // If all retries failed, throw the last error
-    console.error(`[RAG Service] All ${maxRetries} attempts failed for ${operationName}`);
-    throw lastError;
-  }
-
-  /**
-   * Parse RAG API response which can be either JSON or plain text
-   */
-  private async parseRagResponse(response: Response): Promise<any> {
-    try {
-      return await response.json();
-    } catch {
-      return await response.text();
-    }
-  }
-
-  /**
-   * Query RAG for relevant context (used in playground)
-   */
   async queryForContext(query: string, ragIdentifier: string): Promise<RagQueryResponse> {
-    try {
-      if (!this.isConfigured()) {
-        return {
-          success: false,
-          error: 'RAG_API_URL not configured',
-        };
-      }
-
-      // Validate query size (max 10KB)
-      if (query.length > 10 * 1024) {
-        return {
-          success: false,
-          error: 'Query too large. Maximum size is 10KB',
-        };
-      }
-
-      const url = new URL('/rag/rag-query', this.ragApiUrl);
-      
-      // Add timeout to prevent hanging requests (30 seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: query,
-          user_id: ragIdentifier,
-        }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`RAG API error: ${response.status} ${response.statusText}`);
-      }
-
-      // Handle both JSON and plain text responses
-      const body = await this.parseRagResponse(response);
-      const context = typeof body === 'string'
-        ? body
-        : body.message || body.context || body.response || '';
-      
-      return {
-        success: true,
-        context
-      };
-    } catch (error) {
-      console.error('Error querying RAG API for context:', error);
-      
-      // Check for timeout error
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          success: false,
-          error: 'Request timed out after 30 seconds'
-        };
-      }
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    return this.queryForResponse(ragIdentifier, query);
   }
 
-  /**
-   * Query RAG for direct response (used in docs)
-   */
   async queryForResponse(ragIdentifier: string, query: string): Promise<RagQueryResponse> {
     try {
-      if (!this.isConfigured()) {
-        return {
-          success: false,
-          error: 'RAG_API_URL not configured',
-        };
+      if (!this.isEnabled()) {
+        return { success: false, error: 'RAG is not enabled' };
       }
 
-      // Validate query size (max 10KB)
-      if (query.length > 10 * 1024) {
-        return {
-          success: false,
-          error: 'Query too large. Maximum size is 10KB',
-        };
+      if (!query || query.length > 10 * 1024) {
+        return { success: false, error: query ? 'Query too large. Maximum size is 10KB' : 'Query cannot be empty' };
       }
 
-      // Wrap the API call in retry logic
-      const result = await this.retryWithBackoff(async () => {
-        // Use the same endpoint as queryForContext which works in playground
-        const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
+      // Generate query embedding
+      const embedding = await generateEmbedding(query);
 
-        // Add timeout to prevent hanging requests (30 seconds)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+      // Search zvec via shared vector service
+      const results = searchVectors({
+        embedding,
+        domain: 'rag',
+        topK: 5,
+        filter: `project_uuid = "${ragIdentifier}"`,
+      });
 
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: ragIdentifier,
-            query: query,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`RAG API responded with status: ${response.status}`);
-        }
-
-        return response;
-      }, 'RAG query', 2); // Retry up to 2 times for queries
-
-      const response = result;
-
-      // Handle both JSON and plain text responses
-      const body = await this.parseRagResponse(response);
-
-      if (typeof body === 'string') {
+      if (results.length === 0) {
         return {
           success: true,
-          response: body || 'No response received',
+          response: 'No relevant documents found',
           sources: [],
           documentIds: [],
         };
       }
 
-      // Handle new format with sources
-      if (body.results !== undefined) {
-        return {
-          success: true,
-          response: body.results || 'No response received',
-          sources: body.sources || [],
-          documentIds: body.document_ids || [],
-        };
-      }
+      // Fetch chunk texts from PostgreSQL
+      const { db } = await import('@/db');
+      const { documentChunksTable, docsTable } = await import('@/db/schema');
+      const { inArray } = await import('drizzle-orm');
 
-      // Handle no documents found case
-      if (body.message === 'No relevant documents found') {
+      const chunkUuids = results
+        .map((r) => r.fields.chunk_uuid)
+        .filter(Boolean);
+
+      if (chunkUuids.length === 0) {
         return {
           success: true,
-          response: body.message,
+          response: 'No relevant documents found',
           sources: [],
           documentIds: [],
         };
       }
 
-      // Fallback for old format
+      const chunks = await db
+        .select({
+          uuid: documentChunksTable.uuid,
+          chunk_text: documentChunksTable.chunk_text,
+          document_uuid: documentChunksTable.document_uuid,
+        })
+        .from(documentChunksTable)
+        .where(inArray(documentChunksTable.uuid, chunkUuids));
+
+      // Build context from chunks
+      const context = chunks.map((c) => c.chunk_text).join('\n\n---\n\n');
+
+      // Get unique document names
+      const docUuids = [...new Set(chunks.map((c) => c.document_uuid))];
+      const docs = docUuids.length > 0
+        ? await db
+            .select({ uuid: docsTable.uuid, name: docsTable.name })
+            .from(docsTable)
+            .where(inArray(docsTable.uuid, docUuids))
+        : [];
+
       return {
         success: true,
-        response: body.message || body.response || 'No response received',
-        sources: [],
-        documentIds: [],
+        response: context,
+        context,
+        sources: docs.map((d) => d.name),
+        documentIds: docs.map((d) => d.uuid),
       };
     } catch (error) {
-      console.error('Error querying RAG for response:', error);
-      
-      // Check for timeout error
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          success: false,
-          error: 'Request timed out after 30 seconds'
-        };
-      }
-      // Check for common network errors to RAG API
-      if (error instanceof Error) {
-        // Check error code first (more reliable), then fall back to message
-        const errorCode = (error as any).code;
-        const errorMessage = error.message;
-        
-        if (errorCode === 'ECONNREFUSED' || errorMessage.includes('ECONNREFUSED') ||
-            errorCode === 'ETIMEDOUT' || errorMessage.includes('ETIMEDOUT') ||
-            errorCode === 'ENOTFOUND' || errorMessage.includes('ENOTFOUND') ||
-            errorCode === 'ECONNRESET' || errorMessage.includes('ECONNRESET') ||
-            errorCode === 'EHOSTUNREACH' || errorMessage.includes('EHOSTUNREACH') ||
-            errorCode === 'ENETUNREACH' || errorMessage.includes('ENETUNREACH')) {
-          return {
-            success: false,
-            error: 'Unable to connect to RAG API service. Please ensure the RAG service is running and reachable.',
-          };
-        }
-      }
+      console.error('[RAG Service] Query error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to query RAG',
+        error: error instanceof Error ? error.message : 'Query failed',
       };
     }
   }
 
-  /**
-   * Upload document to RAG collection
-   */
+  // ─── Document Processing ──────────────────────────────────────────
+
+  async processDocument(
+    documentUuid: string,
+    projectUuid: string,
+    text: string,
+    _fileName: string,
+  ): Promise<{ success: boolean; uploadId?: string; error?: string }> {
+    const uploadId = randomUUID();
+
+    try {
+      if (!this.isEnabled()) {
+        return { success: false, error: 'RAG is not enabled' };
+      }
+
+      // Track progress
+      uploadProgressCache.set(uploadId, makeProgress('processing', 'chunking', 10, 'Splitting document into chunks...'));
+
+      // Step 1: Chunk text
+      const chunkTexts = splitTextIntoChunks(text);
+      if (chunkTexts.length === 0) {
+        uploadProgressCache.set(uploadId, makeProgress('failed', 'chunking', 0, 'No text content found in document'));
+        return { success: false, uploadId, error: 'No text content found' };
+      }
+
+      uploadProgressCache.set(uploadId, makeProgress('processing', 'embeddings', 30, `Generating embeddings for ${chunkTexts.length} chunks...`));
+
+      // Step 2: Generate embeddings
+      const embeddings = await generateEmbeddings(chunkTexts);
+
+      uploadProgressCache.set(uploadId, makeProgress('processing', 'vector_storage', 60, 'Storing vectors...'));
+
+      // Step 3: Insert chunks to PostgreSQL
+      const { db } = await import('@/db');
+      const { documentChunksTable } = await import('@/db/schema');
+
+      const chunkRecords = chunkTexts.map((chunkText, i) => ({
+        document_uuid: documentUuid,
+        project_uuid: projectUuid,
+        chunk_index: i,
+        chunk_text: chunkText,
+        zvec_vector_id: `${documentUuid}-${i}`,
+      }));
+
+      const insertedChunks = await db
+        .insert(documentChunksTable)
+        .values(chunkRecords)
+        .returning({ uuid: documentChunksTable.uuid });
+
+      // Step 4: Insert vectors to zvec via shared vector service
+      const vectorParams = embeddings.map((emb, i) => ({
+        id: `${documentUuid}-${i}`,
+        embedding: emb,
+        domain: 'rag' as const,
+        fields: {
+          project_uuid: projectUuid,
+          document_uuid: documentUuid,
+          chunk_uuid: insertedChunks[i]?.uuid || `${documentUuid}-chunk-${i}`,
+        },
+      }));
+
+      upsertVectors(vectorParams);
+
+      uploadProgressCache.set(uploadId, makeProgress('completed', 'completed', 100, 'Document processed successfully', documentUuid));
+
+      // Invalidate storage cache
+      this.invalidateStorageCache(projectUuid);
+
+      return { success: true, uploadId };
+    } catch (error) {
+      console.error('[RAG Service] Process document error:', error);
+      uploadProgressCache.set(uploadId, makeProgress('failed', 'vector_storage', 0, error instanceof Error ? error.message : 'Processing failed'));
+      return {
+        success: false,
+        uploadId,
+        error: error instanceof Error ? error.message : 'Processing failed',
+      };
+    }
+  }
+
+  // Backward-compatible upload method
   async uploadDocument(file: File, ragIdentifier: string): Promise<RagUploadResponse> {
     try {
-      if (!this.isConfigured()) {
-        return {
-          success: false,
-          error: 'RAG_API_URL not configured',
-        };
-      }
-
-      // Create FormData for multipart upload
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // Add timeout for upload (60 seconds for larger files)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-      const response = await fetch(`${this.ragApiUrl}/rag/upload-to-collection?user_id=${ragIdentifier}`, {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          // Don't set Content-Type, let browser set it with boundary for multipart
-        },
-        body: formData,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        // Handle 422 Unprocessable Entity specially
-        if (response.status === 422) {
-          let errorDetail = 'Document validation failed';
-          try {
-            const errorBody = await response.json();
-            if (errorBody.detail) {
-              // Extract meaningful error from FastAPI validation error format
-              if (typeof errorBody.detail === 'string') {
-                errorDetail = errorBody.detail;
-              } else if (Array.isArray(errorBody.detail)) {
-                // FastAPI validation errors are often arrays
-                errorDetail = errorBody.detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', ');
-              } else {
-                errorDetail = JSON.stringify(errorBody.detail);
-              }
-            } else if (errorBody.message) {
-              errorDetail = errorBody.message;
-            }
-          } catch (parseError) {
-            // If we can't parse the error, try to get it as text
-            try {
-              errorDetail = await response.text();
-            } catch {
-              // Keep default error message
-            }
-          }
-          console.error(`RAG API 422 error for file "${file.name}":`, errorDetail);
-          return {
-            success: false,
-            error: `Document upload failed: ${errorDetail}. File may already exist or have invalid format.`
-          };
-        }
-
-        // Handle 409 Conflict (duplicate document)
-        if (response.status === 409) {
-          console.warn(`RAG API 409 conflict for file "${file.name}": Document already exists`);
-          return {
-            success: false,
-            error: `Document "${file.name}" already exists in RAG. Consider using a different filename or version.`
-          };
-        }
-
-        // Handle 413 Payload Too Large
-        if (response.status === 413) {
-          return {
-            success: false,
-            error: `File "${file.name}" is too large. Maximum file size allowed is 10MB.`
-          };
-        }
-
-        // Handle 415 Unsupported Media Type
-        if (response.status === 415) {
-          return {
-            success: false,
-            error: `File type of "${file.name}" is not supported. Please upload a supported document format.`
-          };
-        }
-
-        // Generic error handling
-        let errorMessage = `RAG API responded with status: ${response.status}`;
-        try {
-          const errorBody = await response.text();
-          if (errorBody) {
-            errorMessage += ` - ${errorBody.substring(0, 200)}`; // Limit error message length
-          }
-        } catch {
-          // Ignore parse errors
-        }
-        throw new Error(errorMessage);
-      }
-
-      const result = await response.json();
-
-      if (!result.upload_id) {
-        console.error('Warning: No upload_id in RAG API response, falling back to legacy behavior');
-        return {
-          success: false,
-          error: 'No upload_id returned from RAG API'
-        };
-      }
-
+      const text = await file.text();
+      const result = await this.processDocument(
+        randomUUID(),
+        ragIdentifier,
+        text,
+        file.name,
+      );
       return {
-        success: true,
-        upload_id: result.upload_id
+        success: result.success,
+        upload_id: result.uploadId,
+        error: result.error,
       };
     } catch (error) {
-      console.error('Error sending to RAG API:', error);
-
-      // Check for timeout error
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          success: false,
-          error: 'Upload timed out after 60 seconds'
-        };
-      }
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to upload to RAG'
+        error: error instanceof Error ? error.message : 'Upload failed',
       };
     }
   }
 
-  /**
-   * Remove document from RAG collection
-   */
-  async removeDocument(documentId: string, ragIdentifier: string): Promise<{ success: boolean; error?: string }> {
+  // ─── Status & Stats ────────────────────────────────────────────────
+
+  async getUploadStatus(uploadId: string, _ragIdentifier?: string): Promise<UploadStatusResponse> {
+    const progress = uploadProgressCache.get(uploadId);
+    if (!progress) {
+      return { success: false, error: 'Upload not found - may have completed' };
+    }
+    return { success: true, progress };
+  }
+
+  async removeDocument(documentId: string, _ragIdentifier: string): Promise<{ success: boolean; error?: string }> {
     try {
-      if (!this.isConfigured()) {
-        console.warn('RAG_API_URL not configured');
-        return { success: true }; // Don't fail if RAG is not configured
-      }
+      if (!this.isEnabled()) return { success: true };
 
-      // Add timeout (30 seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      const response = await fetch(`${this.ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${ragIdentifier}`, {
-        method: 'DELETE',
-        headers: {
-          'accept': 'application/json',
-        },
-        signal: controller.signal,
+      // Delete vectors from zvec
+      deleteVectorsByFilter({
+        domain: 'rag',
+        filter: `document_uuid = "${documentId}"`,
       });
 
-      clearTimeout(timeoutId);
+      // Delete chunks from PostgreSQL (also handled by CASCADE on doc delete)
+      const { db } = await import('@/db');
+      const { documentChunksTable } = await import('@/db/schema');
+      const { eq } = await import('drizzle-orm');
 
-      if (!response.ok) {
-        // Handle 404 Not Found (document doesn't exist)
-        if (response.status === 404) {
-          console.warn(`RAG document ${documentId} not found, treating as successful deletion`);
-          return { success: true }; // Consider it successful if already gone
-        }
-
-        // Handle 422 Unprocessable Entity
-        if (response.status === 422) {
-          let errorDetail = 'Invalid document ID or user ID';
-          try {
-            const errorBody = await response.json();
-            if (errorBody.detail) {
-              errorDetail = typeof errorBody.detail === 'string'
-                ? errorBody.detail
-                : JSON.stringify(errorBody.detail);
-            }
-          } catch {
-            // Keep default error message
-          }
-          console.error(`RAG API 422 error when deleting ${documentId}:`, errorDetail);
-          return {
-            success: false,
-            error: `Cannot delete document: ${errorDetail}`
-          };
-        }
-
-        throw new Error(`RAG API responded with status: ${response.status}`);
-      }
+      await db
+        .delete(documentChunksTable)
+        .where(eq(documentChunksTable.document_uuid, documentId));
 
       return { success: true };
     } catch (error) {
-      console.error('Error removing from RAG API:', error);
+      console.error('[RAG Service] Remove error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to remove from RAG'
+        error: error instanceof Error ? error.message : 'Remove failed',
       };
     }
   }
 
-  /**
-   * Get documents in RAG collection
-   */
   async getDocuments(ragIdentifier: string): Promise<RagDocumentsResponse> {
     try {
-      if (!this.isConfigured()) {
-        return {
-          success: false,
-          error: 'RAG_API_URL not configured',
-        };
+      if (!this.isEnabled()) {
+        return { success: false, error: 'RAG is not enabled' };
       }
 
-      // Add timeout (30 seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const response = await fetch(`${this.ragApiUrl}/rag/get-collection?user_id=${ragIdentifier}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json',
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
+      const { db } = await import('@/db');
+      const { docsTable } = await import('@/db/schema');
+      const { eq, isNotNull, and } = await import('drizzle-orm');
 
-      if (!response.ok) {
-        // Check if it's a backend error we can work around
-        if (response.status === 500) {
-          try {
-            const errorText = await response.text();
+      const docs = await db
+        .select({
+          name: docsTable.name,
+          rag_document_id: docsTable.rag_document_id,
+        })
+        .from(docsTable)
+        .where(
+          and(
+            eq(docsTable.project_uuid, ragIdentifier),
+            isNotNull(docsTable.rag_document_id),
+          ),
+        );
 
-            // Check for known backend issues
-            if (errorText.includes('milvus_manager') ||
-                errorText.includes('Milvus connection') ||
-                errorText.includes('Failed to get documents')) {
-              console.warn('RAG backend service issue detected:', errorText.substring(0, 200));
+      const documents: Array<[string, string]> = docs.map((d) => [
+        d.name,
+        d.rag_document_id!,
+      ]);
 
-              // Return gracefully with empty documents list
-              return {
-                success: false,
-                error: 'Document listing temporarily unavailable due to backend service issues',
-                documents: [] // Return empty list to allow search to continue
-              };
-            }
-          } catch (parseError) {
-            console.error('Failed to parse error response:', parseError);
-          }
-        }
-
-        // For other errors, throw as before
-        throw new Error(`RAG API responded with status: ${response.status}`);
-      }
-
-      const documents = await response.json();
-      
-      return {
-        success: true,
-        documents, // Array of [filename, document_id] pairs
-      };
+      return { success: true, documents };
     } catch (error) {
-      console.error('Error fetching RAG documents:', error);
+      console.error('[RAG Service] Get documents error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch RAG documents',
+        error: error instanceof Error ? error.message : 'Failed to fetch documents',
       };
     }
   }
 
-  /**
-   * Check upload status
-   */
-  async getUploadStatus(uploadId: string, ragIdentifier: string): Promise<UploadStatusResponse> {
-    try {
-      if (!this.isConfigured()) {
-        return {
-          success: false,
-          error: 'RAG_API_URL not configured',
-        };
-      }
-
-      const statusUrl = `${this.ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
-
-      // Add timeout (30 seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const response = await fetch(statusUrl, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json',
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`RAG API upload status error (${response.status}): ${errorText}`);
-        
-        // If upload not found, it might be completed already - check documents
-        if (response.status === 404) {
-          return {
-            success: false,
-            error: 'Upload not found - may have completed',
-          };
-        }
-        
-        throw new Error(`RAG API responded with status: ${response.status} - ${errorText}`);
-      }
-
-      const progress: UploadProgress = await response.json();
-      
-      return {
-        success: true,
-        progress,
-      };
-    } catch (error) {
-      console.error('Error checking upload status:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to check upload status',
-      };
-    }
-  }
-
-  /**
-   * Get storage statistics for RAG documents with caching
-   */
   async getStorageStats(ragIdentifier: string): Promise<RagStorageStatsResponse> {
     try {
-      if (!this.isConfigured()) {
-        return {
-          success: false,
-          error: 'RAG_API_URL not configured',
+      if (!this.isEnabled()) {
+        return { success: false, error: 'RAG is not enabled' };
+      }
+
+      const cacheKey = `storage-stats-${ragIdentifier}`;
+      const cached = this.storageStatsCache.get(cacheKey);
+      if (cached) return cached;
+
+      // Get vector count from zvec
+      const stats = getVectorStats('rag');
+
+      // Get document count from PostgreSQL
+      const { db } = await import('@/db');
+      const { documentChunksTable } = await import('@/db/schema');
+      const { eq, sql } = await import('drizzle-orm');
+
+      const chunkCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(documentChunksTable)
+        .where(eq(documentChunksTable.project_uuid, ragIdentifier));
+
+      const totalChunks = Number(chunkCountResult[0]?.count || 0);
+      const vectorCount = stats.count || totalChunks;
+
+      let result: RagStorageStatsResponse;
+      if (vectorCount > 0) {
+        const docsResult = await this.getDocuments(ragIdentifier);
+        const documentsCount = docsResult.documents?.length || 0;
+        result = {
+          success: true,
+          ...calculateStorageFromVectorCount(vectorCount, documentsCount),
+        };
+      } else {
+        result = {
+          success: true,
+          ...estimateStorageFromDocumentCount(0),
         };
       }
 
-      // Check cache first (LRU cache handles expiry internally)
-      const cacheKey = `storage-stats-${ragIdentifier}`;
-      const cached = this.storageStatsCache.get(cacheKey);
-
-      if (cached) {
-        return cached;
-      }
-
-      // Try to fetch from the backend storage-stats endpoint
-      try {
-        const response = await fetch(`${this.ragApiUrl}/rag/storage-stats?user_id=${ragIdentifier}`, {
-          method: 'GET',
-          headers: {
-            'accept': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-
-          const result = {
-            success: true,
-            documentsCount: data.documents_count || 0,
-            totalChunks: data.total_chunks || 0,
-            estimatedStorageMb: data.estimated_storage_mb || 0,
-            vectorsCount: data.vectors_count || 0,
-            embeddingDimension: data.embedding_dimension || 1536,
-            isEstimate: false,
-          };
-
-          // Cache successful result (LRU cache handles eviction automatically)
-          this.storageStatsCache.set(cacheKey, result);
-
-          return result;
-        }
-
-        console.log('Backend storage-stats endpoint returned:', response.status);
-      } catch (error) {
-        console.log('Failed to fetch from backend, using fallback:', error);
-      }
-
-      // Fallback: try to get document count as a simple approach
-      const docsResponse = await this.getDocuments(ragIdentifier);
-      if (docsResponse.success && docsResponse.documents) {
-        const documentsCount = docsResponse.documents.length;
-
-        if (documentsCount > 0) {
-          // Use shared utility for consistent storage estimation
-          const estimation = estimateStorageFromDocumentCount(documentsCount);
-          return {
-            success: true,
-            ...estimation,
-          };
-        }
-      }
-
-      // No documents found - return empty stats
-      const emptyEstimation = estimateStorageFromDocumentCount(0);
-      return {
-        success: true,
-        ...emptyEstimation,
-      };
+      this.storageStatsCache.set(cacheKey, result);
+      return result;
     } catch (error) {
-      console.error('Error getting storage stats:', error);
+      console.error('[RAG Service] Storage stats error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get storage statistics',
@@ -766,28 +459,18 @@ class RagService {
     }
   }
 
-  /**
-   * Invalidate storage stats cache for a specific identifier
-   */
   invalidateStorageCache(ragIdentifier: string): void {
-    const cacheKey = `storage-stats-${ragIdentifier}`;
-    this.storageStatsCache.delete(cacheKey);
+    this.storageStatsCache.delete(`storage-stats-${ragIdentifier}`);
   }
 
-  /**
-   * Clear entire storage stats cache
-   */
   clearStorageCache(): void {
     this.storageStatsCache.clear();
   }
 
-  /**
-   * Destroy the service and clean up resources (useful for testing or shutdown)
-   */
   destroy(): void {
     this.storageStatsCache.destroy();
   }
 }
 
-// Export singleton instance
-export const ragService = new RagService(); 
+// Export singleton instance (backward compatible)
+export const ragService = new RagService();
