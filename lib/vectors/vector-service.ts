@@ -37,18 +37,27 @@ const ZVEC_DATA_DIR = process.env.ZVEC_DATA_PATH
   || process.env.MEMORY_VECTOR_DATA_DIR
   || path.join(process.cwd(), 'data', 'vectors');
 
-let initialized = false;
+// Persist zvec state on globalThis to survive Next.js HMR reloads.
+// Without this, module reload loses collection handles while RocksDB
+// still holds file locks, causing "lock hold by current process" errors.
+const globalForZvec = globalThis as typeof globalThis & {
+  __zvecInitialized?: boolean;
+  __zvecCollections?: Record<string, ZVecCollection>;
+};
 
 function ensureInitialized(): void {
-  if (!initialized) {
+  if (!globalForZvec.__zvecInitialized) {
     ZVecInitialize({ logLevel: 2 }); // WARN
-    initialized = true;
+    globalForZvec.__zvecInitialized = true;
   }
 }
 
 // ─── Collection Management ─────────────────────────────────────────
 
-const collections: Record<string, ZVecCollection> = {};
+if (!globalForZvec.__zvecCollections) {
+  globalForZvec.__zvecCollections = {};
+}
+const collections = globalForZvec.__zvecCollections;
 
 const INVERT_INDEX = { indexType: ZVecIndexType.INVERT } as const;
 
