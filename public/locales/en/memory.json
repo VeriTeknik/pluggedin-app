@@ -11,7 +11,15 @@
     "expiring": "Expiring",
     "today": "today",
     "types": "Types",
-    "contentTypes": "content types"
+    "contentTypes": "content types",
+    "sessions": "Sessions",
+    "active": "active",
+    "memories": "Memories",
+    "inRings": "in rings",
+    "fresh": "Fresh",
+    "unclassified": "unclassified",
+    "patterns": "Patterns",
+    "collective": "collective"
   },
   "tabs": {
     "clipboard": "Clipboard",
@@ -127,14 +135,95 @@
   },
   "longterm": {
     "title": "Long-term Memory",
-    "description": "Persistent memory that survives across sessions and conversations."
+    "description": "Persistent memory that survives across sessions and conversations.",
+    "searchPlaceholder": "Search memories semantically...",
+    "search": "Search",
+    "empty": {
+      "title": "No memories yet",
+      "description": "Memories are created from classified observations during sessions."
+    },
+    "table": {
+      "ring": "Ring",
+      "content": "Content",
+      "decay": "Decay",
+      "relevance": "Relevance",
+      "hits": "Hits",
+      "actions": "Actions"
+    },
+    "detail": {
+      "title": "Memory Details",
+      "fullContent": "Full Content",
+      "summary": "Summary",
+      "essence": "Essence",
+      "relevance": "Relevance",
+      "successScore": "Success Score",
+      "reinforcements": "Reinforcements",
+      "tokens": "Tokens",
+      "accessCount": "Access Count",
+      "created": "Created",
+      "lastAccessed": "Last Accessed",
+      "tags": "Tags"
+    },
+    "deleteDialog": {
+      "title": "Delete Memory",
+      "description": "Are you sure you want to delete this memory? This action cannot be undone.",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    }
   },
   "procedures": {
     "title": "Procedures",
-    "description": "Reusable workflows and procedures learned from past interactions."
+    "description": "Reusable workflows and procedures learned from past interactions.",
+    "searchPlaceholder": "Search procedures...",
+    "search": "Search",
+    "empty": {
+      "title": "No procedures yet",
+      "description": "Procedures are learned from repeated successful patterns in your sessions."
+    },
+    "detail": {
+      "title": "Procedure Details",
+      "fullContent": "Full Content",
+      "summary": "Summary",
+      "relevance": "Relevance",
+      "reinforcements": "Reinforcements",
+      "accessCount": "Access Count",
+      "tokens": "Tokens",
+      "created": "Created"
+    },
+    "deleteDialog": {
+      "title": "Delete Procedure",
+      "description": "Are you sure you want to delete this procedure? This action cannot be undone.",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    }
   },
   "fresh": {
     "title": "Fresh Context",
-    "description": "Recent context and working memory from current conversations."
+    "description": "Recent context and working memory from current conversations.",
+    "observations": "observations",
+    "status": {
+      "active": "Active",
+      "completed": "Completed",
+      "abandoned": "Abandoned"
+    },
+    "zReport": "Z-Report",
+    "zReportSummary": "Session Summary (Z-Report)",
+    "noSummary": "No summary available",
+    "observationDetails": "Observation Details",
+    "noObservations": "No observations loaded",
+    "pending": "Pending",
+    "tokens": "Tokens",
+    "createdAt": "Created",
+    "empty": {
+      "title": "No sessions yet",
+      "description": "Sessions are created when agents use pluggedin_memory_session_start."
+    },
+    "table": {
+      "type": "Type",
+      "content": "Content",
+      "outcome": "Outcome",
+      "classified": "Classified",
+      "actions": "Actions"
+    }
   }
 }

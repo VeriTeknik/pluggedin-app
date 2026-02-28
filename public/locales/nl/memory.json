@@ -11,7 +11,15 @@
     "expiring": "Vervalt",
     "today": "vandaag",
     "types": "Types",
-    "contentTypes": "inhoudstypen"
+    "contentTypes": "inhoudstypen",
+    "sessions": "Sessies",
+    "active": "actief",
+    "memories": "Herinneringen",
+    "inRings": "in ringen",
+    "fresh": "Vers",
+    "unclassified": "ongeclassificeerd",
+    "patterns": "Patronen",
+    "collective": "collectief"
   },
   "tabs": {
     "clipboard": "Klembord",
@@ -77,7 +85,7 @@
       "dropzoneHint": "Afbeeldingen, PDF's, JSON, tekstbestanden (max {{maxSize}})",
       "fileTooLarge": "Bestand is te groot. Maximum grootte is {{maxSize}}",
       "fileUploaded": "Bestand geüpload ({{size}})",
-      "fileReadError": "Failed to read file",
+      "fileReadError": "Kan bestand niet lezen",
       "or": "of voer tekst in"
     },
     "deleteDialog": {
@@ -127,14 +135,95 @@
   },
   "longterm": {
     "title": "Langetermijngeheugen",
-    "description": "Persistent geheugen dat sessies en gesprekken overleeft."
+    "description": "Persistent geheugen dat sessies en gesprekken overleeft.",
+    "searchPlaceholder": "Herinneringen semantisch zoeken...",
+    "search": "Zoeken",
+    "empty": {
+      "title": "Nog geen herinneringen",
+      "description": "Herinneringen worden aangemaakt uit geclassificeerde observaties tijdens sessies."
+    },
+    "table": {
+      "ring": "Ring",
+      "content": "Inhoud",
+      "decay": "Verval",
+      "relevance": "Relevantie",
+      "hits": "Hits",
+      "actions": "Acties"
+    },
+    "detail": {
+      "title": "Geheugendetails",
+      "fullContent": "Volledige Inhoud",
+      "summary": "Samenvatting",
+      "essence": "Essentie",
+      "relevance": "Relevantie",
+      "successScore": "Successcore",
+      "reinforcements": "Versterkingen",
+      "tokens": "Tokens",
+      "accessCount": "Aantal keer geopend",
+      "created": "Aangemaakt",
+      "lastAccessed": "Laatst geopend",
+      "tags": "Tags"
+    },
+    "deleteDialog": {
+      "title": "Herinnering Verwijderen",
+      "description": "Weet u zeker dat u deze herinnering wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren"
+    }
   },
   "procedures": {
     "title": "Procedures",
-    "description": "Herbruikbare workflows en procedures geleerd uit eerdere interacties."
+    "description": "Herbruikbare workflows en procedures geleerd uit eerdere interacties.",
+    "searchPlaceholder": "Procedures zoeken...",
+    "search": "Zoeken",
+    "empty": {
+      "title": "Nog geen procedures",
+      "description": "Procedures worden geleerd van herhaalde succesvolle patronen in uw sessies."
+    },
+    "detail": {
+      "title": "Proceduredetails",
+      "fullContent": "Volledige Inhoud",
+      "summary": "Samenvatting",
+      "relevance": "Relevantie",
+      "reinforcements": "Versterkingen",
+      "accessCount": "Aantal keer geopend",
+      "tokens": "Tokens",
+      "created": "Aangemaakt"
+    },
+    "deleteDialog": {
+      "title": "Procedure Verwijderen",
+      "description": "Weet u zeker dat u deze procedure wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren"
+    }
   },
   "fresh": {
     "title": "Verse Context",
-    "description": "Recente context en werkgeheugen uit huidige gesprekken."
+    "description": "Recente context en werkgeheugen uit huidige gesprekken.",
+    "observations": "observaties",
+    "status": {
+      "active": "Actief",
+      "completed": "Voltooid",
+      "abandoned": "Verlaten"
+    },
+    "zReport": "Z-Rapport",
+    "zReportSummary": "Sessie Samenvatting (Z-Rapport)",
+    "noSummary": "Geen samenvatting beschikbaar",
+    "observationDetails": "Observatiedetails",
+    "noObservations": "Geen observaties geladen",
+    "pending": "In afwachting",
+    "tokens": "Tokens",
+    "createdAt": "Aangemaakt",
+    "empty": {
+      "title": "Nog geen sessies",
+      "description": "Sessies worden aangemaakt wanneer agents pluggedin_memory_session_start gebruiken."
+    },
+    "table": {
+      "type": "Type",
+      "content": "Inhoud",
+      "outcome": "Uitkomst",
+      "classified": "Geclassificeerd",
+      "actions": "Acties"
+    }
   }
 }

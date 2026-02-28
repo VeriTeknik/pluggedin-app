@@ -5,24 +5,42 @@ import {
   Clipboard,
   Clock,
   Database,
+  Layers,
   Loader2,
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { ClipboardTab } from './components/ClipboardTab';
+import { FreshMemoryTab } from './components/FreshMemoryTab';
+import { LongTermTab } from './components/LongTermTab';
+import { ProceduresTab } from './components/ProceduresTab';
 import { useClipboard } from './hooks/useClipboard';
+import { useMemoryStats } from './hooks/useMemoryStats';
 
 export default function MemoryContent() {
   const { t } = useTranslation('memory');
-  const { entries, isLoading, refresh, stats } = useClipboard();
+  const { entries, isLoading: clipboardLoading, refresh: refreshClipboard, stats: clipboardStats } = useClipboard();
+  const { stats: memoryStats, isLoading: statsLoading, refresh: refreshStats } = useMemoryStats();
+
+  const handleRefresh = () => {
+    refreshClipboard();
+    refreshStats();
+  };
+
+  const isLoading = clipboardLoading || statsLoading;
+
+  // Calculate total ring memories
+  const totalRingMemories = Object.values(memoryStats.ringCounts || {}).reduce(
+    (sum, count) => sum + (count as number || 0),
+    0
+  );
 
   return (
     <PageContainer>
@@ -42,7 +60,7 @@ export default function MemoryContent() {
             <Button
               variant="outline"
               size="sm"
-              onClick={refresh}
+              onClick={handleRefresh}
               disabled={isLoading}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -61,7 +79,7 @@ export default function MemoryContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-2xl font-bold">{clipboardStats.total}</div>
               <p className="text-xs text-muted-foreground">
                 {t('stats.entries')}
               </p>
@@ -71,14 +89,14 @@ export default function MemoryContent() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                {t('stats.storage')}
+                <Layers className="h-4 w-4" />
+                {t('stats.sessions')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatBytes(stats.totalSize)}</div>
+              <div className="text-2xl font-bold">{memoryStats.totalSessions}</div>
               <p className="text-xs text-muted-foreground">
-                {t('stats.used')}
+                {memoryStats.activeSessions} {t('stats.active')}
               </p>
             </CardContent>
           </Card>
@@ -86,14 +104,14 @@ export default function MemoryContent() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {t('stats.expiring')}
+                <Database className="h-4 w-4" />
+                {t('stats.memories')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.expiringToday}</div>
+              <div className="text-2xl font-bold">{totalRingMemories}</div>
               <p className="text-xs text-muted-foreground">
-                {t('stats.today')}
+                {t('stats.inRings')}
               </p>
             </CardContent>
           </Card>
@@ -102,13 +120,13 @@ export default function MemoryContent() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                {t('stats.types')}
+                {t('stats.fresh')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.contentTypes}</div>
+              <div className="text-2xl font-bold">{memoryStats.totalFreshMemories}</div>
               <p className="text-xs text-muted-foreground">
-                {t('stats.contentTypes')}
+                {memoryStats.unclassifiedCount} {t('stats.unclassified')}
               </p>
             </CardContent>
           </Card>
@@ -121,93 +139,43 @@ export default function MemoryContent() {
               <Clipboard className="h-4 w-4" />
               {t('tabs.clipboard')}
             </TabsTrigger>
-            <TabsTrigger value="longterm" className="flex items-center gap-2" disabled>
+            <TabsTrigger value="longterm" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               {t('tabs.longterm')}
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {t('comingSoon')}
-              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="procedures" className="flex items-center gap-2" disabled>
+            <TabsTrigger value="procedures" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
               {t('tabs.procedures')}
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {t('comingSoon')}
-              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="fresh" className="flex items-center gap-2" disabled>
+            <TabsTrigger value="fresh" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               {t('tabs.fresh')}
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {t('comingSoon')}
-              </Badge>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="clipboard" className="flex-1 overflow-auto mt-0">
-            {isLoading ? (
+            {clipboardLoading ? (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
-              <ClipboardTab entries={entries} onRefresh={refresh} />
+              <ClipboardTab entries={entries} onRefresh={refreshClipboard} />
             )}
           </TabsContent>
 
-          <TabsContent value="longterm" className="flex-1">
-            <ComingSoonCard
-              icon={Database}
-              title={t('longterm.title')}
-              description={t('longterm.description')}
-            />
+          <TabsContent value="longterm" className="flex-1 overflow-auto mt-0">
+            <LongTermTab onRefresh={refreshStats} />
           </TabsContent>
 
-          <TabsContent value="procedures" className="flex-1">
-            <ComingSoonCard
-              icon={Brain}
-              title={t('procedures.title')}
-              description={t('procedures.description')}
-            />
+          <TabsContent value="procedures" className="flex-1 overflow-auto mt-0">
+            <ProceduresTab onRefresh={refreshStats} />
           </TabsContent>
 
-          <TabsContent value="fresh" className="flex-1">
-            <ComingSoonCard
-              icon={Sparkles}
-              title={t('fresh.title')}
-              description={t('fresh.description')}
-            />
+          <TabsContent value="fresh" className="flex-1 overflow-auto mt-0">
+            <FreshMemoryTab onRefresh={refreshStats} />
           </TabsContent>
         </Tabs>
       </div>
     </PageContainer>
-  );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-interface ComingSoonCardProps {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-}
-
-function ComingSoonCard({ icon: Icon, title, description }: ComingSoonCardProps) {
-  return (
-    <Card className="h-64 flex items-center justify-center">
-      <CardContent className="text-center">
-        <Icon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <CardTitle className="mb-2">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-        <Badge variant="outline" className="mt-4">
-          Coming Soon
-        </Badge>
-      </CardContent>
-    </Card>
   );
 }

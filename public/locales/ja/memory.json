@@ -11,7 +11,15 @@
     "expiring": "期限切れ予定",
     "today": "今日",
     "types": "タイプ",
-    "contentTypes": "コンテンツタイプ"
+    "contentTypes": "コンテンツタイプ",
+    "sessions": "セッション",
+    "active": "アクティブ",
+    "memories": "メモリ",
+    "inRings": "リング内",
+    "fresh": "フレッシュ",
+    "unclassified": "未分類",
+    "patterns": "パターン",
+    "collective": "集合的"
   },
   "tabs": {
     "clipboard": "クリップボード",
@@ -77,7 +85,7 @@
       "dropzoneHint": "画像、PDF、JSON、テキストファイル（最大 {{maxSize}}）",
       "fileTooLarge": "ファイルが大きすぎます。最大サイズは {{maxSize}} です",
       "fileUploaded": "ファイルがアップロードされました（{{size}}）",
-      "fileReadError": "Failed to read file",
+      "fileReadError": "ファイルの読み取りに失敗しました",
       "or": "またはテキストを入力"
     },
     "deleteDialog": {
@@ -127,14 +135,95 @@
   },
   "longterm": {
     "title": "長期メモリ",
-    "description": "セッションや会話を超えて持続する永続的なメモリ。"
+    "description": "セッションや会話を超えて持続する永続的なメモリ。",
+    "searchPlaceholder": "意味的にメモリを検索...",
+    "search": "検索",
+    "empty": {
+      "title": "メモリがまだありません",
+      "description": "メモリはセッション中に分類された観察から作成されます。"
+    },
+    "table": {
+      "ring": "リング",
+      "content": "内容",
+      "decay": "減衰",
+      "relevance": "関連性",
+      "hits": "ヒット",
+      "actions": "アクション"
+    },
+    "detail": {
+      "title": "メモリ詳細",
+      "fullContent": "完全なコンテンツ",
+      "summary": "要約",
+      "essence": "エッセンス",
+      "relevance": "関連性",
+      "successScore": "成功スコア",
+      "reinforcements": "強化回数",
+      "tokens": "トークン",
+      "accessCount": "アクセス回数",
+      "created": "作成日",
+      "lastAccessed": "最終アクセス",
+      "tags": "タグ"
+    },
+    "deleteDialog": {
+      "title": "メモリを削除",
+      "description": "このメモリを削除してもよろしいですか？この操作は元に戻せません。",
+      "delete": "削除",
+      "cancel": "キャンセル"
+    }
   },
   "procedures": {
     "title": "手順",
-    "description": "過去のやり取りから学習した再利用可能なワークフローと手順。"
+    "description": "過去のやり取りから学習した再利用可能なワークフローと手順。",
+    "searchPlaceholder": "手順を検索...",
+    "search": "検索",
+    "empty": {
+      "title": "手順がまだありません",
+      "description": "手順はセッション内の繰り返される成功パターンから学習されます。"
+    },
+    "detail": {
+      "title": "手順の詳細",
+      "fullContent": "完全なコンテンツ",
+      "summary": "要約",
+      "relevance": "関連性",
+      "reinforcements": "強化回数",
+      "accessCount": "アクセス回数",
+      "tokens": "トークン",
+      "created": "作成日"
+    },
+    "deleteDialog": {
+      "title": "手順を削除",
+      "description": "この手順を削除してもよろしいですか？この操作は元に戻せません。",
+      "delete": "削除",
+      "cancel": "キャンセル"
+    }
   },
   "fresh": {
     "title": "フレッシュコンテキスト",
-    "description": "現在の会話からの最近のコンテキストとワーキングメモリ。"
+    "description": "現在の会話からの最近のコンテキストとワーキングメモリ。",
+    "observations": "観察",
+    "status": {
+      "active": "アクティブ",
+      "completed": "完了",
+      "abandoned": "放棄"
+    },
+    "zReport": "Z-レポート",
+    "zReportSummary": "セッション要約（Z-レポート）",
+    "noSummary": "要約がありません",
+    "observationDetails": "観察の詳細",
+    "noObservations": "観察が読み込まれていません",
+    "pending": "保留中",
+    "tokens": "トークン",
+    "createdAt": "作成日時",
+    "empty": {
+      "title": "セッションがまだありません",
+      "description": "セッションはエージェントが pluggedin_memory_session_start を使用すると作成されます。"
+    },
+    "table": {
+      "type": "タイプ",
+      "content": "内容",
+      "outcome": "結果",
+      "classified": "分類",
+      "actions": "アクション"
+    }
   }
 }

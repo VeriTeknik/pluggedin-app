@@ -11,7 +11,15 @@
     "expiring": "समाप्त हो रहा",
     "today": "आज",
     "types": "प्रकार",
-    "contentTypes": "सामग्री प्रकार"
+    "contentTypes": "सामग्री प्रकार",
+    "sessions": "सत्र",
+    "active": "सक्रिय",
+    "memories": "स्मृतियां",
+    "inRings": "रिंग में",
+    "fresh": "ताज़ा",
+    "unclassified": "अवर्गीकृत",
+    "patterns": "पैटर्न",
+    "collective": "सामूहिक"
   },
   "tabs": {
     "clipboard": "क्लिपबोर्ड",
@@ -77,7 +85,7 @@
       "dropzoneHint": "इमेज, PDF, JSON, टेक्स्ट फ़ाइलें (अधिकतम {{maxSize}})",
       "fileTooLarge": "फ़ाइल बहुत बड़ी है। अधिकतम आकार {{maxSize}} है",
       "fileUploaded": "फ़ाइल अपलोड हुई ({{size}})",
-      "fileReadError": "Failed to read file",
+      "fileReadError": "फ़ाइल पढ़ने में विफल",
       "or": "या टेक्स्ट दर्ज करें"
     },
     "deleteDialog": {
@@ -127,14 +135,95 @@
   },
   "longterm": {
     "title": "दीर्घकालिक मेमोरी",
-    "description": "सत्रों और बातचीत में जीवित रहने वाली स्थायी मेमोरी।"
+    "description": "सत्रों और बातचीत में जीवित रहने वाली स्थायी मेमोरी।",
+    "searchPlaceholder": "अर्थपूर्ण रूप से स्मृतियां खोजें...",
+    "search": "खोजें",
+    "empty": {
+      "title": "अभी तक कोई स्मृति नहीं",
+      "description": "स्मृतियां सत्रों के दौरान वर्गीकृत अवलोकनों से बनाई जाती हैं।"
+    },
+    "table": {
+      "ring": "रिंग",
+      "content": "सामग्री",
+      "decay": "क्षय",
+      "relevance": "प्रासंगिकता",
+      "hits": "हिट्स",
+      "actions": "क्रियाएं"
+    },
+    "detail": {
+      "title": "स्मृति विवरण",
+      "fullContent": "पूर्ण सामग्री",
+      "summary": "सारांश",
+      "essence": "सार",
+      "relevance": "प्रासंगिकता",
+      "successScore": "सफलता स्कोर",
+      "reinforcements": "सुदृढ़ीकरण",
+      "tokens": "टोकन",
+      "accessCount": "पहुंच गणना",
+      "created": "बनाया गया",
+      "lastAccessed": "अंतिम पहुंच",
+      "tags": "टैग"
+    },
+    "deleteDialog": {
+      "title": "स्मृति हटाएं",
+      "description": "क्या आप वाकई यह स्मृति हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+      "delete": "हटाएं",
+      "cancel": "रद्द करें"
+    }
   },
   "procedures": {
     "title": "प्रक्रियाएं",
-    "description": "पिछली बातचीत से सीखे गए पुन: प्रयोज्य वर्कफ्लो और प्रक्रियाएं।"
+    "description": "पिछली बातचीत से सीखे गए पुन: प्रयोज्य वर्कफ्लो और प्रक्रियाएं।",
+    "searchPlaceholder": "प्रक्रियाएं खोजें...",
+    "search": "खोजें",
+    "empty": {
+      "title": "अभी तक कोई प्रक्रिया नहीं",
+      "description": "प्रक्रियाएं आपके सत्रों में दोहराए गए सफल पैटर्न से सीखी जाती हैं।"
+    },
+    "detail": {
+      "title": "प्रक्रिया विवरण",
+      "fullContent": "पूर्ण सामग्री",
+      "summary": "सारांश",
+      "relevance": "प्रासंगिकता",
+      "reinforcements": "सुदृढ़ीकरण",
+      "accessCount": "पहुंच गणना",
+      "tokens": "टोकन",
+      "created": "बनाया गया"
+    },
+    "deleteDialog": {
+      "title": "प्रक्रिया हटाएं",
+      "description": "क्या आप वाकई यह प्रक्रिया हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+      "delete": "हटाएं",
+      "cancel": "रद्द करें"
+    }
   },
   "fresh": {
     "title": "ताजा संदर्भ",
-    "description": "वर्तमान बातचीत से हाल का संदर्भ और कार्यशील मेमोरी।"
+    "description": "वर्तमान बातचीत से हाल का संदर्भ और कार्यशील मेमोरी।",
+    "observations": "अवलोकन",
+    "status": {
+      "active": "सक्रिय",
+      "completed": "पूर्ण",
+      "abandoned": "परित्यक्त"
+    },
+    "zReport": "Z-रिपोर्ट",
+    "zReportSummary": "सत्र सारांश (Z-रिपोर्ट)",
+    "noSummary": "कोई सारांश उपलब्ध नहीं",
+    "observationDetails": "अवलोकन विवरण",
+    "noObservations": "कोई अवलोकन लोड नहीं हुआ",
+    "pending": "लंबित",
+    "tokens": "टोकन",
+    "createdAt": "बनाया गया",
+    "empty": {
+      "title": "अभी तक कोई सत्र नहीं",
+      "description": "सत्र तब बनाए जाते हैं जब एजेंट pluggedin_memory_session_start का उपयोग करते हैं।"
+    },
+    "table": {
+      "type": "प्रकार",
+      "content": "सामग्री",
+      "outcome": "परिणाम",
+      "classified": "वर्गीकृत",
+      "actions": "क्रियाएं"
+    }
   }
 }

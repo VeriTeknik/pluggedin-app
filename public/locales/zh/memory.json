@@ -11,7 +11,15 @@
     "expiring": "即将过期",
     "today": "今天",
     "types": "类型",
-    "contentTypes": "内容类型"
+    "contentTypes": "内容类型",
+    "sessions": "会话",
+    "active": "活跃",
+    "memories": "记忆",
+    "inRings": "在环中",
+    "fresh": "新鲜",
+    "unclassified": "未分类",
+    "patterns": "模式",
+    "collective": "集体"
   },
   "tabs": {
     "clipboard": "剪贴板",
@@ -77,7 +85,7 @@
       "dropzoneHint": "图片、PDF、JSON、文本文件（最大 {{maxSize}}）",
       "fileTooLarge": "文件太大。最大大小为 {{maxSize}}",
       "fileUploaded": "文件已上传（{{size}}）",
-      "fileReadError": "Failed to read file",
+      "fileReadError": "读取文件失败",
       "or": "或输入文本"
     },
     "deleteDialog": {
@@ -127,14 +135,95 @@
   },
   "longterm": {
     "title": "长期记忆",
-    "description": "跨会话和对话持久保存的记忆。"
+    "description": "跨会话和对话持久保存的记忆。",
+    "searchPlaceholder": "语义搜索记忆...",
+    "search": "搜索",
+    "empty": {
+      "title": "暂无记忆",
+      "description": "记忆在会话期间从分类的观察中创建。"
+    },
+    "table": {
+      "ring": "环",
+      "content": "内容",
+      "decay": "衰减",
+      "relevance": "相关性",
+      "hits": "访问",
+      "actions": "操作"
+    },
+    "detail": {
+      "title": "记忆详情",
+      "fullContent": "完整内容",
+      "summary": "摘要",
+      "essence": "精华",
+      "relevance": "相关性",
+      "successScore": "成功评分",
+      "reinforcements": "强化次数",
+      "tokens": "令牌数",
+      "accessCount": "访问次数",
+      "created": "创建时间",
+      "lastAccessed": "最后访问",
+      "tags": "标签"
+    },
+    "deleteDialog": {
+      "title": "删除记忆",
+      "description": "确定要删除此记忆吗？此操作无法撤销。",
+      "delete": "删除",
+      "cancel": "取消"
+    }
   },
   "procedures": {
     "title": "程序",
-    "description": "从过去交互中学习的可重用工作流程和程序。"
+    "description": "从过去交互中学习的可重用工作流程和程序。",
+    "searchPlaceholder": "搜索程序...",
+    "search": "搜索",
+    "empty": {
+      "title": "暂无程序",
+      "description": "程序从会话中重复的成功模式中学习。"
+    },
+    "detail": {
+      "title": "程序详情",
+      "fullContent": "完整内容",
+      "summary": "摘要",
+      "relevance": "相关性",
+      "reinforcements": "强化次数",
+      "accessCount": "访问次数",
+      "tokens": "令牌数",
+      "created": "创建时间"
+    },
+    "deleteDialog": {
+      "title": "删除程序",
+      "description": "确定要删除此程序吗？此操作无法撤销。",
+      "delete": "删除",
+      "cancel": "取消"
+    }
   },
   "fresh": {
     "title": "新鲜上下文",
-    "description": "来自当前对话的最新上下文和工作记忆。"
+    "description": "来自当前对话的最新上下文和工作记忆。",
+    "observations": "观察",
+    "status": {
+      "active": "活跃",
+      "completed": "已完成",
+      "abandoned": "已放弃"
+    },
+    "zReport": "Z-报告",
+    "zReportSummary": "会话摘要（Z-报告）",
+    "noSummary": "暂无摘要",
+    "observationDetails": "观察详情",
+    "noObservations": "未加载观察",
+    "pending": "待处理",
+    "tokens": "令牌数",
+    "createdAt": "创建时间",
+    "empty": {
+      "title": "暂无会话",
+      "description": "会话在代理使用 pluggedin_memory_session_start 时创建。"
+    },
+    "table": {
+      "type": "类型",
+      "content": "内容",
+      "outcome": "结果",
+      "classified": "分类",
+      "actions": "操作"
+    }
   }
 }

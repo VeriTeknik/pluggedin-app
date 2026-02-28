@@ -11,7 +11,15 @@
     "expiring": "Süresi Dolan",
     "today": "bugün",
     "types": "Türler",
-    "contentTypes": "içerik türü"
+    "contentTypes": "içerik türü",
+    "sessions": "Oturumlar",
+    "active": "aktif",
+    "memories": "Anılar",
+    "inRings": "halkalarda",
+    "fresh": "Taze",
+    "unclassified": "sınıflandırılmamış",
+    "patterns": "Örüntüler",
+    "collective": "kolektif"
   },
   "tabs": {
     "clipboard": "Pano",
@@ -77,7 +85,7 @@
       "dropzoneHint": "Resimler, PDF, JSON, metin dosyaları (max {{maxSize}})",
       "fileTooLarge": "Dosya çok büyük. Maksimum boyut {{maxSize}}",
       "fileUploaded": "Dosya yüklendi ({{size}})",
-      "fileReadError": "Failed to read file",
+      "fileReadError": "Dosya okunamadı",
       "or": "veya metin girin"
     },
     "deleteDialog": {
@@ -127,14 +135,95 @@
   },
   "longterm": {
     "title": "Uzun Vadeli Bellek",
-    "description": "Oturumlar ve konuşmalar arasında kalıcı bellek."
+    "description": "Oturumlar ve konuşmalar arasında kalıcı bellek.",
+    "searchPlaceholder": "Belleklerde anlamsal arama yap...",
+    "search": "Ara",
+    "empty": {
+      "title": "Henüz bellek yok",
+      "description": "Bellekler, oturumlar sırasında sınıflandırılmış gözlemlerden oluşturulur."
+    },
+    "table": {
+      "ring": "Halka",
+      "content": "İçerik",
+      "decay": "Bozunma",
+      "relevance": "İlgi",
+      "hits": "Erişim",
+      "actions": "İşlemler"
+    },
+    "detail": {
+      "title": "Bellek Detayları",
+      "fullContent": "Tam İçerik",
+      "summary": "Özet",
+      "essence": "Öz",
+      "relevance": "İlgi Skoru",
+      "successScore": "Başarı Skoru",
+      "reinforcements": "Güçlendirmeler",
+      "tokens": "Token",
+      "accessCount": "Erişim Sayısı",
+      "created": "Oluşturulma",
+      "lastAccessed": "Son Erişim",
+      "tags": "Etiketler"
+    },
+    "deleteDialog": {
+      "title": "Belleği Sil",
+      "description": "Bu belleği silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "delete": "Sil",
+      "cancel": "İptal"
+    }
   },
   "procedures": {
     "title": "Prosedürler",
-    "description": "Geçmiş etkileşimlerden öğrenilen yeniden kullanılabilir iş akışları ve prosedürler."
+    "description": "Geçmiş etkileşimlerden öğrenilen yeniden kullanılabilir iş akışları ve prosedürler.",
+    "searchPlaceholder": "Prosedürlerde ara...",
+    "search": "Ara",
+    "empty": {
+      "title": "Henüz prosedür yok",
+      "description": "Prosedürler, oturumlarınızdaki tekrarlanan başarılı kalıplardan öğrenilir."
+    },
+    "detail": {
+      "title": "Prosedür Detayları",
+      "fullContent": "Tam İçerik",
+      "summary": "Özet",
+      "relevance": "İlgi Skoru",
+      "reinforcements": "Güçlendirmeler",
+      "accessCount": "Erişim Sayısı",
+      "tokens": "Token",
+      "created": "Oluşturulma"
+    },
+    "deleteDialog": {
+      "title": "Prosedürü Sil",
+      "description": "Bu prosedürü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "delete": "Sil",
+      "cancel": "İptal"
+    }
   },
   "fresh": {
     "title": "Taze Bağlam",
-    "description": "Mevcut konuşmalardan son bağlam ve çalışma belleği."
+    "description": "Mevcut konuşmalardan son bağlam ve çalışma belleği.",
+    "observations": "gözlem",
+    "status": {
+      "active": "Aktif",
+      "completed": "Tamamlandı",
+      "abandoned": "Terk Edildi"
+    },
+    "zReport": "Z-Rapor",
+    "zReportSummary": "Oturum Özeti (Z-Rapor)",
+    "noSummary": "Özet mevcut değil",
+    "observationDetails": "Gözlem Detayları",
+    "noObservations": "Gözlem yüklenmedi",
+    "pending": "Bekliyor",
+    "tokens": "Token",
+    "createdAt": "Oluşturulma",
+    "empty": {
+      "title": "Henüz oturum yok",
+      "description": "Oturumlar, ajanlar pluggedin_memory_session_start kullandığında oluşturulur."
+    },
+    "table": {
+      "type": "Tür",
+      "content": "İçerik",
+      "outcome": "Sonuç",
+      "classified": "Sınıflandırma",
+      "actions": "İşlemler"
+    }
   }
 }

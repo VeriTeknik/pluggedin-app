@@ -3012,8 +3012,335 @@ export const modelServiceMappingsTable = pgTable(
   })
 );
 
+// ============================================================================
+// MEMORY SYSTEM TABLES
+// Human cognition-inspired memory architecture (concentric rings)
+// ============================================================================
+
+/**
+ * Memory Sessions Table
+ *
+ * Tracks each interaction session for memory capture.
+ * Dual session ID pattern: content_session_id (external chat thread) +
+ * memory_session_id (internal memory tracking).
+ * Z-reports are generated at session end.
+ */
+export const memorySessionsTable = pgTable(
+  'memory_sessions',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    agent_uuid: uuid('agent_uuid')
+      .references(() => agentsTable.uuid, { onDelete: 'set null' }),
+
+    // Dual session ID pattern (inspired by claude-mem)
+    content_session_id: text('content_session_id').notNull(),
+    memory_session_id: text('memory_session_id').notNull().unique(),
+
+    // Session state
+    status: varchar('status', { length: 20 }).notNull().default('active'),
+
+    // Z-report: AI-compressed end-of-session summary
+    z_report: jsonb('z_report').$type<{
+      summary: string;
+      token_count: number;
+      key_observations: string[];
+      decisions_made: string[];
+      tools_used: string[];
+      success_rate: number;
+      generated_at: string;
+      generated_by_model?: string;
+    }>(),
+
+    // Focus agent: working set (7±2 items)
+    focus_items: jsonb('focus_items').$type<Array<{
+      id: string;
+      content: string;
+      relevance_score: number;
+      added_at: string;
+    }>>().default([]),
+
+    // Counters
+    observation_count: integer('observation_count').default(0),
+    total_tokens: integer('total_tokens').default(0),
+
+    // Timestamps
+    started_at: timestamp('started_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    ended_at: timestamp('ended_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    memorySessionsProfileUuidIdx: index('memory_sessions_profile_uuid_idx').on(table.profile_uuid),
+    memorySessionsAgentUuidIdx: index('memory_sessions_agent_uuid_idx').on(table.agent_uuid),
+    memorySessionsStatusIdx: index('memory_sessions_status_idx').on(table.status),
+    memorySessionsContentSessionIdx: index('memory_sessions_content_session_idx').on(table.content_session_id),
+    memorySessionsStartedAtIdx: index('memory_sessions_started_at_idx').on(table.started_at),
+    memorySessionsProfileAgentIdx: index('memory_sessions_profile_agent_idx').on(table.profile_uuid, table.agent_uuid),
+  })
+);
+
+export const memorySessionsRelations = relations(memorySessionsTable, ({ one, many }) => ({
+  profile: one(profilesTable, {
+    fields: [memorySessionsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  agent: one(agentsTable, {
+    fields: [memorySessionsTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+  observations: many(freshMemoryTable),
+}));
+
+/**
+ * Fresh Memory Table (Observation Buffer)
+ *
+ * Buffer zone for recent interactions before routing by the Analytics Agent.
+ * Observations land here first, get classified, then promoted to the memory ring.
+ */
+export const freshMemoryTable = pgTable(
+  'fresh_memory',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    session_uuid: uuid('session_uuid')
+      .notNull()
+      .references(() => memorySessionsTable.uuid, { onDelete: 'cascade' }),
+    agent_uuid: uuid('agent_uuid')
+      .references(() => agentsTable.uuid, { onDelete: 'set null' }),
+
+    // Observation data
+    observation_type: varchar('observation_type', { length: 30 }).notNull(),
+    content: text('content').notNull(),
+    token_count: integer('token_count').notNull(),
+
+    // Analytics Agent classification
+    classified: boolean('classified').default(false),
+    classified_ring: varchar('classified_ring', { length: 20 }),
+    classified_at: timestamp('classified_at', { withTimezone: true }),
+    classification_confidence: real('classification_confidence'),
+
+    // Success tracking for natural selection
+    outcome: varchar('outcome', { length: 10 }),
+
+    // Metadata
+    metadata: jsonb('metadata').$type<{
+      tool_name?: string;
+      mcp_server?: string;
+      error_code?: string;
+      related_memory_uuids?: string[];
+      context_hash?: string;
+      [key: string]: unknown;
+    }>(),
+
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true }),
+  },
+  (table) => ({
+    freshMemoryProfileUuidIdx: index('fresh_memory_profile_uuid_idx').on(table.profile_uuid),
+    freshMemorySessionUuidIdx: index('fresh_memory_session_uuid_idx').on(table.session_uuid),
+    freshMemoryAgentUuidIdx: index('fresh_memory_agent_uuid_idx').on(table.agent_uuid),
+    freshMemoryObservationTypeIdx: index('fresh_memory_observation_type_idx').on(table.observation_type),
+    freshMemoryClassifiedIdx: index('fresh_memory_classified_idx').on(table.classified),
+    freshMemoryCreatedAtIdx: index('fresh_memory_created_at_idx').on(table.created_at),
+    freshMemoryExpiresAtIdx: index('fresh_memory_expires_at_idx').on(table.expires_at),
+    freshMemoryProfileClassifiedIdx: index('fresh_memory_profile_classified_idx').on(table.profile_uuid, table.classified),
+  })
+);
+
+export const freshMemoryRelations = relations(freshMemoryTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [freshMemoryTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  session: one(memorySessionsTable, {
+    fields: [freshMemoryTable.session_uuid],
+    references: [memorySessionsTable.uuid],
+  }),
+  agent: one(agentsTable, {
+    fields: [freshMemoryTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+}));
+
+/**
+ * Memory Ring Table (Unified Long-Term Store)
+ *
+ * The four concentric memory ring types in a single table:
+ * - PROCEDURES: How-tos, explicit repeatable processes
+ * - PRACTICE: Muscle memory, repeated successful patterns
+ * - LONGTERM: Validated successful memories (success-gated)
+ * - SHOCKS: Critical failures that bypass normal decay
+ *
+ * Each memory progresses through decay stages:
+ * FULL (500 tokens) → COMPRESSED (250) → SUMMARY (150) → ESSENCE (50) → FORGOTTEN
+ */
+export const memoryRingTable = pgTable(
+  'memory_ring',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    agent_uuid: uuid('agent_uuid')
+      .references(() => agentsTable.uuid, { onDelete: 'set null' }),
+
+    // Ring classification
+    ring_type: varchar('ring_type', { length: 20 }).notNull(),
+
+    // Content at various decay stages
+    content_full: text('content_full'),
+    content_compressed: text('content_compressed'),
+    content_summary: text('content_summary'),
+    content_essence: text('content_essence'),
+    current_decay_stage: varchar('current_decay_stage', { length: 20 }).notNull().default('full'),
+    current_token_count: integer('current_token_count').notNull(),
+
+    // Scoring and natural selection
+    access_count: integer('access_count').default(0),
+    last_accessed_at: timestamp('last_accessed_at', { withTimezone: true }),
+    relevance_score: real('relevance_score').default(1.0),
+    success_score: real('success_score'),
+    reinforcement_count: integer('reinforcement_count').default(0),
+
+    // Source tracking
+    source_session_uuid: uuid('source_session_uuid')
+      .references(() => memorySessionsTable.uuid, { onDelete: 'set null' }),
+    source_observation_uuids: text('source_observation_uuids').array(),
+
+    // Decay scheduling
+    next_decay_at: timestamp('next_decay_at', { withTimezone: true }),
+
+    // Shock memory: bypass normal decay
+    is_shock: boolean('is_shock').default(false),
+    shock_severity: real('shock_severity'),
+
+    // Organization
+    tags: text('tags').array().default(sql`'{}'::text[]`),
+
+    // Metadata
+    metadata: jsonb('metadata').$type<{
+      classification_reason?: string;
+      related_tools?: string[];
+      related_mcp_servers?: string[];
+      decay_history?: Array<{ from: string; to: string; at: string }>;
+      [key: string]: unknown;
+    }>(),
+
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    memoryRingProfileUuidIdx: index('memory_ring_profile_uuid_idx').on(table.profile_uuid),
+    memoryRingAgentUuidIdx: index('memory_ring_agent_uuid_idx').on(table.agent_uuid),
+    memoryRingRingTypeIdx: index('memory_ring_ring_type_idx').on(table.ring_type),
+    memoryRingDecayStageIdx: index('memory_ring_decay_stage_idx').on(table.current_decay_stage),
+    memoryRingRelevanceScoreIdx: index('memory_ring_relevance_score_idx').on(table.relevance_score),
+    memoryRingNextDecayAtIdx: index('memory_ring_next_decay_at_idx').on(table.next_decay_at),
+    memoryRingIsShockIdx: index('memory_ring_is_shock_idx').on(table.is_shock),
+    memoryRingProfileRingTypeIdx: index('memory_ring_profile_ring_type_idx').on(table.profile_uuid, table.ring_type),
+    memoryRingLastAccessedIdx: index('memory_ring_last_accessed_idx').on(table.last_accessed_at),
+    memoryRingProfileRelevanceIdx: index('memory_ring_profile_relevance_idx').on(table.profile_uuid, table.relevance_score),
+  })
+);
+
+export const memoryRingRelations = relations(memoryRingTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [memoryRingTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  agent: one(agentsTable, {
+    fields: [memoryRingTable.agent_uuid],
+    references: [agentsTable.uuid],
+  }),
+  sourceSession: one(memorySessionsTable, {
+    fields: [memoryRingTable.source_session_uuid],
+    references: [memorySessionsTable.uuid],
+  }),
+}));
+
+/**
+ * Gut Patterns Table (Collective Wisdom)
+ *
+ * Anonymized collective intuition from aggregated patterns across all profiles.
+ * NOT scoped by profile_uuid - this is shared wisdom.
+ * Only patterns seen by >= 3 unique profiles are persisted (k-anonymity).
+ */
+export const gutPatternsTable = pgTable(
+  'gut_patterns',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Pattern identification
+    pattern_hash: text('pattern_hash').notNull().unique(),
+    pattern_type: varchar('pattern_type', { length: 50 }).notNull(),
+    pattern_description: text('pattern_description').notNull(),
+
+    // Aggregate stats
+    occurrence_count: integer('occurrence_count').default(1),
+    success_rate: real('success_rate'),
+    unique_profile_count: integer('unique_profile_count').default(1),
+
+    // Token-efficient representation (max 100 tokens)
+    compressed_pattern: text('compressed_pattern').notNull(),
+
+    // Confidence (increases with more observations)
+    confidence: real('confidence').default(0.5),
+
+    // Metadata (anonymized)
+    metadata: jsonb('metadata').$type<{
+      tool_names?: string[];
+      categories?: string[];
+      avg_tokens?: number;
+      first_seen?: string;
+      last_seen?: string;
+      profile_hashes?: string[];
+    }>(),
+
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    gutPatternsPatternHashIdx: index('gut_patterns_pattern_hash_idx').on(table.pattern_hash),
+    gutPatternsPatternTypeIdx: index('gut_patterns_pattern_type_idx').on(table.pattern_type),
+    gutPatternsConfidenceIdx: index('gut_patterns_confidence_idx').on(table.confidence),
+    gutPatternsOccurrenceIdx: index('gut_patterns_occurrence_count_idx').on(table.occurrence_count),
+    gutPatternsSuccessRateIdx: index('gut_patterns_success_rate_idx').on(table.success_rate),
+  })
+);
+
 // Type exports for new tables
 export type ModelRouterService = typeof modelRouterServicesTable.$inferSelect;
 export type NewModelRouterService = typeof modelRouterServicesTable.$inferInsert;
 export type ModelServiceMapping = typeof modelServiceMappingsTable.$inferSelect;
 export type NewModelServiceMapping = typeof modelServiceMappingsTable.$inferInsert;
+
+// Memory system type exports
+export type MemorySession = typeof memorySessionsTable.$inferSelect;
+export type NewMemorySession = typeof memorySessionsTable.$inferInsert;
+export type FreshMemory = typeof freshMemoryTable.$inferSelect;
+export type NewFreshMemory = typeof freshMemoryTable.$inferInsert;
+export type MemoryRing = typeof memoryRingTable.$inferSelect;
+export type NewMemoryRing = typeof memoryRingTable.$inferInsert;
+export type GutPattern = typeof gutPatternsTable.$inferSelect;
+export type NewGutPattern = typeof gutPatternsTable.$inferInsert;
