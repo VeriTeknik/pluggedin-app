@@ -7,6 +7,9 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 FROM base AS deps
 WORKDIR /app
 
+# Install native build tools for zvec bindings
+RUN apk add --no-cache python3 make g++
+
 # Files needed for pnpm install
 COPY package.json pnpm-lock.yaml* ./
 # Copy scripts directory for postinstall
@@ -63,8 +66,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 
 # Create necessary directories with proper permissions
-RUN mkdir -p .next logs uploads && \
-    chown -R nextjs:nodejs .next logs uploads
+RUN mkdir -p .next logs uploads data/vectors && \
+    chown -R nextjs:nodejs .next logs uploads data/vectors
 
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
