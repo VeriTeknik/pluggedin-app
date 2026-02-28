@@ -75,6 +75,9 @@ uploads/
 # Memory system vector data (contains user embeddings - NEVER commit)
 data/memory-vectors/
 
+# Auto-generated reports
+z_reports/
+
 CLAUDE.md
 # Sentry Config File
 .env.sentry-build-plugin

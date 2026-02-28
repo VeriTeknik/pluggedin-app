@@ -42,31 +42,20 @@ export async function GET(request: NextRequest) {
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
-    const topKParam = searchParams.get('top_k');
 
-    // Validate query parameter
-    if (!query || query.length === 0 || query.length > 1000) {
+    const parsed = gutQuerySchema.safeParse({
+      query: searchParams.get('query'),
+      top_k: searchParams.get('top_k') ? Number(searchParams.get('top_k')) : undefined,
+    });
+
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'query parameter is required and must be 1-1000 characters' },
+        { success: false, error: 'Invalid parameters', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    // Validate top_k parameter
-    let topK: number | undefined;
-    if (topKParam) {
-      const parsed = parseInt(topKParam, 10);
-      if (isNaN(parsed) || parsed < 1 || parsed > 20) {
-        return NextResponse.json(
-          { success: false, error: 'top_k must be an integer between 1 and 20' },
-          { status: 400 }
-        );
-      }
-      topK = parsed;
-    }
-
-    const result = await queryIntuition(query, topK);
+    const result = await queryIntuition(parsed.data.query, parsed.data.top_k);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

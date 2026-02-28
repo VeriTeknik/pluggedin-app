@@ -64,6 +64,7 @@ export function ProceduresTab({ onRefresh }: ProceduresTabProps) {
     try {
       await removeMemory(deleteTarget.uuid);
       setDeleteTarget(null);
+      onRefresh?.();
     } catch {
       // Error handled by hook
     } finally {
