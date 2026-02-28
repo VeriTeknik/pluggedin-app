@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'crypto';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -5,6 +7,18 @@ import { queryIntuition, aggregatePatterns } from '@/lib/memory/gut-agent';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../auth';
+
+/**
+ * Timing-safe comparison of secret strings to prevent timing attacks.
+ */
+function verifyCronSecret(provided: string | null): boolean {
+  const expected = process.env.CRON_SECRET;
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 const gutQuerySchema = z.object({
   query: z.string().min(1).max(1000),
@@ -83,10 +97,7 @@ export async function POST(request: NextRequest) {
 
     // This is a global cross-profile operation designed for cron jobs.
     // Require CRON_SECRET header to prevent regular users from triggering it.
-    const cronSecret = request.headers.get('x-cron-secret');
-    const expectedSecret = process.env.CRON_SECRET;
-
-    if (!expectedSecret || cronSecret !== expectedSecret) {
+    if (!verifyCronSecret(request.headers.get('x-cron-secret'))) {
       return NextResponse.json(
         { success: false, error: 'Forbidden: this endpoint requires cron authorization' },
         { status: 403 }

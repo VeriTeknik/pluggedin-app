@@ -15,7 +15,13 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { gutPatternsTable, memoryRingTable } from '@/db/schema';
 
-import { GUT_K_ANONYMITY_THRESHOLD, GUT_MAX_PATTERN_TOKENS } from './constants';
+import {
+  GUT_AGGREGATION_BATCH_LIMIT,
+  GUT_K_ANONYMITY_THRESHOLD,
+  GUT_MAX_PATTERN_TOKENS,
+  GUT_QUERY_SIMILARITY_THRESHOLD,
+  MAX_PATTERN_CONTENT_LENGTH,
+} from './constants';
 import { createMemoryLLM } from './llm-factory';
 import { generateEmbedding } from './embedding-service';
 import { extractResponseText, parseJsonFromResponse } from './llm-utils';
@@ -25,9 +31,6 @@ import type { MemoryResult, PatternType } from './types';
 // ============================================================================
 // Pattern Extraction & Normalization
 // ============================================================================
-
-// Maximum content length sent to the pattern extraction LLM
-const MAX_PATTERN_CONTENT_LENGTH = 2000;
 
 /** Valid pattern types for output validation */
 const VALID_PATTERN_TYPES: ReadonlySet<string> = new Set([
@@ -150,7 +153,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
           AND ${memoryRingTable.current_decay_stage} != 'forgotten'
           AND COALESCE(${memoryRingTable.metadata}::jsonb->>'gut_processed', 'false') <> 'true'`
       )
-      .limit(100);
+      .limit(GUT_AGGREGATION_BATCH_LIMIT);
 
     for (const memory of memories) {
       const content = memory.content || memory.contentFull;
@@ -213,8 +216,8 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
         let embedding: number[] | null = null;
         try {
           embedding = await generateEmbedding(pattern.compressedPattern);
-        } catch {
-          // Non-fatal
+        } catch (error) {
+          console.warn('Failed to generate embedding for gut pattern:', error);
         }
 
         const [newPattern] = await db
@@ -240,8 +243,8 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
         if (embedding && newPattern) {
           try {
             upsertGutPatternVector(newPattern.uuid, embedding, pattern.patternType);
-          } catch {
-            // Non-fatal
+          } catch (error) {
+            console.warn(`Failed to store vector for gut pattern ${newPattern.uuid}:`, error);
           }
         }
 
@@ -300,7 +303,7 @@ export async function queryIntuition(
     const vectorResults = searchGutPatterns({
       queryEmbedding,
       topK,
-      threshold: 0.5,
+      threshold: GUT_QUERY_SIMILARITY_THRESHOLD,
     });
 
     if (vectorResults.length === 0) {

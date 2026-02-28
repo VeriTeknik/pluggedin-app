@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  AlertCircle,
   ChevronDown,
   Database,
   Eye,
@@ -40,31 +41,12 @@ import {
 
 import type { RingType } from '@/lib/memory/types';
 
-import { useMemoryRing } from '../hooks/useMemoryRing';
+import { useMemoryRing, type MemoryRingEntry } from '../hooks/useMemoryRing';
 import { useMemorySearch } from '../hooks/useMemorySearch';
 import { getDecayColor, getRingColor } from '../utils';
 
 interface LongTermTabProps {
   onRefresh?: () => void;
-}
-
-interface MemoryEntry {
-  uuid: string;
-  ring_type: string;
-  content_summary: string | null;
-  content_essence: string | null;
-  content_full: string | null;
-  current_decay_stage: string;
-  current_token_count: number;
-  access_count: number;
-  relevance_score: number;
-  success_score: number | null;
-  reinforcement_count: number;
-  is_shock: boolean;
-  tags: string[] | null;
-  created_at: string;
-  updated_at: string;
-  last_accessed_at: string | null;
 }
 
 const RING_TYPES: Array<{ value: RingType | 'all'; label: string }> = [
@@ -79,19 +61,18 @@ export function LongTermTab({ onRefresh }: LongTermTabProps) {
   const { t } = useTranslation('memory');
   const [selectedRing, setSelectedRing] = useState<RingType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [previewMemory, setPreviewMemory] = useState<MemoryEntry | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<MemoryEntry | null>(null);
+  const [previewMemory, setPreviewMemory] = useState<MemoryRingEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MemoryRingEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { memories, isLoading, refresh, removeMemory } = useMemoryRing(
+  const { memories, isLoading, error: ringError, refresh, removeMemory } = useMemoryRing(
     selectedRing === 'all' ? undefined : { ringType: selectedRing }
   );
-  const { results: searchResults, isSearching, search, clear } = useMemorySearch();
+  const { results: searchResults, isSearching, error: searchError, search, clear } = useMemorySearch();
 
-  const typedMemories = memories as unknown as MemoryEntry[];
-  const displayMemories = searchQuery && searchResults.length > 0
-    ? searchResults as unknown as MemoryEntry[]
-    : typedMemories;
+  const displayMemories: MemoryRingEntry[] = searchQuery && searchResults.length > 0
+    ? searchResults as unknown as MemoryRingEntry[]
+    : memories;
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -126,8 +107,31 @@ export function LongTermTab({ onRefresh }: LongTermTabProps) {
     );
   }
 
+  if (ringError) {
+    return (
+      <Card className="h-48 flex items-center justify-center">
+        <CardContent className="text-center">
+          <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive" />
+          <CardTitle className="text-sm mb-1">{t('longterm.error.title')}</CardTitle>
+          <CardDescription className="text-xs">{typeof ringError === 'string' ? ringError : t('longterm.error.description')}</CardDescription>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refresh()}>
+            {t('longterm.error.retry')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Search error banner */}
+      {searchError && (
+        <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{searchError}</span>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">

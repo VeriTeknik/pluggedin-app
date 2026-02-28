@@ -19,6 +19,7 @@ import { memoryRingTable } from '@/db/schema';
 import {
   ACCESS_SLOW_MULTIPLIER,
   ACCESS_SLOW_THRESHOLD,
+  DECAY_BATCH_LIMIT,
   DECAY_SCHEDULE_DAYS,
   LOW_SUCCESS_MULTIPLIER,
   LOW_SUCCESS_THRESHOLD,
@@ -105,7 +106,8 @@ async function markMemoryForgotten(memory: MemoryRow): Promise<void> {
 async function safeGenerateEmbedding(content: string): Promise<number[] | null> {
   try {
     return await generateEmbedding(content);
-  } catch {
+  } catch (error) {
+    console.warn('Failed to generate embedding during decay:', error);
     return null;
   }
 }
@@ -122,8 +124,8 @@ function safeUpsertVector(memory: MemoryRow, embedding: number[]): void {
       memory.ring_type,
       memory.agent_uuid
     );
-  } catch {
-    // Non-fatal
+  } catch (error) {
+    console.warn(`Failed to upsert vector for memory ${memory.uuid}:`, error);
   }
 }
 
@@ -216,7 +218,7 @@ export async function processDecay(profileUuid?: string): Promise<MemoryResult<{
       .select()
       .from(memoryRingTable)
       .where(and(...conditions))
-      .limit(100); // Process in batches
+      .limit(DECAY_BATCH_LIMIT);
 
     for (const memory of dueForDecay) {
       processed++;

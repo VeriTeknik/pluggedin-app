@@ -197,29 +197,13 @@ export async function endMemorySession(
   try {
     const parsed = endSessionSchema.parse({ memorySessionId });
 
-    // Verify session ownership before ending it
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
 
-    // Check that the session belongs to the calling user's profile
-    const [sessionCheck] = await db
-      .select({ uuid: memorySessionsTable.uuid })
-      .from(memorySessionsTable)
-      .where(
-        and(
-          eq(memorySessionsTable.memory_session_id, parsed.memorySessionId),
-          eq(memorySessionsTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
-
-    if (!sessionCheck) {
-      return { success: false, error: 'Session not found' };
-    }
-
-    const result = await endSessionService(parsed.memorySessionId);
+    // Atomic ownership check + status update (prevents TOCTOU race)
+    const result = await endSessionService(parsed.memorySessionId, profileUuid);
 
     // Trigger Z-report generation if session ended successfully
     if (result.success && result.data) {
@@ -481,7 +465,9 @@ export async function getMemoryStats(
       .where(eq(memoryRingTable.profile_uuid, profileUuid))
       .groupBy(memoryRingTable.current_decay_stage);
 
-    // Gut patterns count
+    // Gut patterns count: intentionally global (collective wisdom).
+    // Only patterns meeting k-anonymity threshold are returned to users via the query endpoint.
+    // This count reveals no per-profile data.
     const [gutStats] = await db
       .select({ total: count() })
       .from(gutPatternsTable);

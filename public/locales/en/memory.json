@@ -164,6 +164,11 @@
       "lastAccessed": "Last Accessed",
       "tags": "Tags"
     },
+    "error": {
+      "title": "Failed to load memories",
+      "description": "Something went wrong loading your memories. Please try again.",
+      "retry": "Retry"
+    },
     "deleteDialog": {
       "title": "Delete Memory",
       "description": "Are you sure you want to delete this memory? This action cannot be undone.",
@@ -189,6 +194,11 @@
       "accessCount": "Access Count",
       "tokens": "Tokens",
       "created": "Created"
+    },
+    "error": {
+      "title": "Failed to load procedures",
+      "description": "Something went wrong loading your procedures. Please try again.",
+      "retry": "Retry"
     },
     "deleteDialog": {
       "title": "Delete Procedure",

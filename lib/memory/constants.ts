@@ -154,3 +154,36 @@ export const ACCESS_WEIGHT = 0.1;
 
 /** Base weight (initial relevance) */
 export const BASE_WEIGHT = 0.5;
+
+// ============================================================================
+// LLM Content Limits
+// ============================================================================
+
+/** Maximum content length sent to classification LLM to limit prompt injection surface */
+export const MAX_CLASSIFICATION_CONTENT_LENGTH = 2000;
+
+/** Maximum content length sent to pattern extraction LLM */
+export const MAX_PATTERN_CONTENT_LENGTH = 2000;
+
+// ============================================================================
+// Similarity Thresholds
+// ============================================================================
+
+/** Similarity threshold for near-duplicate memory detection during promotion */
+export const DUPLICATE_SIMILARITY_THRESHOLD = 0.9;
+
+/** Similarity threshold for gut pattern queries */
+export const GUT_QUERY_SIMILARITY_THRESHOLD = 0.5;
+
+// ============================================================================
+// Batch Limits
+// ============================================================================
+
+/** Batch limit for decay processing */
+export const DECAY_BATCH_LIMIT = 100;
+
+/** Batch limit for gut aggregation */
+export const GUT_AGGREGATION_BATCH_LIMIT = 100;
+
+/** Default stale session threshold in hours */
+export const STALE_SESSION_THRESHOLD_HOURS = 24;

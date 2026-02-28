@@ -54,23 +54,35 @@ export async function startSession(
 }
 
 /**
- * End a memory session (triggers Z-report generation externally)
+ * End a memory session (triggers Z-report generation externally).
+ * When profileUuid is provided, ownership is verified atomically with the
+ * status update to prevent TOCTOU race conditions.
  */
 export async function endSession(
-  memorySessionId: string
+  memorySessionId: string,
+  profileUuid?: string
 ): Promise<MemoryResult<{ uuid: string }>> {
   try {
+    const conditions = [
+      eq(memorySessionsTable.memory_session_id, memorySessionId),
+      eq(memorySessionsTable.status, 'active'),
+    ];
+
+    if (profileUuid) {
+      conditions.push(eq(memorySessionsTable.profile_uuid, profileUuid));
+    }
+
     const [session] = await db
       .update(memorySessionsTable)
       .set({
         status: 'completed',
         ended_at: new Date(),
       })
-      .where(eq(memorySessionsTable.memory_session_id, memorySessionId))
+      .where(and(...conditions))
       .returning({ uuid: memorySessionsTable.uuid });
 
     if (!session) {
-      return { success: false, error: 'Session not found' };
+      return { success: false, error: 'Session not found or already ended' };
     }
 
     return { success: true, data: { uuid: session.uuid } };

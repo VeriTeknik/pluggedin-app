@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'crypto';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 import { processDecay, cleanupForgotten } from '@/lib/memory/decay-engine';
@@ -8,8 +10,20 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { authenticate } from '../../auth';
 
 /**
+ * Timing-safe comparison of secret strings to prevent timing attacks.
+ */
+function verifyCronSecret(provided: string | null): boolean {
+  const expected = process.env.CRON_SECRET;
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+/**
  * POST /api/memory/decay - Trigger decay engine + cleanup
- * Designed to be called by a cron job
+ * Designed to be called by a cron job. Requires CRON_SECRET header.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +37,14 @@ export async function POST(request: NextRequest) {
 
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
+
+    // Require CRON_SECRET to prevent regular users from triggering decay
+    if (!verifyCronSecret(request.headers.get('x-cron-secret'))) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: this endpoint requires cron authorization' },
+        { status: 403 }
+      );
+    }
 
     const profileUuid = auth.activeProfile.uuid;
 

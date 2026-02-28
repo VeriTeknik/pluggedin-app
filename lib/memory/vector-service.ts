@@ -181,8 +181,8 @@ export function deleteFreshMemoryVector(uuid: string): void {
   try {
     const collection = getFreshMemoryCollection();
     collection.deleteSync(uuid);
-  } catch {
-    // Silently ignore if not found
+  } catch (error) {
+    console.warn(`Failed to delete fresh memory vector ${uuid}:`, error);
   }
 }
 
@@ -193,8 +193,8 @@ export function deleteMemoryRingVector(uuid: string): void {
   try {
     const collection = getMemoryRingCollection();
     collection.deleteSync(uuid);
-  } catch {
-    // Silently ignore if not found
+  } catch (error) {
+    console.warn(`Failed to delete memory ring vector ${uuid}:`, error);
   }
 }
 
@@ -205,8 +205,8 @@ export function deleteGutPatternVector(uuid: string): void {
   try {
     const collection = getGutPatternsCollection();
     collection.deleteSync(uuid);
-  } catch {
-    // Silently ignore if not found
+  } catch (error) {
+    console.warn(`Failed to delete gut pattern vector ${uuid}:`, error);
   }
 }
 
@@ -214,14 +214,24 @@ export function deleteGutPatternVector(uuid: string): void {
 // Search Operations
 // ============================================================================
 
+/** Allowed field names for zvec filter expressions to prevent field injection */
+const ALLOWED_FILTER_FIELDS: ReadonlySet<string> = new Set([
+  'profile_uuid', 'agent_uuid', 'ring_type', 'pattern_type',
+]);
+
 /**
  * Build a zvec filter expression string.
+ * Field names are validated against an allowlist.
  * Values are sanitized by removing double quotes to prevent filter expression injection.
  */
 function buildFilter(conditions: Array<[string, string] | null>): string | undefined {
   const parts = conditions
     .filter((c): c is [string, string] => c !== null && c[1] !== '')
     .map(([field, value]) => {
+      // Validate field name against allowlist to prevent filter injection
+      if (!ALLOWED_FILTER_FIELDS.has(field)) {
+        throw new Error(`Invalid filter field: ${field}`);
+      }
       // Sanitize value: remove double quotes and backslashes to prevent filter injection
       const sanitized = value.replace(/["\\]/g, '');
       return `${field} = "${sanitized}"`;

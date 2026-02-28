@@ -14,6 +14,27 @@ interface UseMemoryRingOptions {
   offset?: number;
 }
 
+/** Shape of a memory ring entry as returned by the Drizzle query */
+export interface MemoryRingEntry {
+  uuid: string;
+  ring_type: string;
+  content_summary: string | null;
+  content_essence: string | null;
+  content_full: string | null;
+  content_compressed: string | null;
+  current_decay_stage: string;
+  current_token_count: number;
+  access_count: number;
+  relevance_score: number;
+  success_score: number | null;
+  reinforcement_count: number;
+  is_shock: boolean;
+  tags: string[] | null;
+  created_at: string;
+  updated_at: string;
+  last_accessed_at: string | null;
+}
+
 export function useMemoryRing(options?: UseMemoryRingOptions) {
   const { data: session } = useSafeSession();
 
@@ -34,7 +55,9 @@ export function useMemoryRing(options?: UseMemoryRingOptions) {
     }
   );
 
-  const memories = response?.success && response.data ? (response.data as Array<Record<string, unknown>>) : [];
+  const memories: MemoryRingEntry[] = response?.success && response.data
+    ? (response.data as MemoryRingEntry[])
+    : [];
 
   const removeMemory = useCallback(
     async (memoryUuid: string) => {

@@ -92,7 +92,7 @@ export async function PATCH(
       );
     }
 
-    // Verify ownership
+    // Verify ownership: look up session to get its memory_session_id
     const session = await getSessionByUuid(id);
     if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
       return NextResponse.json(
@@ -101,7 +101,8 @@ export async function PATCH(
       );
     }
 
-    const result = await endSession(session.memory_session_id);
+    // Atomic ownership check + status update (prevents TOCTOU race)
+    const result = await endSession(session.memory_session_id, auth.activeProfile.uuid);
 
     // Trigger Z-report generation asynchronously
     if (result.success && result.data) {

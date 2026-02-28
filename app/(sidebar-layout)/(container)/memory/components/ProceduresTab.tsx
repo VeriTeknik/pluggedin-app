@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  AlertCircle,
   Brain,
   CheckCircle2,
   Eye,
@@ -24,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
-import { useMemoryRing } from '../hooks/useMemoryRing';
+import { useMemoryRing, type MemoryRingEntry } from '../hooks/useMemoryRing';
 import { useMemorySearch } from '../hooks/useMemorySearch';
 import { getDecayColor } from '../utils';
 
@@ -32,35 +33,18 @@ interface ProceduresTabProps {
   onRefresh?: () => void;
 }
 
-interface ProcedureEntry {
-  uuid: string;
-  content_summary: string | null;
-  content_essence: string | null;
-  content_full: string | null;
-  current_decay_stage: string;
-  current_token_count: number;
-  access_count: number;
-  relevance_score: number;
-  success_score: number | null;
-  reinforcement_count: number;
-  tags: string[] | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export function ProceduresTab({ onRefresh }: ProceduresTabProps) {
   const { t } = useTranslation('memory');
-  const { memories, isLoading, removeMemory } = useMemoryRing({ ringType: 'procedures' });
-  const { results: searchResults, isSearching, search, clear } = useMemorySearch();
+  const { memories, isLoading, error: ringError, refresh, removeMemory } = useMemoryRing({ ringType: 'procedures' });
+  const { results: searchResults, isSearching, error: searchError, search, clear } = useMemorySearch();
   const [searchQuery, setSearchQuery] = useState('');
-  const [previewProc, setPreviewProc] = useState<ProcedureEntry | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ProcedureEntry | null>(null);
+  const [previewProc, setPreviewProc] = useState<MemoryRingEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MemoryRingEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const typedProcedures = memories as unknown as ProcedureEntry[];
-  const displayProcedures = searchQuery && searchResults.length > 0
-    ? searchResults as unknown as ProcedureEntry[]
-    : typedProcedures;
+  const displayProcedures: MemoryRingEntry[] = searchQuery && searchResults.length > 0
+    ? searchResults as unknown as MemoryRingEntry[]
+    : memories;
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -95,8 +79,31 @@ export function ProceduresTab({ onRefresh }: ProceduresTabProps) {
     );
   }
 
+  if (ringError) {
+    return (
+      <Card className="h-48 flex items-center justify-center">
+        <CardContent className="text-center">
+          <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive" />
+          <CardTitle className="text-sm mb-1">{t('procedures.error.title')}</CardTitle>
+          <CardDescription className="text-xs">{typeof ringError === 'string' ? ringError : t('procedures.error.description')}</CardDescription>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refresh()}>
+            {t('procedures.error.retry')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Search error banner */}
+      {searchError && (
+        <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{searchError}</span>
+        </div>
+      )}
+
       {/* Search */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">

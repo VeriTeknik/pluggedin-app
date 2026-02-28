@@ -136,13 +136,19 @@ export async function getSessionObservations(
 }
 
 /**
- * Get observation by UUID
+ * Get observation by UUID.
+ * When profileUuid is provided, it acts as an ownership guard.
  */
-export async function getObservationByUuid(uuid: string) {
+export async function getObservationByUuid(uuid: string, profileUuid?: string) {
+  const conditions = [eq(freshMemoryTable.uuid, uuid)];
+  if (profileUuid) {
+    conditions.push(eq(freshMemoryTable.profile_uuid, profileUuid));
+  }
+
   const [observation] = await db
     .select()
     .from(freshMemoryTable)
-    .where(eq(freshMemoryTable.uuid, uuid))
+    .where(and(...conditions))
     .limit(1);
 
   return observation ?? null;
