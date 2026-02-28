@@ -13,6 +13,7 @@ services:
       - mcp-cache:/app/.cache
       - app-uploads:/app/uploads
       - app-logs:/app/logs
+      - zvec-data:/app/data/vectors
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
@@ -25,6 +26,8 @@ services:
       - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages
       - MCP_PNPM_STORE_DIR=/app/.cache/mcp-packages/pnpm-store
       - MCP_UV_CACHE_DIR=/app/.cache/mcp-packages/uv-cache
+      - ENABLE_RAG=true
+      - ZVEC_DATA_PATH=/app/data/vectors
     depends_on:
       pluggedin-postgres:
         condition: service_healthy
@@ -33,7 +36,7 @@ services:
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
-    image: postgres:18-alpine
+    image: pgvector/pgvector:pg18
     restart: always
     environment:
       POSTGRES_DB: pluggedin
@@ -102,4 +105,6 @@ volumes:
   app-uploads:
     driver: local
   app-logs:
+    driver: local
+  zvec-data:
     driver: local
