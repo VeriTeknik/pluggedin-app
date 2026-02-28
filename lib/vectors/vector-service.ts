@@ -8,8 +8,8 @@
  * All collections share the same HNSW index configuration and embedding dimensions.
  */
 
-import path from 'path';
 import {
+  type ZVecCollection,
   ZVecCollectionSchema,
   ZVecCreateAndOpen,
   ZVecDataType,
@@ -17,8 +17,8 @@ import {
   ZVecInitialize,
   ZVecMetricType,
   ZVecOpen,
-  type ZVecCollection,
 } from '@zvec/zvec';
+import path from 'path';
 
 import type {
   VectorDeleteByFilterParams,
@@ -66,7 +66,7 @@ const EMBEDDING_VECTOR_CONFIG = {
  * Domain-specific collection field definitions.
  * Each domain has its own set of filterable fields stored alongside vectors.
  */
-const DOMAIN_FIELDS: Record<VectorDomain, Array<{ name: string; dataType: string; nullable?: boolean; indexParams: { indexType: string } }>> = {
+const DOMAIN_FIELDS: Record<VectorDomain, ConstructorParameters<typeof ZVecCollectionSchema>[0]['fields']> = {
   rag: [
     { name: 'project_uuid', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
     { name: 'document_uuid', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
@@ -167,7 +167,6 @@ export function searchVectors(params: VectorSearchParams): VectorSearchResult[] 
 
   const results = collection.querySync(queryParams);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (results || [])
     .map((r: any) => ({
       id: r.id,
@@ -202,7 +201,6 @@ export function deleteVectorsByFilter(params: VectorDeleteByFilterParams): void 
 export function getVectorStats(domain: VectorDomain): VectorStats {
   try {
     const collection = getCollection(domain);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const info = (collection as any).infoSync?.() || {};
     return { domain, count: info.count || info.total || 0 };
   } catch {
