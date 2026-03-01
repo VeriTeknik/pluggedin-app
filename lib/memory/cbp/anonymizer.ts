@@ -41,8 +41,8 @@ const PII_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
   { pattern: /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, replacement: '<JWT>' },
   // Connection strings
   { pattern: /(?:postgresql|mysql|mongodb|redis):\/\/[^\s]+/gi, replacement: '<CONNECTION_STRING>' },
-  // Hex strings that look like hashes/keys (32+ chars)
-  { pattern: /\b[0-9a-f]{32,}\b/gi, replacement: '<HASH>' },
+  // Hex strings that look like secrets/keys (64+ chars, avoids git SHAs and MD5 checksums)
+  { pattern: /\b[0-9a-f]{64,}\b/gi, replacement: '<HASH>' },
 ];
 
 /**
@@ -110,6 +110,20 @@ export async function anonymize(content: string): Promise<MemoryResult<{
 
     if (!anonymized || anonymized.length < 10) {
       return { success: false, error: 'Anonymization produced empty or too-short result' };
+    }
+
+    // Re-scan LLM output for any PII that leaked through
+    const { sanitized: finalText, replacementCount: outputPII } = stripPII(anonymized);
+    if (outputPII > 0) {
+      // Use the re-sanitized version
+      return {
+        success: true,
+        data: {
+          anonymized: finalText,
+          piiStripped: replacementCount + outputPII,
+          originalLength: content.length,
+        },
+      };
     }
 
     return {

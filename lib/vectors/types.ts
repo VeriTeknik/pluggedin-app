@@ -17,9 +17,6 @@ export function getResolvedEmbeddingDimensions(): number {
   return _embeddingDimensions;
 }
 
-/** @deprecated Use getResolvedEmbeddingDimensions() for lazy evaluation */
-export const EMBEDDING_DIMENSIONS: number = 0; // Placeholder — callers should migrate
-
 /** Parameters for inserting a vector */
 export interface VectorInsertParams {
   id: string;

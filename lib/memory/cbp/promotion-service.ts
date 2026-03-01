@@ -269,39 +269,51 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
           // Determine pattern type from ring type
           const patternType = mapRingTypeToPatternType(memory.ringType);
 
-          const [newPattern] = await db
-            .insert(gutPatternsTable)
-            .values({
-              pattern_hash: patternHash,
-              pattern_type: patternType,
-              pattern_description: anonymizedText.slice(0, 500),
-              compressed_pattern: anonymizedText.slice(0, 200),
-              occurrence_count: 1,
-              success_rate: memory.successScore ?? 0.5,
-              unique_profile_count: 1,
-              confidence: 0.3,
-              metadata: {
-                first_seen: new Date().toISOString(),
-                last_seen: new Date().toISOString(),
-                profile_hashes: [hashProfileUuid(memory.profileUuid)],
-              },
-            })
-            .returning({ uuid: gutPatternsTable.uuid });
+          // Transaction ensures pattern + contribution are atomic (no orphaned patterns)
+          const newPattern = await db.transaction(async (tx) => {
+            const [inserted] = await tx
+              .insert(gutPatternsTable)
+              .values({
+                pattern_hash: patternHash,
+                pattern_type: patternType,
+                pattern_description: anonymizedText.slice(0, 500),
+                compressed_pattern: anonymizedText.slice(0, 200),
+                occurrence_count: 1,
+                success_rate: memory.successScore ?? 0.5,
+                unique_profile_count: 1,
+                confidence: 0.3,
+                metadata: {
+                  first_seen: new Date().toISOString(),
+                  last_seen: new Date().toISOString(),
+                  profile_hashes: [hashProfileUuid(memory.profileUuid)],
+                },
+              })
+              .returning({ uuid: gutPatternsTable.uuid });
 
-          if (newPattern) {
-            try {
-              upsertGutPatternVector(newPattern.uuid, embedding, patternType);
-            } catch {
-              // Vector storage failure is non-fatal
+            if (inserted) {
+              const profileHash = hashProfileUuid(memory.profileUuid);
+              await tx
+                .insert(collectiveContributionsTable)
+                .values({
+                  pattern_uuid: inserted.uuid,
+                  profile_hash: profileHash,
+                  source_ring_uuid: memory.uuid,
+                  success_score: memory.successScore,
+                  ring_type: memory.ringType,
+                })
+                .onConflictDoNothing();
             }
 
-            await trackContribution(
-              newPattern.uuid,
-              memory.profileUuid,
-              memory.uuid,
-              memory.successScore,
-              memory.ringType
-            );
+            return inserted;
+          });
+
+          if (newPattern) {
+            // upsertGutPatternVector is synchronous (zvec) — try-catch works correctly
+            try {
+              upsertGutPatternVector(newPattern.uuid, embedding, patternType);
+            } catch (err) {
+              console.error('Vector storage failed for pattern:', newPattern.uuid, err);
+            }
 
             stats.newPatterns++;
           }

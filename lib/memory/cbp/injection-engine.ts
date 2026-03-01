@@ -235,7 +235,6 @@ export async function submitFeedback(
           rating,
           feedback_type: feedbackType,
           comment: comment?.slice(0, 1000),
-          created_at: new Date(),
         },
       });
 

@@ -17,7 +17,7 @@ vi.mock('@/lib/vectors/embedding-service', () => ({
     Array(1536).fill(0.1),
     Array(1536).fill(0.2),
   ]),
-  EMBEDDING_DIMENSIONS: 1536,
+  getResolvedEmbeddingDimensions: vi.fn().mockReturnValue(1536),
 }));
 
 // Mock chunking

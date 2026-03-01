@@ -8,7 +8,7 @@
 
 import { getEmbeddingProvider } from '@/lib/ai';
 
-export { getResolvedEmbeddingDimensions, EMBEDDING_DIMENSIONS } from './types';
+export { getResolvedEmbeddingDimensions } from './types';
 
 /**
  * Generate embedding vector for a single text
