@@ -73,8 +73,8 @@ function createProvider(
 ): AIProvider {
   switch (provider) {
     case 'gemini': {
-      const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-      if (!apiKey) throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY is required for Gemini provider');
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) throw new Error('GEMINI_API_KEY is required for Gemini provider');
       return new GeminiProvider({
         apiKey,
         embeddingModel: overrides.embeddingModel,
