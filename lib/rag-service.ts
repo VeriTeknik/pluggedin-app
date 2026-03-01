@@ -250,12 +250,13 @@ export class RagService {
   async removeDocument(documentId: string, _ragIdentifier: string): Promise<{ success: boolean; error?: string }> {
     try {
       if (!this.isEnabled()) return { success: true };
+      if (!documentId) return { success: true }; // Nothing to remove
 
       // Delete vectors from zvec
-      deleteVectorsByFilter({
-        domain: 'rag',
-        filter: buildFilter([['document_uuid', documentId]])!,
-      });
+      const filter = buildFilter([['document_uuid', documentId]]);
+      if (filter) {
+        deleteVectorsByFilter({ domain: 'rag', filter });
+      }
 
       // Delete chunks from PostgreSQL (also handled by CASCADE on doc delete)
       const { db } = await import('@/db');

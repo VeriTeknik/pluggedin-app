@@ -606,10 +606,12 @@ export async function reindexDocument(
       return { success: false, error: 'No text content could be extracted from the file' };
     }
 
-    // Remove existing vectors and chunks for this document
-    await ragService.removeDocument(doc.uuid, ragIdentifier);
+    // Remove existing vectors using the ID they were indexed under.
+    // AI-generated documents may have rag_document_id !== doc.uuid.
+    const vectorDocId = doc.rag_document_id ?? doc.uuid;
+    await ragService.removeDocument(vectorDocId, ragIdentifier);
 
-    // Re-process the document
+    // Re-process using doc.uuid (normalizes AI docs going forward)
     const result = await ragService.processDocument(
       doc.uuid,
       ragIdentifier,

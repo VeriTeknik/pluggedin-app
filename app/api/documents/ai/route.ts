@@ -306,16 +306,16 @@ export async function POST(request: NextRequest) {
       const { updateDocRagId } = await import('@/app/actions/library');
 
       try {
-        const ragDocUuid = randomUUID();
+        // Use the document's own UUID so re-index can find vectors by doc.uuid
         const result = await ragService.processDocument(
-          ragDocUuid,
+          documentId,
           activeProfile.project_uuid,
           processedContent,
           filename,
         );
 
         if (result.success) {
-          const updateResult = await updateDocRagId(documentId, ragDocUuid, user.id);
+          const updateResult = await updateDocRagId(documentId, documentId, user.id);
           if (!updateResult.success) {
             console.error(`Failed to update RAG ID for document ${documentId}:`, updateResult.error);
           }

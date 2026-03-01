@@ -25,7 +25,7 @@ function highlightTerms(text: string, query: string): React.ReactNode {
 
   if (terms.length === 0) return text;
 
-  const pattern = new RegExp(`(${terms.join('|')})`, 'gi');
+  const pattern = new RegExp(`(\\b(?:${terms.join('|')})\\b)`, 'gi');
   const parts = text.split(pattern);
 
   // split(/(capture)/) places matched segments at odd indices

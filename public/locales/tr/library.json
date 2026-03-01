@@ -111,6 +111,13 @@
     "downloadPDF": "PDF İndir",
     "loadingPDF": "PDF Yükleniyor..."
   },
+  "upload": {
+    "success": "Belge Yüklendi",
+    "indexed": "Belge yüklendi ve arama için indekslendi",
+    "savedOnly": "Belge başarıyla yüklendi",
+    "ragFailed": "Yükleme Başarılı",
+    "ragFailedDesc": "Belge yüklendi ancak indeksleme başarısız: {{error}}"
+  },
   "uploadProgress": {
     "title": "Yükleme İlerlemesi",
     "clearCompleted": "Tamamlananları Temizle",

@@ -111,6 +111,13 @@
     "downloadPDF": "下载PDF",
     "loadingPDF": "加载PDF中..."
   },
+  "upload": {
+    "success": "文档已上传",
+    "indexed": "文档已上传并已索引以供搜索",
+    "savedOnly": "文档上传成功",
+    "ragFailed": "上传成功",
+    "ragFailedDesc": "文档已上传但索引失败：{{error}}"
+  },
   "uploadProgress": {
     "title": "上传进度",
     "clearCompleted": "清除已完成",

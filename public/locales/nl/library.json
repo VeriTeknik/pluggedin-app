@@ -111,6 +111,13 @@
     "downloadPDF": "PDF Downloaden",
     "loadingPDF": "PDF Laden..."
   },
+  "upload": {
+    "success": "Document Geüpload",
+    "indexed": "Document geüpload en geïndexeerd voor zoeken",
+    "savedOnly": "Document succesvol geüpload",
+    "ragFailed": "Upload Geslaagd",
+    "ragFailedDesc": "Document geüpload maar indexering mislukt: {{error}}"
+  },
   "uploadProgress": {
     "title": "Upload Voortgang",
     "clearCompleted": "Voltooide Wissen",

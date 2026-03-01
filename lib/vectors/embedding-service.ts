@@ -8,6 +8,8 @@
 
 import { OpenAIEmbeddings } from '@langchain/openai';
 
+import { DEFAULT_EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from './types';
+
 export { EMBEDDING_DIMENSIONS, DEFAULT_EMBEDDING_MODEL } from './types';
 
 let embeddingsInstance: OpenAIEmbeddings | null = null;
@@ -21,8 +23,8 @@ function getEmbeddings(): OpenAIEmbeddings {
 
     embeddingsInstance = new OpenAIEmbeddings({
       openAIApiKey: apiKey,
-      modelName: process.env.MEMORY_EMBEDDING_MODEL || 'text-embedding-3-small',
-      dimensions: 1536,
+      modelName: process.env.MEMORY_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
     });
   }
   return embeddingsInstance;

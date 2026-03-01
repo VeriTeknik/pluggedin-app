@@ -205,6 +205,13 @@
       "databaseInsertion": "Saving processed data to database"
     }
   },
+  "upload": {
+    "success": "Document Uploaded",
+    "indexed": "Document uploaded and indexed for search",
+    "savedOnly": "Document uploaded successfully",
+    "ragFailed": "Upload Successful",
+    "ragFailedDesc": "Document uploaded but indexing failed: {{error}}"
+  },
   "uploadMetadata": {
     "title": "Upload Information",
     "uploadMethod": "Upload Method",

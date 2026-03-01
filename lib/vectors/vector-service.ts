@@ -120,9 +120,9 @@ function isIndexHealthy(collection: ZVecCollection): boolean {
   try {
     const { docCount, indexCompleteness } = collection.stats;
     if (docCount === 0) return true; // Empty collection is healthy
-    // If we have documents but embedding index completeness is 0, the index is corrupted
+    // If we have documents but embedding index is less than half complete, treat as corrupted
     const embeddingCompleteness = indexCompleteness?.embedding;
-    if (typeof embeddingCompleteness === 'number' && embeddingCompleteness === 0) {
+    if (typeof embeddingCompleteness === 'number' && embeddingCompleteness < 0.5) {
       return false;
     }
     return true;

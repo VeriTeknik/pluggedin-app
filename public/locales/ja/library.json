@@ -111,6 +111,13 @@
     "downloadPDF": "PDFをダウンロード",
     "loadingPDF": "PDF読み込み中..."
   },
+  "upload": {
+    "success": "ドキュメントがアップロードされました",
+    "indexed": "ドキュメントがアップロードされ、検索用にインデックスされました",
+    "savedOnly": "ドキュメントが正常にアップロードされました",
+    "ragFailed": "アップロード成功",
+    "ragFailedDesc": "ドキュメントはアップロードされましたが、インデックスに失敗しました: {{error}}"
+  },
   "uploadProgress": {
     "title": "アップロード進行状況",
     "clearCompleted": "完了済みをクリア",

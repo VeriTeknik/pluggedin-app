@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { createDoc, deleteDoc, getDocs, getProjectStorageUsage, reindexDocument } from '@/app/actions/library';
-import { useUploadProgress } from '@/contexts/UploadProgressContext';
 import { useProjects } from '@/hooks/use-projects';
 import { notifications } from '@/lib/notification-helper';
 import type { Doc } from '@/types/library';
@@ -18,7 +17,6 @@ export function useLibrary() {
   const { t } = useTranslation('library');
   const { currentProject } = useProjects();
   const { currentProfile } = useProfiles();
-  const { addUpload } = useUploadProgress();
   const { mutate: globalMutate } = useSWRConfig();
 
   const {
@@ -126,32 +124,21 @@ export function useLibrary() {
           );
         }
 
-        // Add to progress tracking if we have an upload_id
-        if (result.upload_id && result.doc) {
-          addUpload({
-            upload_id: result.upload_id,
-            doc_uuid: result.doc.uuid,
-            file_name: data.file.name,
-            file_size: data.file.size,
-            status: 'processing',
-            progress: {
-              step: 'text_extraction',
-              current: 1,
-              total: 5,
-              step_progress: {
-                percentage: 0,
-              },
-            },
-            message: 'Starting document processing...',
-            document_id: null,
+        if (result.ragError) {
+          toast({
+            title: t('upload.ragFailed', 'Upload Successful'),
+            description: t('upload.ragFailedDesc', 'Document uploaded but indexing failed: {{error}}', { error: result.ragError }),
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: t('upload.success', 'Document Uploaded'),
+            description: result.ragProcessed
+              ? t('upload.indexed', 'Document uploaded and indexed for search')
+              : t('upload.savedOnly', 'Document uploaded successfully'),
           });
         }
-        
-        toast({
-          title: 'Upload Started',
-          description: 'Document uploaded successfully, processing in background',
-        });
-        
+
         // Send notification for successful upload
         if (currentProfile?.uuid) {
           await notifications.success(
@@ -159,20 +146,6 @@ export function useLibrary() {
             `Document "${data.name}" has been uploaded successfully`,
             { profileUuid: currentProfile.uuid }
           );
-        }
-        
-        // Handle legacy RAG processing status (for backward compatibility)
-        if (result.ragProcessed && !result.upload_id) {
-          toast({
-            title: 'RAG Processing Complete',
-            description: 'Document has been added to your knowledge base',
-          });
-        } else if (result.ragError && !result.upload_id) {
-          toast({
-            title: 'RAG Processing Failed',
-            description: `Document uploaded but RAG processing failed: ${result.ragError}`,
-            variant: 'destructive',
-          });
         }
       } else {
         toast({
@@ -183,7 +156,7 @@ export function useLibrary() {
         throw new Error(result.error || 'Failed to upload document');
       }
     },
-    [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast, addUpload, globalMutate]
+    [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast, t, globalMutate]
   );
 
   const removeDoc = useCallback(
@@ -249,6 +222,8 @@ export function useLibrary() {
       const result = await reindexDocument(session.user.id, docUuid, currentProject?.uuid);
 
       if (result.success) {
+        // Refresh storage stats since chunk counts may have changed
+        await mutateStorage();
         toast({
           title: t('grid.reindexSuccess'),
         });
@@ -261,7 +236,7 @@ export function useLibrary() {
         throw new Error(result.error || t('grid.reindexError'));
       }
     },
-    [session?.user?.id, currentProject?.uuid, toast, t]
+    [session?.user?.id, currentProject?.uuid, mutateStorage, toast, t]
   );
 
   const downloadDoc = useCallback(
