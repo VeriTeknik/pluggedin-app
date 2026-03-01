@@ -3,13 +3,16 @@ import { z } from 'zod';
 
 import { submitFeedback } from '@/lib/memory/cbp/injection-engine';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
+import { FeedbackType } from '@/lib/memory/types';
 
 import { authenticate } from '../../../auth';
+
+const FEEDBACK_TYPE_VALUES = Object.values(FeedbackType) as [string, ...string[]];
 
 const feedbackSchema = z.object({
   pattern_uuid: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
-  feedback_type: z.enum(['helpful', 'inaccurate', 'outdated', 'dangerous']),
+  feedback_type: z.enum(FEEDBACK_TYPE_VALUES),
   comment: z.string().max(1000).optional(),
 });
 

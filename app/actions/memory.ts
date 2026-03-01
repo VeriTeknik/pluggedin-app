@@ -11,6 +11,9 @@ import {
   memorySessionsTable,
   projectsTable,
 } from '@/db/schema';
+import {
+  FeedbackType,
+} from '@/lib/memory/types';
 import type {
   DecayStage,
   MemoryResult,
@@ -577,10 +580,12 @@ export async function queryGutIntuition(
 // Collective Best Practices (CBP)
 // ============================================================================
 
+const FEEDBACK_TYPE_VALUES = Object.values(FeedbackType) as [string, ...string[]];
+
 const cbpFeedbackSchema = z.object({
   patternUuid: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
-  feedbackType: z.enum(['helpful', 'inaccurate', 'outdated', 'dangerous']),
+  feedbackType: z.enum(FEEDBACK_TYPE_VALUES),
   comment: z.string().max(1000).optional(),
 });
 

@@ -100,7 +100,9 @@ interface DedupResult {
  * Check if a pattern already exists in the collective pool using vector similarity.
  */
 async function checkDuplicate(embedding: number[]): Promise<DedupResult> {
-  const results = searchGutPatterns({
+  // searchGutPatterns is currently synchronous (zvec); await is safe on sync
+  // return values and future-proofs against backend changes.
+  const results = await searchGutPatterns({
     queryEmbedding: embedding,
     topK: 1,
     threshold: CBP_DEDUP_SIMILARITY_THRESHOLD,
@@ -191,6 +193,7 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
         // Step 1: Anonymize
         const anonResult = await anonymize(content);
         if (!anonResult.success || !anonResult.data) {
+          console.error(`CBP anonymization failed for memory ${memory.uuid}:`, anonResult.error);
           stats.errors++;
           continue;
         }
@@ -203,7 +206,8 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
         let embedding: number[];
         try {
           embedding = await generateEmbedding(anonymizedText);
-        } catch {
+        } catch (err) {
+          console.error(`CBP embedding generation failed for memory ${memory.uuid}:`, err);
           stats.errors++;
           continue;
         }
@@ -212,56 +216,45 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
         const dedup = await checkDuplicate(embedding);
 
         if (dedup.isDuplicate && dedup.existingPatternUuid) {
-          // Step 4a: Reinforce existing pattern
+          // Step 4a: Reinforce existing pattern (atomic transaction)
           const profileHash = hashProfileUuid(memory.profileUuid);
+          const patternUuid = dedup.existingPatternUuid;
 
-          // Check if this profile is new to this pattern
-          const [existing] = await db
-            .select({ metadata: gutPatternsTable.metadata })
-            .from(gutPatternsTable)
-            .where(eq(gutPatternsTable.uuid, dedup.existingPatternUuid))
-            .limit(1);
+          await db.transaction(async (tx) => {
+            // Try to insert contribution — onConflictDoNothing returns empty
+            // if this profile already contributed (unique constraint on pattern+profile_hash)
+            const [inserted] = await tx
+              .insert(collectiveContributionsTable)
+              .values({
+                pattern_uuid: patternUuid,
+                profile_hash: profileHash,
+                source_ring_uuid: memory.uuid,
+                success_score: memory.successScore,
+                ring_type: memory.ringType,
+              })
+              .onConflictDoNothing()
+              .returning({ uuid: collectiveContributionsTable.uuid });
 
-          const existingHashes = (existing?.metadata as Record<string, unknown>)?.profile_hashes as string[] ?? [];
-          const isNewProfile = !existingHashes.includes(profileHash);
+            const isNewProfile = !!inserted;
 
-          const metadataUpdate = isNewProfile
-            ? sql`jsonb_set(
-                jsonb_set(
+            await tx
+              .update(gutPatternsTable)
+              .set({
+                occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
+                success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? 0.5}) / (${gutPatternsTable.occurrence_count} + 1)`,
+                unique_profile_count: isNewProfile
+                  ? sql`${gutPatternsTable.unique_profile_count} + 1`
+                  : gutPatternsTable.unique_profile_count,
+                confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
+                updated_at: new Date(),
+                metadata: sql`jsonb_set(
                   COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
                   '{last_seen}',
                   ${JSON.stringify(new Date().toISOString())}::jsonb
-                ),
-                '{profile_hashes}',
-                (COALESCE(${gutPatternsTable.metadata}->'profile_hashes', '[]'::jsonb) || ${JSON.stringify(profileHash)}::jsonb)
-              )`
-            : sql`jsonb_set(
-                COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
-                '{last_seen}',
-                ${JSON.stringify(new Date().toISOString())}::jsonb
-              )`;
-
-          await db
-            .update(gutPatternsTable)
-            .set({
-              occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
-              success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? 0.5}) / (${gutPatternsTable.occurrence_count} + 1)`,
-              unique_profile_count: isNewProfile
-                ? sql`${gutPatternsTable.unique_profile_count} + 1`
-                : gutPatternsTable.unique_profile_count,
-              confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
-              updated_at: new Date(),
-              metadata: metadataUpdate,
-            })
-            .where(eq(gutPatternsTable.uuid, dedup.existingPatternUuid));
-
-          await trackContribution(
-            dedup.existingPatternUuid,
-            memory.profileUuid,
-            memory.uuid,
-            memory.successScore,
-            memory.ringType
-          );
+                )`,
+              })
+              .where(eq(gutPatternsTable.uuid, patternUuid));
+          });
 
           stats.reinforced++;
         } else {
@@ -285,7 +278,6 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
                 metadata: {
                   first_seen: new Date().toISOString(),
                   last_seen: new Date().toISOString(),
-                  profile_hashes: [hashProfileUuid(memory.profileUuid)],
                 },
               })
               .returning({ uuid: gutPatternsTable.uuid });

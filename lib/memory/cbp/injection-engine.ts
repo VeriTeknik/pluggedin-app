@@ -18,10 +18,12 @@ import {
 } from '@/db/schema';
 
 import {
+  CBP_CONFIDENCE_ADJUSTMENT_FACTOR,
   CBP_INJECTION_SIMILARITY_THRESHOLD,
   CBP_MAX_INJECTION_RESULTS,
   CBP_MIN_FEEDBACK_RATING,
   CBP_NEGATIVE_FEEDBACK_THRESHOLD,
+  CBP_NEUTRAL_RATING,
   GUT_K_ANONYMITY_THRESHOLD,
 } from '../constants';
 import { generateEmbedding } from '../embedding-service';
@@ -58,8 +60,9 @@ async function findRelevantPatterns(
   context: InjectionContext,
   maxResults: number = CBP_MAX_INJECTION_RESULTS
 ): Promise<InjectedPattern[]> {
-  // Vector search for similar patterns
-  const vectorResults = searchGutPatterns({
+  // searchGutPatterns is currently synchronous (zvec); await future-proofs
+  // against backend changes (e.g. VectorChord migration).
+  const vectorResults = await searchGutPatterns({
     queryEmbedding,
     topK: maxResults * 2, // Fetch extra for filtering
     threshold: CBP_INJECTION_SIMILARITY_THRESHOLD,
@@ -250,9 +253,7 @@ export async function submitFeedback(
     if (feedback && Number(feedback.count) >= CBP_NEGATIVE_FEEDBACK_THRESHOLD) {
       const avgRating = Number(feedback.avgRating);
       // Map 1-5 rating to confidence adjustment: neutral = no change, below = decrease, above = increase
-      const NEUTRAL_RATING = 3.0;
-      const ADJUSTMENT_FACTOR = 0.05;
-      const confidenceAdjustment = (avgRating - NEUTRAL_RATING) * ADJUSTMENT_FACTOR;
+      const confidenceAdjustment = (avgRating - CBP_NEUTRAL_RATING) * CBP_CONFIDENCE_ADJUSTMENT_FACTOR;
 
       await db
         .update(gutPatternsTable)

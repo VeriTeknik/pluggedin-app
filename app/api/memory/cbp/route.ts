@@ -15,7 +15,10 @@ import { authenticate } from '../../auth';
 
 /**
  * Timing-safe comparison of secret strings.
- * Uses HMAC-SHA256 digests (constant 32 bytes) to prevent length leakage.
+ *
+ * Why HMAC-SHA256 digests? Both `a` and `b` are always exactly 32 bytes
+ * regardless of input length, so timingSafeEqual never leaks the secret's
+ * length through an early-return on Buffer.length mismatch.
  */
 function verifyCronSecret(provided: string | null): boolean {
   const expected = process.env.CRON_SECRET;

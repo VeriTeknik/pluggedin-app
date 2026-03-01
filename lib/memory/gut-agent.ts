@@ -13,7 +13,7 @@ import { createHash, createHmac } from 'crypto';
 import { eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { gutPatternsTable, memoryRingTable } from '@/db/schema';
+import { collectiveContributionsTable, gutPatternsTable, memoryRingTable } from '@/db/schema';
 
 import {
   GUT_AGGREGATION_BATCH_LIMIT,
@@ -188,42 +188,43 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
         .limit(1);
 
       if (existing) {
-        // Check if this profile is new to this pattern
-        const isNewProfile = !((existing.metadata as Record<string, unknown>)?.profile_hashes as string[] ?? [])
-          .includes(hashProfileUuid(memory.profileUuid));
-
         const profileHash = hashProfileUuid(memory.profileUuid);
 
-        // Build metadata update: always set last_seen, append profile hash if new
-        const metadataUpdate = isNewProfile
-          ? sql`jsonb_set(
-              jsonb_set(
+        // Atomic: insert contribution + update pattern in one transaction
+        await db.transaction(async (tx) => {
+          // onConflictDoNothing returns empty if profile already contributed
+          const [inserted] = await tx
+            .insert(collectiveContributionsTable)
+            .values({
+              pattern_uuid: existing.uuid,
+              profile_hash: profileHash,
+              source_ring_uuid: memory.uuid,
+              success_score: memory.successScore,
+              ring_type: memory.ringType,
+            })
+            .onConflictDoNothing()
+            .returning({ uuid: collectiveContributionsTable.uuid });
+
+          const isNewProfile = !!inserted;
+
+          await tx
+            .update(gutPatternsTable)
+            .set({
+              occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
+              success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? 0.5}) / (${gutPatternsTable.occurrence_count} + 1)`,
+              unique_profile_count: isNewProfile
+                ? sql`${gutPatternsTable.unique_profile_count} + 1`
+                : gutPatternsTable.unique_profile_count,
+              confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
+              updated_at: new Date(),
+              metadata: sql`jsonb_set(
                 COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
                 '{last_seen}',
                 ${JSON.stringify(new Date().toISOString())}::jsonb
-              ),
-              '{profile_hashes}',
-              (COALESCE(${gutPatternsTable.metadata}->'profile_hashes', '[]'::jsonb) || ${JSON.stringify(profileHash)}::jsonb)
-            )`
-          : sql`jsonb_set(
-              COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
-              '{last_seen}',
-              ${JSON.stringify(new Date().toISOString())}::jsonb
-            )`;
-
-        await db
-          .update(gutPatternsTable)
-          .set({
-            occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
-            success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? 0.5}) / (${gutPatternsTable.occurrence_count} + 1)`,
-            unique_profile_count: isNewProfile
-              ? sql`${gutPatternsTable.unique_profile_count} + 1`
-              : gutPatternsTable.unique_profile_count,
-            confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
-            updated_at: new Date(),
-            metadata: metadataUpdate,
-          })
-          .where(eq(gutPatternsTable.uuid, existing.uuid));
+              )`,
+            })
+            .where(eq(gutPatternsTable.uuid, existing.uuid));
+        });
 
         reinforced++;
       } else {
@@ -249,7 +250,6 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
             metadata: {
               first_seen: new Date().toISOString(),
               last_seen: new Date().toISOString(),
-              profile_hashes: [hashProfileUuid(memory.profileUuid)],
             },
           })
           .returning({ uuid: gutPatternsTable.uuid });

@@ -209,3 +209,9 @@ export const CBP_INJECTION_SIMILARITY_THRESHOLD = 0.65;
 
 /** Maximum content length for anonymizer input */
 export const CBP_MAX_ANONYMIZER_INPUT_LENGTH = 2000;
+
+/** Neutral rating baseline for confidence adjustment (1-5 scale midpoint) */
+export const CBP_NEUTRAL_RATING = 3.0;
+
+/** Per-feedback confidence adjustment magnitude */
+export const CBP_CONFIDENCE_ADJUSTMENT_FACTOR = 0.05;
