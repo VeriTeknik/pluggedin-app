@@ -25,22 +25,28 @@ const stages: RoadmapStage[] = [
     descriptionKey: 'roadmap.stage1.description'
   },
   {
-    date: '19 June 2025',
+    date: 'March 2026',
     status: 'completed',
     titleKey: 'roadmap.stage2.title',
     descriptionKey: 'roadmap.stage2.description'
   },
   {
-    date: 'Late October 2025',
-    status: 'in_progress',
+    date: 'March 2026',
+    status: 'completed',
     titleKey: 'roadmap.stage3.title',
     descriptionKey: 'roadmap.stage3.description'
   },
   {
-    date: 'Q1 2026',
-    status: 'future',
+    date: 'Late October 2025',
+    status: 'in_progress',
     titleKey: 'roadmap.stage4.title',
     descriptionKey: 'roadmap.stage4.description'
+  },
+  {
+    date: 'Q2 2026',
+    status: 'future',
+    titleKey: 'roadmap.stage5.title',
+    descriptionKey: 'roadmap.stage5.description'
   }
 ];
 

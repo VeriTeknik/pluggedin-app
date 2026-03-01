@@ -74,10 +74,15 @@ const memoryFeatures: Feature[] = [
     pillar: 'memory'
   },
   {
+    icon: Users,
+    titleKey: 'features.collectiveBestPractices.title',
+    descriptionKey: 'features.collectiveBestPractices.description',
+    pillar: 'memory'
+  },
+  {
     icon: Clock,
     titleKey: 'features.crossModelMemory.title',
     descriptionKey: 'features.crossModelMemory.description',
-    comingSoon: true,
     pillar: 'memory'
   }
 ];

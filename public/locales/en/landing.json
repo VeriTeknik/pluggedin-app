@@ -83,15 +83,15 @@
       "highlight": "Replace 100 individual MCP configurations with one unified proxy. Update once, apply everywhere. Your team saves hours per week on setup alone."
     },
     "memory": {
-      "title": "Memory Clipboard",
-      "description": "Persistent clipboard storage for AI workflows. Store named key-value pairs or use stack-based indexed storage with TTL expiration, multiple content types, and cross-platform access.",
+      "title": "Intelligent Memory System",
+      "description": "Human cognition-inspired memory with concentric rings, intelligent forgetting, and collective wisdom. From clipboard storage to long-term memories that decay naturally and community patterns that emerge anonymously.",
       "features": {
-        "1": "Named entries with upsert behavior and indexed stack with push/pop",
-        "2": "TTL expiration, text/JSON/base64 content types, profile isolation",
-        "3": "MCP tools and SDKs (JS, Python, Go) for cross-platform access"
+        "1": "Concentric memory rings: Fresh observations, procedures, practice, long-term, and shocks",
+        "2": "Collective Best Practices: Privacy-preserving patterns aggregated across the community",
+        "3": "Clipboard, sessions, Z-reports, and progressive retrieval with 10x token efficiency"
       },
-      "highlightLabel": "Production Ready",
-      "highlight": "Memory Clipboard is live and production-ready. Focus Agent and advanced memory tiers coming soon."
+      "highlightLabel": "NEW in v3.1.0",
+      "highlight": "Collective Best Practices (CBP) system now live. Your agents learn from anonymized community patterns — error recovery, workflows, and best practices — without exposing private data."
     },
     "agents": {
       "title": "Autonomous Agents with Military-Grade Governance",
@@ -190,8 +190,8 @@
       "description": "All models can use the same MCP tools to take actions."
     },
     "feature3": {
-      "title": "Memory Clipboard",
-      "description": "Persistent clipboard storage for AI workflows. Store and retrieve data across sessions and platforms."
+      "title": "Intelligent Memory",
+      "description": "Persistent memory with clipboard storage, concentric rings, intelligent forgetting, and collective best practices from the community."
     },
     "cta": {
       "title": "Ready to test with multiple models?",
@@ -210,7 +210,7 @@
       },
       "memory": {
         "title": "🧠 Memory",
-        "subtitle": "Clipboard storage for AI workflows"
+        "subtitle": "Intelligent memory with collective wisdom"
       },
       "tools": {
         "title": "🔧 Tools",
@@ -233,9 +233,13 @@
       "title": "Memory Clipboard",
       "description": "Persistent key-value and stack storage for AI workflows. Store named entries or push/pop indexed values with TTL expiration."
     },
+    "collectiveBestPractices": {
+      "title": "Collective Best Practices",
+      "description": "Privacy-preserving patterns aggregated from the community. Error recovery, workflows, and best practices emerge anonymously with k-anonymity protection."
+    },
     "crossModelMemory": {
       "title": "Cross-Model Memory",
-      "description": "Coming Soon: Build knowledge that works across all AI tools, not trapped in one platform."
+      "description": "Long-term memory with concentric rings, intelligent forgetting, and success gates. Memories decay naturally from full detail to essence over time."
     },
     "mcpRegistry": {
       "title": "MCP Registry",
@@ -720,12 +724,17 @@
       "description": "RAG rebuilt from scratch with embedded zvec vector engine. Zero external dependencies — document chunking, embedding, and HNSW search all run in-process. Knowledge becomes a built-in capability, not an external service."
     },
     "stage3": {
+      "date": "March 2026",
+      "title": "Plugged.in v3.1.0 — Collective Best Practices",
+      "description": "Agents now learn from the community. The CBP system promotes high-quality memories into anonymized collective patterns with k-anonymity protection, HMAC-based privacy, and contextual injection. Includes AI provider abstraction with Gemini support and shared vector infrastructure."
+    },
+    "stage4": {
       "date": "Late October 2025",
       "title": "PAP — Plugged.in Agent Protocol (Milestone)",
       "description": "PAP released as the control + telemetry backbone. Autonomous agents now have: lifecycle management, policy engine, secure channels, kill-switch, event streaming, and cross-model orchestration. PAP turns Plugged.in from a control layer into an autonomous agent platform."
     },
-    "stage4": {
-      "date": "Q1 2026",
+    "stage5": {
+      "date": "Q2 2026",
       "title": "Sensors → Agents → Cognitive Predictive Automation",
       "description": "Plugged.in expands into the physical world. Raspberry Pi & lightweight sensor nodes stream: pressure, vibration, heat, acoustics, voltage & current. Cloud agents learn, adapt, predict, and act. Outcome: 'Agents that work.' Enables a global agent-enabled workforce."
     },

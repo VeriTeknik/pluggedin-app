@@ -36,7 +36,7 @@ const pillars = [
     borderColor: 'border-purple-500/20',
     hoverBorder: 'hover:border-purple-500/50',
     iconColor: 'text-purple-500',
-    badge: 'v2.20.0',
+    badge: 'v3.1.0',
     badgeColor: 'bg-purple-500',
   },
   {

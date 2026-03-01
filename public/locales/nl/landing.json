@@ -643,15 +643,15 @@
       "highlight": "Vervang 100 individuele MCP-configuraties door één uniforme proxy. Update één keer, pas overal toe. Uw team bespaart alleen al aan setup uren per week."
     },
     "memory": {
-      "title": "Geheugenklembord",
-      "description": "Persistente klembordopslag voor AI-workflows. Gebruik benoemde sleutel-waarde paren of stack-gebaseerde geïndexeerde opslag met TTL-vervaldatum.",
+      "title": "Intelligent geheugensysteem",
+      "description": "Door menselijke cognitie geïnspireerd geheugensysteem met concentrische ringen, intelligent vergeten en collectieve wijsheid. Van klembordopslag tot langetermijnherinneringen die natuurlijk vervagen en anoniem opkomende gemeenschapspatronen.",
       "features": {
-        "1": "Benoemde entries met upsert-gedrag en push/pop geïndexeerde stack",
-        "2": "TTL-vervaldatum, text/JSON/base64 content types, profielisolatie",
-        "3": "MCP-tools en SDK's (JS, Python, Go) voor cross-platform toegang"
+        "1": "Concentrische geheugenringen: Verse observaties, procedures, praktijk, langetermijn en schokken",
+        "2": "Collectieve Best Practices: Privacy-beschermende patronen geaggregeerd uit de gemeenschap",
+        "3": "Klembord, sessies, Z-rapporten en progressief ophalen met 10x token-efficiëntie"
       },
-      "highlightLabel": "Productie-klaar",
-      "highlight": "Geheugenklembord is live en productie-klaar. Focus Agent en geavanceerde geheugenlagen komen binnenkort."
+      "highlightLabel": "NIEUW in v3.1.0",
+      "highlight": "Collectieve Best Practices (CBP) systeem nu live. Uw agenten leren van geanonimiseerde gemeenschapspatronen — foutherstel, workflows en best practices — zonder privégegevens bloot te stellen."
     },
     "agents": {
       "title": "Autonome agents met militaire governance",
@@ -714,12 +714,16 @@
       "description": "RAG vanaf de grond opnieuw opgebouwd met de ingebedde zvec vector engine. Geen externe afhankelijkheden — documentchunking, embedding en HNSW-zoekopdrachten draaien allemaal in-process. Kennis wordt een ingebouwde functionaliteit, geen externe service."
     },
     "stage3": {
+      "title": "Plugged.in v3.1.0 — Collectieve Best Practices",
+      "description": "Agenten leren nu van de gemeenschap. Het CBP-systeem promoveert hoogwaardige herinneringen naar geanonimiseerde collectieve patronen met k-anonimiteit bescherming, HMAC-gebaseerde privacy en contextuele injectie. Inclusief AI-provider abstractie met Gemini-ondersteuning en gedeelde vectorinfrastructuur."
+    },
+    "stage4": {
       "date": "Eind Oktober 2025",
       "title": "PAP — Plugged.in Agent Protocol (Mijlpaal)",
       "description": "PAP vrijgegeven als de controle + telemetrie ruggengraat. Autonome agenten hebben nu: levenscyclusbeheer, beleidsmotor, veilige kanalen, kill-switch, eventstroom en cross-model orkestratie. PAP transformeert Plugged.in van een controlelaag naar een autonoom agentplatform."
     },
-    "stage4": {
-      "date": "Q1 2026",
+    "stage5": {
+      "date": "Q2 2026",
       "title": "Sensoren → Agenten → Cognitieve Predictieve Automatisering",
       "description": "Plugged.in breidt uit naar de fysieke wereld. Raspberry Pi & lichtgewicht sensorknooppunten streamen: druk, vibratie, warmte, akoestiek, spanning & stroom. Cloud-agenten leren, passen zich aan, voorspellen en handelen. Resultaat: 'Agenten die werken.' Maakt een wereldwijde agent-ondersteunde workforce mogelijk."
     },

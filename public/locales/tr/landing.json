@@ -93,15 +93,15 @@
       "highlight": "100 ayrı MCP yapılandırmasını tek birleşik proxy ile değiştirin. Bir kez güncelleyin, her yere uygulayın. Ekibiniz sadece kurulumda haftada saatler kazanır."
     },
     "memory": {
-      "title": "Bellek Panosu",
-      "description": "AI iş akışları için kalıcı pano depolaması. Adlandırılmış anahtar-değer çiftleri veya TTL süreli yığın tabanlı indeksli depolama kullanın.",
+      "title": "Akıllı Bellek Sistemi",
+      "description": "İnsan bilişinden esinlenen eş merkezli bellek halkaları, akıllı unutma ve kolektif bilgelik ile bellek sistemi. Pano depolamadan doğal olarak çürüyen uzun vadeli anılara ve anonim olarak ortaya çıkan topluluk kalıplarına.",
       "features": {
-        "1": "Upsert davranışlı adlandırılmış girişler ve push/pop ile indeksli yığın",
-        "2": "TTL süresi, text/JSON/base64 içerik türleri, profil izolasyonu",
-        "3": "Platformlar arası erişim için MCP araçları ve SDK'lar (JS, Python, Go)"
+        "1": "Eş merkezli bellek halkaları: Taze gözlemler, prosedürler, pratik, uzun vadeli ve şoklar",
+        "2": "Kolektif En İyi Uygulamalar: Topluluktan gizlilik koruyarak toplanan kalıplar",
+        "3": "Pano, oturumlar, Z-raporları ve 10x token verimliliği ile aşamalı erişim"
       },
-      "highlightLabel": "Üretime Hazır",
-      "highlight": "Bellek Panosu yayında ve üretime hazır. Focus Agent ve gelişmiş bellek katmanları yakında."
+      "highlightLabel": "v3.1.0'DA YENİ",
+      "highlight": "Kolektif En İyi Uygulamalar (CBP) sistemi artık aktif. Ajanlarınız anonimleştirilmiş topluluk kalıplarından öğrenir — hata kurtarma, iş akışları ve en iyi uygulamalar — özel verileri açığa çıkarmadan."
     },
     "agents": {
       "title": "Askeri Düzey Yönetişim ile Otonom Ajanlar",
@@ -692,14 +692,14 @@
       "description": "RAG, gömülü zvec vektör motoru ile sıfırdan yeniden inşa edildi. Sıfır harici bağımlılık — belge parçalama, gömme ve HNSW arama tamamen işlem içi çalışır. Bilgi, harici bir hizmet değil, yerleşik bir yetenek haline gelir."
     },
     "stage3": {
+      "date": "Mart 2026",
+      "title": "Plugged.in v3.1.0 — Kolektif En İyi Uygulamalar",
+      "description": "Ajanlar artık topluluktan öğreniyor. CBP sistemi, k-anonimlik koruması, HMAC tabanlı gizlilik ve bağlamsal enjeksiyon ile yüksek kaliteli anıları anonimleştirilmiş kolektif kalıplara yükseltiyor. Gemini desteği ile AI sağlayıcı soyutlaması ve paylaşımlı vektör altyapısı içerir."
+    },
+    "stage4": {
       "date": "Ekim 2025 Sonu",
       "title": "PAP — Plugged.in Agent Protocol (Kilometre Taşı)",
       "description": "PAP, kontrol + telemetri omurgası olarak yayınlandı. Otonom ajanlar artık şunlara sahip: yaşam döngüsü yönetimi, politika motoru, güvenli kanallar, kill-switch, olay akışı ve çapraz model orkestrasyonu. PAP, Plugged.in'i bir kontrol katmanından otonom bir ajan platformuna dönüştürüyor."
-    },
-    "stage4": {
-      "date": "2026 Q1",
-      "title": "Sensörler → Ajanlar → Bilişsel Öngörücü Otomasyon",
-      "description": "Plugged.in fiziksel dünyaya genişliyor. Raspberry Pi ve hafif sensör düğümleri şunları akıtıyor: basınç, titreşim, ısı, akustik, voltaj ve akım. Bulut ajanları öğreniyor, uyum sağlıyor, tahmin ediyor ve hareket ediyor. Sonuç: 'Çalışan ajanlar.' Küresel bir ajan destekli iş gücünü mümkün kılıyor."
     },
     "outcome": {
       "title": "Bilişsel Öngörücü Otomasyon",
@@ -720,6 +720,11 @@
       "inProgress": "Devam Ediyor",
       "planned": "Planlandı",
       "future": "Gelecek"
+    },
+    "stage5": {
+      "date": "2026 Q2",
+      "title": "Sensörler → Ajanlar → Bilişsel Öngörücü Otomasyon",
+      "description": "Plugged.in fiziksel dünyaya genişliyor. Raspberry Pi ve hafif sensör düğümleri şunları akıtıyor: basınç, titreşim, ısı, akustik, voltaj ve akım. Bulut ajanları öğreniyor, uyum sağlıyor, tahmin ediyor ve hareket ediyor. Sonuç: 'Çalışan ajanlar.' Küresel bir ajan destekli iş gücünü mümkün kılıyor."
     }
   },
   "popularServers": {
