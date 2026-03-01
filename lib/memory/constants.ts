@@ -186,11 +186,22 @@ export const STALE_SESSION_THRESHOLD_HOURS = 24;
 // Collective Best Practices (CBP)
 // ============================================================================
 
-/** Minimum reinforcement count before a memory is eligible for CBP promotion */
+/** Minimum reinforcement count before a memory is eligible for CBP promotion.
+ *  Also used by gut-agent for its eligibility filter. */
 export const CBP_MIN_REINFORCEMENT = 2;
 
-/** Minimum success score for CBP eligibility */
+/** Minimum success score for CBP eligibility.
+ *  Also used by gut-agent for its eligibility filter. */
 export const CBP_MIN_SUCCESS_SCORE = 0.5;
+
+/** Batch limit for CBP promotion pipeline (involves LLM calls per memory) */
+export const CBP_PROMOTION_BATCH_LIMIT = 50;
+
+/** Default success score when memory has no explicit score */
+export const CBP_DEFAULT_SUCCESS_SCORE = 0.5;
+
+/** Initial confidence for newly created patterns */
+export const CBP_INITIAL_CONFIDENCE = 0.3;
 
 /** Cosine similarity threshold for deduplication (≥ 0.90 = same pattern) */
 export const CBP_DEDUP_SIMILARITY_THRESHOLD = 0.90;

@@ -9,6 +9,13 @@ import { createHash, createHmac } from 'crypto';
 /**
  * HMAC-hash a profile UUID for k-anonymity tracking.
  * Uses a keyed hash so raw UUIDs never appear in the collective pool.
+ *
+ * WARNING: Rotating CBP_HASH_SECRET (or the NEXTAUTH_SECRET fallback) will
+ * invalidate all existing profile_hash values in collective_contributions.
+ * The unique constraint (pattern_uuid, profile_hash) would fail to detect
+ * prior contributions from the same profile, inflating unique_profile_count
+ * and potentially defeating k-anonymity.  If rotation is required, run a
+ * migration to re-hash all profile_hash values with the new secret.
  */
 export function hashProfileUuid(profileUuid: string): string {
   const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET;

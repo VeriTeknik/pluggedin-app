@@ -15,6 +15,10 @@ import { db } from '@/db';
 import { collectiveContributionsTable, gutPatternsTable, memoryRingTable } from '@/db/schema';
 
 import {
+  CBP_DEFAULT_SUCCESS_SCORE,
+  CBP_INITIAL_CONFIDENCE,
+  CBP_MIN_REINFORCEMENT,
+  CBP_MIN_SUCCESS_SCORE,
   GUT_AGGREGATION_BATCH_LIMIT,
   GUT_K_ANONYMITY_THRESHOLD,
   GUT_MAX_PATTERN_TOKENS,
@@ -142,8 +146,8 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
       })
       .from(memoryRingTable)
       .where(
-        sql`${memoryRingTable.reinforcement_count} >= 2
-          AND (${memoryRingTable.success_score} IS NULL OR ${memoryRingTable.success_score} >= 0.5)
+        sql`${memoryRingTable.reinforcement_count} >= ${CBP_MIN_REINFORCEMENT}
+          AND (${memoryRingTable.success_score} IS NULL OR ${memoryRingTable.success_score} >= ${CBP_MIN_SUCCESS_SCORE})
           AND ${memoryRingTable.current_decay_stage} != 'forgotten'
           AND ${memoryRingTable.gut_processed} IS NOT TRUE`
       )
@@ -190,7 +194,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
             .update(gutPatternsTable)
             .set({
               occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
-              success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? 0.5}) / (${gutPatternsTable.occurrence_count} + 1)`,
+              success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? CBP_DEFAULT_SUCCESS_SCORE}) / (${gutPatternsTable.occurrence_count} + 1)`,
               unique_profile_count: isNewProfile
                 ? sql`${gutPatternsTable.unique_profile_count} + 1`
                 : gutPatternsTable.unique_profile_count,
@@ -226,9 +230,9 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
               pattern_description: pattern.patternDescription,
               compressed_pattern: pattern.compressedPattern,
               occurrence_count: 1,
-              success_rate: memory.successScore ?? 0.5,
+              success_rate: memory.successScore ?? CBP_DEFAULT_SUCCESS_SCORE,
               unique_profile_count: 1,
-              confidence: 0.3,
+              confidence: CBP_INITIAL_CONFIDENCE,
               metadata: {
                 first_seen: new Date().toISOString(),
                 last_seen: new Date().toISOString(),

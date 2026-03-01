@@ -3,11 +3,9 @@ import { z } from 'zod';
 
 import { submitFeedback } from '@/lib/memory/cbp/injection-engine';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
-import { FeedbackType } from '@/lib/memory/types';
+import { FEEDBACK_TYPE_VALUES } from '@/lib/memory/types';
 
 import { authenticate } from '../../../auth';
-
-const FEEDBACK_TYPE_VALUES = Object.values(FeedbackType) as [string, ...string[]];
 
 const feedbackSchema = z.object({
   pattern_uuid: z.string().uuid(),

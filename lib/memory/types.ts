@@ -86,6 +86,9 @@ export const FeedbackType = {
 } as const;
 export type FeedbackType = (typeof FeedbackType)[keyof typeof FeedbackType];
 
+/** Feedback type values array for Zod enum validation */
+export const FEEDBACK_TYPE_VALUES = Object.values(FeedbackType) as [string, ...string[]];
+
 /** CBP injection trigger contexts */
 export const InjectionContext = {
   PROACTIVE_WARNING: 'proactive_warning',

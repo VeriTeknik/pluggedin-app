@@ -3,6 +3,9 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { sql } from 'drizzle-orm';
+
+import { db } from '@/db';
 import {
   injectContextual,
   injectPostErrorSuggestion,
@@ -108,8 +111,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await runPromotionPipeline();
-    return NextResponse.json(result);
+    // Postgres advisory lock prevents concurrent pipeline runs.  The lock key
+    // is an arbitrary fixed integer; pg_try_advisory_lock returns false
+    // immediately (no blocking) if another session already holds it.
+    const CBP_PIPELINE_LOCK_KEY = 738201;
+    const lockResult = await db.execute(
+      sql`SELECT pg_try_advisory_lock(${CBP_PIPELINE_LOCK_KEY}) AS acquired`
+    );
+    const acquired = (lockResult.rows[0] as { acquired: boolean } | undefined)?.acquired;
+
+    if (!acquired) {
+      return NextResponse.json(
+        { success: false, error: 'Pipeline already running' },
+        { status: 409 }
+      );
+    }
+
+    try {
+      const result = await runPromotionPipeline();
+      return NextResponse.json(result);
+    } finally {
+      await db.execute(sql`SELECT pg_advisory_unlock(${CBP_PIPELINE_LOCK_KEY})`);
+    }
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Internal server error' },

@@ -18,9 +18,11 @@ import {
 
 import {
   CBP_DEDUP_SIMILARITY_THRESHOLD,
+  CBP_DEFAULT_SUCCESS_SCORE,
+  CBP_INITIAL_CONFIDENCE,
   CBP_MIN_REINFORCEMENT,
   CBP_MIN_SUCCESS_SCORE,
-  GUT_AGGREGATION_BATCH_LIMIT,
+  CBP_PROMOTION_BATCH_LIMIT,
   GUT_K_ANONYMITY_THRESHOLD,
 } from '../constants';
 import { generateEmbedding } from '../embedding-service';
@@ -138,7 +140,7 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
   };
 
   try {
-    const memories = await findEligibleMemories(GUT_AGGREGATION_BATCH_LIMIT);
+    const memories = await findEligibleMemories(CBP_PROMOTION_BATCH_LIMIT);
     stats.eligible = memories.length;
 
     for (const memory of memories) {
@@ -200,7 +202,7 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
               .update(gutPatternsTable)
               .set({
                 occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
-                success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? 0.5}) / (${gutPatternsTable.occurrence_count} + 1)`,
+                success_rate: sql`(${gutPatternsTable.success_rate} * ${gutPatternsTable.occurrence_count} + ${memory.successScore ?? CBP_DEFAULT_SUCCESS_SCORE}) / (${gutPatternsTable.occurrence_count} + 1)`,
                 unique_profile_count: isNewProfile
                   ? sql`${gutPatternsTable.unique_profile_count} + 1`
                   : gutPatternsTable.unique_profile_count,
@@ -238,9 +240,9 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
                 pattern_description: anonymizedText.slice(0, 500),
                 compressed_pattern: anonymizedText.slice(0, 200),
                 occurrence_count: 1,
-                success_rate: memory.successScore ?? 0.5,
+                success_rate: memory.successScore ?? CBP_DEFAULT_SUCCESS_SCORE,
                 unique_profile_count: 1,
-                confidence: 0.3,
+                confidence: CBP_INITIAL_CONFIDENCE,
                 metadata: {
                   first_seen: new Date().toISOString(),
                   last_seen: new Date().toISOString(),
@@ -364,7 +366,7 @@ function mapRingTypeToPatternType(ringType: string | null): PatternType {
     case 'procedures': return 'workflow';
     case 'practice': return 'best_practice';
     case 'shocks': return 'error_recovery';
-    case 'longterm': return 'tool_sequence';
+    case 'longterm': return 'best_practice';
     default: return 'best_practice';
   }
 }

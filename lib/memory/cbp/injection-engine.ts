@@ -210,6 +210,13 @@ export async function injectContextual(
 
 /**
  * Submit feedback on a collective pattern.
+ *
+ * Privacy note: collective_feedback stores raw profile_uuid (needed for
+ * per-user upsert semantics), while collective_contributions stores only a
+ * one-way HMAC hash.  An actor who can enumerate pattern UUIDs could correlate
+ * a profile's feedback with its contribution hashes, weakening k-anonymity for
+ * that profile.  This is an accepted trade-off — feedback is intentionally
+ * attributable so users can update their own ratings.
  */
 export async function submitFeedback(
   patternUuid: string,
