@@ -63,7 +63,7 @@ export default function LibraryContent() {
   const { t } = useTranslation('library');
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { docs, isLoading, storageUsage, fileStorage, ragStorage, uploadDoc, removeDoc, downloadDoc } = useLibrary();
+  const { docs, isLoading, storageUsage, fileStorage, ragStorage, uploadDoc, removeDoc, reindexDoc, downloadDoc } = useLibrary();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -230,6 +230,10 @@ export default function LibraryContent() {
     setVersionHistoryDoc(doc);
     setVersionHistoryOpen(true);
   }, []);
+
+  const handleReindex = useCallback(async (doc: Doc) => {
+    await reindexDoc(doc.uuid);
+  }, [reindexDoc]);
 
   const handleViewVersion = useCallback((versionNumber: number) => {
     setViewingVersionNumber(versionNumber);
@@ -643,6 +647,7 @@ export default function LibraryContent() {
               onDelete={handleDelete}
               onPreview={handlePreview}
               onViewVersions={handleViewVersions}
+              onReindex={handleReindex}
               formatFileSize={formatFileSize}
               getMimeTypeIcon={getMimeTypeIcon}
             />

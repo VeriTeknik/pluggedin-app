@@ -2,7 +2,7 @@
 
 import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
-import { mkdir, unlink, writeFile } from 'fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
 
@@ -570,6 +570,83 @@ export async function updateDocRagId(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Re-index a document by reading the stored file and re-running RAG processing.
+ * Deletes existing chunks/vectors first, then re-extracts text and re-embeds.
+ */
+export async function reindexDocument(
+  userId: string,
+  docUuid: string,
+  projectUuid?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (process.env.ENABLE_RAG !== 'true') {
+      return { success: false, error: 'RAG is not enabled' };
+    }
+
+    // Get the document record
+    const doc = await getDocByUuid(userId, docUuid, projectUuid);
+    if (!doc) {
+      return { success: false, error: 'Document not found' };
+    }
+
+    const ragIdentifier = projectUuid || userId;
+
+    // Supported file types for RAG
+    const supportedRagTypes = [
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'text/x-markdown',
+    ];
+
+    if (!supportedRagTypes.includes(doc.mime_type)) {
+      return { success: false, error: `File type ${doc.mime_type} is not supported for indexing` };
+    }
+
+    // Read the stored file
+    const fullPath = buildSecurePath(UPLOADS_BASE_DIR, doc.file_path);
+    let textContent = '';
+
+    if (doc.mime_type === 'application/pdf') {
+      const { extractTextFromPdf } = await import('@/lib/rag/pdf-extract');
+      const buffer = await readFile(fullPath);
+      textContent = await extractTextFromPdf(buffer.buffer as ArrayBuffer);
+    } else {
+      textContent = await readFile(fullPath, 'utf-8');
+    }
+
+    if (!textContent.trim()) {
+      return { success: false, error: 'No text content could be extracted from the file' };
+    }
+
+    // Remove existing vectors and chunks for this document
+    await ragService.removeDocument(doc.uuid, ragIdentifier);
+
+    // Re-process the document
+    const result = await ragService.processDocument(
+      doc.uuid,
+      ragIdentifier,
+      textContent,
+      doc.file_name,
+    );
+
+    if (result.success) {
+      await updateDocRagId(doc.uuid, doc.uuid, userId);
+      ragService.invalidateStorageCache(ragIdentifier);
+      return { success: true };
+    } else {
+      return { success: false, error: result.error || 'Re-indexing failed' };
+    }
+  } catch (error) {
+    console.error('[Library] Re-index document error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Re-indexing failed',
     };
   }
 }

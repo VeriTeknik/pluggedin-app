@@ -1,6 +1,7 @@
 'use client';
 
-import { Clock, Download, Eye, MessageSquare, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Clock, Download, Eye, Loader2, MessageSquare, MoreHorizontal, RefreshCw, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -21,9 +22,17 @@ export interface DocsGridProps {
   onDelete: (doc: Doc) => void;
   onPreview?: (doc: Doc) => void;
   onViewVersions?: (doc: Doc) => void;
+  onReindex?: (doc: Doc) => Promise<void>;
   formatFileSize: (bytes: number) => string;
   getMimeTypeIcon: (mimeType: string) => string;
 }
+
+const RAG_SUPPORTED_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'text/x-markdown',
+];
 
 export function DocsGrid({
   docs,
@@ -31,10 +40,13 @@ export function DocsGrid({
   onDelete,
   onPreview,
   onViewVersions,
+  onReindex,
   formatFileSize,
   getMimeTypeIcon
 }: DocsGridProps) {
   const { t } = useTranslation('library');
+  const [reindexingIds, setReindexingIds] = useState<Set<string>>(new Set());
+
   if (docs.length === 0) {
     return (
       <div className="text-center py-8">
@@ -131,6 +143,33 @@ export function DocsGrid({
                     >
                       <Clock className="mr-2 h-4 w-4" />
                       {t('grid.versions')}
+                    </DropdownMenuItem>
+                  )}
+                  {onReindex && RAG_SUPPORTED_TYPES.includes(doc.mime_type) && (
+                    <DropdownMenuItem
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (reindexingIds.has(doc.uuid)) return;
+                        setReindexingIds(prev => new Set(prev).add(doc.uuid));
+                        try {
+                          await onReindex(doc);
+                        } finally {
+                          setReindexingIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(doc.uuid);
+                            return next;
+                          });
+                        }
+                      }}
+                      className="cursor-pointer"
+                      disabled={reindexingIds.has(doc.uuid)}
+                    >
+                      {reindexingIds.has(doc.uuid) ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      {reindexingIds.has(doc.uuid) ? t('grid.reindexing') : t('grid.reindex')}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem

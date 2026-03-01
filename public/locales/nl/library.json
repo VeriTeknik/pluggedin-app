@@ -73,6 +73,10 @@
   "grid": {
     "noDocuments": "Geen documenten gevonden.",
     "openMenu": "Menu openen",
+    "preview": "Voorbeeld",
+    "versions": "Versiegeschiedenis",
+    "reindex": "Opnieuw indexeren",
+    "reindexing": "Indexeren...",
     "download": "Downloaden",
     "delete": "Verwijderen"
   },

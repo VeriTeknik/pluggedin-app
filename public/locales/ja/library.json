@@ -73,6 +73,10 @@
   "grid": {
     "noDocuments": "ドキュメントが見つかりません。",
     "openMenu": "メニューを開く",
+    "preview": "プレビュー",
+    "versions": "バージョン履歴",
+    "reindex": "再インデックス",
+    "reindexing": "インデックス中...",
     "download": "ダウンロード",
     "delete": "削除"
   },

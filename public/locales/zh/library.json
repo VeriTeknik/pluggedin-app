@@ -73,6 +73,10 @@
   "grid": {
     "noDocuments": "未找到文档。",
     "openMenu": "打开菜单",
+    "preview": "预览",
+    "versions": "版本历史",
+    "reindex": "重新索引",
+    "reindexing": "正在索引...",
     "download": "下载",
     "delete": "删除"
   },

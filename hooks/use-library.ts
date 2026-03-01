@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 
-import { createDoc, deleteDoc, getDocs, getProjectStorageUsage } from '@/app/actions/library';
+import { createDoc, deleteDoc, getDocs, getProjectStorageUsage, reindexDocument } from '@/app/actions/library';
 import { useUploadProgress } from '@/contexts/UploadProgressContext';
 import { useProjects } from '@/hooks/use-projects';
 import { notifications } from '@/lib/notification-helper';
@@ -238,6 +238,31 @@ export function useLibrary() {
     [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast, globalMutate]
   );
 
+  const reindexDoc = useCallback(
+    async (docUuid: string) => {
+      if (!session?.user?.id) {
+        throw new Error('Not authenticated');
+      }
+
+      const result = await reindexDocument(session.user.id, docUuid, currentProject?.uuid);
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Document re-indexed successfully',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to re-index document',
+          variant: 'destructive',
+        });
+        throw new Error(result.error || 'Failed to re-index document');
+      }
+    },
+    [session?.user?.id, currentProject?.uuid, toast]
+  );
+
   const downloadDoc = useCallback(
     (doc: Doc) => {
       if (!session?.user?.id) {
@@ -272,6 +297,7 @@ export function useLibrary() {
     ragStorageAvailable,
     uploadDoc,
     removeDoc,
+    reindexDoc,
     downloadDoc,
     mutate,
   };

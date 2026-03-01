@@ -73,6 +73,10 @@
   "grid": {
     "noDocuments": "Belge bulunamadı.",
     "openMenu": "Menüyü aç",
+    "preview": "Önizleme",
+    "versions": "Sürüm Geçmişi",
+    "reindex": "Yeniden İndeksle",
+    "reindexing": "İndeksleniyor...",
     "download": "İndir",
     "delete": "Sil"
   },

@@ -83,6 +83,9 @@
     "noDocuments": "No documents found.",
     "openMenu": "Open menu",
     "preview": "Preview",
+    "versions": "Version History",
+    "reindex": "Re-index",
+    "reindexing": "Re-indexing...",
     "download": "Download",
     "delete": "Delete"
   },
