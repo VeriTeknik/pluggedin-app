@@ -17,6 +17,9 @@ import {
   calculateStorageFromVectorCount,
   estimateStorageFromDocumentCount,
 } from './rag-storage-utils';
+
+/** Number of chunks to retrieve per query. Override via RAG_SEARCH_TOP_K env var. */
+const RAG_SEARCH_TOP_K = parseInt(process.env.RAG_SEARCH_TOP_K || '5', 10);
 import {
   generateEmbedding,
   generateEmbeddings,
@@ -95,7 +98,7 @@ export class RagService {
       const results = searchVectors({
         embedding,
         domain: 'rag',
-        topK: 5,
+        topK: RAG_SEARCH_TOP_K,
         filter,
       });
 
@@ -190,6 +193,12 @@ export class RagService {
 
       // Step 2: Generate embeddings
       const embeddings = await generateEmbeddings(chunkTexts);
+      if (embeddings.length !== chunkTexts.length) {
+        return {
+          success: false,
+          error: `Embedding count mismatch: expected ${chunkTexts.length}, got ${embeddings.length}`,
+        };
+      }
 
       // Step 3: Insert chunks to PostgreSQL
       const { db } = await import('@/db');
@@ -208,7 +217,20 @@ export class RagService {
         .values(chunkRecords)
         .returning({ uuid: documentChunksTable.uuid });
 
-      // Step 4: Insert vectors to zvec via shared vector service.
+      // Step 4: Validate DB returned all chunk UUIDs
+      if (insertedChunks.length !== chunkTexts.length) {
+        // Partial insert - clean up and fail rather than create phantom vectors
+        const { eq } = await import('drizzle-orm');
+        await db
+          .delete(documentChunksTable)
+          .where(eq(documentChunksTable.document_uuid, documentUuid));
+        return {
+          success: false,
+          error: `Chunk insert mismatch: expected ${chunkTexts.length}, got ${insertedChunks.length}`,
+        };
+      }
+
+      // Step 5: Insert vectors to zvec via shared vector service.
       // If this fails, clean up PG rows to maintain atomicity.
       try {
         const vectorParams = embeddings.map((emb, i) => ({
@@ -218,7 +240,7 @@ export class RagService {
           fields: {
             project_uuid: projectUuid,
             document_uuid: documentUuid,
-            chunk_uuid: insertedChunks[i]?.uuid || `${documentUuid}-chunk-${i}`,
+            chunk_uuid: insertedChunks[i].uuid,
           },
         }));
 

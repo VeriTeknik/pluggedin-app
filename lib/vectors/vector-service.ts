@@ -42,9 +42,21 @@ import { EMBEDDING_DIMENSIONS } from './types';
 
 // ─── Configuration ─────────────────────────────────────────────────
 
-const ZVEC_DATA_DIR = process.env.ZVEC_DATA_PATH
-  || process.env.MEMORY_VECTOR_DATA_DIR
-  || path.join(process.cwd(), 'data', 'vectors');
+const ZVEC_DATA_DIR = (() => {
+  const raw = process.env.ZVEC_DATA_PATH
+    || process.env.MEMORY_VECTOR_DATA_DIR
+    || path.join(process.cwd(), 'data', 'vectors');
+  const resolved = path.resolve(raw);
+  // Validate the path is within the application root or an explicit data directory.
+  // This prevents misconfigured env vars from writing to sensitive system paths.
+  const appRoot = path.resolve(process.cwd());
+  if (!resolved.startsWith(appRoot + path.sep) && !resolved.startsWith(appRoot)) {
+    // Allow explicit override outside app root (e.g. /data/vectors in Docker)
+    // but log a warning so operators are aware.
+    console.warn(`[zvec] ZVEC_DATA_PATH "${resolved}" is outside app root "${appRoot}". Ensure this is intentional.`);
+  }
+  return resolved;
+})();
 
 // Persist zvec state on globalThis to survive Next.js HMR reloads.
 // Without this, module reload loses collection handles while RocksDB
@@ -120,7 +132,11 @@ function isIndexHealthy(collection: ZVecCollection): boolean {
   try {
     const { docCount, indexCompleteness } = collection.stats;
     if (docCount === 0) return true; // Empty collection is healthy
-    // If we have documents but embedding index is less than half complete, treat as corrupted
+    // Threshold 0.5: zvec reports indexCompleteness as a 0.0–1.0 ratio of indexed
+    // vs total documents. A healthy index after optimizeSync should be 1.0. Values
+    // near 0.0 indicate a corrupted or failed build. 0.5 was chosen as a conservative
+    // midpoint — low enough to avoid false positives during in-progress builds, high
+    // enough to catch indexes that will return mostly empty results.
     const embeddingCompleteness = indexCompleteness?.embedding;
     if (typeof embeddingCompleteness === 'number' && embeddingCompleteness < 0.5) {
       return false;
@@ -170,12 +186,19 @@ const ALLOWED_FILTER_FIELDS: ReadonlySet<string> = new Set([
   'profile_uuid', 'agent_uuid', 'ring_type', 'pattern_type',
 ]);
 
+/** UUID v4 pattern — all current filter values are UUIDs */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Sanitize a value for use in zvec filter expressions.
- * Removes double quotes and backslashes to prevent filter injection.
+ * Validate and sanitize a value for use in zvec filter expressions.
+ * Since all current filter values are UUIDs, we validate against the UUID format
+ * rather than trying to strip dangerous characters — rejecting non-UUIDs outright.
  */
 function sanitizeFilterValue(value: string): string {
-  return value.replace(/["\\]/g, '');
+  if (!UUID_REGEX.test(value)) {
+    throw new Error(`Invalid filter value (expected UUID): ${value}`);
+  }
+  return value;
 }
 
 /**
@@ -217,9 +240,11 @@ export function upsertVector(params: VectorInsertParams): void {
  * NOTE: upsertSync and optimizeSync are synchronous and block the event loop.
  * For large batches or high-concurrency scenarios, consider offloading to a
  * Worker thread. optimizeSync rebuilds the HNSW index (O(n log n) in total
- * vectors) and is called per-batch to prevent corruption; if performance
- * becomes an issue, defer optimization to a background job triggered when
- * indexCompleteness drops below a threshold.
+ * vectors) and is called when indexCompleteness < 0.95 to avoid redundant work.
+ *
+ * TODO: Move vector operations to a Worker thread to prevent event-loop
+ * blocking during large document uploads (hundreds of chunks).
+ * See: https://github.com/VeriTeknik/pluggedin-app/issues/XXX
  */
 export function upsertVectors(paramsList: VectorInsertParams[]): void {
   if (paramsList.length === 0) return;
@@ -240,8 +265,13 @@ export function upsertVectors(paramsList: VectorInsertParams[]): void {
       fields: p.fields,
     }));
     collection.upsertSync(docs);
-    // Build/optimize HNSW index after batch inserts to prevent corruption
-    collection.optimizeSync();
+    // Only rebuild HNSW index when completeness drops below threshold.
+    // optimizeSync is O(n log n) in total vectors, so skipping when the
+    // index is already near-complete avoids redundant work.
+    const completeness = collection.stats.indexCompleteness?.embedding;
+    if (typeof completeness !== 'number' || completeness < 0.95) {
+      collection.optimizeSync();
+    }
   }
 }
 

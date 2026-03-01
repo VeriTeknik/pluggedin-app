@@ -55,7 +55,6 @@ import { DocsTable } from './components/DocsTable';
 import { DocumentPreview } from './components/DocumentPreview';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UploadDialog } from './components/UploadDialog';
-import { UploadProgress } from './components/UploadProgress';
 
 const columnHelper = createColumnHelper<Doc>();
 
@@ -594,9 +593,6 @@ export default function LibraryContent() {
             />
           </div>
         </div>
-
-        {/* Upload Progress */}
-        <UploadProgress />
 
         {/* Stats */}
         <DocsStats

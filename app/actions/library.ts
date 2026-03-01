@@ -635,15 +635,6 @@ export async function reindexDocument(
   }
 }
 
-// Legacy: upload status polling is no longer needed with synchronous zvec processing.
-// Kept for backward compatibility with the upload-status API route.
-export async function getUploadStatus(
-  _uploadId: string,
-  _ragIdentifier: string
-): Promise<{ success: boolean; status?: any; error?: string }> {
-  return { success: false, error: 'Upload not found - processing is synchronous' };
-}
-
 export async function createDoc(
   userId: string,
   projectUuid: string | undefined,

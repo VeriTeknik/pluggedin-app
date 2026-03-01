@@ -71,44 +71,9 @@ export interface Doc {
   modelAttributions?: ModelAttribution[];
 }
 
-// New interfaces for RAG progress tracking
-interface UploadProgress {
-  upload_id: string;
-  status: 'processing' | 'completed' | 'failed';
-  message: string;
-  document_id: string | null;
-  progress: {
-    step: 'text_extraction' | 'chunking' | 'id_generation' | 'embeddings' | 'database_insertion';
-    current: number;
-    total: number;
-    step_progress: {
-      chunks_processed?: number;
-      total_chunks?: number;
-      batches_completed?: number;
-      total_batches?: number;
-      percentage: number;
-      estimated_remaining_time?: string;
-    };
-  };
-}
-
-export interface UploadProgressState {
-  upload_id: string;
-  doc_uuid?: string;
-  file_name: string;
-  file_size: number;
-  status: 'processing' | 'completed' | 'failed';
-  progress: UploadProgress['progress'];
-  message: string;
-  document_id: string | null;
-  created_at: Date;
-}
-
-
 export interface DocUploadResponse {
   success: boolean;
   doc?: Doc;
-  upload_id?: string; // Legacy: no longer used with synchronous zvec processing
   error?: string;
   ragProcessed?: boolean;
   ragError?: string;
