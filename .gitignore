@@ -72,8 +72,8 @@ console-log-backup-*/
 # User uploads
 uploads/
 
-# Memory system vector data (contains user embeddings - NEVER commit)
-data/memory-vectors/
+# Vector data (zvec collections, embeddings - NEVER commit)
+/data
 
 # Auto-generated reports
 z_reports/

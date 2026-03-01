@@ -21,8 +21,7 @@ vi.mock('@/db', () => ({
 vi.mock('fs/promises');
 vi.mock('@/lib/rag-service', () => ({
   ragService: {
-    uploadDocument: vi.fn(),
-    getUploadStatus: vi.fn(),
+    processDocument: vi.fn(),
     removeDocument: vi.fn(),
   }
 }));
@@ -323,7 +322,7 @@ describe('Version Manager Tests', () => {
 
       // Mock RAG service failure
       const { ragService } = await import('@/lib/rag-service');
-      (ragService.uploadDocument as any).mockRejectedValue(new Error('RAG service unavailable'));
+      (ragService.processDocument as any).mockRejectedValue(new Error('RAG service unavailable'));
 
       const result = await saveDocumentVersion({
         documentId,

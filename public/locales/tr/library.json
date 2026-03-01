@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "Belgeler",
-    "description": "Belge dosyalarınızı yükleyin, yönetin ve paylaşın",
+    "description": "Belgelerinizi yerleşik vektör aramasıyla yükleyin ve yönetin — hızlı, yerel AI erişimi için zvec ile desteklenmektedir",
     "loading": "Belgeler yükleniyor...",
     "tableHeaders": {
       "name": "Ad",
@@ -73,6 +73,12 @@
   "grid": {
     "noDocuments": "Belge bulunamadı.",
     "openMenu": "Menüyü aç",
+    "preview": "Önizleme",
+    "versions": "Sürüm Geçmişi",
+    "reindex": "Yeniden İndeksle",
+    "reindexing": "İndeksleniyor...",
+    "reindexSuccess": "Belge başarıyla yeniden dizine eklendi",
+    "reindexError": "Belge yeniden dizine eklenemedi",
     "download": "İndir",
     "delete": "Sil"
   },
@@ -104,6 +110,13 @@
     "pdfError": "PDF yüklenirken hata",
     "downloadPDF": "PDF İndir",
     "loadingPDF": "PDF Yükleniyor..."
+  },
+  "upload": {
+    "success": "Belge Yüklendi",
+    "indexed": "Belge yüklendi ve arama için indekslendi",
+    "savedOnly": "Belge başarıyla yüklendi",
+    "ragFailed": "Yükleme Başarılı",
+    "ragFailedDesc": "Belge yüklendi ancak indeksleme başarısız: {{error}}"
   },
   "uploadProgress": {
     "title": "Yükleme İlerlemesi",

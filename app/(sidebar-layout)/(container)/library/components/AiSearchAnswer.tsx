@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle,ChevronDown, ChevronUp, FileText, Loader2, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -9,6 +9,36 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+
+/**
+ * Highlight search query terms within text.
+ * Splits query into words (3+ chars) and wraps matches in <mark>.
+ */
+function highlightTerms(text: string, query: string): React.ReactNode {
+  if (!query || !text) return text;
+
+  // Extract meaningful words (3+ chars) from query
+  const terms = query
+    .split(/\s+/)
+    .filter((t) => t.length >= 3)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  if (terms.length === 0) return text;
+
+  const pattern = new RegExp(`(\\b(?:${terms.join('|')})\\b)`, 'gi');
+  const parts = text.split(pattern);
+
+  // split(/(capture)/) places matched segments at odd indices
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 dark:text-yellow-100 rounded-sm px-0.5">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
 
 export interface AiSearchAnswerProps {
   answer: string | null;
@@ -23,6 +53,7 @@ export interface AiSearchAnswerProps {
       provider: string;
     };
     source?: string;
+    isUnresolved?: boolean;
   }>;
   isLoading: boolean;
   error: string | null;
@@ -105,8 +136,12 @@ export function AiSearchAnswer({ answer, sources = [], documentIds = [], documen
       </CardHeader>
       {isExpanded && (
         <CardContent>
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="text-sm whitespace-pre-wrap">{answer}</p>
+          <div className="prose prose-sm dark:prose-invert max-w-none space-y-3">
+            {answer.split('\n\n---\n\n').map((chunk, i) => (
+              <p key={i} className="text-sm whitespace-pre-wrap">
+                {highlightTerms(chunk, query)}
+              </p>
+            ))}
           </div>
           {(sources.length > 0 || documents.length > 0) && (
             <>
@@ -128,7 +163,7 @@ export function AiSearchAnswer({ answer, sources = [], documentIds = [], documen
                                             'text-gray-600';
 
                       // Check if document is unresolved (couldn't be matched to database)
-                      const isUnresolved = (doc as any).isUnresolved === true;
+                      const isUnresolved = doc.isUnresolved === true;
 
                       if (isUnresolved) {
                         // Unresolved documents are non-clickable with visual indication

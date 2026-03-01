@@ -8,6 +8,8 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
+import { isRagSupported } from '@/lib/rag/constants';
+import { extractTextFromFile } from '@/lib/rag/text-extract';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
 import { buildSecurePath, validatePathComponent, getSecureBaseUploadDir } from '@/lib/secure-path-builder';
@@ -504,34 +506,35 @@ async function validateProjectStorageLimit(
   }
 }
 
-// Helper function: Process RAG upload - now returns upload_id for tracking
+// Helper function: Process RAG upload (synchronous with embedded zvec)
 async function processRagUpload(
   docRecord: any,
   textContent: string,
   file: File,
-  name: string,
-  tags: string[],
+  _name: string,
+  _tags: string[],
   userId: string,
-  projectUuid?: string
+  projectUuid: string
 ) {
   try {
-    // Use projectUuid for project-specific RAG, fallback to userId for legacy
-    const ragIdentifier = projectUuid || userId;
-    
-    const result = await ragService.uploadDocument(file, ragIdentifier);
+    const result = await ragService.processDocument(
+      docRecord.uuid,
+      projectUuid,
+      textContent,
+      file.name,
+    );
 
     if (result.success) {
-      // Invalidate storage cache after uploading document
-      ragService.invalidateStorageCache(ragIdentifier);
-      return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
+      await updateDocRagId(docRecord.uuid, docRecord.uuid, userId);
+      ragService.invalidateStorageCache(projectUuid);
+      return { ragProcessed: true, ragError: undefined };
     } else {
-      throw new Error(result.error || 'RAG upload failed');
+      throw new Error(result.error || 'RAG processing failed');
     }
   } catch (ragErr) {
-    console.error('Failed to send document to RAG API:', ragErr);
+    console.error('Failed to process document for RAG:', ragErr);
     const ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
-    // Continue with success even if RAG fails
-    return { ragProcessed: false, ragError, upload_id: undefined };
+    return { ragProcessed: false, ragError };
   }
 }
 
@@ -565,24 +568,69 @@ export async function updateDocRagId(
   }
 }
 
-// Function to get upload status from RAG API
-export async function getUploadStatus(
-  uploadId: string,
-  ragIdentifier: string
-): Promise<{ success: boolean; status?: any; error?: string }> {
+/**
+ * Re-index a document by reading the stored file and re-running RAG processing.
+ * Deletes existing chunks/vectors first, then re-extracts text and re-embeds.
+ */
+export async function reindexDocument(
+  userId: string,
+  docUuid: string,
+  projectUuid?: string
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const { ragService } = await import('@/lib/rag-service');
-    const result = await ragService.getUploadStatus(uploadId, ragIdentifier);
-    
-    return {
-      success: true,
-      status: result
-    };
+    if (process.env.ENABLE_RAG !== 'true') {
+      return { success: false, error: 'RAG is not enabled' };
+    }
+
+    if (!projectUuid) {
+      return { success: false, error: 'No active project selected. Please select or create a project first.' };
+    }
+
+    // Get the document record
+    const doc = await getDocByUuid(userId, docUuid, projectUuid);
+    if (!doc) {
+      return { success: false, error: 'Document not found' };
+    }
+
+    const ragIdentifier = projectUuid;
+
+    if (!isRagSupported(doc.mime_type)) {
+      return { success: false, error: `File type ${doc.mime_type} is not supported for indexing` };
+    }
+
+    // Read the stored file and extract text
+    const fullPath = buildSecurePath(UPLOADS_BASE_DIR, doc.file_path);
+    const textContent = await extractTextFromFile(fullPath, doc.mime_type);
+
+    if (!textContent.trim()) {
+      return { success: false, error: 'No text content could be extracted from the file' };
+    }
+
+    // Remove existing vectors using the ID they were indexed under.
+    // AI-generated documents may have rag_document_id !== doc.uuid.
+    const vectorDocId = doc.rag_document_id ?? doc.uuid;
+    await ragService.removeDocument(vectorDocId, ragIdentifier);
+
+    // Re-process using doc.uuid (normalizes AI docs going forward)
+    const result = await ragService.processDocument(
+      doc.uuid,
+      ragIdentifier,
+      textContent,
+      doc.file_name,
+    );
+
+    if (result.success) {
+      await updateDocRagId(doc.uuid, doc.uuid, userId);
+      ragService.invalidateStorageCache(ragIdentifier);
+      return { success: true };
+    } else {
+      return { success: false, error: result.error || 'Re-indexing failed' };
+    }
   } catch (error) {
-    console.error('Failed to get upload status:', error);
+    console.error('[Library] Re-index document error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Re-indexing failed',
     };
   }
 }
@@ -613,39 +661,25 @@ export async function createDoc(
     // Step 5 & 6: Process RAG upload only for supported file types
     let ragProcessed = false;
     let ragError: string | undefined;
-    let upload_id: string | undefined;
-    
-    // Only send PDF, text, and markdown files to RAG
-    const supportedRagTypes = [
-      'application/pdf',
-      'text/plain',
-      'text/markdown',
-      'text/x-markdown',
-    ];
-    
-    if (process.env.ENABLE_RAG === 'true' && supportedRagTypes.includes(file.type)) {
+    if (process.env.ENABLE_RAG === 'true' && isRagSupported(file.type)) {
       // Extract text content for RAG
-      // For now, we'll use a simple approach for text files
-      // PDF extraction would require additional libraries like pdf-parse
       let textContent = '';
-      
+
       if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
-        // For text files, convert to string
         const arrayBuffer = await file.arrayBuffer();
         textContent = new TextDecoder().decode(arrayBuffer);
       } else if (file.type === 'application/pdf') {
-        // For PDFs, we'd need a library like pdf-parse
-        // For now, just use the description as placeholder
-        textContent = description || 'PDF content extraction not implemented';
+        const { extractTextFromPdf } = await import('@/lib/rag/pdf-extract');
+        const arrayBuffer = await file.arrayBuffer();
+        textContent = await extractTextFromPdf(arrayBuffer);
       }
-      
-      // Process RAG upload
+
+      // Process RAG (synchronous with embedded zvec)
       const ragResult = await processRagUpload(
         docRecord, textContent, file, name, tags, userId, projectUuid
       );
       ragProcessed = ragResult.ragProcessed;
       ragError = ragResult.ragError;
-      upload_id = ragResult.upload_id;
     } else if (process.env.ENABLE_RAG === 'true') {
       // File type not supported for RAG
       console.log(`File type ${file.type} not supported for RAG processing`);
@@ -691,7 +725,6 @@ export async function createDoc(
     return {
       success: true,
       doc,
-      upload_id, // Include upload_id for progress tracking
       ragProcessed,
       ragError,
     };

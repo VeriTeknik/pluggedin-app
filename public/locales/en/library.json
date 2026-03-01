@@ -44,7 +44,7 @@
   },
   "page": {
     "title": "Documents",
-    "description": "Upload, manage, and share your documentation files",
+    "description": "Upload and manage your documents with embedded vector search — powered by zvec for fast, local AI retrieval",
     "loading": "Loading documents...",
     "tableHeaders": {
       "name": "Name",
@@ -83,6 +83,11 @@
     "noDocuments": "No documents found.",
     "openMenu": "Open menu",
     "preview": "Preview",
+    "versions": "Version History",
+    "reindex": "Re-index",
+    "reindexing": "Re-indexing...",
+    "reindexSuccess": "Document re-indexed successfully",
+    "reindexError": "Failed to re-index document",
     "download": "Download",
     "delete": "Delete"
   },
@@ -199,6 +204,13 @@
       "embeddings": "Converting text to vector representations",
       "databaseInsertion": "Saving processed data to database"
     }
+  },
+  "upload": {
+    "success": "Document Uploaded",
+    "indexed": "Document uploaded and indexed for search",
+    "savedOnly": "Document uploaded successfully",
+    "ragFailed": "Upload Successful",
+    "ragFailedDesc": "Document uploaded but indexing failed: {{error}}"
   },
   "uploadMetadata": {
     "title": "Upload Information",

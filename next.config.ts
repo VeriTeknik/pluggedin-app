@@ -12,7 +12,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['rate-limiter-flexible', '@zvec/zvec'],
+  serverExternalPackages: ['rate-limiter-flexible', '@zvec/zvec', 'unpdf'],
   allowedDevOrigins: ['plugged.in', 'staging.plugged.in'],
   async rewrites() {
     return [];

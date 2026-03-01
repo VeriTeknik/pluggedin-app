@@ -126,6 +126,7 @@
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
+    "unpdf": "^1.4.0",
     "use-debounce": "^10.1.0",
     "uuid": "^11.1.0",
     "vitest": "^3.2.4",

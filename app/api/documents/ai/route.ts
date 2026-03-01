@@ -300,88 +300,43 @@ export async function POST(request: NextRequest) {
       return document;
     });
 
-    // Trigger RAG processing only for specific file formats
-    if (process.env.ENABLE_RAG === 'true' && ['md', 'txt', 'pdf'].includes(validatedData.format)) {
-      // Extract text content based on format
-      const textContent = validatedData.format === 'md' || validatedData.format === 'txt'
-        ? processedContent
-        : ''; // PDF would need special extraction
+    // Trigger RAG processing only for text-based formats (synchronous with embedded zvec)
+    if (process.env.ENABLE_RAG === 'true' && activeProfile.project_uuid && ['md', 'txt'].includes(validatedData.format) && processedContent) {
+      const { ragService } = await import('@/lib/rag-service');
+      const { updateDocRagId } = await import('@/app/actions/library');
 
-      if (textContent) {
-        // Import RAG service and helper function dynamically to avoid circular dependencies
-        const { ragService } = await import('@/lib/rag-service');
-        const { updateDocRagId } = await import('@/app/actions/library');
+      try {
+        // Use the document's own UUID so re-index can find vectors by doc.uuid
+        const result = await ragService.processDocument(
+          documentId,
+          activeProfile.project_uuid,
+          processedContent,
+          filename,
+        );
 
-        // Create a dummy file object for AI-generated content
-        const dummyFile = new File([textContent], filename, { type: mimeType });
+        if (result.success) {
+          const updateResult = await updateDocRagId(documentId, documentId, user.id);
+          if (!updateResult.success) {
+            console.error(`Failed to update RAG ID for document ${documentId}:`, updateResult.error);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to process AI document in RAG:', error);
 
+        // Create a notification about the RAG failure
         try {
-          // Upload to RAG and get upload_id
-          const uploadResult = await ragService.uploadDocument(
-            dummyFile,
-            activeProfile.project_uuid || user.id
-          );
-
-          if (uploadResult.success && uploadResult.upload_id) {
-            // Poll for upload completion to get document_id
-            const maxAttempts = 30; // 30 seconds max wait
-            let ragDocumentId: string | null = null;
-
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-              // Wait 1 second between polls
-              await new Promise(resolve => setTimeout(resolve, 1000));
-
-              try {
-                const statusResult = await ragService.getUploadStatus(
-                  uploadResult.upload_id,
-                  activeProfile.project_uuid || user.id
-                );
-
-                if (statusResult.progress?.status === 'completed' && statusResult.progress?.document_id) {
-                  ragDocumentId = statusResult.progress.document_id;
-                  console.log(`RAG upload completed for AI document ${documentId}, RAG ID: ${ragDocumentId}`);
-
-                  // Update document with RAG document ID
-                  const updateResult = await updateDocRagId(documentId, ragDocumentId, user.id);
-                  if (!updateResult.success) {
-                    console.error(`Failed to update RAG ID for document ${documentId}:`, updateResult.error);
-                  }
-                  break;
-                } else if (statusResult.progress?.status === 'failed') {
-                  console.error('RAG upload failed:', statusResult.progress);
-                  throw new Error('RAG processing failed');
-                }
-              } catch (pollError) {
-                console.error(`Error polling upload status (attempt ${attempt + 1}/${maxAttempts}):`, pollError);
-                // Continue polling unless it's the last attempt
-                if (attempt === maxAttempts - 1) {
-                  throw pollError;
-                }
-              }
-            }
-
-            if (!ragDocumentId) {
-              console.warn(`RAG upload timed out for document ${documentId} after ${maxAttempts} seconds`);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to process AI document in RAG:', error);
-
-          // Create a notification about the RAG failure
-          try {
-            await db.insert(notificationsTable).values({
-              id: randomUUID(),
-              profile_uuid: activeProfile.uuid,
-              type: 'document_rag_failed',
-              title: 'RAG Processing Failed',
-              message: `Failed to process "${validatedData.title}" for search capabilities. The document was saved but may not be searchable.`,
-              severity: 'WARNING',
-              link: `/library/${documentId}`,
-              created_at: new Date(),
-            });
-          } catch (notificationError) {
-            console.error('Failed to create RAG failure notification:', notificationError);
-          }
+          await db.insert(notificationsTable).values({
+            id: randomUUID(),
+            profile_uuid: activeProfile.uuid,
+            type: 'document_rag_failed',
+            title: 'RAG Processing Failed',
+            message: `Failed to process "${validatedData.title}" for search capabilities. The document was saved but may not be searchable.`,
+            severity: 'WARNING',
+            link: `/library/${documentId}`,
+            created_at: new Date(),
+          });
+        } catch (notificationError) {
+          console.error('Failed to create RAG failure notification:', notificationError);
         }
       }
     }

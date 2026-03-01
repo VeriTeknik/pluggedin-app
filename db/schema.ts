@@ -1071,6 +1071,44 @@ export const docsRelations = relations(docsTable, ({ one, many }) => ({
   modelAttributions: many(documentModelAttributionsTable),
 }));
 
+// ─── Document Chunks (RAG Vector Storage) ───────────────────────────
+
+export const documentChunksTable = pgTable(
+  'document_chunks',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    document_uuid: uuid('document_uuid')
+      .notNull()
+      .references(() => docsTable.uuid, { onDelete: 'cascade' }),
+    project_uuid: uuid('project_uuid')
+      .notNull()
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
+    chunk_index: integer('chunk_index').notNull(),
+    chunk_text: text('chunk_text').notNull(),
+    zvec_vector_id: varchar('zvec_vector_id', { length: 255 }).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    documentChunksProjectIdx: index('document_chunks_project_uuid_idx').on(table.project_uuid),
+    documentChunksDocumentIdx: index('document_chunks_document_uuid_idx').on(table.document_uuid),
+    documentChunksZvecIdx: index('document_chunks_zvec_vector_id_idx').on(table.zvec_vector_id),
+    documentChunksUniqueIdx: uniqueIndex('document_chunks_doc_chunk_idx').on(table.document_uuid, table.chunk_index),
+  })
+);
+
+export const documentChunksRelations = relations(documentChunksTable, ({ one }) => ({
+  document: one(docsTable, {
+    fields: [documentChunksTable.document_uuid],
+    references: [docsTable.uuid],
+  }),
+  project: one(projectsTable, {
+    fields: [documentChunksTable.project_uuid],
+    references: [projectsTable.uuid],
+  }),
+}));
+
 // New table for document versions
 export const documentVersionsTable = pgTable(
   'document_versions',

@@ -35,8 +35,9 @@ import type { RingType } from './types';
 // Configuration
 // ============================================================================
 
-const ZVEC_DATA_DIR = process.env.MEMORY_VECTOR_DATA_DIR
-  || path.join(process.cwd(), 'data', 'memory-vectors');
+const ZVEC_DATA_DIR = process.env.ZVEC_DATA_PATH
+  || process.env.MEMORY_VECTOR_DATA_DIR
+  || path.join(process.cwd(), 'data', 'vectors');
 
 let initialized = false;
 

@@ -270,12 +270,12 @@
       "description": "Test MCP servers with any model - Claude, GPT, Llama, and more. Virtual scrolling for large conversations and custom instructions support."
     },
     "ragIntegration": {
-      "title": "AI Knowledge Platform (RAG)",
-      "description": "Upload documents, create knowledge bases, and query them through any MCP client. Secure, project-based isolation with enterprise-grade security."
+      "title": "Embedded Vector Search (RAG)",
+      "description": "In-process vector engine powered by zvec — no external services needed. Upload documents, build knowledge bases, and query them locally with low-latency semantic search."
     },
     "documentLibrary": {
       "title": "Document Library",
-      "description": "Upload PDFs, DOCX, TXT, and Markdown files. Your AI can query and reference your specific documents."
+      "description": "Upload PDFs, TXT, and Markdown files. Automatically chunked, embedded, and indexed locally for instant AI-powered retrieval."
     },
     "aiDocumentExchange": {
       "title": "AI-Generated Documents",
@@ -283,7 +283,7 @@
     },
     "semanticSearch": {
       "title": "Semantic Search",
-      "description": "Query your entire knowledge base with natural language. Find relevant context instantly."
+      "description": "Query your entire knowledge base with natural language. Embedded HNSW vector index delivers fast, relevant results ranked by similarity."
     },
     "customInstructions": {
       "title": "Custom Instructions",

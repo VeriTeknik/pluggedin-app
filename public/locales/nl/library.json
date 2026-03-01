@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "Documenten",
-    "description": "Upload, beheer en deel je documentatiebestanden",
+    "description": "Upload en beheer uw documenten met ingebouwde vectorzoekopdrachten — aangedreven door zvec voor snelle, lokale AI-retrieval",
     "loading": "Documenten laden...",
     "tableHeaders": {
       "name": "Naam",
@@ -73,6 +73,12 @@
   "grid": {
     "noDocuments": "Geen documenten gevonden.",
     "openMenu": "Menu openen",
+    "preview": "Voorbeeld",
+    "versions": "Versiegeschiedenis",
+    "reindex": "Opnieuw indexeren",
+    "reindexing": "Indexeren...",
+    "reindexSuccess": "Document succesvol opnieuw geïndexeerd",
+    "reindexError": "Het opnieuw indexeren van het document is mislukt",
     "download": "Downloaden",
     "delete": "Verwijderen"
   },
@@ -104,6 +110,13 @@
     "pdfError": "Fout bij laden van PDF",
     "downloadPDF": "PDF Downloaden",
     "loadingPDF": "PDF Laden..."
+  },
+  "upload": {
+    "success": "Document Geüpload",
+    "indexed": "Document geüpload en geïndexeerd voor zoeken",
+    "savedOnly": "Document succesvol geüpload",
+    "ragFailed": "Upload Geslaagd",
+    "ragFailedDesc": "Document geüpload maar indexering mislukt: {{error}}"
   },
   "uploadProgress": {
     "title": "Upload Voortgang",

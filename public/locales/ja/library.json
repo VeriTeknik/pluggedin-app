@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "ドキュメント",
-    "description": "ドキュメントファイルをアップロード、管理、共有",
+    "description": "埋め込みベクトル検索でドキュメントをアップロード・管理 — zvecによる高速ローカルAI検索",
     "loading": "ドキュメントを読み込み中...",
     "tableHeaders": {
       "name": "名前",
@@ -73,6 +73,12 @@
   "grid": {
     "noDocuments": "ドキュメントが見つかりません。",
     "openMenu": "メニューを開く",
+    "preview": "プレビュー",
+    "versions": "バージョン履歴",
+    "reindex": "再インデックス",
+    "reindexing": "インデックス中...",
+    "reindexSuccess": "ドキュメントの再インデックスが完了しました",
+    "reindexError": "ドキュメントの再インデックスに失敗しました",
     "download": "ダウンロード",
     "delete": "削除"
   },
@@ -104,6 +110,13 @@
     "pdfError": "PDF読み込みエラー",
     "downloadPDF": "PDFをダウンロード",
     "loadingPDF": "PDF読み込み中..."
+  },
+  "upload": {
+    "success": "ドキュメントがアップロードされました",
+    "indexed": "ドキュメントがアップロードされ、検索用にインデックスされました",
+    "savedOnly": "ドキュメントが正常にアップロードされました",
+    "ragFailed": "アップロード成功",
+    "ragFailedDesc": "ドキュメントはアップロードされましたが、インデックスに失敗しました: {{error}}"
   },
   "uploadProgress": {
     "title": "アップロード進行状況",
