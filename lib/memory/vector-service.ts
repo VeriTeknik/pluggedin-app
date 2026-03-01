@@ -21,6 +21,16 @@ import {
 import { DEFAULT_TOP_K, SIMILARITY_THRESHOLD } from './constants';
 import type { RingType } from './types';
 
+/**
+ * Guard: profileUuid must be a non-empty string.
+ * buildFilter silently drops empty values, which would remove tenant isolation.
+ */
+function requireProfileUuid(profileUuid: string): void {
+  if (!profileUuid) {
+    throw new Error('profileUuid is required for memory vector operations');
+  }
+}
+
 // ============================================================================
 // Upsert Operations
 // ============================================================================
@@ -34,6 +44,7 @@ export function upsertFreshMemoryVector(
   profileUuid: string,
   agentUuid?: string | null
 ): void {
+  requireProfileUuid(profileUuid);
   upsertVector({
     id: uuid,
     embedding,
@@ -55,6 +66,7 @@ export function upsertMemoryRingVector(
   ringType: string,
   agentUuid?: string | null
 ): void {
+  requireProfileUuid(profileUuid);
   upsertVector({
     id: uuid,
     embedding,
@@ -134,6 +146,8 @@ export function searchFreshMemory(params: {
   threshold?: number;
   agentUuid?: string;
 }): Array<{ uuid: string; score: number }> {
+  requireProfileUuid(params.profileUuid);
+
   const filter = buildFilter([
     ['profile_uuid', params.profileUuid],
     params.agentUuid ? ['agent_uuid', params.agentUuid] : null,
@@ -169,6 +183,7 @@ export function searchMemoryRing(params: {
     threshold,
     agentUuid,
   } = params;
+  requireProfileUuid(profileUuid);
   const topK = topKParam ?? DEFAULT_TOP_K;
 
   // For single ring type, use filter. For multiple, over-fetch and filter in JS.
