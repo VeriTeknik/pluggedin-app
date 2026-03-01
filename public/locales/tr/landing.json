@@ -69,14 +69,14 @@
   "fourPillars": {
     "badge": "Eksiksiz Platform",
     "title": "Dört Sütun. Sonsuz Olasılıklar.",
-    "subtitle": "MCP orkestrasyonu, RAG v2 doküman yönetimi, kalıcı bellek sistemleri ve otonom ajan yaşam döngüsü yönetimini birleştiren tek birleşik platform.",
+    "subtitle": "MCP orkestrasyonu, gömülü vektör arama, kalıcı bellek sistemleri ve otonom ajan yaşam döngüsü yönetimini birleştiren tek birleşik platform.",
     "knowledge": {
       "title": "AI'nızın Bellek Bankası",
-      "description": "Belgeleri bir kez yükleyin, her yerden erişin. RAG v2 motorumuz kurumsal bilginizi her AI'nın kullanabileceği kalıcı, aranabilir bağlama dönüştürür.",
+      "description": "Belgeleri bir kez yükleyin, her yerden erişin. Gömülü vektör motorumuz kurumsal bilginizi her AI'nın kullanabileceği kalıcı, aranabilir bağlama dönüştürür — harici hizmet gerekmez.",
       "features": {
         "1": "Tam model atıf ve sürüm geçmişi ile AI tarafından üretilen belgeler",
-        "2": "Tüm kütüphanenizde bir saniyenin altında semantik arama",
-        "3": "Çoklu format desteği: Otomatik indeksleme ile Markdown, JSON, HTML, PDF"
+        "2": "İşlem içi HNSW vektör indeksleme ile bir saniyenin altında semantik arama",
+        "3": "Çoklu format desteği: Otomatik parçalama ve gömme ile PDF, Markdown, JSON, HTML"
       },
       "highlightLabel": "Gerçek Dünya Etkisi",
       "highlight": "AI platformları arasında kalıcı kod inceleme belleği. Hata ayıklama oturumlarınız zamanla biriken kurumsal bilgiye dönüşür."
@@ -101,7 +101,7 @@
         "3": "Platformlar arası erişim için MCP araçları ve SDK'lar (JS, Python, Go)"
       },
       "highlightLabel": "Üretime Hazır",
-      "highlight": "Bellek Panosu v2.20.0'da yayında. Focus Agent ve gelişmiş bellek katmanları yakında."
+      "highlight": "Bellek Panosu yayında ve üretime hazır. Focus Agent ve gelişmiş bellek katmanları yakında."
     },
     "agents": {
       "title": "Askeri Düzey Yönetişim ile Otonom Ajanlar",
@@ -562,7 +562,7 @@
   "cta": {
     "title": "Yapay Zeka Devrimine Katılmaya Hazır mısınız?",
     "subtitle": "En kapsamlı MCP platformu ile inşa etmeye başlayın. Bireyler için sonsuza kadar ücretsiz.",
-    "description": "Plugged.in v1.0.0 ile yapay zekanın geleceğini inşa eden binlerce geliştiriciye katılın.",
+    "description": "Plugged.in ile yapay zekanın geleceğini inşa eden binlerce geliştiriciye katılın.",
     "primary": "Ücretsiz Başla",
     "secondary": "Belgeleri Görüntüle",
     "primaryAction": "Ücretsiz Hesap Oluştur",
@@ -687,9 +687,9 @@
       "description": "Plugged.in başlatıldı. İlk temel: Bilgi, Araçlar ve Hafıza tek bir kontrol düzlemi altında. Model Context Protocol desteği başlıyor."
     },
     "stage2": {
-      "date": "19 Haziran 2025",
-      "title": "Plugged.in App v2.1.0 — RAG Üretime Giriyor",
-      "description": "Tam semantik arama. Belge sürümleme, metadata, gömülmeler. AI sonunda kullanıcı sahipliğindeki bilgiyi görebiliyor. Bu, temellendirilmiş akıl yürütme için omurga haline geliyor."
+      "date": "Mart 2026",
+      "title": "Plugged.in v3.0.0 — Gömülü RAG Vektör Motoru",
+      "description": "RAG, gömülü zvec vektör motoru ile sıfırdan yeniden inşa edildi. Sıfır harici bağımlılık — belge parçalama, gömme ve HNSW arama tamamen işlem içi çalışır. Bilgi, harici bir hizmet değil, yerleşik bir yetenek haline gelir."
     },
     "stage3": {
       "date": "Ekim 2025 Sonu",

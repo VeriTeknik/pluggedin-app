@@ -69,14 +69,14 @@
   "fourPillars": {
     "badge": "完整平台",
     "title": "四大支柱。无限可能。",
-    "subtitle": "唯一结合MCP编排、RAG v2文档管理、持久记忆系统和自主智能体生命周期管理的统一平台。",
+    "subtitle": "唯一结合MCP编排、嵌入式向量搜索、持久记忆系统和自主智能体生命周期管理的统一平台。",
     "knowledge": {
       "title": "您AI的记忆银行",
-      "description": "上传一次文档，随处访问。我们的RAG v2引擎将您的机构知识转化为每个AI都可以利用的持久、可搜索的上下文。",
+      "description": "上传一次文档，随处访问。我们的嵌入式向量引擎将您的机构知识转化为每个AI都可以利用的持久、可搜索的上下文——无需外部服务。",
       "features": {
         "1": "具有完整模型归因和版本历史的AI生成文档",
-        "2": "整个库的亚秒级语义搜索",
-        "3": "多格式支持：带自动索引的Markdown、JSON、HTML、PDF"
+        "2": "由进程内HNSW向量索引驱动的亚秒级语义搜索",
+        "3": "多格式支持：带自动分块和嵌入的PDF、Markdown、JSON、HTML"
       },
       "highlightLabel": "真实影响",
       "highlight": "跨AI平台持久的代码审查记忆。您的调试会话成为随时间复合的机构知识。"
@@ -101,7 +101,7 @@
         "3": "用于跨平台访问的MCP工具和SDK（JS、Python、Go）"
       },
       "highlightLabel": "生产就绪",
-      "highlight": "记忆剪贴板已在v2.20.0中上线。Focus Agent和高级记忆层即将推出。"
+      "highlight": "记忆剪贴板已上线并可用于生产环境。Focus Agent和高级记忆层即将推出。"
     },
     "agents": {
       "title": "具有军事级治理的自主智能体",
@@ -534,7 +534,7 @@
   "cta": {
     "title": "准备好加入 AI 革命了吗？",
     "subtitle": "使用最全面的 MCP 平台开始构建。个人永久免费。",
-    "description": "加入数千名使用 Plugged.in v1.0.0 构建 AI 未来的开发者。",
+    "description": "加入数千名使用 Plugged.in 构建 AI 未来的开发者。",
     "primary": "免费开始",
     "secondary": "查看文档",
     "primaryAction": "创建免费账户",
@@ -659,9 +659,9 @@
       "description": "Plugged.in启动。第一个基础：知识、工具和记忆在一个控制平面下。模型上下文协议支持开始。"
     },
     "stage2": {
-      "date": "2025年6月19日",
-      "title": "Plugged.in App v2.1.0 — RAG进入生产",
-      "description": "完整的语义搜索。文档版本控制、元数据、嵌入。AI终于可以看到用户拥有的知识。这成为基于事实推理的支柱。"
+      "date": "2026年3月",
+      "title": "Plugged.in v3.0.0 — 嵌入式RAG向量引擎",
+      "description": "RAG使用嵌入式zvec向量引擎从零开始重建。零外部依赖——文档分块、嵌入和HNSW搜索全部在进程内运行。知识成为内置能力，而非外部服务。"
     },
     "stage3": {
       "date": "2025年10月下旬",

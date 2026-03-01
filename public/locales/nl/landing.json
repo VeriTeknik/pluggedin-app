@@ -403,7 +403,7 @@
   "cta": {
     "title": "Klaar om deel te nemen aan de AI-revolutie?",
     "subtitle": "Begin met bouwen op het meest uitgebreide MCP-platform. Gratis voor altijd voor individuen.",
-    "description": "Word lid van duizenden ontwikkelaars die de toekomst van AI bouwen met Plugged.in v1.0.0.",
+    "description": "Word lid van duizenden ontwikkelaars die de toekomst van AI bouwen met Plugged.in.",
     "primary": "Gratis beginnen",
     "secondary": "Bekijk documentatie",
     "primaryAction": "Gratis account aanmaken",
@@ -619,14 +619,14 @@
   "fourPillars": {
     "badge": "Het complete platform",
     "title": "Vier pijlers. Oneindige mogelijkheden.",
-    "subtitle": "Het enige uniforme platform dat MCP-orkestratie, RAG v2-documentbeheer, persistente geheugensystemen en autonome agent lifecycle management combineert.",
+    "subtitle": "Het enige uniforme platform dat MCP-orkestratie, ingebedde vectorzoekopdrachten, persistente geheugensystemen en autonome agent lifecycle management combineert.",
     "knowledge": {
       "title": "De geheugenbank van uw AI",
-      "description": "Upload documenten één keer, toegang overal. Onze RAG v2-engine transformeert uw institutionele kennis in persistente, doorzoekbare context waar elke AI gebruik van kan maken.",
+      "description": "Upload documenten één keer, toegang overal. Onze ingebedde vector-engine transformeert uw institutionele kennis in persistente, doorzoekbare context waar elke AI gebruik van kan maken — geen externe services nodig.",
       "features": {
         "1": "AI-gegenereerde documenten met volledige modelattributie en versiegeschiedenis",
-        "2": "Sub-seconde semantisch zoeken door uw hele bibliotheek",
-        "3": "Multi-format ondersteuning: Markdown, JSON, HTML, PDF met automatische indexering"
+        "2": "Sub-seconde semantisch zoeken aangedreven door in-process HNSW vector-indexering",
+        "3": "Multi-format ondersteuning: PDF, Markdown, JSON, HTML met automatische chunking en embedding"
       },
       "highlightLabel": "Echte impact",
       "highlight": "Code review geheugen dat persistent is over AI-platforms. Uw debugging-sessies worden institutionele kennis die zich in de loop van de tijd opbouwt."
@@ -651,7 +651,7 @@
         "3": "MCP-tools en SDK's (JS, Python, Go) voor cross-platform toegang"
       },
       "highlightLabel": "Productie-klaar",
-      "highlight": "Geheugenklembord is live in v2.20.0. Focus Agent en geavanceerde geheugenlagen komen binnenkort."
+      "highlight": "Geheugenklembord is live en productie-klaar. Focus Agent en geavanceerde geheugenlagen komen binnenkort."
     },
     "agents": {
       "title": "Autonome agents met militaire governance",
@@ -709,9 +709,9 @@
       "description": "Plugged.in gelanceerd. Eerste fundament: Kennis, Tools en Geheugen onder één controlevlak. Model Context Protocol-ondersteuning begint."
     },
     "stage2": {
-      "date": "19 Juni 2025",
-      "title": "Plugged.in App v2.1.0 — RAG Gaat Naar Productie",
-      "description": "Volledige semantische zoekopdracht. Documentversie, metadata, embeddings. AI kan eindelijk door de gebruiker beheerde kennis zien. Dit wordt de ruggengraat voor gefundeerde redenering."
+      "date": "Maart 2026",
+      "title": "Plugged.in v3.0.0 — Ingebedde RAG Vector Engine",
+      "description": "RAG vanaf de grond opnieuw opgebouwd met de ingebedde zvec vector engine. Geen externe afhankelijkheden — documentchunking, embedding en HNSW-zoekopdrachten draaien allemaal in-process. Kennis wordt een ingebouwde functionaliteit, geen externe service."
     },
     "stage3": {
       "date": "Eind Oktober 2025",

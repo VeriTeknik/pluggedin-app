@@ -8,7 +8,7 @@
 
 **Turn your AI conversations into permanent organizational memory**
 
-[![Version](https://img.shields.io/badge/version-2.17.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://hub.docker.com/r/veriteknik/pluggedin)
@@ -16,10 +16,10 @@
 [🚀 Get Started](#-quick-start) • [📚 Documentation](#-documentation) • [🌟 Features](#-key-features) • [💬 Community](#-community--support)
 
 ---
-🧩 **Now Multi‑Arch Ready!**  
-Plugged.in Docker images support both `amd64` and `arm64` architectures via a unified manifest.  
-🧠 **Beyond Proxy Mode — Full AI Platform:**  
-Plugged.in is no longer just a proxy; it’s a unified AI infrastructure layer combining web app, memory, and tool orchestration.
+🧩 **Now Multi‑Arch Ready!**
+Plugged.in Docker images support both `amd64` and `arm64` architectures via a unified manifest.
+🧠 **v3.0.0 — Embedded RAG Vector Engine:**
+RAG now runs fully in-process using zvec (RocksDB + HNSW). No external services needed — document processing, chunking, and semantic search are all built-in.
 ---
 </div>
 
@@ -58,7 +58,8 @@ Documents Managed: 90+ (72% AI-generated)
 Integrated MCP Servers: 1,568
 Active Versioning: Documents with up to 4 iterations
 Model Attributions: 17 different AI models tracked
-Search Performance: Sub-second RAG queries
+RAG Engine: Embedded zvec (RocksDB + HNSW) — zero external dependencies
+Search Performance: Sub-second semantic search with cosine similarity
 Security: AES-256-GCM encryption, Redis rate limiting
 ```
 
@@ -88,28 +89,29 @@ git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
 cp .env.example .env
 
-# Start with Docker (includes PostgreSQL 18-alpine)
+# Start with Docker (includes PostgreSQL 18 + pgvector)
 docker compose up --build -d
 
 # Visit http://localhost:12005
 ```
 
 **What's included:**
-- ✅ PostgreSQL 18 (latest stable) with automatic migrations
+- ✅ PostgreSQL 18 with pgvector extension for vector search
+- ✅ Embedded zvec vector engine for RAG (no external Milvus/Qdrant needed)
 - ✅ Next.js 15 web application with optimized production build
-- ✅ Persistent volumes for database, uploads, and logs
+- ✅ Persistent volumes for database, uploads, vectors, and logs
 - ✅ Health checks and automatic restarts
-- ✅ Migrator container (288 MB) for database setup
 
 **Docker Architecture:**
 ```yaml
 Services:
   - pluggedin-app: Main web application (port 12005)
-  - pluggedin-postgres: PostgreSQL 18-alpine database (port 5432)
+  - pluggedin-postgres: PostgreSQL 18 + pgvector database (port 5432)
   - drizzle-migrate: One-time migration runner (auto-stops)
 
 Volumes:
   - pluggedin-postgres: Database data (persistent)
+  - zvec-data: Vector collections (persistent)
   - app-uploads: User uploaded files (persistent)
   - app-logs: Application logs (persistent)
   - mcp-cache: MCP package cache (persistent)
@@ -136,12 +138,13 @@ Visit [plugged.in](https://plugged.in) for instant access - no installation requ
 
 ## 🌟 Key Features
 
-### 📚 Document Management & Versioning
+### 📚 Document Management & RAG
+- **Embedded Vector Search**: In-process zvec engine (RocksDB + HNSW) — no external services needed
+- **Automatic Indexing**: Upload PDFs or text, automatically chunked, embedded, and indexed
 - **Version Control**: Track every change with Git-style history
 - **Model Attribution**: Know which AI contributed what
-- **Smart Search**: Semantic search across all documents
-- **Multiple Formats**: PDF, Markdown, Code, Images, and more
-- **Dual Storage Display**: View both file and RAG vector storage usage
+- **Semantic Search**: Query your knowledge base with natural language
+- **Re-index Recovery**: One-click re-indexing from the library UI for corrupted vectors
 
 ### 🔧 MCP Server Hub
 - **1,500+ Integrations**: Connect to any MCP-compatible tool
@@ -249,11 +252,11 @@ const results = await client.rag.query("How do we handle auth?");
 #### **Platform Core Features**
 The plugged.in web platform provides:
 
-1. **Knowledge Base (RAG)**
-   - Semantic search across all documents
-   - AI-powered question answering
-   - Project-scoped isolation
-   - Sub-second query performance
+1. **Knowledge Base (Embedded RAG)**
+   - In-process vector search via zvec (RocksDB + HNSW) — no external services
+   - Automatic PDF/text chunking, embedding, and indexing
+   - Project-scoped isolation with per-field filter validation
+   - Sub-second cosine similarity search
 
 2. **Document Store**
    - Version control for AI-generated content
@@ -319,12 +322,12 @@ Persistent memory across sessions:
 
 **Document Creation Flow**:
 ```
-1. AI generates document via SDK
-2. Content processed and sanitized
+1. AI generates document via SDK or user uploads PDF/text
+2. Content processed, chunked, and sanitized
 3. Model attribution recorded
 4. Version created in Document Store
-5. Vectors generated for RAG
-6. Document searchable immediately
+5. Chunks stored in PostgreSQL, embeddings indexed in zvec
+6. Document searchable immediately via semantic search
 ```
 
 ### 🔒 Security Architecture
@@ -399,13 +402,16 @@ ENABLE_NOTIFICATIONS=true
 ENABLE_EMAIL_VERIFICATION=true
 REDIS_URL=redis://localhost:6379  # For Redis rate limiting
 
+# RAG / Vector Search
+ZVEC_DATA_PATH=./data/vectors     # Path to zvec collection files
+EMBEDDING_MODEL=                   # OpenAI model (default: text-embedding-3-small)
+RAG_SEARCH_TOP_K=5                 # Chunks returned per query
+RAG_CACHE_TTL_MS=60000             # Storage stats cache TTL
+
 # Email (For notifications)
 EMAIL_SERVER_HOST=smtp.example.com
 EMAIL_SERVER_PORT=587
 EMAIL_FROM=noreply@example.com
-
-# Performance (Optional)
-RAG_CACHE_TTL_MS=60000  # Cache TTL in milliseconds
 ```
 
 ### Manual Installation
@@ -529,40 +535,38 @@ Built on top of these amazing projects:
 
 ## 📝 Release Notes
 
-**Latest Release: v2.17.0** - Multi-Architecture Docker Support & Self-Hosted Fixes
+**Latest Release: v3.0.0** — Embedded RAG Vector Engine
 
-### 🎯 What's New in v2.17.0
+### 🎯 What's New in v3.0.0
 
-**🐳 Multi-Architecture Docker Support** (Major Feature!)
-- **AMD64 + ARM64 Support**: Native builds for both Intel/AMD and ARM processors
-- **Apple Silicon Ready**: M1/M2/M3 Macs now run natively without performance issues
-- **AWS Graviton Support**: Cost-effective cloud deployments on ARM instances
-- **Official Docker Hub Images**: Pre-built multi-arch images at `veriteknik/pluggedin:latest`
-- **Automatic Platform Detection**: Docker pulls the correct architecture for your system
-- **Build Times**: 5-10 minutes (single arch), 15-25 minutes (multi-arch)
+This is a **major architectural shift** that eliminates the external FastAPI/Milvus dependency for RAG.
 
-**🐛 Critical Bug Fixes**
-- **Fixed Self-Hosted Registration** (#61): New users can now register successfully on self-hosted instances
-- **Username Column Migration**: Robust migration (`0066_fix_missing_username.sql`) works for fresh and existing installs
-- **Platform Detection**: Reliable platform detection using `docker version -f`
-- **Error Handling**: Improved Docker login and build error messages
+**🧠 Embedded RAG Vector Engine** (Breaking Change)
+- **In-process vector search** via zvec (RocksDB + HNSW) — zero external dependencies
+- **Shared vector infrastructure** (`lib/vectors/`) with domain-based collections
+- **Server-side PDF extraction** using unpdf — no external service needed
+- **Smart text chunking** with configurable overlap and separators
+- **Model-to-dimension validation** — detects misconfigured embedding models at startup
+- **Re-index menu option** in library UI for recovering from vector corruption
+- **Relevance-ordered results** with query term highlighting
 
-**🔒 Security Enhancements**
-- **Pinned GitHub Actions**: All third-party actions use commit SHAs to prevent supply chain attacks
-- **Input Validation**: Workflow inputs validated (version must match `latest` or `vX.Y.Z`)
-- **Manifest Verification**: Automatic verification that both architectures are present after build
+**🔒 Security Hardening**
+- **Filter injection prevention**: Field-name allowlist + per-type value validation (UUID/alphanumeric regex)
+- **Path traversal protection**: External `ZVEC_DATA_PATH` blocked unless explicitly opted in
+- **Corruption recovery**: Collections backed up to `.bak` before recreation with stats logging
+- **Idempotent document processing**: Prevents orphaned rows on retry
 
-**⚡ Infrastructure Improvements**
-- **Ephemeral CI Builders**: Auto-cleanup prevents state pollution between builds
-- **Optimized Caching**: Changed from `mode=max` to `mode=min` for sustainable builds
-- **Docker Hub README Sync**: Automated workflow keeps Docker Hub description up to date
+**🗑️ Dead Code Removal**
+- Removed ~750 lines of upload polling infrastructure (no longer needed with synchronous processing)
+- Removed `UploadProgressContext`, `UploadProgressToast`, upload-status API route
 
-**📚 Documentation Updates**
-- **Multi-Arch Deployment Guide**: Complete guide in `/deployment/docker`
-- **Updated Installation Guide**: Docker Hub pre-built images option added
-- **Rollback Procedures**: Documented recovery strategy if builds fail
+**⚠️ Migration Notes**
+- Docker image changed to `pgvector/pgvector:pg18` — back up your database before upgrading
+- New env vars: `ZVEC_DATA_PATH`, `EMBEDDING_MODEL`, `RAG_SEARCH_TOP_K`, `RAG_CACHE_TTL_MS`
+- Removed env var: `RAG_API_URL`
+- Run `pnpm db:migrate` after upgrading (3 new migrations)
 
-View the full changelog and release notes at [docs.plugged.in/releases](https://docs.plugged.in/releases/changelog)
+View the full changelog at [GitHub Releases](https://github.com/VeriTeknik/pluggedin-app/releases/tag/v3.0.0)
 
 ---
 

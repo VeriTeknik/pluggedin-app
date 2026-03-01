@@ -59,14 +59,14 @@
   "fourPillars": {
     "badge": "The Complete Platform",
     "title": "Four Pillars. Infinite Possibilities.",
-    "subtitle": "The only unified platform combining MCP orchestration, RAG v2 document management, persistent memory systems, and autonomous agent lifecycle management.",
+    "subtitle": "The only unified platform combining MCP orchestration, embedded vector search, persistent memory systems, and autonomous agent lifecycle management.",
     "knowledge": {
       "title": "Your AI's Memory Bank",
-      "description": "Upload documents once, access everywhere. Our RAG v2 engine transforms your institutional knowledge into persistent, searchable context that every AI can tap into.",
+      "description": "Upload documents once, access everywhere. Our embedded vector engine transforms your institutional knowledge into persistent, searchable context that every AI can tap into — no external services needed.",
       "features": {
         "1": "AI-generated documents with full model attribution and version history",
-        "2": "Sub-second semantic search across your entire library",
-        "3": "Multi-format support: Markdown, JSON, HTML, PDF with automatic indexing"
+        "2": "Sub-second semantic search powered by in-process HNSW vector indexing",
+        "3": "Multi-format support: PDF, Markdown, JSON, HTML with automatic chunking and embedding"
       },
       "highlightLabel": "Real-World Impact",
       "highlight": "Code review memory that persists across AI platforms. Your debugging sessions become institutional knowledge that compounds over time."
@@ -91,7 +91,7 @@
         "3": "MCP tools and SDKs (JS, Python, Go) for cross-platform access"
       },
       "highlightLabel": "Production Ready",
-      "highlight": "Memory Clipboard is live in v2.20.0. Focus Agent and advanced memory tiers coming soon."
+      "highlight": "Memory Clipboard is live and production-ready. Focus Agent and advanced memory tiers coming soon."
     },
     "agents": {
       "title": "Autonomous Agents with Military-Grade Governance",
@@ -150,7 +150,7 @@
       "title": "Complete Your AI",
       "description": "plugged.in provides the trinity your AI needs:",
       "benefit1": "📚 Knowledge: Upload documents and let AI access your specific context",
-      "benefit2": "🧠 Memory: Persistent clipboard storage for AI workflows (v2.20.0)",
+      "benefit2": "🧠 Memory: Persistent clipboard storage for AI workflows",
       "benefit3": "🔧 Tools: Connect any MCP server to give AI real-world capabilities",
       "benefit4": "🔄 Universal: Works with Claude, GPT-4, Gemini, and all major models"
     },
@@ -590,7 +590,7 @@
   "cta": {
     "title": "Ready to Join the AI Revolution?",
     "subtitle": "Start building with the most comprehensive MCP platform. Free forever for individuals.",
-    "description": "Join thousands of developers building the future of AI with Plugged.in v1.0.0.",
+    "description": "Join thousands of developers building the future of AI with Plugged.in.",
     "primary": "Get Started Free",
     "secondary": "View Documentation",
     "primaryAction": "Create Free Account",
@@ -715,9 +715,9 @@
       "description": "Plugged.in launched. First foundation: Knowledge, Tools, and Memory under one control plane. Model Context Protocol support begins."
     },
     "stage2": {
-      "date": "19 June 2025",
-      "title": "Plugged.in App v2.1.0 — RAG Enters Production",
-      "description": "Full semantic search. Document versioning, metadata, embeddings. AI can finally see user-owned knowledge. This becomes the backbone for grounded reasoning."
+      "date": "March 2026",
+      "title": "Plugged.in v3.0.0 — Embedded RAG Vector Engine",
+      "description": "RAG rebuilt from scratch with embedded zvec vector engine. Zero external dependencies — document chunking, embedding, and HNSW search all run in-process. Knowledge becomes a built-in capability, not an external service."
     },
     "stage3": {
       "date": "Late October 2025",
