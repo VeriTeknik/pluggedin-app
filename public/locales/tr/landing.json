@@ -81,16 +81,20 @@
       "highlightLabel": "Gerçek Dünya Etkisi",
       "highlight": "AI platformları arasında kalıcı kod inceleme belleği. Hata ayıklama oturumlarınız zamanla biriken kurumsal bilgiye dönüşür."
     },
+    "claudeCodePlugin": {
+      "title": "Claude Code Eklentisi",
+      "description": "Claude Code için yerel MCP eklentisi. Tüm araçlarınız, bilgi tabanınız, belleğiniz ve bildirimleriniz doğrudan kodlama iş akışınızda — sıfır yapılandırma."
+    },
     "tools": {
       "title": "1.500+ Araç, Tek Arayüz",
-      "description": "Her AI platformu için aynı MCP sunucularını yapılandırmayı bırakın. Bir kez bağlanın, her yerde kullanın. GitHub'dan Linear'a, özel API'lere kadar—MCP sunucusu varsa, çalışır.",
+      "description": "Her AI platformu için aynı MCP sunucularını yapılandırmayı bırakın. Bir kez bağlanın, her yerde kullanın. Yerel Claude Code eklentisi ve diğer tüm istemciler için evrensel MCP proxy.",
       "features": {
-        "1": "Otomatik GitHub doğrulama ve OAuth 2.1 entegrasyonu ile Akıllı Sunucu Sihirbazı",
+        "1": "Yerel Claude Code eklentisi: tüm araçlar, bilgi tabanı, bellek ve bildirimler IDE'nizde",
         "2": "Tipik MCP proxy'lerine kıyasla %30-55 token verimliliği artışı",
-        "3": "Evrensel uyumluluk: Claude, Cursor, Cline, ChatGPT, LM Studio ve daha fazlası"
+        "3": "Evrensel uyumluluk: Claude Code, Cursor, Cline, ChatGPT, LM Studio ve daha fazlası"
       },
       "highlightLabel": "Verimlilik Kazancı",
-      "highlight": "100 ayrı MCP yapılandırmasını tek birleşik proxy ile değiştirin. Bir kez güncelleyin, her yere uygulayın. Ekibiniz sadece kurulumda haftada saatler kazanır."
+      "highlight": "plugged.in'i Claude Code'a saniyeler içinde ekleyin. Tek eklenti yüzlerce ayrı MCP yapılandırmasının yerini alır — bir kez güncelleyin, her yere uygulayın."
     },
     "memory": {
       "title": "Akıllı Bellek Sistemi",
@@ -547,7 +551,7 @@
       },
       "step4": {
         "title": "4. İstemci Bağla",
-        "desc": "Claude, Cursor veya herhangi bir MCP istemcisine ekle"
+        "desc": "Claude Code eklentisi, Cursor veya herhangi bir MCP istemcisi ekleyin"
       }
     },
     "resources": {

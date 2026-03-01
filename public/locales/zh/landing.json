@@ -83,14 +83,14 @@
     },
     "tools": {
       "title": "1500+工具，一个界面",
-      "description": "停止为每个AI平台配置相同的MCP服务器。连接一次，到处使用。从GitHub到Linear到自定义API——如果它有MCP服务器，就能工作。",
+      "description": "不再为每个 AI 平台重复配置相同的 MCP 服务器。一次连接，处处使用。原生 Claude Code 插件加上适用于所有其他客户端的通用 MCP 代理。",
       "features": {
-        "1": "具有自动GitHub验证和OAuth 2.1集成的智能服务器向导",
+        "1": "原生 Claude Code 插件：所有工具、知识库、记忆和通知在您的 IDE 中",
         "2": "与典型MCP代理相比，令牌效率提高30-55%",
-        "3": "通用兼容性：Claude、Cursor、Cline、ChatGPT、LM Studio等"
+        "3": "通用兼容：Claude Code、Cursor、Cline、ChatGPT、LM Studio 等"
       },
       "highlightLabel": "效率提升",
-      "highlight": "用一个统一代理替换100个单独的MCP配置。更新一次，到处应用。仅在设置上，您的团队每周就能节省数小时。"
+      "highlight": "几秒钟内将 plugged.in 添加到 Claude Code。一个插件替代数百个单独的 MCP 配置 — 一次更新，全部生效。"
     },
     "memory": {
       "title": "智能记忆系统",
@@ -213,6 +213,10 @@
     "subtitle": "管理 MCP 服务器所需的一切",
     "sectionTitle": "完整的 AI 生态系统平台",
     "sectionSubtitle": "从数据所有权到社区协作 - 您需要的一切都在一个平台上。",
+    "claudeCodePlugin": {
+      "title": "Claude Code 插件",
+      "description": "Claude Code 原生 MCP 插件。所有工具、知识库、记忆和通知直接在您的编码工作流中使用 — 零配置。"
+    },
     "oauthAutoRotation": {
       "title": "OAuth 2.1 自动轮换",
       "description": "过期前15分钟自动刷新令牌。符合OAuth 2.1标准的令牌轮换。零服务中断，零手动操作。"
@@ -519,7 +523,7 @@
       },
       "step4": {
         "title": "4. 连接客户端",
-        "desc": "添加到 Claude、Cursor 或任何 MCP 客户端"
+        "desc": "添加 Claude Code 插件、Cursor 或任何 MCP 客户端"
       }
     },
     "resources": {

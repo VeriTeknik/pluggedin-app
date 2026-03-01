@@ -89,6 +89,12 @@ const memoryFeatures: Feature[] = [
 
 const toolsFeatures: Feature[] = [
   {
+    icon: Zap,
+    titleKey: 'features.claudeCodePlugin.title',
+    descriptionKey: 'features.claudeCodePlugin.description',
+    pillar: 'tools'
+  },
+  {
     icon: Package,
     titleKey: 'features.mcpRegistry.title',
     descriptionKey: 'features.mcpRegistry.description',

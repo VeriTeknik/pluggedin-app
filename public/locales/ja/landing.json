@@ -39,6 +39,10 @@
     "subtitle": "MCPサーバーを管理するために必要なすべて",
     "sectionTitle": "完全なAIエコシステムプラットフォーム",
     "sectionSubtitle": "エンタープライズグレードの機能でAI機能を接続、共有、発見、拡張します。",
+    "claudeCodePlugin": {
+      "title": "Claude Code プラグイン",
+      "description": "Claude Code用ネイティブMCPプラグイン。すべてのツール、ナレッジベース、メモリ、通知をコーディングワークフローで直接利用 — 設定不要。"
+    },
     "oauthAutoRotation": {
       "title": "OAuth 2.1自動ローテーション",
       "description": "期限切れの15分前に自動トークン更新。OAuth 2.1準拠のトークンローテーション。サービス中断ゼロ、手動作業ゼロ。"
@@ -345,7 +349,7 @@
       },
       "step4": {
         "title": "4. クライアント接続",
-        "desc": "Claude、Cursor、または任意のMCPクライアントに追加"
+        "desc": "Claude Codeプラグイン、Cursorまたは任意のMCPクライアントを追加"
       }
     },
     "resources": {
@@ -590,14 +594,14 @@
     },
     "tools": {
       "title": "1,500以上のツール、1つのインターフェース",
-      "description": "すべてのAIプラットフォームで同じMCPサーバーを設定するのをやめましょう。一度接続すれば、どこでも使用可能。GitHubからLinearまで、カスタムAPIまで—MCPサーバーがあれば機能します。",
+      "description": "すべてのAIプラットフォームに同じMCPサーバーを設定するのをやめましょう。一度接続すればどこでも使えます。ネイティブClaude Codeプラグインと他のすべてのクライアント向けユニバーサルMCPプロキシ。",
       "features": {
-        "1": "自動GitHub検証とOAuth 2.1統合を備えたスマートサーバーウィザード",
+        "1": "ネイティブClaude Codeプラグイン：すべてのツール、ナレッジベース、メモリ、通知をIDEで",
         "2": "通常のMCPプロキシと比較して30-55%のトークン効率改善",
-        "3": "ユニバーサル互換性：Claude、Cursor、Cline、ChatGPT、LM Studioなど"
+        "3": "ユニバーサル互換性：Claude Code、Cursor、Cline、ChatGPT、LM Studio等"
       },
       "highlightLabel": "効率の向上",
-      "highlight": "100個の個別MCP設定を1つの統合プロキシに置き換えます。一度更新すれば、どこにでも適用。チームは設定だけで週に何時間も節約します。"
+      "highlight": "plugged.inをClaude Codeに数秒で追加。1つのプラグインが数百の個別MCP設定に取って代わります — 一度更新すればすべてに適用。"
     },
     "memory": {
       "title": "インテリジェントメモリシステム",

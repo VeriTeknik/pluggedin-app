@@ -73,14 +73,14 @@
     },
     "tools": {
       "title": "1,500+ Tools, One Interface",
-      "description": "Stop configuring the same MCP servers for every AI platform. Connect once, use everywhere. From GitHub to Linear to custom APIs—if it has an MCP server, it works.",
+      "description": "Stop configuring the same MCP servers for every AI platform. Connect once, use everywhere. Native Claude Code plugin plus universal MCP proxy for every other client.",
       "features": {
-        "1": "Smart Server Wizard with automatic GitHub verification and OAuth 2.1 integration",
+        "1": "Native Claude Code plugin: all tools, knowledge, memory, and notifications in your IDE",
         "2": "30-55% token efficiency improvement vs. typical MCP proxies",
-        "3": "Universal compatibility: Claude, Cursor, Cline, ChatGPT, LM Studio, and more"
+        "3": "Universal compatibility: Claude Code, Cursor, Cline, ChatGPT, LM Studio, and more"
       },
       "highlightLabel": "The Efficiency Gain",
-      "highlight": "Replace 100 individual MCP configurations with one unified proxy. Update once, apply everywhere. Your team saves hours per week on setup alone."
+      "highlight": "Add plugged.in to Claude Code in seconds. One plugin replaces hundreds of individual MCP configurations—update once, apply everywhere."
     },
     "memory": {
       "title": "Intelligent Memory System",
@@ -240,6 +240,10 @@
     "crossModelMemory": {
       "title": "Cross-Model Memory",
       "description": "Long-term memory with concentric rings, intelligent forgetting, and success gates. Memories decay naturally from full detail to essence over time."
+    },
+    "claudeCodePlugin": {
+      "title": "Claude Code Plugin",
+      "description": "Native MCP plugin for Claude Code. All your tools, knowledge base, memory, and notifications available directly in your coding workflow — zero configuration."
     },
     "mcpRegistry": {
       "title": "MCP Registry",
@@ -579,7 +583,7 @@
       },
       "step4": {
         "title": "4. Connect Client",
-        "desc": "Add to Claude, Cursor, or any MCP client"
+        "desc": "Add Claude Code plugin, Cursor, or any MCP client"
       }
     },
     "resources": {
