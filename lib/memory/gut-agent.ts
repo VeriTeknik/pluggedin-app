@@ -9,7 +9,6 @@
  * when seen by >= K unique profiles (k-anonymity).
  */
 
-import { createHash, createHmac } from 'crypto';
 import { eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -24,9 +23,10 @@ import {
 } from './constants';
 import { createMemoryLLM } from './llm-factory';
 import { generateEmbedding } from './embedding-service';
-import { extractResponseText, parseJsonFromResponse } from './llm-utils';
+import { extractResponseText } from './llm-utils';
 import { searchGutPatterns, upsertGutPatternVector } from './vector-service';
 import type { MemoryResult, PatternType } from './types';
+import { hashPattern, hashProfileUuid } from './cbp/hash-utils';
 
 // ============================================================================
 // Pattern Extraction & Normalization
@@ -109,27 +109,6 @@ ${sanitizedContent}
   } catch {
     return null;
   }
-}
-
-/**
- * Hash a normalized pattern for deduplication
- */
-function hashPattern(compressedPattern: string): string {
-  return createHash('sha256')
-    .update(compressedPattern.toLowerCase().trim())
-    .digest('hex');
-}
-
-/**
- * HMAC-hash a profile UUID for k-anonymity tracking.
- * Must match the implementation in promotion-service.ts.
- */
-function hashProfileUuid(profileUuid: string): string {
-  const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error('CBP_HASH_SECRET or NEXTAUTH_SECRET must be configured for profile anonymization');
-  }
-  return createHmac('sha256', secret).update(profileUuid).digest('hex');
 }
 
 // ============================================================================
@@ -254,12 +233,16 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
           })
           .returning({ uuid: gutPatternsTable.uuid });
 
-        // Store embedding in zvec
+        // Vector storage runs outside the DB transaction (zvec is file-based).
+        // If it fails, delete the orphaned DB record to prevent patterns that
+        // exist in the database but are invisible to vector-based dedup.
         if (embedding && newPattern) {
           try {
             upsertGutPatternVector(newPattern.uuid, embedding, pattern.patternType);
           } catch (error) {
-            console.warn(`Failed to store vector for gut pattern ${newPattern.uuid}:`, error);
+            console.error(`Vector storage failed for gut pattern ${newPattern.uuid} — rolling back DB record:`, error);
+            await db.delete(gutPatternsTable).where(eq(gutPatternsTable.uuid, newPattern.uuid));
+            continue;
           }
         }
 
@@ -314,8 +297,9 @@ export async function queryIntuition(
   try {
     const queryEmbedding = await generateEmbedding(query);
 
-    // Search zvec for similar patterns (returns uuid + score)
-    const vectorResults = searchGutPatterns({
+    // searchGutPatterns is currently synchronous (zvec); await future-proofs
+    // against backend changes (e.g. VectorChord migration).
+    const vectorResults = await searchGutPatterns({
       queryEmbedding,
       topK,
       threshold: GUT_QUERY_SIMILARITY_THRESHOLD,

@@ -7,7 +7,6 @@
  * pattern pool with privacy-preserving anonymization and deduplication.
  */
 
-import { createHash, createHmac } from 'crypto';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -28,22 +27,7 @@ import { generateEmbedding } from '../embedding-service';
 import { searchGutPatterns, upsertGutPatternVector } from '../vector-service';
 import type { MemoryResult, PatternType } from '../types';
 import { anonymize } from './anonymizer';
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function hashProfileUuid(profileUuid: string): string {
-  const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error('CBP_HASH_SECRET or NEXTAUTH_SECRET must be configured for profile anonymization');
-  }
-  return createHmac('sha256', secret).update(profileUuid).digest('hex');
-}
-
-function hashPattern(text: string): string {
-  return createHash('sha256').update(text.toLowerCase().trim()).digest('hex');
-}
+import { hashPattern, hashProfileUuid } from './hash-utils';
 
 // ============================================================================
 // Eligibility Check
@@ -117,31 +101,6 @@ async function checkDuplicate(embedding: number[]): Promise<DedupResult> {
   }
 
   return { isDuplicate: false };
-}
-
-// ============================================================================
-// Contribution Tracking
-// ============================================================================
-
-async function trackContribution(
-  patternUuid: string,
-  profileUuid: string,
-  sourceRingUuid: string,
-  successScore: number | null,
-  ringType: string | null
-): Promise<void> {
-  const profileHash = hashProfileUuid(profileUuid);
-
-  await db
-    .insert(collectiveContributionsTable)
-    .values({
-      pattern_uuid: patternUuid,
-      profile_hash: profileHash,
-      source_ring_uuid: sourceRingUuid,
-      success_score: successScore,
-      ring_type: ringType,
-    })
-    .onConflictDoNothing(); // Skip if already contributed
 }
 
 // ============================================================================
@@ -300,11 +259,17 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
           });
 
           if (newPattern) {
-            // upsertGutPatternVector is synchronous (zvec) — try-catch works correctly
+            // Vector storage runs outside the DB transaction (zvec is file-based).
+            // If it fails, delete the orphaned DB record to prevent patterns that
+            // exist in the database but are invisible to vector-based dedup.
             try {
               upsertGutPatternVector(newPattern.uuid, embedding, patternType);
             } catch (err) {
-              console.error('Vector storage failed for pattern:', newPattern.uuid, err);
+              console.error('Vector storage failed for pattern:', newPattern.uuid, '— rolling back DB record', err);
+              await db.delete(gutPatternsTable).where(eq(gutPatternsTable.uuid, newPattern.uuid));
+              await db.delete(collectiveContributionsTable).where(eq(collectiveContributionsTable.pattern_uuid, newPattern.uuid));
+              stats.errors++;
+              continue;
             }
 
             stats.newPatterns++;
@@ -348,19 +313,23 @@ export async function getPromotionStats(): Promise<MemoryResult<{
   uniqueContributors: number;
 }>> {
   try {
-    const [patternStats] = await db
-      .select({
-        total: sql<number>`COUNT(*)`,
-        aboveThreshold: sql<number>`COUNT(*) FILTER (WHERE ${gutPatternsTable.unique_profile_count} >= ${GUT_K_ANONYMITY_THRESHOLD})`,
-      })
-      .from(gutPatternsTable);
+    const [patternStatsResult, contribStatsResult] = await Promise.all([
+      db
+        .select({
+          total: sql<number>`COUNT(*)`,
+          aboveThreshold: sql<number>`COUNT(*) FILTER (WHERE ${gutPatternsTable.unique_profile_count} >= ${GUT_K_ANONYMITY_THRESHOLD})`,
+        })
+        .from(gutPatternsTable),
+      db
+        .select({
+          total: sql<number>`COUNT(*)`,
+          uniqueProfiles: sql<number>`COUNT(DISTINCT ${collectiveContributionsTable.profile_hash})`,
+        })
+        .from(collectiveContributionsTable),
+    ]);
 
-    const [contribStats] = await db
-      .select({
-        total: sql<number>`COUNT(*)`,
-        uniqueProfiles: sql<number>`COUNT(DISTINCT ${collectiveContributionsTable.profile_hash})`,
-      })
-      .from(collectiveContributionsTable);
+    const patternStats = patternStatsResult[0];
+    const contribStats = contribStatsResult[0];
 
     return {
       success: true,

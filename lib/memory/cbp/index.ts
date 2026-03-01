@@ -8,6 +8,7 @@
  */
 
 export { stripPII, anonymize } from './anonymizer';
+export { hashPattern, hashProfileUuid } from './hash-utils';
 export {
   runPromotionPipeline,
   getPromotionStats,
