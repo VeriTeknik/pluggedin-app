@@ -21,6 +21,7 @@ import {
   CBP_INJECTION_SIMILARITY_THRESHOLD,
   CBP_MAX_INJECTION_RESULTS,
   CBP_MIN_FEEDBACK_RATING,
+  CBP_NEGATIVE_FEEDBACK_THRESHOLD,
   GUT_K_ANONYMITY_THRESHOLD,
 } from '../constants';
 import { generateEmbedding } from '../embedding-service';
@@ -103,7 +104,7 @@ async function findRelevantPatterns(
     .filter(p => {
       const feedback = feedbackMap.get(p.uuid);
       // No feedback = OK; feedback with avg < threshold = skip
-      if (feedback && feedback.count >= 3 && feedback.avg < CBP_MIN_FEEDBACK_RATING) {
+      if (feedback && feedback.count >= CBP_NEGATIVE_FEEDBACK_THRESHOLD && feedback.avg < CBP_MIN_FEEDBACK_RATING) {
         return false;
       }
       return true;
@@ -184,11 +185,12 @@ export async function injectPostErrorSuggestion(
  * Use when enriching search results or providing background context.
  */
 export async function injectContextual(
-  query: string
+  query: string,
+  maxResults?: number
 ): Promise<MemoryResult<InjectedPattern[]>> {
   try {
     const embedding = await generateEmbedding(query);
-    const patterns = await findRelevantPatterns(embedding, 'contextual');
+    const patterns = await findRelevantPatterns(embedding, 'contextual', maxResults);
 
     return { success: true, data: patterns };
   } catch (error) {
@@ -246,10 +248,12 @@ export async function submitFeedback(
       .from(collectiveFeedbackTable)
       .where(eq(collectiveFeedbackTable.pattern_uuid, patternUuid));
 
-    if (feedback && Number(feedback.count) >= 3) {
+    if (feedback && Number(feedback.count) >= CBP_NEGATIVE_FEEDBACK_THRESHOLD) {
       const avgRating = Number(feedback.avgRating);
-      // Map 1-5 rating to confidence adjustment: 3.0 = neutral, below = decrease, above = increase
-      const confidenceAdjustment = (avgRating - 3.0) * 0.05;
+      // Map 1-5 rating to confidence adjustment: neutral = no change, below = decrease, above = increase
+      const NEUTRAL_RATING = 3.0;
+      const ADJUSTMENT_FACTOR = 0.05;
+      const confidenceAdjustment = (avgRating - NEUTRAL_RATING) * ADJUSTMENT_FACTOR;
 
       await db
         .update(gutPatternsTable)

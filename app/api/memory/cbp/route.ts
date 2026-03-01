@@ -101,9 +101,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const auth = await authenticate(request);
-    if (auth.error) return auth.error;
-
+    // No user auth required — cron jobs authenticate via CRON_SECRET only.
+    // This is a cross-profile operation that processes all eligible memories.
     if (!verifyCronSecret(request.headers.get('x-cron-secret'))) {
       return NextResponse.json(
         { success: false, error: 'Forbidden: this endpoint requires cron authorization' },

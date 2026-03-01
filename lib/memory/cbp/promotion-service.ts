@@ -27,7 +27,7 @@ import {
 import { generateEmbedding } from '../embedding-service';
 import { searchGutPatterns, upsertGutPatternVector } from '../vector-service';
 import type { MemoryResult, PatternType } from '../types';
-import { anonymize, stripPII } from './anonymizer';
+import { anonymize } from './anonymizer';
 
 // ============================================================================
 // Helpers
@@ -271,7 +271,7 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
               pattern_hash: patternHash,
               pattern_type: patternType,
               pattern_description: anonymizedText.slice(0, 500),
-              compressed_pattern: anonymizedText.slice(0, 500),
+              compressed_pattern: anonymizedText.slice(0, 200),
               occurrence_count: 1,
               success_rate: memory.successScore ?? 0.5,
               unique_profile_count: 1,
@@ -314,7 +314,8 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
             )`,
           })
           .where(eq(memoryRingTable.uuid, memory.uuid));
-      } catch {
+      } catch (err) {
+        console.error(`CBP promotion failed for memory ${memory.uuid}:`, err);
         stats.errors++;
       }
     }

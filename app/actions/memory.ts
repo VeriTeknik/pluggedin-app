@@ -620,7 +620,7 @@ export async function queryCBPPatterns(
   try {
     const parsed = cbpQuerySchema.parse({ query, maxResults });
     const { injectContextual } = await import('@/lib/memory/cbp/injection-engine');
-    return injectContextual(parsed.query);
+    return injectContextual(parsed.query, parsed.maxResults);
   } catch (error) {
     return formatError(error);
   }

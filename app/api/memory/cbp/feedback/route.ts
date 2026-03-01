@@ -39,9 +39,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!auth.activeProfile) {
+      return NextResponse.json(
+        { success: false, error: 'No active profile found' },
+        { status: 401 }
+      );
+    }
+
     const result = await submitFeedback(
       parsed.data.pattern_uuid,
-      auth.activeProfile!.uuid,
+      auth.activeProfile.uuid,
       parsed.data.rating,
       parsed.data.feedback_type,
       parsed.data.comment

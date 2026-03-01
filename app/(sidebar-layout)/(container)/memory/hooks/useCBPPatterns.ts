@@ -66,8 +66,8 @@ export function useCBPPatterns() {
         feedbackType,
         comment,
       });
-    } catch {
-      // Feedback submission is non-critical
+    } catch (err) {
+      console.error('Failed to submit CBP feedback:', err);
     }
   }, [session?.user?.id]);
 
@@ -78,8 +78,8 @@ export function useCBPPatterns() {
       if (result.success && result.data) {
         setStats(result.data as CBPStats);
       }
-    } catch {
-      // Stats loading is non-critical
+    } catch (err) {
+      console.error('Failed to load CBP stats:', err);
     } finally {
       setIsLoadingStats(false);
     }
