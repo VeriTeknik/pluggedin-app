@@ -26,7 +26,7 @@ import {
   ZVecMetricType,
   ZVecOpen,
 } from '@zvec/zvec';
-import { existsSync, rmSync } from 'fs';
+import { existsSync, renameSync, rmSync } from 'fs';
 import path from 'path';
 
 import type {
@@ -51,9 +51,14 @@ const ZVEC_DATA_DIR = (() => {
   // This prevents misconfigured env vars from writing to sensitive system paths.
   const appRoot = path.resolve(process.cwd());
   if (!resolved.startsWith(appRoot + path.sep) && !resolved.startsWith(appRoot)) {
-    // Allow explicit override outside app root (e.g. /data/vectors in Docker)
-    // but log a warning so operators are aware.
-    console.warn(`[zvec] ZVEC_DATA_PATH "${resolved}" is outside app root "${appRoot}". Ensure this is intentional.`);
+    if (process.env.ZVEC_ALLOW_EXTERNAL_PATH === 'true') {
+      console.warn(`[zvec] ZVEC_DATA_PATH "${resolved}" is outside app root "${appRoot}" (allowed via ZVEC_ALLOW_EXTERNAL_PATH).`);
+    } else {
+      throw new Error(
+        `[zvec] ZVEC_DATA_PATH "${resolved}" is outside app root "${appRoot}". ` +
+        `Set ZVEC_ALLOW_EXTERNAL_PATH=true to allow this.`
+      );
+    }
   }
   return resolved;
 })();
@@ -118,7 +123,16 @@ const DOMAIN_FIELDS: Record<VectorDomain, ConstructorParameters<typeof ZVecColle
 
 function createCollection(collectionPath: string, domain: VectorDomain, fields: (typeof DOMAIN_FIELDS)[VectorDomain]): ZVecCollection {
   if (existsSync(collectionPath)) {
-    rmSync(collectionPath, { recursive: true });
+    // Backup before destroying — rename to .bak (overwrite any previous backup)
+    const backupPath = `${collectionPath}.bak`;
+    try {
+      if (existsSync(backupPath)) rmSync(backupPath, { recursive: true });
+      renameSync(collectionPath, backupPath);
+      console.warn(`[zvec] Backed up "${domain}" collection to ${backupPath} before recreation`);
+    } catch {
+      // Rename failed (e.g. cross-device) — fall back to delete
+      rmSync(collectionPath, { recursive: true });
+    }
   }
   const schema = new ZVecCollectionSchema({
     name: domain,
@@ -159,7 +173,11 @@ function getCollection(domain: VectorDomain): ZVecCollection {
     const col = ZVecOpen(collectionPath);
     // Validate index health - corrupted indexes silently return empty results
     if (!isIndexHealthy(col)) {
-      console.warn(`[zvec] Corrupted index detected for "${domain}", rebuilding collection`);
+      const { docCount, indexCompleteness } = col.stats;
+      console.warn(
+        `[zvec] Corrupted index detected for "${domain}" (docCount=${docCount}, ` +
+        `completeness=${indexCompleteness?.embedding ?? 'unknown'}), rebuilding collection`
+      );
       try { col.closeSync(); } catch { /* ignore */ }
       collections[domain] = createCollection(collectionPath, domain, fields);
     } else {

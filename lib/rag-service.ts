@@ -200,7 +200,16 @@ export class RagService {
         };
       }
 
-      // Step 3: Insert chunks to PostgreSQL
+      // Step 3: Clean up any existing chunks for this document (idempotent re-processing)
+      const existingFilter = buildFilter([['document_uuid', documentUuid]]);
+      if (existingFilter) {
+        deleteVectorsByFilter({ domain: 'rag', filter: existingFilter });
+      }
+      await db
+        .delete(documentChunksTable)
+        .where(eq(documentChunksTable.document_uuid, documentUuid));
+
+      // Step 4: Insert chunks to PostgreSQL
       const chunkRecords = chunkTexts.map((chunkText, i) => ({
         document_uuid: documentUuid,
         project_uuid: projectUuid,
@@ -214,7 +223,7 @@ export class RagService {
         .values(chunkRecords)
         .returning({ uuid: documentChunksTable.uuid });
 
-      // Step 4: Validate DB returned all chunk UUIDs
+      // Step 5: Validate DB returned all chunk UUIDs
       if (insertedChunks.length !== chunkTexts.length) {
         // Partial insert - clean up and fail rather than create phantom vectors
         await db
@@ -226,7 +235,7 @@ export class RagService {
         };
       }
 
-      // Step 5: Insert vectors to zvec via shared vector service.
+      // Step 6: Insert vectors to zvec via shared vector service.
       // If this fails, clean up PG rows to maintain atomicity.
       try {
         const vectorParams = embeddings.map((emb, i) => ({
@@ -264,7 +273,8 @@ export class RagService {
 
   // ─── Document Management ─────────────────────────────────────────
 
-  async removeDocument(documentId: string, _ragIdentifier: string): Promise<{ success: boolean; error?: string }> {
+  /** @deprecated ragIdentifier is no longer used — removal is by documentId only */
+  async removeDocument(documentId: string, _ragIdentifier?: string): Promise<{ success: boolean; error?: string }> {
     try {
       if (!this.isEnabled()) return { success: true };
       if (!documentId) return { success: true }; // Nothing to remove
