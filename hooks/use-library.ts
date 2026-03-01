@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { createDoc, deleteDoc, getDocs, getProjectStorageUsage, reindexDocument } from '@/app/actions/library';
@@ -14,6 +15,7 @@ import { useToast } from './use-toast';
 export function useLibrary() {
   const { data: session } = useSafeSession();
   const { toast } = useToast();
+  const { t } = useTranslation('library');
   const { currentProject } = useProjects();
   const { currentProfile } = useProfiles();
   const { addUpload } = useUploadProgress();
@@ -248,19 +250,18 @@ export function useLibrary() {
 
       if (result.success) {
         toast({
-          title: 'Success',
-          description: 'Document re-indexed successfully',
+          title: t('grid.reindexSuccess'),
         });
       } else {
         toast({
-          title: 'Error',
-          description: result.error || 'Failed to re-index document',
+          title: t('grid.reindexError'),
+          description: result.error,
           variant: 'destructive',
         });
-        throw new Error(result.error || 'Failed to re-index document');
+        throw new Error(result.error || t('grid.reindexError'));
       }
     },
-    [session?.user?.id, currentProject?.uuid, toast]
+    [session?.user?.id, currentProject?.uuid, toast, t]
   );
 
   const downloadDoc = useCallback(

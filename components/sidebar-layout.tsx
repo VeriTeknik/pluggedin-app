@@ -267,7 +267,12 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild tooltip={t('library.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/library'>
                         <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden flex items-center gap-2">
+                          {t('library.title')}
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-electric-cyan/20 text-electric-cyan">
+                            UPDATED
+                          </span>
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -278,8 +283,8 @@ export default function SidebarLayout({
                         <Brain className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden flex items-center gap-2">
                           {t('memory.title')}
-                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-primary text-primary-foreground">
-                            NEW
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-electric-cyan/20 text-electric-cyan">
+                            UPDATED
                           </span>
                         </span>
                       </Link>

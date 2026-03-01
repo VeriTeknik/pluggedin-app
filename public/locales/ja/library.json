@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "ドキュメント",
-    "description": "ドキュメントファイルをアップロード、管理、共有",
+    "description": "埋め込みベクトル検索でドキュメントをアップロード・管理 — zvecによる高速ローカルAI検索",
     "loading": "ドキュメントを読み込み中...",
     "tableHeaders": {
       "name": "名前",
@@ -77,6 +77,8 @@
     "versions": "バージョン履歴",
     "reindex": "再インデックス",
     "reindexing": "インデックス中...",
+    "reindexSuccess": "ドキュメントの再インデックスが完了しました",
+    "reindexError": "ドキュメントの再インデックスに失敗しました",
     "download": "ダウンロード",
     "delete": "削除"
   },

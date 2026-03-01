@@ -1094,6 +1094,7 @@ export const documentChunksTable = pgTable(
     documentChunksProjectIdx: index('document_chunks_project_uuid_idx').on(table.project_uuid),
     documentChunksDocumentIdx: index('document_chunks_document_uuid_idx').on(table.document_uuid),
     documentChunksZvecIdx: index('document_chunks_zvec_vector_id_idx').on(table.zvec_vector_id),
+    documentChunksUniqueIdx: uniqueIndex('document_chunks_doc_chunk_idx').on(table.document_uuid, table.chunk_index),
   })
 );
 

@@ -96,32 +96,6 @@ export interface RAGDocumentRequest {
   };
 }
 
-// ─── Upload Progress Tracking ────────────────────────────────────────
-
-const uploadProgressCache = new LRUCache<UploadProgress>(1000, 15 * 60 * 1000); // 15 min TTL
-
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-function makeProgress(
-  status: UploadProgress['status'],
-  step: string,
-  percentage: number,
-  message: string,
-  documentId?: string,
-): UploadProgress {
-  return {
-    status,
-    progress: {
-      current: percentage,
-      total: 100,
-      step,
-      step_progress: { percentage },
-    },
-    message,
-    document_id: documentId,
-  };
-}
-
 // ─── RAG Service Class ──────────────────────────────────────────────
 
 export class RagService {
@@ -243,29 +217,19 @@ export class RagService {
     text: string,
     _fileName: string,
   ): Promise<{ success: boolean; uploadId?: string; error?: string }> {
-    const uploadId = randomUUID();
-
     try {
       if (!this.isEnabled()) {
         return { success: false, error: 'RAG is not enabled' };
       }
 
-      // Track progress
-      uploadProgressCache.set(uploadId, makeProgress('processing', 'chunking', 10, 'Splitting document into chunks...'));
-
       // Step 1: Chunk text
       const chunkTexts = splitTextIntoChunks(text);
       if (chunkTexts.length === 0) {
-        uploadProgressCache.set(uploadId, makeProgress('failed', 'chunking', 0, 'No text content found in document'));
-        return { success: false, uploadId, error: 'No text content found' };
+        return { success: false, error: 'No text content found' };
       }
-
-      uploadProgressCache.set(uploadId, makeProgress('processing', 'embeddings', 30, `Generating embeddings for ${chunkTexts.length} chunks...`));
 
       // Step 2: Generate embeddings
       const embeddings = await generateEmbeddings(chunkTexts);
-
-      uploadProgressCache.set(uploadId, makeProgress('processing', 'vector_storage', 60, 'Storing vectors...'));
 
       // Step 3: Insert chunks to PostgreSQL
       const { db } = await import('@/db');
@@ -298,18 +262,14 @@ export class RagService {
 
       upsertVectors(vectorParams);
 
-      uploadProgressCache.set(uploadId, makeProgress('completed', 'completed', 100, 'Document processed successfully', documentUuid));
-
       // Invalidate storage cache
       this.invalidateStorageCache(projectUuid);
 
-      return { success: true, uploadId };
+      return { success: true };
     } catch (error) {
       console.error('[RAG Service] Process document error:', error);
-      uploadProgressCache.set(uploadId, makeProgress('failed', 'vector_storage', 0, error instanceof Error ? error.message : 'Processing failed'));
       return {
         success: false,
-        uploadId,
         error: error instanceof Error ? error.message : 'Processing failed',
       };
     }
@@ -340,12 +300,10 @@ export class RagService {
 
   // ─── Status & Stats ────────────────────────────────────────────────
 
-  async getUploadStatus(uploadId: string, _ragIdentifier?: string): Promise<UploadStatusResponse> {
-    const progress = uploadProgressCache.get(uploadId);
-    if (!progress) {
-      return { success: false, error: 'Upload not found - may have completed' };
-    }
-    return { success: true, progress };
+  async getUploadStatus(_uploadId: string, _ragIdentifier?: string): Promise<UploadStatusResponse> {
+    // Processing is synchronous with embedded zvec - no async progress to track.
+    // Client-side UploadProgressContext handles UI progress display.
+    return { success: false, error: 'Upload not found - may have completed' };
   }
 
   async removeDocument(documentId: string, _ragIdentifier: string): Promise<{ success: boolean; error?: string }> {

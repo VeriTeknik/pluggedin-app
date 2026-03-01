@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "Belgeler",
-    "description": "Belge dosyalarınızı yükleyin, yönetin ve paylaşın",
+    "description": "Belgelerinizi yerleşik vektör aramasıyla yükleyin ve yönetin — hızlı, yerel AI erişimi için zvec ile desteklenmektedir",
     "loading": "Belgeler yükleniyor...",
     "tableHeaders": {
       "name": "Ad",
@@ -77,6 +77,8 @@
     "versions": "Sürüm Geçmişi",
     "reindex": "Yeniden İndeksle",
     "reindexing": "İndeksleniyor...",
+    "reindexSuccess": "Belge başarıyla yeniden dizine eklendi",
+    "reindexError": "Belge yeniden dizine eklenemedi",
     "download": "İndir",
     "delete": "Sil"
   },

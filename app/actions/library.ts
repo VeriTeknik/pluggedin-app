@@ -514,11 +514,10 @@ async function processRagUpload(
   name: string,
   tags: string[],
   userId: string,
-  projectUuid?: string
+  projectUuid: string
 ) {
   try {
-    // Use projectUuid for project-specific RAG, fallback to userId for legacy
-    const ragIdentifier = projectUuid || userId;
+    const ragIdentifier = projectUuid;
 
     // Process document directly with embedded zvec (no HTTP)
     const result = await ragService.processDocument(
@@ -590,13 +589,17 @@ export async function reindexDocument(
       return { success: false, error: 'RAG is not enabled' };
     }
 
+    if (!projectUuid) {
+      return { success: false, error: 'No active project selected. Please select or create a project first.' };
+    }
+
     // Get the document record
     const doc = await getDocByUuid(userId, docUuid, projectUuid);
     if (!doc) {
       return { success: false, error: 'Document not found' };
     }
 
-    const ragIdentifier = projectUuid || userId;
+    const ragIdentifier = projectUuid;
 
     if (!isRagSupported(doc.mime_type)) {
       return { success: false, error: `File type ${doc.mime_type} is not supported for indexing` };

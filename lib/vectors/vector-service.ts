@@ -205,6 +205,13 @@ export function upsertVector(params: VectorInsertParams): void {
 
 /**
  * Batch insert vectors.
+ *
+ * NOTE: upsertSync and optimizeSync are synchronous and block the event loop.
+ * For large batches or high-concurrency scenarios, consider offloading to a
+ * Worker thread. optimizeSync rebuilds the HNSW index (O(n log n) in total
+ * vectors) and is called per-batch to prevent corruption; if performance
+ * becomes an issue, defer optimization to a background job triggered when
+ * indexCompleteness drops below a threshold.
  */
 export function upsertVectors(paramsList: VectorInsertParams[]): void {
   if (paramsList.length === 0) return;

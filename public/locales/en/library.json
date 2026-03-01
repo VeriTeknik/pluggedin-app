@@ -44,7 +44,7 @@
   },
   "page": {
     "title": "Documents",
-    "description": "Upload, manage, and share your documentation files",
+    "description": "Upload and manage your documents with embedded vector search — powered by zvec for fast, local AI retrieval",
     "loading": "Loading documents...",
     "tableHeaders": {
       "name": "Name",
@@ -86,6 +86,8 @@
     "versions": "Version History",
     "reindex": "Re-index",
     "reindexing": "Re-indexing...",
+    "reindexSuccess": "Document re-indexed successfully",
+    "reindexError": "Failed to re-index document",
     "download": "Download",
     "delete": "Delete"
   },

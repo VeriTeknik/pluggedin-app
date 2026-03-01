@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "文档",
-    "description": "上传、管理和分享您的文档文件",
+    "description": "上传和管理您的文档，内置向量搜索 — 由 zvec 驱动，实现快速本地 AI 检索",
     "loading": "正在加载文档...",
     "tableHeaders": {
       "name": "名称",
@@ -77,6 +77,8 @@
     "versions": "版本历史",
     "reindex": "重新索引",
     "reindexing": "正在索引...",
+    "reindexSuccess": "文档重新索引成功",
+    "reindexError": "文档重新索引失败",
     "download": "下载",
     "delete": "删除"
   },

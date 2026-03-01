@@ -37,7 +37,7 @@
   },
   "page": {
     "title": "Documenten",
-    "description": "Upload, beheer en deel je documentatiebestanden",
+    "description": "Upload en beheer uw documenten met ingebouwde vectorzoekopdrachten — aangedreven door zvec voor snelle, lokale AI-retrieval",
     "loading": "Documenten laden...",
     "tableHeaders": {
       "name": "Naam",
@@ -77,6 +77,8 @@
     "versions": "Versiegeschiedenis",
     "reindex": "Opnieuw indexeren",
     "reindexing": "Indexeren...",
+    "reindexSuccess": "Document succesvol opnieuw geïndexeerd",
+    "reindexError": "Het opnieuw indexeren van het document is mislukt",
     "download": "Downloaden",
     "delete": "Verwijderen"
   },
