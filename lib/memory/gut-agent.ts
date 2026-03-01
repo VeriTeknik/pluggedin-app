@@ -9,7 +9,7 @@
  * when seen by >= K unique profiles (k-anonymity).
  */
 
-import { createHash } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 import { eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -120,6 +120,15 @@ function hashPattern(compressedPattern: string): string {
     .digest('hex');
 }
 
+/**
+ * HMAC-hash a profile UUID for k-anonymity tracking.
+ * Must match the implementation in promotion-service.ts.
+ */
+function hashProfileUuid(profileUuid: string): string {
+  const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET || 'pluggedin-cbp-default';
+  return createHmac('sha256', secret).update(profileUuid).digest('hex');
+}
+
 // ============================================================================
 // Aggregation
 // ============================================================================
@@ -178,9 +187,9 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
       if (existing) {
         // Check if this profile is new to this pattern
         const isNewProfile = !((existing.metadata as Record<string, unknown>)?.profile_hashes as string[] ?? [])
-          .includes(hashPattern(memory.profileUuid));
+          .includes(hashProfileUuid(memory.profileUuid));
 
-        const profileHash = hashPattern(memory.profileUuid);
+        const profileHash = hashProfileUuid(memory.profileUuid);
 
         // Build metadata update: always set last_seen, append profile hash if new
         const metadataUpdate = isNewProfile
@@ -237,7 +246,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
             metadata: {
               first_seen: new Date().toISOString(),
               last_seen: new Date().toISOString(),
-              profile_hashes: [hashPattern(memory.profileUuid)],
+              profile_hashes: [hashProfileUuid(memory.profileUuid)],
             },
           })
           .returning({ uuid: gutPatternsTable.uuid });
