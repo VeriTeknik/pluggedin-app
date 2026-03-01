@@ -13,6 +13,9 @@ const DEFAULT_CHUNK_SIZE = 800;
 const DEFAULT_CHUNK_OVERLAP = 100;
 const DEFAULT_SEPARATORS = ['\n\n', '\n', '. ', ' ', ''];
 
+/** Maximum allowed ratio of chunk size when overlap pushes a chunk beyond target size. */
+const MAX_CHUNK_OVERFLOW_FACTOR = 1.2;
+
 /**
  * Split text into overlapping chunks using recursive character splitting.
  * Tries to split on natural boundaries (paragraphs > newlines > sentences > words).
@@ -26,6 +29,10 @@ export function splitTextIntoChunks(
     chunkOverlap = DEFAULT_CHUNK_OVERLAP,
     separators = DEFAULT_SEPARATORS,
   } = options;
+
+  if (chunkOverlap >= chunkSize) {
+    throw new Error('chunkOverlap must be smaller than chunkSize');
+  }
 
   if (!text || text.trim().length === 0) return [];
   if (text.length <= chunkSize) return [text];
@@ -91,7 +98,7 @@ function recursiveSplit(
       const prevChunk = mergedSplits[i - 1];
       const overlapText = prevChunk.slice(-chunkOverlap);
       const withOverlap = overlapText + separator + mergedSplits[i];
-      chunks.push(withOverlap.length <= chunkSize * 1.2 ? withOverlap : mergedSplits[i]);
+      chunks.push(withOverlap.length <= chunkSize * MAX_CHUNK_OVERFLOW_FACTOR ? withOverlap : mergedSplits[i]);
     }
   }
 

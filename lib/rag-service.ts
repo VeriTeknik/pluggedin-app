@@ -26,7 +26,6 @@ import {
 import {
   buildFilter,
   deleteVectorsByFilter,
-  getVectorStats,
   searchVectors,
   upsertVectors,
 } from './vectors/vector-service';
@@ -426,10 +425,7 @@ export class RagService {
       const cached = this.storageStatsCache.get(cacheKey);
       if (cached) return cached;
 
-      // Get vector count from zvec
-      const stats = getVectorStats('rag');
-
-      // Get document count from PostgreSQL
+      // Get per-project chunk count from PostgreSQL (authoritative per-project count)
       const { db } = await import('@/db');
       const { documentChunksTable } = await import('@/db/schema');
       const { eq, sql } = await import('drizzle-orm');
@@ -439,8 +435,9 @@ export class RagService {
         .from(documentChunksTable)
         .where(eq(documentChunksTable.project_uuid, ragIdentifier));
 
-      const totalChunks = Number(chunkCountResult[0]?.count || 0);
-      const vectorCount = stats.count || totalChunks;
+      // Use project-specific chunk count, not collection-wide getVectorStats
+      // which returns counts across ALL projects sharing the RAG collection.
+      const vectorCount = Number(chunkCountResult[0]?.count || 0);
 
       let result: RagStorageStatsResponse;
       if (vectorCount > 0) {

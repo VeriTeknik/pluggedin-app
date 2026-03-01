@@ -2,12 +2,14 @@
 
 import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
-import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
+import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
+import { isRagSupported } from '@/lib/rag/constants';
+import { extractTextFromFile } from '@/lib/rag/text-extract';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
 import { buildSecurePath, validatePathComponent, getSecureBaseUploadDir } from '@/lib/secure-path-builder';
@@ -596,29 +598,13 @@ export async function reindexDocument(
 
     const ragIdentifier = projectUuid || userId;
 
-    // Supported file types for RAG
-    const supportedRagTypes = [
-      'application/pdf',
-      'text/plain',
-      'text/markdown',
-      'text/x-markdown',
-    ];
-
-    if (!supportedRagTypes.includes(doc.mime_type)) {
+    if (!isRagSupported(doc.mime_type)) {
       return { success: false, error: `File type ${doc.mime_type} is not supported for indexing` };
     }
 
-    // Read the stored file
+    // Read the stored file and extract text
     const fullPath = buildSecurePath(UPLOADS_BASE_DIR, doc.file_path);
-    let textContent = '';
-
-    if (doc.mime_type === 'application/pdf') {
-      const { extractTextFromPdf } = await import('@/lib/rag/pdf-extract');
-      const buffer = await readFile(fullPath);
-      textContent = await extractTextFromPdf(buffer.buffer as ArrayBuffer);
-    } else {
-      textContent = await readFile(fullPath, 'utf-8');
-    }
+    const textContent = await extractTextFromFile(fullPath, doc.mime_type);
 
     if (!textContent.trim()) {
       return { success: false, error: 'No text content could be extracted from the file' };
@@ -701,15 +687,7 @@ export async function createDoc(
     let ragError: string | undefined;
     let upload_id: string | undefined;
     
-    // Only send PDF, text, and markdown files to RAG
-    const supportedRagTypes = [
-      'application/pdf',
-      'text/plain',
-      'text/markdown',
-      'text/x-markdown',
-    ];
-    
-    if (process.env.ENABLE_RAG === 'true' && supportedRagTypes.includes(file.type)) {
+    if (process.env.ENABLE_RAG === 'true' && isRagSupported(file.type)) {
       // Extract text content for RAG
       // For now, we'll use a simple approach for text files
       // PDF extraction would require additional libraries like pdf-parse

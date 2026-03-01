@@ -18,6 +18,7 @@ import {
   ZVecMetricType,
   ZVecOpen,
 } from '@zvec/zvec';
+import { existsSync, rmSync } from 'fs';
 import path from 'path';
 
 import type {
@@ -96,9 +97,8 @@ const DOMAIN_FIELDS: Record<VectorDomain, ConstructorParameters<typeof ZVecColle
 };
 
 function createCollection(collectionPath: string, domain: VectorDomain, fields: (typeof DOMAIN_FIELDS)[VectorDomain]): ZVecCollection {
-  const fs = require('fs');
-  if (fs.existsSync(collectionPath)) {
-    fs.rmSync(collectionPath, { recursive: true });
+  if (existsSync(collectionPath)) {
+    rmSync(collectionPath, { recursive: true });
   }
   const schema = new ZVecCollectionSchema({
     name: domain,

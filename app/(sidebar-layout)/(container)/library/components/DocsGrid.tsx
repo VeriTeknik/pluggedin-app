@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { isRagSupported } from '@/lib/rag/constants';
 import { Doc } from '@/types/library';
 
 export interface DocsGridProps {
@@ -26,13 +27,6 @@ export interface DocsGridProps {
   formatFileSize: (bytes: number) => string;
   getMimeTypeIcon: (mimeType: string) => string;
 }
-
-const RAG_SUPPORTED_TYPES = [
-  'application/pdf',
-  'text/plain',
-  'text/markdown',
-  'text/x-markdown',
-];
 
 export function DocsGrid({
   docs,
@@ -145,7 +139,7 @@ export function DocsGrid({
                       {t('grid.versions')}
                     </DropdownMenuItem>
                   )}
-                  {onReindex && RAG_SUPPORTED_TYPES.includes(doc.mime_type) && (
+                  {onReindex && isRagSupported(doc.mime_type) && (
                     <DropdownMenuItem
                       onClick={async (e) => {
                         e.stopPropagation();

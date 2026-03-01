@@ -28,8 +28,9 @@ function highlightTerms(text: string, query: string): React.ReactNode {
   const pattern = new RegExp(`(${terms.join('|')})`, 'gi');
   const parts = text.split(pattern);
 
+  // split(/(capture)/) places matched segments at odd indices
   return parts.map((part, i) =>
-    pattern.test(part) ? (
+    i % 2 === 1 ? (
       <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 dark:text-yellow-100 rounded-sm px-0.5">
         {part}
       </mark>
