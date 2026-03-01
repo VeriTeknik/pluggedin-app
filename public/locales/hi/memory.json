@@ -239,8 +239,8 @@
       "description": "सर्वोत्तम प्रथाओं, त्रुटि समाधानों और सामान्य समस्याओं के लिए समुदाय पैटर्न खोजें।"
     },
     "stats": {
-      "totalPatterns": "कुल पैटर्न",
-      "verified": "सत्यापित",
+      "totalPatterns": "दृश्य पैटर्न",
+      "verified": "लंबित",
       "contributors": "योगदानकर्ता",
       "contributions": "योगदान"
     },

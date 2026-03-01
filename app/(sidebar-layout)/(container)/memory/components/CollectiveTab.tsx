@@ -96,7 +96,7 @@ export function CollectiveTab({ onRefresh }: CollectiveTabProps) {
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-primary" />
                 <div>
-                  <p className="text-lg font-bold">{stats.totalPatterns}</p>
+                  <p className="text-lg font-bold">{stats.visiblePatterns}</p>
                   <p className="text-xs text-muted-foreground">{t('collective.stats.totalPatterns')}</p>
                 </div>
               </div>
@@ -107,7 +107,7 @@ export function CollectiveTab({ onRefresh }: CollectiveTabProps) {
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500" />
                 <div>
-                  <p className="text-lg font-bold">{stats.patternsAboveThreshold}</p>
+                  <p className="text-lg font-bold">{stats.pendingPatterns}</p>
                   <p className="text-xs text-muted-foreground">{t('collective.stats.verified')}</p>
                 </div>
               </div>

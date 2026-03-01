@@ -239,8 +239,8 @@
       "description": "搜索社区聚合的最佳实践、错误解决方案和常见陷阱。"
     },
     "stats": {
-      "totalPatterns": "总模式数",
-      "verified": "已验证",
+      "totalPatterns": "可见模式",
+      "verified": "待处理",
       "contributors": "贡献者",
       "contributions": "贡献"
     },

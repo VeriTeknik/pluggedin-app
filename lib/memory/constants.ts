@@ -226,3 +226,16 @@ export const CBP_NEUTRAL_RATING = 3.0;
 
 /** Per-feedback confidence adjustment magnitude */
 export const CBP_CONFIDENCE_ADJUSTMENT_FACTOR = 0.05;
+
+/** Per-reinforcement confidence increment (when a pattern is re-observed) */
+export const CBP_REINFORCEMENT_CONFIDENCE_INCREMENT = 0.05;
+
+// ============================================================================
+// Advisory Lock Keys (Postgres pg_advisory_lock)
+// ============================================================================
+
+/** Advisory lock key for CBP promotion pipeline (must be globally unique) */
+export const CBP_PIPELINE_ADVISORY_LOCK_KEY = 738201;
+
+/** Advisory lock key for gut aggregation pipeline (must be globally unique) */
+export const GUT_AGGREGATION_ADVISORY_LOCK_KEY = 738202;

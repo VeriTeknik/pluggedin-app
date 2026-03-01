@@ -230,47 +230,51 @@ export async function submitFeedback(
       return { success: false, error: 'Rating must be between 1 and 5' };
     }
 
-    await db
-      .insert(collectiveFeedbackTable)
-      .values({
-        pattern_uuid: patternUuid,
-        profile_uuid: profileUuid,
-        rating,
-        feedback_type: feedbackType,
-        comment: comment?.slice(0, 1000),
-      })
-      .onConflictDoUpdate({
-        target: [collectiveFeedbackTable.pattern_uuid, collectiveFeedbackTable.profile_uuid],
-        set: {
+    // Transaction prevents concurrent feedback submissions from double-counting
+    // the confidence adjustment: upsert + aggregate + update are atomic.
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(collectiveFeedbackTable)
+        .values({
+          pattern_uuid: patternUuid,
+          profile_uuid: profileUuid,
           rating,
           feedback_type: feedbackType,
           comment: comment?.slice(0, 1000),
-          updated_at: new Date(),
-        },
-      });
-
-    // Update pattern confidence based on feedback
-    const [feedback] = await db
-      .select({
-        avgRating: sql<number>`AVG(${collectiveFeedbackTable.rating})`,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(collectiveFeedbackTable)
-      .where(eq(collectiveFeedbackTable.pattern_uuid, patternUuid));
-
-    if (feedback && Number(feedback.count) >= CBP_NEGATIVE_FEEDBACK_THRESHOLD) {
-      const avgRating = Number(feedback.avgRating);
-      // Map 1-5 rating to confidence adjustment: neutral = no change, below = decrease, above = increase
-      const confidenceAdjustment = (avgRating - CBP_NEUTRAL_RATING) * CBP_CONFIDENCE_ADJUSTMENT_FACTOR;
-
-      await db
-        .update(gutPatternsTable)
-        .set({
-          confidence: sql`GREATEST(0.0, LEAST(1.0, ${gutPatternsTable.confidence} + ${confidenceAdjustment}))`,
-          updated_at: new Date(),
         })
-        .where(eq(gutPatternsTable.uuid, patternUuid));
-    }
+        .onConflictDoUpdate({
+          target: [collectiveFeedbackTable.pattern_uuid, collectiveFeedbackTable.profile_uuid],
+          set: {
+            rating,
+            feedback_type: feedbackType,
+            comment: comment?.slice(0, 1000),
+            updated_at: new Date(),
+          },
+        });
+
+      // Recompute aggregate rating and adjust pattern confidence
+      const [feedback] = await tx
+        .select({
+          avgRating: sql<number>`AVG(${collectiveFeedbackTable.rating})`,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(collectiveFeedbackTable)
+        .where(eq(collectiveFeedbackTable.pattern_uuid, patternUuid));
+
+      if (feedback && Number(feedback.count) >= CBP_NEGATIVE_FEEDBACK_THRESHOLD) {
+        const avgRating = Number(feedback.avgRating);
+        // Map 1-5 rating to confidence adjustment: neutral = no change, below = decrease, above = increase
+        const confidenceAdjustment = (avgRating - CBP_NEUTRAL_RATING) * CBP_CONFIDENCE_ADJUSTMENT_FACTOR;
+
+        await tx
+          .update(gutPatternsTable)
+          .set({
+            confidence: sql`GREATEST(0.0, LEAST(1.0, ${gutPatternsTable.confidence} + ${confidenceAdjustment}))`,
+            updated_at: new Date(),
+          })
+          .where(eq(gutPatternsTable.uuid, patternUuid));
+      }
+    });
 
     return { success: true };
   } catch (error) {

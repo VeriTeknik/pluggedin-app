@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
+import { GUT_AGGREGATION_ADVISORY_LOCK_KEY } from '@/lib/memory/constants';
 import { queryIntuition, aggregatePatterns } from '@/lib/memory/gut-agent';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
@@ -88,9 +89,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Postgres advisory lock prevents concurrent aggregation runs.
-    const GUT_AGGREGATION_LOCK_KEY = 738202;
     const lockResult = await db.execute(
-      sql`SELECT pg_try_advisory_lock(${GUT_AGGREGATION_LOCK_KEY}) AS acquired`
+      sql`SELECT pg_try_advisory_lock(${GUT_AGGREGATION_ADVISORY_LOCK_KEY}) AS acquired`
     );
     const acquired = (lockResult.rows[0] as { acquired: boolean } | undefined)?.acquired;
 
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       const result = await aggregatePatterns();
       return NextResponse.json(result);
     } finally {
-      await db.execute(sql`SELECT pg_advisory_unlock(${GUT_AGGREGATION_LOCK_KEY})`);
+      await db.execute(sql`SELECT pg_advisory_unlock(${GUT_AGGREGATION_ADVISORY_LOCK_KEY})`);
     }
   } catch (error) {
     return NextResponse.json(

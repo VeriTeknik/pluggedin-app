@@ -249,8 +249,8 @@
       "description": "Search community-aggregated patterns for best practices, error solutions, and gotchas."
     },
     "stats": {
-      "totalPatterns": "Total Patterns",
-      "verified": "Verified",
+      "totalPatterns": "Visible Patterns",
+      "verified": "Pending",
       "contributors": "Contributors",
       "contributions": "Contributions"
     },

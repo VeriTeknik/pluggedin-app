@@ -239,8 +239,8 @@
       "description": "Zoek naar best practices, foutoplossingen en valkuilen uit de gemeenschap."
     },
     "stats": {
-      "totalPatterns": "Totaal Patronen",
-      "verified": "Geverifieerd",
+      "totalPatterns": "Zichtbare patronen",
+      "verified": "In afwachting",
       "contributors": "Bijdragers",
       "contributions": "Bijdragen"
     },

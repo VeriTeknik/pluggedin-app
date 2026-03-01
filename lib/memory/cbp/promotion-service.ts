@@ -23,6 +23,7 @@ import {
   CBP_MIN_REINFORCEMENT,
   CBP_MIN_SUCCESS_SCORE,
   CBP_PROMOTION_BATCH_LIMIT,
+  CBP_REINFORCEMENT_CONFIDENCE_INCREMENT,
   GUT_K_ANONYMITY_THRESHOLD,
 } from '../constants';
 import { generateEmbedding } from '../embedding-service';
@@ -206,7 +207,7 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
                 unique_profile_count: isNewProfile
                   ? sql`${gutPatternsTable.unique_profile_count} + 1`
                   : gutPatternsTable.unique_profile_count,
-                confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
+                confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + ${CBP_REINFORCEMENT_CONFIDENCE_INCREMENT})`,
                 updated_at: new Date(),
                 metadata: sql`jsonb_set(
                   COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),
@@ -314,8 +315,10 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
 // ============================================================================
 
 export async function getPromotionStats(): Promise<MemoryResult<{
-  totalPatterns: number;
-  patternsAboveThreshold: number;
+  /** Patterns visible to users (meet k-anonymity threshold) */
+  visiblePatterns: number;
+  /** Patterns still accumulating contributors (below k-anonymity threshold) */
+  pendingPatterns: number;
   totalContributions: number;
   uniqueContributors: number;
 }>> {
@@ -337,12 +340,14 @@ export async function getPromotionStats(): Promise<MemoryResult<{
 
     const patternStats = patternStatsResult[0];
     const contribStats = contribStatsResult[0];
+    const total = Number(patternStats?.total ?? 0);
+    const visible = Number(patternStats?.aboveThreshold ?? 0);
 
     return {
       success: true,
       data: {
-        totalPatterns: Number(patternStats?.total ?? 0),
-        patternsAboveThreshold: Number(patternStats?.aboveThreshold ?? 0),
+        visiblePatterns: visible,
+        pendingPatterns: total - visible,
         totalContributions: Number(contribStats?.total ?? 0),
         uniqueContributors: Number(contribStats?.uniqueProfiles ?? 0),
       },
@@ -360,7 +365,12 @@ export async function getPromotionStats(): Promise<MemoryResult<{
 // ============================================================================
 
 /** Map ring types to pattern types. Unknown/null types intentionally default
- *  to 'best_practice' — safe fallback, new ring types should be added here. */
+ *  to 'best_practice' — safe fallback, new ring types should be added here.
+ *
+ *  Note: Extended PatternType values (error_solution, anti_pattern, gotcha,
+ *  security_warning, performance_tip, etc.) are only assigned by the gut-agent's
+ *  LLM-based pattern extraction, not by this static mapping. This function only
+ *  covers the four ring types that the CBP promotion pipeline processes. */
 function mapRingTypeToPatternType(ringType: string | null): PatternType {
   switch (ringType) {
     case 'procedures': return 'workflow';

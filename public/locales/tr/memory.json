@@ -239,8 +239,8 @@
       "description": "En iyi uygulamalar, hata çözümleri ve tuzaklar için topluluk örüntülerini arayın."
     },
     "stats": {
-      "totalPatterns": "Toplam Örüntü",
-      "verified": "Doğrulanmış",
+      "totalPatterns": "Görünür Kalıplar",
+      "verified": "Beklemede",
       "contributors": "Katkıda Bulunan",
       "contributions": "Katkılar"
     },

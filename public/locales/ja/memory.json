@@ -239,8 +239,8 @@
       "description": "ベストプラクティス、エラー解決策、落とし穴についてコミュニティパターンを検索します。"
     },
     "stats": {
-      "totalPatterns": "総パターン数",
-      "verified": "検証済み",
+      "totalPatterns": "表示パターン",
+      "verified": "保留中",
       "contributors": "貢献者",
       "contributions": "貢献"
     },

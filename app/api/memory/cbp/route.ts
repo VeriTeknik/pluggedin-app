@@ -12,6 +12,7 @@ import {
   injectProactiveWarning,
 } from '@/lib/memory/cbp/injection-engine';
 import { runPromotionPipeline } from '@/lib/memory/cbp/promotion-service';
+import { CBP_PIPELINE_ADVISORY_LOCK_KEY } from '@/lib/memory/constants';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../auth';
@@ -111,12 +112,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Postgres advisory lock prevents concurrent pipeline runs.  The lock key
-    // is an arbitrary fixed integer; pg_try_advisory_lock returns false
-    // immediately (no blocking) if another session already holds it.
-    const CBP_PIPELINE_LOCK_KEY = 738201;
+    // Postgres advisory lock prevents concurrent pipeline runs.
+    // pg_try_advisory_lock returns false immediately if another session holds it.
     const lockResult = await db.execute(
-      sql`SELECT pg_try_advisory_lock(${CBP_PIPELINE_LOCK_KEY}) AS acquired`
+      sql`SELECT pg_try_advisory_lock(${CBP_PIPELINE_ADVISORY_LOCK_KEY}) AS acquired`
     );
     const acquired = (lockResult.rows[0] as { acquired: boolean } | undefined)?.acquired;
 
@@ -131,7 +130,7 @@ export async function POST(request: NextRequest) {
       const result = await runPromotionPipeline();
       return NextResponse.json(result);
     } finally {
-      await db.execute(sql`SELECT pg_advisory_unlock(${CBP_PIPELINE_LOCK_KEY})`);
+      await db.execute(sql`SELECT pg_advisory_unlock(${CBP_PIPELINE_ADVISORY_LOCK_KEY})`);
     }
   } catch (error) {
     return NextResponse.json(

@@ -18,8 +18,8 @@ export interface CBPPattern {
 }
 
 export interface CBPStats {
-  totalPatterns: number;
-  patternsAboveThreshold: number;
+  visiblePatterns: number;
+  pendingPatterns: number;
   totalContributions: number;
   uniqueContributors: number;
 }

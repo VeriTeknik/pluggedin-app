@@ -19,6 +19,7 @@ import {
   CBP_INITIAL_CONFIDENCE,
   CBP_MIN_REINFORCEMENT,
   CBP_MIN_SUCCESS_SCORE,
+  CBP_REINFORCEMENT_CONFIDENCE_INCREMENT,
   GUT_AGGREGATION_BATCH_LIMIT,
   GUT_K_ANONYMITY_THRESHOLD,
   GUT_MAX_PATTERN_TOKENS,
@@ -198,7 +199,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
               unique_profile_count: isNewProfile
                 ? sql`${gutPatternsTable.unique_profile_count} + 1`
                 : gutPatternsTable.unique_profile_count,
-              confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + 0.05)`,
+              confidence: sql`LEAST(1.0, ${gutPatternsTable.confidence} + ${CBP_REINFORCEMENT_CONFIDENCE_INCREMENT})`,
               updated_at: new Date(),
               metadata: sql`jsonb_set(
                 COALESCE(${gutPatternsTable.metadata}, '{}'::jsonb),

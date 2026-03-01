@@ -39,6 +39,10 @@ import { classifyBatch } from '@/lib/memory/analytics-agent';
 import { processDecay } from '@/lib/memory/decay-engine';
 import { aggregatePatterns, queryIntuition } from '@/lib/memory/gut-agent';
 import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
+import { submitFeedback, injectContextual } from '@/lib/memory/cbp/injection-engine';
+import { getPromotionStats } from '@/lib/memory/cbp/promotion-service';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -597,8 +601,6 @@ export async function submitCBPFeedback(
   input: unknown
 ): Promise<MemoryResult> {
   try {
-    const { getServerSession } = await import('next-auth');
-    const { authOptions } = await import('@/lib/auth');
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return { success: false, error: 'Authentication required' };
@@ -610,7 +612,6 @@ export async function submitCBPFeedback(
       return { success: false, error: 'No active profile found' };
     }
 
-    const { submitFeedback } = await import('@/lib/memory/cbp/injection-engine');
     return submitFeedback(
       parsed.patternUuid,
       profileUuid,
@@ -630,15 +631,12 @@ export async function queryCBPPatterns(
   try {
     // CBP patterns are k-anonymous collective data (no profile scoping needed),
     // but we still require an authenticated session.
-    const { getServerSession } = await import('next-auth');
-    const { authOptions } = await import('@/lib/auth');
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return { success: false, error: 'Authentication required' };
     }
 
     const parsed = cbpQuerySchema.parse({ query, maxResults });
-    const { injectContextual } = await import('@/lib/memory/cbp/injection-engine');
     return injectContextual(parsed.query, parsed.maxResults);
   } catch (error) {
     return formatError(error);
@@ -647,14 +645,11 @@ export async function queryCBPPatterns(
 
 export async function getCBPStats(): Promise<MemoryResult> {
   try {
-    const { getServerSession } = await import('next-auth');
-    const { authOptions } = await import('@/lib/auth');
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return { success: false, error: 'Authentication required' };
     }
 
-    const { getPromotionStats } = await import('@/lib/memory/cbp/promotion-service');
     return getPromotionStats();
   } catch (error) {
     return formatError(error);
