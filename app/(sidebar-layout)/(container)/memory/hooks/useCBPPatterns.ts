@@ -60,7 +60,7 @@ export function useCBPPatterns() {
   ) => {
     if (!session?.user?.id) return;
     try {
-      await submitCBPFeedback(session.user.id, {
+      await submitCBPFeedback({
         patternUuid,
         rating,
         feedbackType,

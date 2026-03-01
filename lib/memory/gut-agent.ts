@@ -125,7 +125,10 @@ function hashPattern(compressedPattern: string): string {
  * Must match the implementation in promotion-service.ts.
  */
 function hashProfileUuid(profileUuid: string): string {
-  const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET || 'pluggedin-cbp-default';
+  const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('CBP_HASH_SECRET or NEXTAUTH_SECRET must be configured for profile anonymization');
+  }
   return createHmac('sha256', secret).update(profileUuid).digest('hex');
 }
 

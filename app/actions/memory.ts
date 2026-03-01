@@ -590,12 +590,18 @@ const cbpQuerySchema = z.object({
 });
 
 export async function submitCBPFeedback(
-  userId: string,
   input: unknown
 ): Promise<MemoryResult> {
   try {
+    const { getServerSession } = await import('next-auth');
+    const { authOptions } = await import('@/lib/auth');
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, error: 'Authentication required' };
+    }
+
     const parsed = cbpFeedbackSchema.parse(input);
-    const profileUuid = await getActiveProfileUuid(userId);
+    const profileUuid = await getActiveProfileUuid(session.user.id);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
