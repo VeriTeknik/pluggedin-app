@@ -170,7 +170,9 @@
     "typescript": "^5.9.3"
   },
   "optionalDependencies": {
-    "@zvec/bindings-darwin-arm64": "^0.2.0"
+    "@zvec/bindings-darwin-arm64": "^0.2.0",
+    "@zvec/bindings-linux-x64": "^0.2.0",
+    "@zvec/bindings-linux-arm64": "^0.2.0"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [
@@ -179,6 +181,10 @@
       "sharp"
     ],
     "onlyBuiltDependencies": [
+      "@zvec/zvec",
+      "@zvec/bindings-linux-x64",
+      "@zvec/bindings-linux-arm64",
+      "@zvec/bindings-darwin-arm64",
       "bcrypt",
       "esbuild",
       "sharp"

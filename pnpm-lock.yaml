@@ -420,6 +420,12 @@ importers:
       '@zvec/bindings-darwin-arm64':
         specifier: ^0.2.0
         version: 0.2.0
+      '@zvec/bindings-linux-arm64':
+        specifier: ^0.2.0
+        version: 0.2.0
+      '@zvec/bindings-linux-x64':
+        specifier: ^0.2.0
+        version: 0.2.0
 
 packages:
 

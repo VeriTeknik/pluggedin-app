@@ -104,6 +104,7 @@ export async function authenticate(request: Request) {
     }
 
     return {
+      error: undefined,
       success: true,
       activeProfile,
       project: { uuid: project[0].uuid, user_id: session.user.id },
