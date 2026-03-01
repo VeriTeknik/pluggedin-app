@@ -145,7 +145,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
         sql`${memoryRingTable.reinforcement_count} >= 2
           AND (${memoryRingTable.success_score} IS NULL OR ${memoryRingTable.success_score} >= 0.5)
           AND ${memoryRingTable.current_decay_stage} != 'forgotten'
-          AND COALESCE(${memoryRingTable.metadata}::jsonb->>'gut_processed', 'false') <> 'true'`
+          AND ${memoryRingTable.gut_processed} IS NOT TRUE`
       )
       .limit(GUT_AGGREGATION_BATCH_LIMIT);
 
@@ -215,33 +215,53 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
           console.warn('Failed to generate embedding for gut pattern:', error);
         }
 
-        const [newPattern] = await db
-          .insert(gutPatternsTable)
-          .values({
-            pattern_hash: hash,
-            pattern_type: pattern.patternType,
-            pattern_description: pattern.patternDescription,
-            compressed_pattern: pattern.compressedPattern,
-            occurrence_count: 1,
-            success_rate: memory.successScore ?? 0.5,
-            unique_profile_count: 1,
-            confidence: 0.3,
-            metadata: {
-              first_seen: new Date().toISOString(),
-              last_seen: new Date().toISOString(),
-            },
-          })
-          .returning({ uuid: gutPatternsTable.uuid });
+        // Atomic: create pattern + track first contribution in one transaction
+        const profileHash = hashProfileUuid(memory.profileUuid);
+        const newPattern = await db.transaction(async (tx) => {
+          const [inserted] = await tx
+            .insert(gutPatternsTable)
+            .values({
+              pattern_hash: hash,
+              pattern_type: pattern.patternType,
+              pattern_description: pattern.patternDescription,
+              compressed_pattern: pattern.compressedPattern,
+              occurrence_count: 1,
+              success_rate: memory.successScore ?? 0.5,
+              unique_profile_count: 1,
+              confidence: 0.3,
+              metadata: {
+                first_seen: new Date().toISOString(),
+                last_seen: new Date().toISOString(),
+              },
+            })
+            .returning({ uuid: gutPatternsTable.uuid });
+
+          if (inserted) {
+            await tx
+              .insert(collectiveContributionsTable)
+              .values({
+                pattern_uuid: inserted.uuid,
+                profile_hash: profileHash,
+                source_ring_uuid: memory.uuid,
+                success_score: memory.successScore,
+                ring_type: memory.ringType,
+              })
+              .onConflictDoNothing();
+          }
+
+          return inserted;
+        });
 
         // Vector storage runs outside the DB transaction (zvec is file-based).
-        // If it fails, delete the orphaned DB record to prevent patterns that
+        // If it fails, delete the orphaned DB records to prevent patterns that
         // exist in the database but are invisible to vector-based dedup.
         if (embedding && newPattern) {
           try {
-            upsertGutPatternVector(newPattern.uuid, embedding, pattern.patternType);
+            await upsertGutPatternVector(newPattern.uuid, embedding, pattern.patternType);
           } catch (error) {
             console.error(`Vector storage failed for gut pattern ${newPattern.uuid} — rolling back DB record:`, error);
             await db.delete(gutPatternsTable).where(eq(gutPatternsTable.uuid, newPattern.uuid));
+            await db.delete(collectiveContributionsTable).where(eq(collectiveContributionsTable.pattern_uuid, newPattern.uuid));
             continue;
           }
         }
@@ -252,13 +272,7 @@ export async function aggregatePatterns(): Promise<MemoryResult<{
       // Mark memory as gut-processed
       await db
         .update(memoryRingTable)
-        .set({
-          metadata: sql`jsonb_set(
-            COALESCE(${memoryRingTable.metadata}, '{}'::jsonb),
-            '{gut_processed}',
-            'true'::jsonb
-          )`,
-        })
+        .set({ gut_processed: true })
         .where(eq(memoryRingTable.uuid, memory.uuid));
     }
 

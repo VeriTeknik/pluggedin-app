@@ -3266,6 +3266,12 @@ export const memoryRingTable = pgTable(
     // Organization
     tags: text('tags').array().default(sql`'{}'::text[]`),
 
+    // CBP (Collective Best Practices) processing flag
+    cbp_promoted: boolean('cbp_promoted').default(false),
+
+    // Gut agent processing flag
+    gut_processed: boolean('gut_processed').default(false),
+
     // Metadata
     metadata: jsonb('metadata').$type<{
       classification_reason?: string;
@@ -3294,6 +3300,13 @@ export const memoryRingTable = pgTable(
     memoryRingProfileRingTypeIdx: index('memory_ring_profile_ring_type_idx').on(table.profile_uuid, table.ring_type),
     memoryRingLastAccessedIdx: index('memory_ring_last_accessed_idx').on(table.last_accessed_at),
     memoryRingProfileRelevanceIdx: index('memory_ring_profile_relevance_idx').on(table.profile_uuid, table.relevance_score),
+    // Partial indexes for CBP/gut processing: only index unprocessed rows
+    memoryRingCbpNotPromotedIdx: index('memory_ring_cbp_not_promoted_idx')
+      .on(table.cbp_promoted)
+      .where(sql`cbp_promoted IS NOT TRUE`),
+    memoryRingGutNotProcessedIdx: index('memory_ring_gut_not_processed_idx')
+      .on(table.gut_processed)
+      .where(sql`gut_processed IS NOT TRUE`),
   })
 );
 
@@ -3439,6 +3452,9 @@ export const collectiveFeedbackTable = pgTable(
 
     // Timestamps
     created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },

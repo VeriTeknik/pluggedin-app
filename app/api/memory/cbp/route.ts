@@ -97,16 +97,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const rateLimitResult = await EnhancedRateLimiters.api(request);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: 'Too many requests', retryAfter: rateLimitResult.retryAfter },
-        { status: 429 }
-      );
-    }
-
-    // No user auth required — cron jobs authenticate via CRON_SECRET only.
-    // This is a cross-profile operation that processes all eligible memories.
+    // Authenticate via CRON_SECRET first — cron callers are exempt from API
+    // rate limiting since they already have a shared secret and run on a
+    // fixed schedule. Checking auth before rate limit avoids consuming user
+    // quota for legitimate cron invocations.
     if (!verifyCronSecret(request.headers.get('x-cron-secret'))) {
       return NextResponse.json(
         { success: false, error: 'Forbidden: this endpoint requires cron authorization' },

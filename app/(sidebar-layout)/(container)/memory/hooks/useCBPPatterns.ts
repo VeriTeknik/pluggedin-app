@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 
 import { queryCBPPatterns, submitCBPFeedback, getCBPStats } from '@/app/actions/memory';
-import { useSafeSession } from '@/hooks/use-safe-session';
 
 export interface CBPPattern {
   uuid: string;
@@ -26,7 +25,6 @@ export interface CBPStats {
 }
 
 export function useCBPPatterns() {
-  const { data: session } = useSafeSession();
   const [patterns, setPatterns] = useState<CBPPattern[]>([]);
   const [stats, setStats] = useState<CBPStats | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -58,7 +56,6 @@ export function useCBPPatterns() {
     feedbackType: string,
     comment?: string
   ) => {
-    if (!session?.user?.id) return;
     try {
       await submitCBPFeedback({
         patternUuid,
@@ -69,7 +66,7 @@ export function useCBPPatterns() {
     } catch (err) {
       console.error('Failed to submit CBP feedback:', err);
     }
-  }, [session?.user?.id]);
+  }, []);
 
   const loadStats = useCallback(async () => {
     setIsLoadingStats(true);

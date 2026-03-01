@@ -23,8 +23,18 @@ const PII_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
   { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, replacement: '<EMAIL>' },
   // UUIDs
   { pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, replacement: '<UUID>' },
-  // API keys (common patterns)
+  // API keys (common patterns: OpenAI, Stripe, Plugged.in, generic)
   { pattern: /\b(sk-|pk-|pg_in_|api_|key_)[a-zA-Z0-9]{16,}\b/g, replacement: '<API_KEY>' },
+  // Anthropic keys (sk-ant-...)
+  { pattern: /\bsk-ant-[a-zA-Z0-9_-]{16,}\b/g, replacement: '<API_KEY>' },
+  // GitHub tokens (ghp_..., github_pat_...)
+  { pattern: /\b(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_)[a-zA-Z0-9_]{16,}\b/g, replacement: '<API_KEY>' },
+  // GitLab tokens (glpat-...)
+  { pattern: /\bglpat-[a-zA-Z0-9_-]{16,}\b/g, replacement: '<API_KEY>' },
+  // Stripe live/test keys (rk_live_, rk_test_, sk_live_, sk_test_)
+  { pattern: /\b[rs]k_(live|test)_[a-zA-Z0-9]{16,}\b/g, replacement: '<API_KEY>' },
+  // AWS access key IDs (AKIA...)
+  { pattern: /\bAKIA[0-9A-Z]{16}\b/g, replacement: '<API_KEY>' },
   // IPv4 addresses
   { pattern: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, replacement: '<IP>' },
   // IPv6 addresses (simplified)

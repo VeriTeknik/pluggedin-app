@@ -65,7 +65,7 @@ async function findEligibleMemories(limit: number): Promise<EligibleMemory[]> {
       sql`${memoryRingTable.reinforcement_count} >= ${CBP_MIN_REINFORCEMENT}
         AND (${memoryRingTable.success_score} IS NULL OR ${memoryRingTable.success_score} >= ${CBP_MIN_SUCCESS_SCORE})
         AND ${memoryRingTable.current_decay_stage} != 'forgotten'
-        AND COALESCE(${memoryRingTable.metadata}::jsonb->>'cbp_promoted', 'false') <> 'true'`
+        AND ${memoryRingTable.cbp_promoted} IS NOT TRUE`
     )
     .limit(limit);
 }
@@ -213,6 +213,13 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
                 )`,
               })
               .where(eq(gutPatternsTable.uuid, patternUuid));
+
+            // Mark source memory as cbp_promoted (inside transaction to prevent
+            // double-processing if the pipeline crashes after pattern update)
+            await tx
+              .update(memoryRingTable)
+              .set({ cbp_promoted: true })
+              .where(eq(memoryRingTable.uuid, memory.uuid));
           });
 
           stats.reinforced++;
@@ -221,7 +228,7 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
           // Determine pattern type from ring type
           const patternType = mapRingTypeToPatternType(memory.ringType);
 
-          // Transaction ensures pattern + contribution are atomic (no orphaned patterns)
+          // Transaction ensures pattern + contribution + flag are atomic
           const newPattern = await db.transaction(async (tx) => {
             const [inserted] = await tx
               .insert(gutPatternsTable)
@@ -253,6 +260,13 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
                   ring_type: memory.ringType,
                 })
                 .onConflictDoNothing();
+
+              // Mark source memory as cbp_promoted (inside transaction to prevent
+              // double-processing if the pipeline crashes after pattern creation)
+              await tx
+                .update(memoryRingTable)
+                .set({ cbp_promoted: true })
+                .where(eq(memoryRingTable.uuid, memory.uuid));
             }
 
             return inserted;
@@ -260,14 +274,17 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
 
           if (newPattern) {
             // Vector storage runs outside the DB transaction (zvec is file-based).
-            // If it fails, delete the orphaned DB record to prevent patterns that
-            // exist in the database but are invisible to vector-based dedup.
+            // If it fails, delete the orphaned DB records and undo the promoted
+            // flag so the memory can be re-processed on the next cron run.
             try {
-              upsertGutPatternVector(newPattern.uuid, embedding, patternType);
+              await upsertGutPatternVector(newPattern.uuid, embedding, patternType);
             } catch (err) {
-              console.error('Vector storage failed for pattern:', newPattern.uuid, '— rolling back DB record', err);
+              console.error('Vector storage failed for pattern:', newPattern.uuid, '— rolling back DB records', err);
               await db.delete(gutPatternsTable).where(eq(gutPatternsTable.uuid, newPattern.uuid));
               await db.delete(collectiveContributionsTable).where(eq(collectiveContributionsTable.pattern_uuid, newPattern.uuid));
+              await db.update(memoryRingTable)
+                .set({ cbp_promoted: false })
+                .where(eq(memoryRingTable.uuid, memory.uuid));
               stats.errors++;
               continue;
             }
@@ -275,18 +292,6 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
             stats.newPatterns++;
           }
         }
-
-        // Step 5: Mark source memory as cbp_promoted
-        await db
-          .update(memoryRingTable)
-          .set({
-            metadata: sql`jsonb_set(
-              COALESCE(${memoryRingTable.metadata}, '{}'::jsonb),
-              '{cbp_promoted}',
-              'true'::jsonb
-            )`,
-          })
-          .where(eq(memoryRingTable.uuid, memory.uuid));
       } catch (err) {
         console.error(`CBP promotion failed for memory ${memory.uuid}:`, err);
         stats.errors++;
@@ -352,6 +357,8 @@ export async function getPromotionStats(): Promise<MemoryResult<{
 // Helpers
 // ============================================================================
 
+/** Map ring types to pattern types. Unknown/null types intentionally default
+ *  to 'best_practice' — safe fallback, new ring types should be added here. */
 function mapRingTypeToPatternType(ringType: string | null): PatternType {
   switch (ringType) {
     case 'procedures': return 'workflow';

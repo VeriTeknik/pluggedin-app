@@ -666,6 +666,13 @@
       "when": 1772386480819,
       "tag": "0094_zippy_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1772404062005,
+      "tag": "0095_long_bug",
+      "breakpoints": true
     }
   ]
 }
