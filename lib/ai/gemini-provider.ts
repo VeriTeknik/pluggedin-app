@@ -12,15 +12,18 @@ export class GeminiProvider implements AIProvider {
   readonly name = 'gemini' as const;
   private ai: GoogleGenAI;
   private embeddingModel: string;
+  private embeddingDimensions: number;
   private completionModel: string;
 
   constructor(params: {
     apiKey: string;
     embeddingModel?: string;
+    embeddingDimensions?: number;
     completionModel?: string;
   }) {
     this.ai = new GoogleGenAI({ apiKey: params.apiKey });
     this.embeddingModel = params.embeddingModel || 'gemini-embedding-001';
+    this.embeddingDimensions = params.embeddingDimensions || 768;
     this.completionModel = params.completionModel || 'gemini-2.5-flash-lite';
   }
 
@@ -28,6 +31,9 @@ export class GeminiProvider implements AIProvider {
     const response = await this.ai.models.embedContent({
       model: this.embeddingModel,
       contents: text,
+      config: {
+        outputDimensionality: this.embeddingDimensions,
+      },
     });
     return response.embeddings?.[0]?.values ?? [];
   }

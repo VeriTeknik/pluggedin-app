@@ -78,6 +78,7 @@ function createProvider(
       return new GeminiProvider({
         apiKey,
         embeddingModel: overrides.embeddingModel,
+        embeddingDimensions: overrides.embeddingDimensions,
         completionModel: overrides.completionModel,
       });
     }
