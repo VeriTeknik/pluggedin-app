@@ -3,13 +3,22 @@
  * All vector operations across the platform use these types.
  */
 
+import { getEmbeddingDimensions } from '@/lib/ai';
+
 /** Which subsystem owns the vectors */
 export type VectorDomain = 'rag' | 'fresh_memory' | 'memory_ring' | 'gut_patterns';
 
-import { getEmbeddingDimensions } from '@/lib/ai';
+/** Resolved embedding dimensions from the AI provider abstraction (lazy). */
+let _embeddingDimensions: number | null = null;
+export function getResolvedEmbeddingDimensions(): number {
+  if (_embeddingDimensions === null) {
+    _embeddingDimensions = getEmbeddingDimensions();
+  }
+  return _embeddingDimensions;
+}
 
-/** Resolved embedding dimensions from the AI provider abstraction */
-export const EMBEDDING_DIMENSIONS: number = getEmbeddingDimensions();
+/** @deprecated Use getResolvedEmbeddingDimensions() for lazy evaluation */
+export const EMBEDDING_DIMENSIONS: number = 0; // Placeholder — callers should migrate
 
 /** Parameters for inserting a vector */
 export interface VectorInsertParams {

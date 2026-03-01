@@ -618,6 +618,15 @@ export async function queryCBPPatterns(
   maxResults?: number
 ): Promise<MemoryResult> {
   try {
+    // CBP patterns are k-anonymous collective data (no profile scoping needed),
+    // but we still require an authenticated session.
+    const { getServerSession } = await import('next-auth');
+    const { authOptions } = await import('@/lib/auth');
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: 'Authentication required' };
+    }
+
     const parsed = cbpQuerySchema.parse({ query, maxResults });
     const { injectContextual } = await import('@/lib/memory/cbp/injection-engine');
     return injectContextual(parsed.query, parsed.maxResults);
@@ -628,6 +637,13 @@ export async function queryCBPPatterns(
 
 export async function getCBPStats(): Promise<MemoryResult> {
   try {
+    const { getServerSession } = await import('next-auth');
+    const { authOptions } = await import('@/lib/auth');
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: 'Authentication required' };
+    }
+
     const { getPromotionStats } = await import('@/lib/memory/cbp/promotion-service');
     return getPromotionStats();
   } catch (error) {

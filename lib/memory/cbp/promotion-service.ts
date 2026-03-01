@@ -7,7 +7,7 @@
  * pattern pool with privacy-preserving anonymization and deduplication.
  */
 
-import { createHash } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -34,7 +34,8 @@ import { anonymize } from './anonymizer';
 // ============================================================================
 
 function hashProfileUuid(profileUuid: string): string {
-  return createHash('sha256').update(profileUuid).digest('hex');
+  const secret = process.env.CBP_HASH_SECRET || process.env.NEXTAUTH_SECRET || 'pluggedin-cbp-default';
+  return createHmac('sha256', secret).update(profileUuid).digest('hex');
 }
 
 function hashPattern(text: string): string {
@@ -298,9 +299,9 @@ export async function runPromotionPipeline(): Promise<MemoryResult<PromotionStat
               memory.successScore,
               memory.ringType
             );
-          }
 
-          stats.newPatterns++;
+            stats.newPatterns++;
+          }
         }
 
         // Step 5: Mark source memory as cbp_promoted

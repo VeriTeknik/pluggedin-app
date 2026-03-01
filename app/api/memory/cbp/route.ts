@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -14,14 +14,15 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { authenticate } from '../../auth';
 
 /**
- * Timing-safe comparison of secret strings to prevent timing attacks.
+ * Timing-safe comparison of secret strings.
+ * Uses HMAC-SHA256 digests (constant 32 bytes) to prevent length leakage.
  */
 function verifyCronSecret(provided: string | null): boolean {
   const expected = process.env.CRON_SECRET;
   if (!expected || !provided) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
+  const key = Buffer.from(expected);
+  const a = createHmac('sha256', key).update(provided).digest();
+  const b = createHmac('sha256', key).update(expected).digest();
   return timingSafeEqual(a, b);
 }
 
