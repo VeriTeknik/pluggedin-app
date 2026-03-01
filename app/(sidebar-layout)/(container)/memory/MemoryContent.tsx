@@ -8,6 +8,7 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +18,7 @@ import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { ClipboardTab } from './components/ClipboardTab';
+import { CollectiveTab } from './components/CollectiveTab';
 import { FreshMemoryTab } from './components/FreshMemoryTab';
 import { LongTermTab } from './components/LongTermTab';
 import { ProceduresTab } from './components/ProceduresTab';
@@ -133,7 +135,7 @@ export default function MemoryContent() {
 
         {/* Tabs */}
         <Tabs defaultValue="clipboard" className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
             <TabsTrigger value="clipboard" className="flex items-center gap-2">
               <Clipboard className="h-4 w-4" />
               {t('tabs.clipboard')}
@@ -149,6 +151,10 @@ export default function MemoryContent() {
             <TabsTrigger value="fresh" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               {t('tabs.fresh')}
+            </TabsTrigger>
+            <TabsTrigger value="collective" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              {t('tabs.collective')}
             </TabsTrigger>
           </TabsList>
 
@@ -172,6 +178,10 @@ export default function MemoryContent() {
 
           <TabsContent value="fresh" className="flex-1 overflow-auto mt-0">
             <FreshMemoryTab onRefresh={refreshStats} />
+          </TabsContent>
+
+          <TabsContent value="collective" className="flex-1 overflow-auto mt-0">
+            <CollectiveTab onRefresh={refreshStats} />
           </TabsContent>
         </Tabs>
       </div>

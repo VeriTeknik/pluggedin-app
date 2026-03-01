@@ -25,7 +25,8 @@
     "clipboard": "Pano",
     "longterm": "Uzun Vadeli",
     "procedures": "Prosedürler",
-    "fresh": "Taze"
+    "fresh": "Taze",
+    "collective": "Kolektif"
   },
   "clipboard": {
     "empty": {
@@ -224,6 +225,36 @@
       "outcome": "Sonuç",
       "classified": "Sınıflandırma",
       "actions": "İşlemler"
+    }
+  },
+  "collective": {
+    "title": "Kolektif En İyi Uygulamalar",
+    "description": "Topluluktan anonimleştirilmiş olarak toplanan örüntüler.",
+    "searchPlaceholder": "Kolektif örüntüleri ara...",
+    "search": "Ara",
+    "noResults": "Örüntü bulunamadı",
+    "noResultsDescription": "Farklı bir arama sorgusu deneyin.",
+    "empty": {
+      "title": "Kolektif Zeka",
+      "description": "En iyi uygulamalar, hata çözümleri ve tuzaklar için topluluk örüntülerini arayın."
+    },
+    "stats": {
+      "totalPatterns": "Toplam Örüntü",
+      "verified": "Doğrulanmış",
+      "contributors": "Katkıda Bulunan",
+      "contributions": "Katkılar"
+    },
+    "table": {
+      "type": "Tür",
+      "pattern": "Örüntü",
+      "confidence": "Güven",
+      "seen": "Görülme",
+      "rating": "Puan",
+      "actions": "İşlemler"
+    },
+    "feedback": {
+      "helpful": "Faydalı olarak işaretle",
+      "inaccurate": "Yanlış olarak işaretle"
     }
   }
 }

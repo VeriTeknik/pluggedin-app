@@ -572,3 +572,65 @@ export async function queryGutIntuition(
     return formatError(error);
   }
 }
+
+// ============================================================================
+// Collective Best Practices (CBP)
+// ============================================================================
+
+const cbpFeedbackSchema = z.object({
+  patternUuid: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  feedbackType: z.enum(['helpful', 'inaccurate', 'outdated', 'dangerous']),
+  comment: z.string().max(1000).optional(),
+});
+
+const cbpQuerySchema = z.object({
+  query: z.string().min(1, 'Query is required').max(2000),
+  maxResults: z.number().int().min(1).max(10).optional(),
+});
+
+export async function submitCBPFeedback(
+  userId: string,
+  input: unknown
+): Promise<MemoryResult> {
+  try {
+    const parsed = cbpFeedbackSchema.parse(input);
+    const profileUuid = await getActiveProfileUuid(userId);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    const { submitFeedback } = await import('@/lib/memory/cbp/injection-engine');
+    return submitFeedback(
+      parsed.patternUuid,
+      profileUuid,
+      parsed.rating,
+      parsed.feedbackType,
+      parsed.comment
+    );
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+export async function queryCBPPatterns(
+  query: string,
+  maxResults?: number
+): Promise<MemoryResult> {
+  try {
+    const parsed = cbpQuerySchema.parse({ query, maxResults });
+    const { injectContextual } = await import('@/lib/memory/cbp/injection-engine');
+    return injectContextual(parsed.query);
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+export async function getCBPStats(): Promise<MemoryResult> {
+  try {
+    const { getPromotionStats } = await import('@/lib/memory/cbp/promotion-service');
+    return getPromotionStats();
+  } catch (error) {
+    return formatError(error);
+  }
+}

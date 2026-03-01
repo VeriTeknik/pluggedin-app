@@ -3367,6 +3367,91 @@ export const gutPatternsTable = pgTable(
   })
 );
 
+// ============================================================================
+// Collective Best Practices (CBP) System
+// ============================================================================
+
+/**
+ * Collective Contributions - Anonymous tracking of which profiles
+ * contributed to a collective pattern. Uses hashed profile identifiers
+ * for k-anonymity enforcement without revealing actual profiles.
+ *
+ * NOT scoped by profile_uuid - this is aggregation metadata.
+ */
+export const collectiveContributionsTable = pgTable(
+  'collective_contributions',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Reference to gut pattern
+    pattern_uuid: uuid('pattern_uuid')
+      .notNull()
+      .references(() => gutPatternsTable.uuid, { onDelete: 'cascade' }),
+
+    // Anonymized contributor identity (SHA-256 hash of profile_uuid)
+    profile_hash: text('profile_hash').notNull(),
+
+    // Source memory ring UUID (nullable, for traceability without exposing content)
+    source_ring_uuid: uuid('source_ring_uuid'),
+
+    // Contribution metadata
+    success_score: real('success_score'),
+    ring_type: varchar('ring_type', { length: 20 }),
+
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    contributionsPatternIdx: index('collective_contributions_pattern_uuid_idx').on(table.pattern_uuid),
+    contributionsProfileHashIdx: index('collective_contributions_profile_hash_idx').on(table.profile_hash),
+    contributionsUniquePerPattern: unique('collective_contributions_pattern_profile_unique').on(
+      table.pattern_uuid,
+      table.profile_hash
+    ),
+  })
+);
+
+/**
+ * Collective Feedback - User feedback on pattern quality.
+ * Scoped by profile_uuid so users can rate patterns they see.
+ */
+export const collectiveFeedbackTable = pgTable(
+  'collective_feedback',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // Reference to gut pattern
+    pattern_uuid: uuid('pattern_uuid')
+      .notNull()
+      .references(() => gutPatternsTable.uuid, { onDelete: 'cascade' }),
+
+    // Who gave the feedback
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+
+    // Feedback
+    rating: integer('rating').notNull(), // 1 (unhelpful) to 5 (very helpful)
+    feedback_type: varchar('feedback_type', { length: 30 }).notNull(), // 'helpful', 'inaccurate', 'outdated', 'dangerous'
+    comment: text('comment'), // Optional free-text
+
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    feedbackPatternIdx: index('collective_feedback_pattern_uuid_idx').on(table.pattern_uuid),
+    feedbackProfileIdx: index('collective_feedback_profile_uuid_idx').on(table.profile_uuid),
+    feedbackUniquePerUser: unique('collective_feedback_pattern_profile_unique').on(
+      table.pattern_uuid,
+      table.profile_uuid
+    ),
+  })
+);
+
 // Type exports for new tables
 export type ModelRouterService = typeof modelRouterServicesTable.$inferSelect;
 export type NewModelRouterService = typeof modelRouterServicesTable.$inferInsert;
@@ -3382,3 +3467,9 @@ export type MemoryRing = typeof memoryRingTable.$inferSelect;
 export type NewMemoryRing = typeof memoryRingTable.$inferInsert;
 export type GutPattern = typeof gutPatternsTable.$inferSelect;
 export type NewGutPattern = typeof gutPatternsTable.$inferInsert;
+
+// CBP type exports
+export type CollectiveContribution = typeof collectiveContributionsTable.$inferSelect;
+export type NewCollectiveContribution = typeof collectiveContributionsTable.$inferInsert;
+export type CollectiveFeedback = typeof collectiveFeedbackTable.$inferSelect;
+export type NewCollectiveFeedback = typeof collectiveFeedbackTable.$inferInsert;

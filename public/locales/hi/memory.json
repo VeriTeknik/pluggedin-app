@@ -25,7 +25,8 @@
     "clipboard": "क्लिपबोर्ड",
     "longterm": "दीर्घकालिक",
     "procedures": "प्रक्रियाएं",
-    "fresh": "ताजा"
+    "fresh": "ताजा",
+    "collective": "सामूहिक"
   },
   "clipboard": {
     "empty": {
@@ -224,6 +225,36 @@
       "outcome": "परिणाम",
       "classified": "वर्गीकृत",
       "actions": "क्रियाएं"
+    }
+  },
+  "collective": {
+    "title": "सामूहिक सर्वोत्तम प्रथाएं",
+    "description": "समुदाय से गोपनीयता-संरक्षित पैटर्न।",
+    "searchPlaceholder": "सामूहिक पैटर्न खोजें...",
+    "search": "खोजें",
+    "noResults": "कोई पैटर्न नहीं मिला",
+    "noResultsDescription": "कोई अलग खोज प्रश्न आज़माएं।",
+    "empty": {
+      "title": "सामूहिक बुद्धिमत्ता",
+      "description": "सर्वोत्तम प्रथाओं, त्रुटि समाधानों और सामान्य समस्याओं के लिए समुदाय पैटर्न खोजें।"
+    },
+    "stats": {
+      "totalPatterns": "कुल पैटर्न",
+      "verified": "सत्यापित",
+      "contributors": "योगदानकर्ता",
+      "contributions": "योगदान"
+    },
+    "table": {
+      "type": "प्रकार",
+      "pattern": "पैटर्न",
+      "confidence": "विश्वास",
+      "seen": "देखा गया",
+      "rating": "रेटिंग",
+      "actions": "कार्रवाई"
+    },
+    "feedback": {
+      "helpful": "सहायक के रूप में चिह्नित करें",
+      "inaccurate": "गलत के रूप में चिह्नित करें"
     }
   }
 }

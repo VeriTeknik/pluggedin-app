@@ -8,7 +8,7 @@
 
 import { ChatOpenAI } from '@langchain/openai';
 
-export type MemoryLLMRole = 'classification' | 'compression' | 'pattern' | 'zreport';
+export type MemoryLLMRole = 'classification' | 'compression' | 'pattern' | 'zreport' | 'anonymizer';
 
 const ROLE_DEFAULTS: Record<MemoryLLMRole, {
   envKey: string;
@@ -38,6 +38,12 @@ const ROLE_DEFAULTS: Record<MemoryLLMRole, {
     fallbackModel: 'gpt-4o-mini',
     temperature: 0.2,
     maxTokens: 500,
+  },
+  anonymizer: {
+    envKey: 'MEMORY_ANONYMIZER_MODEL',
+    fallbackModel: 'gpt-4o-mini',
+    temperature: 0.1,
+    maxTokens: 400,
   },
 };
 

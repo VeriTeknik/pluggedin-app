@@ -181,3 +181,31 @@ export const GUT_AGGREGATION_BATCH_LIMIT = 100;
 
 /** Default stale session threshold in hours */
 export const STALE_SESSION_THRESHOLD_HOURS = 24;
+
+// ============================================================================
+// Collective Best Practices (CBP)
+// ============================================================================
+
+/** Minimum reinforcement count before a memory is eligible for CBP promotion */
+export const CBP_MIN_REINFORCEMENT = 2;
+
+/** Minimum success score for CBP eligibility */
+export const CBP_MIN_SUCCESS_SCORE = 0.5;
+
+/** Cosine similarity threshold for deduplication (≥ 0.90 = same pattern) */
+export const CBP_DEDUP_SIMILARITY_THRESHOLD = 0.90;
+
+/** Minimum feedback rating average for a pattern to remain active */
+export const CBP_MIN_FEEDBACK_RATING = 2.0;
+
+/** Number of negative feedbacks before a pattern is reviewed */
+export const CBP_NEGATIVE_FEEDBACK_THRESHOLD = 3;
+
+/** Maximum patterns returned per injection query */
+export const CBP_MAX_INJECTION_RESULTS = 3;
+
+/** Similarity threshold for injection engine context matching */
+export const CBP_INJECTION_SIMILARITY_THRESHOLD = 0.65;
+
+/** Maximum content length for anonymizer input */
+export const CBP_MAX_ANONYMIZER_INPUT_LENGTH = 2000;

@@ -25,7 +25,8 @@
     "clipboard": "Clipboard",
     "longterm": "Long-term",
     "procedures": "Procedures",
-    "fresh": "Fresh"
+    "fresh": "Fresh",
+    "collective": "Collective"
   },
   "clipboard": {
     "empty": {
@@ -234,6 +235,36 @@
       "outcome": "Outcome",
       "classified": "Classified",
       "actions": "Actions"
+    }
+  },
+  "collective": {
+    "title": "Collective Best Practices",
+    "description": "Privacy-preserving patterns aggregated from the community.",
+    "searchPlaceholder": "Search collective patterns...",
+    "search": "Search",
+    "noResults": "No patterns found",
+    "noResultsDescription": "Try a different search query.",
+    "empty": {
+      "title": "Collective Intelligence",
+      "description": "Search community-aggregated patterns for best practices, error solutions, and gotchas."
+    },
+    "stats": {
+      "totalPatterns": "Total Patterns",
+      "verified": "Verified",
+      "contributors": "Contributors",
+      "contributions": "Contributions"
+    },
+    "table": {
+      "type": "Type",
+      "pattern": "Pattern",
+      "confidence": "Confidence",
+      "seen": "Seen",
+      "rating": "Rating",
+      "actions": "Actions"
+    },
+    "feedback": {
+      "helpful": "Mark as helpful",
+      "inaccurate": "Mark as inaccurate"
     }
   }
 }
