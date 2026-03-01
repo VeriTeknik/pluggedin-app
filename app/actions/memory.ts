@@ -11,6 +11,9 @@ import {
   memorySessionsTable,
   projectsTable,
 } from '@/db/schema';
+import {
+  FEEDBACK_TYPE_VALUES,
+} from '@/lib/memory/types';
 import type {
   DecayStage,
   MemoryResult,
@@ -36,6 +39,10 @@ import { classifyBatch } from '@/lib/memory/analytics-agent';
 import { processDecay } from '@/lib/memory/decay-engine';
 import { aggregatePatterns, queryIntuition } from '@/lib/memory/gut-agent';
 import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
+import { submitFeedback, injectContextual } from '@/lib/memory/cbp/injection-engine';
+import { getPromotionStats } from '@/lib/memory/cbp/promotion-service';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -568,6 +575,82 @@ export async function queryGutIntuition(
   try {
     const parsed = queryGutSchema.parse({ query, topK });
     return queryIntuition(parsed.query, parsed.topK);
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+// ============================================================================
+// Collective Best Practices (CBP)
+// ============================================================================
+
+
+const cbpFeedbackSchema = z.object({
+  patternUuid: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  feedbackType: z.enum(FEEDBACK_TYPE_VALUES),
+  comment: z.string().max(1000).optional(),
+});
+
+const cbpQuerySchema = z.object({
+  query: z.string().min(1, 'Query is required').max(2000),
+  maxResults: z.number().int().min(1).max(10).optional(),
+});
+
+export async function submitCBPFeedback(
+  input: unknown
+): Promise<MemoryResult> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    const parsed = cbpFeedbackSchema.parse(input);
+    const profileUuid = await getActiveProfileUuid(session.user.id);
+    if (!profileUuid) {
+      return { success: false, error: 'No active profile found' };
+    }
+
+    return submitFeedback(
+      parsed.patternUuid,
+      profileUuid,
+      parsed.rating,
+      parsed.feedbackType,
+      parsed.comment
+    );
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+export async function queryCBPPatterns(
+  query: string,
+  maxResults?: number
+): Promise<MemoryResult> {
+  try {
+    // CBP patterns are k-anonymous collective data (no profile scoping needed),
+    // but we still require an authenticated session.
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    const parsed = cbpQuerySchema.parse({ query, maxResults });
+    return injectContextual(parsed.query, parsed.maxResults);
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+export async function getCBPStats(): Promise<MemoryResult> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return getPromotionStats();
   } catch (error) {
     return formatError(error);
   }

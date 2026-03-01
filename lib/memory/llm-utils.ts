@@ -1,9 +1,7 @@
-import type { AIMessageChunk } from '@langchain/core/messages';
-
 /**
- * Extract the text content from an LLM response message.
+ * Extract the text content from an LLM response.
  */
-export function extractResponseText(response: AIMessageChunk): string {
+export function extractResponseText(response: { content: string | unknown }): string {
   return typeof response.content === 'string'
     ? response.content
     : JSON.stringify(response.content);

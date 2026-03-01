@@ -15,7 +15,7 @@ import {
   generateEmbedding,
   generateEmbeddings,
   estimateTokenCount,
-  EMBEDDING_DIMENSIONS,
+  getResolvedEmbeddingDimensions,
 } from '@/lib/vectors/embedding-service';
 
 describe('Shared Embedding Service', () => {
@@ -23,8 +23,9 @@ describe('Shared Embedding Service', () => {
     process.env.OPENAI_API_KEY = 'test-key';
   });
 
-  it('should export correct embedding dimension', () => {
-    expect(EMBEDDING_DIMENSIONS).toBe(1536);
+  it('should resolve embedding dimensions from provider', () => {
+    const dims = getResolvedEmbeddingDimensions();
+    expect(dims).toBeGreaterThan(0);
   });
 
   it('should generate a single embedding', async () => {

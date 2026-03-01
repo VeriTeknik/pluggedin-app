@@ -25,7 +25,8 @@
     "clipboard": "Klembord",
     "longterm": "Langetermijn",
     "procedures": "Procedures",
-    "fresh": "Vers"
+    "fresh": "Vers",
+    "collective": "Collectief"
   },
   "clipboard": {
     "empty": {
@@ -224,6 +225,36 @@
       "outcome": "Uitkomst",
       "classified": "Geclassificeerd",
       "actions": "Acties"
+    }
+  },
+  "collective": {
+    "title": "Collectieve Best Practices",
+    "description": "Privacy-beschermde patronen uit de gemeenschap.",
+    "searchPlaceholder": "Zoek collectieve patronen...",
+    "search": "Zoeken",
+    "noResults": "Geen patronen gevonden",
+    "noResultsDescription": "Probeer een andere zoekopdracht.",
+    "empty": {
+      "title": "Collectieve Intelligentie",
+      "description": "Zoek naar best practices, foutoplossingen en valkuilen uit de gemeenschap."
+    },
+    "stats": {
+      "totalPatterns": "Zichtbare patronen",
+      "verified": "In afwachting",
+      "contributors": "Bijdragers",
+      "contributions": "Bijdragen"
+    },
+    "table": {
+      "type": "Type",
+      "pattern": "Patroon",
+      "confidence": "Vertrouwen",
+      "seen": "Gezien",
+      "rating": "Beoordeling",
+      "actions": "Acties"
+    },
+    "feedback": {
+      "helpful": "Markeer als nuttig",
+      "inaccurate": "Markeer als onjuist"
     }
   }
 }

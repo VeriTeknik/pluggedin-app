@@ -25,7 +25,8 @@
     "clipboard": "剪贴板",
     "longterm": "长期",
     "procedures": "程序",
-    "fresh": "新鲜"
+    "fresh": "新鲜",
+    "collective": "集体"
   },
   "clipboard": {
     "empty": {
@@ -224,6 +225,36 @@
       "outcome": "结果",
       "classified": "分类",
       "actions": "操作"
+    }
+  },
+  "collective": {
+    "title": "集体最佳实践",
+    "description": "从社区匿名聚合的模式。",
+    "searchPlaceholder": "搜索集体模式...",
+    "search": "搜索",
+    "noResults": "未找到模式",
+    "noResultsDescription": "请尝试不同的搜索查询。",
+    "empty": {
+      "title": "集体智慧",
+      "description": "搜索社区聚合的最佳实践、错误解决方案和常见陷阱。"
+    },
+    "stats": {
+      "totalPatterns": "可见模式",
+      "verified": "待处理",
+      "contributors": "贡献者",
+      "contributions": "贡献"
+    },
+    "table": {
+      "type": "类型",
+      "pattern": "模式",
+      "confidence": "置信度",
+      "seen": "出现次数",
+      "rating": "评分",
+      "actions": "操作"
+    },
+    "feedback": {
+      "helpful": "标记为有用",
+      "inaccurate": "标记为不准确"
     }
   }
 }

@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
+    "@google/genai": "^1.43.0",
     "@h1deya/langchain-mcp-tools": "^0.4.1",
     "@hookform/resolvers": "^5.2.2",
     "@langchain/anthropic": "^1.3.21",
@@ -171,8 +172,8 @@
   },
   "optionalDependencies": {
     "@zvec/bindings-darwin-arm64": "^0.2.0",
-    "@zvec/bindings-linux-x64": "^0.2.0",
-    "@zvec/bindings-linux-arm64": "^0.2.0"
+    "@zvec/bindings-linux-arm64": "^0.2.0",
+    "@zvec/bindings-linux-x64": "^0.2.0"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [

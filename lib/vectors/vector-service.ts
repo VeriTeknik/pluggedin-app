@@ -38,7 +38,7 @@ import type {
   VectorSearchResult,
   VectorStats,
 } from './types';
-import { EMBEDDING_DIMENSIONS } from './types';
+import { getResolvedEmbeddingDimensions } from './types';
 
 // ─── Configuration ─────────────────────────────────────────────────
 
@@ -87,15 +87,17 @@ const collections = globalForZvec.__zvecCollections;
 
 const INVERT_INDEX = { indexType: ZVecIndexType.INVERT } as const;
 
-const EMBEDDING_VECTOR_CONFIG = {
-  name: 'embedding',
-  dataType: ZVecDataType.VECTOR_FP32,
-  dimension: EMBEDDING_DIMENSIONS,
-  indexParams: {
-    indexType: ZVecIndexType.HNSW,
-    metricType: ZVecMetricType.COSINE,
-  },
-} as const;
+function getEmbeddingVectorConfig() {
+  return {
+    name: 'embedding',
+    dataType: ZVecDataType.VECTOR_FP32,
+    dimension: getResolvedEmbeddingDimensions(),
+    indexParams: {
+      indexType: ZVecIndexType.HNSW,
+      metricType: ZVecMetricType.COSINE,
+    },
+  };
+}
 
 /**
  * Domain-specific collection field definitions.
@@ -136,7 +138,7 @@ function createCollection(collectionPath: string, domain: VectorDomain, fields: 
   }
   const schema = new ZVecCollectionSchema({
     name: domain,
-    vectors: EMBEDDING_VECTOR_CONFIG,
+    vectors: getEmbeddingVectorConfig(),
     fields,
   });
   return ZVecCreateAndOpen(collectionPath, schema);

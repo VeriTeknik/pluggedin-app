@@ -1,21 +1,23 @@
-import { timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 import { NextRequest, NextResponse } from 'next/server';
 
 import { classifyBatch } from '@/lib/memory/analytics-agent';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../auth';
 
 /**
- * Timing-safe comparison of secret strings to prevent timing attacks.
+ * Timing-safe comparison of secret strings.
+ *
+ * Uses HMAC-SHA256 digests so timingSafeEqual always compares 32-byte
+ * buffers — no early return on length mismatch leaks the secret's length.
  */
 function verifyCronSecret(provided: string | null): boolean {
   const expected = process.env.CRON_SECRET;
   if (!expected || !provided) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
+  const key = Buffer.from(expected);
+  const a = createHmac('sha256', key).update(provided).digest();
+  const b = createHmac('sha256', key).update(expected).digest();
   return timingSafeEqual(a, b);
 }
 
@@ -25,23 +27,17 @@ function verifyCronSecret(provided: string | null): boolean {
  */
 export async function POST(request: NextRequest) {
   try {
-    const rateLimitResult = await EnhancedRateLimiters.api(request);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: 'Too many requests', retryAfter: rateLimitResult.retryAfter },
-        { status: 429 }
-      );
-    }
-
-    const auth = await authenticate(request);
-    if (auth.error) return auth.error;
-
+    // Authenticate via CRON_SECRET first — cron callers are exempt from API
+    // rate limiting since they run on a fixed schedule with a shared secret.
     if (!verifyCronSecret(request.headers.get('x-cron-secret'))) {
       return NextResponse.json(
         { success: false, error: 'Forbidden: this endpoint requires cron authorization' },
         { status: 403 }
       );
     }
+
+    const auth = await authenticate(request);
+    if (auth.error) return auth.error;
 
     const result = await classifyBatch(auth.activeProfile.uuid);
     return NextResponse.json(result);

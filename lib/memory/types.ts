@@ -66,8 +66,36 @@ export const PatternType = {
   WORKFLOW: 'workflow',
   PREFERENCE: 'preference',
   BEST_PRACTICE: 'best_practice',
+  // CBP extended types
+  ERROR_SOLUTION: 'error_solution',
+  ANTI_PATTERN: 'anti_pattern',
+  GOTCHA: 'gotcha',
+  MIGRATION_NOTE: 'migration_note',
+  COMPATIBILITY: 'compatibility',
+  PERFORMANCE_TIP: 'performance_tip',
+  SECURITY_WARNING: 'security_warning',
 } as const;
 export type PatternType = (typeof PatternType)[keyof typeof PatternType];
+
+/** Feedback types for collective patterns */
+export const FeedbackType = {
+  HELPFUL: 'helpful',
+  INACCURATE: 'inaccurate',
+  OUTDATED: 'outdated',
+  DANGEROUS: 'dangerous',
+} as const;
+export type FeedbackType = (typeof FeedbackType)[keyof typeof FeedbackType];
+
+/** Feedback type values array for Zod enum validation */
+export const FEEDBACK_TYPE_VALUES = Object.values(FeedbackType) as [string, ...string[]];
+
+/** CBP injection trigger contexts */
+export const InjectionContext = {
+  PROACTIVE_WARNING: 'proactive_warning',
+  POST_ERROR: 'post_error',
+  CONTEXTUAL: 'contextual',
+} as const;
+export type InjectionContext = (typeof InjectionContext)[keyof typeof InjectionContext];
 
 // ============================================================================
 // Z-Report Types
