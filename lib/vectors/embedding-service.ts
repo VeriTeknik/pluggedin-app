@@ -1,41 +1,20 @@
 /**
  * Shared Embedding Service
  *
- * Generates vector embeddings from text using OpenAI's embedding API.
+ * Generates vector embeddings using the configured AI provider.
+ * Supports OpenAI, Gemini, and future providers via the abstraction layer.
  * Used by RAG, Memory, and CBP systems.
- * Uses @langchain/openai (already a project dependency).
  */
 
-import { OpenAIEmbeddings } from '@langchain/openai';
+import { getEmbeddingProvider } from '@/lib/ai';
 
-import { DEFAULT_EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from './types';
-
-export { EMBEDDING_DIMENSIONS, DEFAULT_EMBEDDING_MODEL } from './types';
-
-let embeddingsInstance: OpenAIEmbeddings | null = null;
-
-function getEmbeddings(): OpenAIEmbeddings {
-  if (!embeddingsInstance) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is required for vector embeddings');
-    }
-
-    embeddingsInstance = new OpenAIEmbeddings({
-      openAIApiKey: apiKey,
-      modelName: process.env.EMBEDDING_MODEL || process.env.MEMORY_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL,
-      dimensions: EMBEDDING_DIMENSIONS,
-    });
-  }
-  return embeddingsInstance;
-}
+export { EMBEDDING_DIMENSIONS } from './types';
 
 /**
  * Generate embedding vector for a single text
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const embeddings = getEmbeddings();
-  return embeddings.embedQuery(text);
+  return getEmbeddingProvider().embed(text);
 }
 
 /**
@@ -43,8 +22,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const embeddings = getEmbeddings();
-  return embeddings.embedDocuments(texts);
+  return getEmbeddingProvider().embedBatch(texts);
 }
 
 /**
