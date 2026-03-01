@@ -18,6 +18,7 @@ import {
   upsertVector,
 } from '@/lib/vectors/vector-service';
 
+import { DEFAULT_TOP_K, SIMILARITY_THRESHOLD } from './constants';
 import type { RingType } from './types';
 
 // ============================================================================
@@ -141,9 +142,9 @@ export function searchFreshMemory(params: {
   const results = searchVectors({
     embedding: params.queryEmbedding,
     domain: 'fresh_memory',
-    topK: params.topK ?? 10,
+    topK: params.topK ?? DEFAULT_TOP_K,
     filter,
-    threshold: params.threshold ?? 0.7,
+    threshold: params.threshold ?? SIMILARITY_THRESHOLD,
   });
 
   return results.map(r => ({ uuid: r.id, score: r.score }));
@@ -168,7 +169,7 @@ export function searchMemoryRing(params: {
     threshold,
     agentUuid,
   } = params;
-  const topK = topKParam ?? 10;
+  const topK = topKParam ?? DEFAULT_TOP_K;
 
   // For single ring type, use filter. For multiple, over-fetch and filter in JS.
   const filter = buildFilter([
@@ -182,7 +183,7 @@ export function searchMemoryRing(params: {
     domain: 'memory_ring',
     topK: ringTypes && ringTypes.length > 1 ? topK * 3 : topK,
     filter,
-    threshold: threshold ?? 0.7,
+    threshold: threshold ?? SIMILARITY_THRESHOLD,
   });
 
   let filtered = results;
@@ -210,7 +211,7 @@ export function searchGutPatterns(params: {
     embedding: params.queryEmbedding,
     domain: 'gut_patterns',
     topK: params.topK ?? 5,
-    threshold: params.threshold ?? 0.7,
+    threshold: params.threshold ?? SIMILARITY_THRESHOLD,
   });
 
   return results.map(r => ({ uuid: r.id, score: r.score }));
