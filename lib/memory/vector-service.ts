@@ -1,124 +1,42 @@
 /**
- * Vector Service
+ * Memory Vector Service
  *
- * In-process vector search using zvec (Alibaba's lightweight vector database).
- * Vectors are stored on disk in zvec collections, separate from PostgreSQL.
- * Each collection stores document IDs + embeddings + key filter fields.
- *
- * Collections:
- * - fresh_memory: observation embeddings (filter by profile_uuid, agent_uuid)
- * - memory_ring: long-term memory embeddings (filter by profile_uuid, agent_uuid, ring_type)
- * - gut_patterns: collective wisdom embeddings (filter by pattern_type)
+ * Thin wrapper over the shared vector infrastructure (@/lib/vectors/).
+ * Provides ergonomic, memory-domain-specific functions that delegate
+ * to the hardened shared layer (HMR persistence, path validation,
+ * corruption detection, lock error handling, injection-safe filters).
  */
 
-import path from 'path';
-import {
-  ZVecCollectionSchema,
-  ZVecCreateAndOpen,
-  ZVecDataType,
-  ZVecIndexType,
-  ZVecInitialize,
-  ZVecMetricType,
-  ZVecOpen,
-  type ZVecCollection,
-  type ZVecDoc,
-} from '@zvec/zvec';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { memoryRingTable } from '@/db/schema';
+import {
+  buildFilter,
+  deleteVectors,
+  searchVectors,
+  upsertVector,
+} from '@/lib/vectors/vector-service';
 
-import { DEFAULT_TOP_K, EMBEDDING_DIMENSIONS, SIMILARITY_THRESHOLD } from './constants';
+import { DEFAULT_TOP_K, SIMILARITY_THRESHOLD } from './constants';
 import type { RingType } from './types';
 
-// ============================================================================
-// Configuration
-// ============================================================================
-
-const ZVEC_DATA_DIR = process.env.ZVEC_DATA_PATH
-  || process.env.MEMORY_VECTOR_DATA_DIR
-  || path.join(process.cwd(), 'data', 'vectors');
-
-let initialized = false;
-
-function ensureInitialized(): void {
-  if (!initialized) {
-    ZVecInitialize({
-      logLevel: 2, // WARN
-    });
-    initialized = true;
+/**
+ * Guard: profileUuid must be a non-empty string.
+ * buildFilter silently drops empty values, which would remove tenant isolation.
+ */
+function requireProfileUuid(profileUuid: string): void {
+  if (!profileUuid) {
+    throw new Error('profileUuid is required for memory vector operations');
   }
 }
 
 // ============================================================================
-// Collection Management (lazy singletons)
-// ============================================================================
-
-const collections: Record<string, ZVecCollection> = {};
-
-const INVERT_INDEX = { indexType: ZVecIndexType.INVERT } as const;
-
-const EMBEDDING_VECTOR_CONFIG = {
-  name: 'embedding',
-  dataType: ZVecDataType.VECTOR_FP32,
-  dimension: EMBEDDING_DIMENSIONS,
-  indexParams: {
-    indexType: ZVecIndexType.HNSW,
-    metricType: ZVecMetricType.COSINE,
-  },
-} as const;
-
-function getOrCreateCollection(
-  name: string,
-  fields: ConstructorParameters<typeof ZVecCollectionSchema>[0]['fields']
-): ZVecCollection {
-  if (collections[name]) return collections[name];
-
-  ensureInitialized();
-
-  const collectionPath = path.join(ZVEC_DATA_DIR, name);
-
-  try {
-    collections[name] = ZVecOpen(collectionPath);
-  } catch {
-    const schema = new ZVecCollectionSchema({
-      name,
-      vectors: EMBEDDING_VECTOR_CONFIG,
-      fields,
-    });
-    collections[name] = ZVecCreateAndOpen(collectionPath, schema);
-  }
-
-  return collections[name];
-}
-
-function getFreshMemoryCollection(): ZVecCollection {
-  return getOrCreateCollection('fresh_memory', [
-    { name: 'profile_uuid', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
-    { name: 'agent_uuid', dataType: ZVecDataType.STRING, nullable: true, indexParams: INVERT_INDEX },
-  ]);
-}
-
-function getMemoryRingCollection(): ZVecCollection {
-  return getOrCreateCollection('memory_ring', [
-    { name: 'profile_uuid', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
-    { name: 'agent_uuid', dataType: ZVecDataType.STRING, nullable: true, indexParams: INVERT_INDEX },
-    { name: 'ring_type', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
-  ]);
-}
-
-function getGutPatternsCollection(): ZVecCollection {
-  return getOrCreateCollection('gut_patterns', [
-    { name: 'pattern_type', dataType: ZVecDataType.STRING, indexParams: INVERT_INDEX },
-  ]);
-}
-
-// ============================================================================
-// Upsert / Delete Operations
+// Upsert Operations
 // ============================================================================
 
 /**
- * Store or update a fresh memory embedding in zvec
+ * Store or update a fresh memory embedding
  */
 export function upsertFreshMemoryVector(
   uuid: string,
@@ -126,10 +44,11 @@ export function upsertFreshMemoryVector(
   profileUuid: string,
   agentUuid?: string | null
 ): void {
-  const collection = getFreshMemoryCollection();
-  collection.upsertSync({
+  requireProfileUuid(profileUuid);
+  upsertVector({
     id: uuid,
-    vectors: { embedding },
+    embedding,
+    domain: 'fresh_memory',
     fields: {
       profile_uuid: profileUuid,
       agent_uuid: agentUuid ?? '',
@@ -138,7 +57,7 @@ export function upsertFreshMemoryVector(
 }
 
 /**
- * Store or update a memory ring embedding in zvec
+ * Store or update a memory ring embedding
  */
 export function upsertMemoryRingVector(
   uuid: string,
@@ -147,10 +66,11 @@ export function upsertMemoryRingVector(
   ringType: string,
   agentUuid?: string | null
 ): void {
-  const collection = getMemoryRingCollection();
-  collection.upsertSync({
+  requireProfileUuid(profileUuid);
+  upsertVector({
     id: uuid,
-    vectors: { embedding },
+    embedding,
+    domain: 'memory_ring',
     fields: {
       profile_uuid: profileUuid,
       agent_uuid: agentUuid ?? '',
@@ -160,28 +80,31 @@ export function upsertMemoryRingVector(
 }
 
 /**
- * Store or update a gut pattern embedding in zvec
+ * Store or update a gut pattern embedding
  */
 export function upsertGutPatternVector(
   uuid: string,
   embedding: number[],
   patternType: string
 ): void {
-  const collection = getGutPatternsCollection();
-  collection.upsertSync({
+  upsertVector({
     id: uuid,
-    vectors: { embedding },
+    embedding,
+    domain: 'gut_patterns',
     fields: { pattern_type: patternType },
   });
 }
+
+// ============================================================================
+// Delete Operations
+// ============================================================================
 
 /**
  * Delete a vector from fresh memory collection
  */
 export function deleteFreshMemoryVector(uuid: string): void {
   try {
-    const collection = getFreshMemoryCollection();
-    collection.deleteSync(uuid);
+    deleteVectors({ ids: [uuid], domain: 'fresh_memory' });
   } catch (error) {
     console.warn(`Failed to delete fresh memory vector ${uuid}:`, error);
   }
@@ -192,8 +115,7 @@ export function deleteFreshMemoryVector(uuid: string): void {
  */
 export function deleteMemoryRingVector(uuid: string): void {
   try {
-    const collection = getMemoryRingCollection();
-    collection.deleteSync(uuid);
+    deleteVectors({ ids: [uuid], domain: 'memory_ring' });
   } catch (error) {
     console.warn(`Failed to delete memory ring vector ${uuid}:`, error);
   }
@@ -204,8 +126,7 @@ export function deleteMemoryRingVector(uuid: string): void {
  */
 export function deleteGutPatternVector(uuid: string): void {
   try {
-    const collection = getGutPatternsCollection();
-    collection.deleteSync(uuid);
+    deleteVectors({ ids: [uuid], domain: 'gut_patterns' });
   } catch (error) {
     console.warn(`Failed to delete gut pattern vector ${uuid}:`, error);
   }
@@ -214,32 +135,6 @@ export function deleteGutPatternVector(uuid: string): void {
 // ============================================================================
 // Search Operations
 // ============================================================================
-
-/** Allowed field names for zvec filter expressions to prevent field injection */
-const ALLOWED_FILTER_FIELDS: ReadonlySet<string> = new Set([
-  'profile_uuid', 'agent_uuid', 'ring_type', 'pattern_type',
-]);
-
-/**
- * Build a zvec filter expression string.
- * Field names are validated against an allowlist.
- * Values are sanitized by removing double quotes to prevent filter expression injection.
- */
-function buildFilter(conditions: Array<[string, string] | null>): string | undefined {
-  const parts = conditions
-    .filter((c): c is [string, string] => c !== null && c[1] !== '')
-    .map(([field, value]) => {
-      // Validate field name against allowlist to prevent filter injection
-      if (!ALLOWED_FILTER_FIELDS.has(field)) {
-        throw new Error(`Invalid filter field: ${field}`);
-      }
-      // Sanitize value: remove double quotes and backslashes to prevent filter injection
-      const sanitized = value.replace(/["\\]/g, '');
-      return `${field} = "${sanitized}"`;
-    });
-
-  return parts.length > 0 ? parts.join(' AND ') : undefined;
-}
 
 /**
  * Search fresh memory by semantic similarity
@@ -251,36 +146,26 @@ export function searchFreshMemory(params: {
   threshold?: number;
   agentUuid?: string;
 }): Array<{ uuid: string; score: number }> {
-  const {
-    profileUuid,
-    queryEmbedding,
-    topK = DEFAULT_TOP_K,
-    threshold = SIMILARITY_THRESHOLD,
-    agentUuid,
-  } = params;
-
-  const collection = getFreshMemoryCollection();
+  requireProfileUuid(params.profileUuid);
 
   const filter = buildFilter([
-    ['profile_uuid', profileUuid],
-    agentUuid ? ['agent_uuid', agentUuid] : null,
+    ['profile_uuid', params.profileUuid],
+    params.agentUuid ? ['agent_uuid', params.agentUuid] : null,
   ]);
 
-  const results: ZVecDoc[] = collection.querySync({
-    fieldName: 'embedding',
-    vector: queryEmbedding,
-    topk: topK,
+  const results = searchVectors({
+    embedding: params.queryEmbedding,
+    domain: 'fresh_memory',
+    topK: params.topK ?? DEFAULT_TOP_K,
     filter,
+    threshold: params.threshold ?? SIMILARITY_THRESHOLD,
   });
 
-  // zvec returns cosine similarity as score (higher = more similar)
-  return results
-    .filter(r => r.score >= threshold)
-    .map(r => ({ uuid: r.id, score: r.score }));
+  return results.map(r => ({ uuid: r.id, score: r.score }));
 }
 
 /**
- * Search memory ring by semantic similarity (primary retrieval method)
+ * Search memory ring by semantic similarity
  */
 export function searchMemoryRing(params: {
   profileUuid: string;
@@ -293,34 +178,35 @@ export function searchMemoryRing(params: {
   const {
     profileUuid,
     queryEmbedding,
-    topK = DEFAULT_TOP_K,
-    threshold = SIMILARITY_THRESHOLD,
     ringTypes,
+    topK: topKParam,
+    threshold,
     agentUuid,
   } = params;
+  requireProfileUuid(profileUuid);
+  const topK = topKParam ?? DEFAULT_TOP_K;
 
-  const collection = getMemoryRingCollection();
-
-  // Build filter; for multiple ring types we over-fetch and filter in JS
+  // For single ring type, use filter. For multiple, over-fetch and filter in JS.
   const filter = buildFilter([
     ['profile_uuid', profileUuid],
     agentUuid ? ['agent_uuid', agentUuid] : null,
     ringTypes && ringTypes.length === 1 ? ['ring_type', ringTypes[0]] : null,
   ]);
 
-  const results: ZVecDoc[] = collection.querySync({
-    fieldName: 'embedding',
-    vector: queryEmbedding,
-    topk: ringTypes && ringTypes.length > 1 ? topK * 3 : topK,
+  const results = searchVectors({
+    embedding: queryEmbedding,
+    domain: 'memory_ring',
+    topK: ringTypes && ringTypes.length > 1 ? topK * 3 : topK,
     filter,
+    threshold: threshold ?? SIMILARITY_THRESHOLD,
   });
 
-  let filtered = results.filter(r => r.score >= threshold);
+  let filtered = results;
 
   // Apply ring type filter if multiple types specified
   if (ringTypes && ringTypes.length > 1) {
     const typeSet = new Set(ringTypes);
-    filtered = filtered.filter(r => typeSet.has(r.fields.ring_type as RingType));
+    filtered = results.filter(r => typeSet.has(r.fields.ring_type as RingType));
   }
 
   return filtered
@@ -336,23 +222,14 @@ export function searchGutPatterns(params: {
   topK?: number;
   threshold?: number;
 }): Array<{ uuid: string; score: number }> {
-  const {
-    queryEmbedding,
-    topK = 5,
-    threshold = SIMILARITY_THRESHOLD,
-  } = params;
-
-  const collection = getGutPatternsCollection();
-
-  const results: ZVecDoc[] = collection.querySync({
-    fieldName: 'embedding',
-    vector: queryEmbedding,
-    topk: topK,
+  const results = searchVectors({
+    embedding: params.queryEmbedding,
+    domain: 'gut_patterns',
+    topK: params.topK ?? 5,
+    threshold: params.threshold ?? SIMILARITY_THRESHOLD,
   });
 
-  return results
-    .filter(r => r.score >= threshold)
-    .map(r => ({ uuid: r.id, score: r.score }));
+  return results.map(r => ({ uuid: r.id, score: r.score }));
 }
 
 // ============================================================================
@@ -370,22 +247,4 @@ export async function recordMemoryAccess(memoryUuid: string): Promise<void> {
       last_accessed_at: new Date(),
     })
     .where(eq(memoryRingTable.uuid, memoryUuid));
-}
-
-// ============================================================================
-// Cleanup
-// ============================================================================
-
-/**
- * Close all open zvec collections (call on shutdown)
- */
-export function closeAllCollections(): void {
-  for (const [name, collection] of Object.entries(collections)) {
-    try {
-      collection.closeSync();
-    } catch {
-      // Ignore errors during cleanup
-    }
-    delete collections[name];
-  }
 }

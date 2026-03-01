@@ -101,14 +101,8 @@ export const GUT_MAX_PATTERN_TOKENS = 100;
 export const GUT_MIN_CONFIDENCE = 0.3;
 
 // ============================================================================
-// Embedding
+// Similarity
 // ============================================================================
-
-/** Default embedding model */
-export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small';
-
-/** Embedding dimensions for text-embedding-3-small */
-export const EMBEDDING_DIMENSIONS = 1536;
 
 /** Similarity threshold for "related" memories */
 export const SIMILARITY_THRESHOLD = 0.7;
