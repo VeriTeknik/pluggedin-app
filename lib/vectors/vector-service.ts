@@ -108,6 +108,21 @@ function createCollection(collectionPath: string, domain: VectorDomain, fields: 
   return ZVecCreateAndOpen(collectionPath, schema);
 }
 
+function isIndexHealthy(collection: ZVecCollection): boolean {
+  try {
+    const { docCount, indexCompleteness } = collection.stats;
+    if (docCount === 0) return true; // Empty collection is healthy
+    // If we have documents but embedding index completeness is 0, the index is corrupted
+    const embeddingCompleteness = indexCompleteness?.embedding;
+    if (typeof embeddingCompleteness === 'number' && embeddingCompleteness === 0) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getCollection(domain: VectorDomain): ZVecCollection {
   if (collections[domain]) return collections[domain];
 
@@ -117,7 +132,15 @@ function getCollection(domain: VectorDomain): ZVecCollection {
   const fields = DOMAIN_FIELDS[domain];
 
   try {
-    collections[domain] = ZVecOpen(collectionPath);
+    const col = ZVecOpen(collectionPath);
+    // Validate index health - corrupted indexes silently return empty results
+    if (!isIndexHealthy(col)) {
+      console.warn(`[zvec] Corrupted index detected for "${domain}", rebuilding collection`);
+      try { col.closeSync(); } catch { /* ignore */ }
+      collections[domain] = createCollection(collectionPath, domain, fields);
+    } else {
+      collections[domain] = col;
+    }
   } catch (openErr: any) {
     const msg = openErr?.message || '';
     // Lock held by another process - don't destroy data, propagate error
@@ -202,6 +225,8 @@ export function upsertVectors(paramsList: VectorInsertParams[]): void {
       fields: p.fields,
     }));
     collection.upsertSync(docs);
+    // Build/optimize HNSW index after batch inserts to prevent corruption
+    collection.optimizeSync();
   }
 }
 
@@ -259,9 +284,26 @@ export function deleteVectorsByFilter(params: VectorDeleteByFilterParams): void 
 export function getVectorStats(domain: VectorDomain): VectorStats {
   try {
     const collection = getCollection(domain);
-    const info = (collection as any).infoSync?.() || {};
-    return { domain, count: info.count || info.total || 0 };
+    return { domain, count: collection.stats.docCount || 0 };
   } catch {
     return { domain, count: 0 };
   }
+}
+
+/**
+ * Reset a domain collection by deleting and recreating it.
+ * Use this to recover from corrupted indexes.
+ */
+export function resetCollection(domain: VectorDomain): void {
+  const collectionPath = path.join(ZVEC_DATA_DIR, domain);
+  const fields = DOMAIN_FIELDS[domain];
+
+  // Close existing handle
+  if (collections[domain]) {
+    try { collections[domain].closeSync(); } catch { /* ignore */ }
+    delete collections[domain];
+  }
+
+  ensureInitialized();
+  collections[domain] = createCollection(collectionPath, domain, fields);
 }

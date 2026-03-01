@@ -156,12 +156,14 @@ export class RagService {
       // Generate query embedding
       const embedding = await generateEmbedding(query);
 
+      const filter = buildFilter([['project_uuid', ragIdentifier]]);
+
       // Search zvec via shared vector service
       const results = searchVectors({
         embedding,
         domain: 'rag',
         topK: 5,
-        filter: buildFilter([['project_uuid', ragIdentifier]]),
+        filter,
       });
 
       if (results.length === 0) {
