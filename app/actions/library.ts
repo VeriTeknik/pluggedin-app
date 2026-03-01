@@ -506,42 +506,35 @@ async function validateProjectStorageLimit(
   }
 }
 
-// Helper function: Process RAG upload - now returns upload_id for tracking
+// Helper function: Process RAG upload (synchronous with embedded zvec)
 async function processRagUpload(
   docRecord: any,
   textContent: string,
   file: File,
-  name: string,
-  tags: string[],
+  _name: string,
+  _tags: string[],
   userId: string,
   projectUuid: string
 ) {
   try {
-    const ragIdentifier = projectUuid;
-
-    // Process document directly with embedded zvec (no HTTP)
     const result = await ragService.processDocument(
       docRecord.uuid,
-      ragIdentifier,
+      projectUuid,
       textContent,
       file.name,
     );
 
     if (result.success) {
-      // Set rag_document_id to the document UUID for future lookups
       await updateDocRagId(docRecord.uuid, docRecord.uuid, userId);
-      ragService.invalidateStorageCache(ragIdentifier);
-      // Don't return upload_id - processing is now synchronous (embedded zvec),
-      // so there's nothing to poll. The client handles ragProcessed=true directly.
-      return { ragProcessed: true, ragError: undefined, upload_id: undefined };
+      ragService.invalidateStorageCache(projectUuid);
+      return { ragProcessed: true, ragError: undefined };
     } else {
       throw new Error(result.error || 'RAG processing failed');
     }
   } catch (ragErr) {
     console.error('Failed to process document for RAG:', ragErr);
     const ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
-    // Continue with success even if RAG fails
-    return { ragProcessed: false, ragError, upload_id: undefined };
+    return { ragProcessed: false, ragError };
   }
 }
 
@@ -640,26 +633,13 @@ export async function reindexDocument(
   }
 }
 
-// Function to get upload status from RAG API
+// Legacy: upload status polling is no longer needed with synchronous zvec processing.
+// Kept for backward compatibility with the upload-status API route.
 export async function getUploadStatus(
-  uploadId: string,
-  ragIdentifier: string
+  _uploadId: string,
+  _ragIdentifier: string
 ): Promise<{ success: boolean; status?: any; error?: string }> {
-  try {
-    const { ragService } = await import('@/lib/rag-service');
-    const result = await ragService.getUploadStatus(uploadId, ragIdentifier);
-    
-    return {
-      success: true,
-      status: result
-    };
-  } catch (error) {
-    console.error('Failed to get upload status:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
+  return { success: false, error: 'Upload not found - processing is synchronous' };
 }
 
 export async function createDoc(
@@ -688,32 +668,25 @@ export async function createDoc(
     // Step 5 & 6: Process RAG upload only for supported file types
     let ragProcessed = false;
     let ragError: string | undefined;
-    let upload_id: string | undefined;
-    
     if (process.env.ENABLE_RAG === 'true' && isRagSupported(file.type)) {
       // Extract text content for RAG
-      // For now, we'll use a simple approach for text files
-      // PDF extraction would require additional libraries like pdf-parse
       let textContent = '';
-      
+
       if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
-        // For text files, convert to string
         const arrayBuffer = await file.arrayBuffer();
         textContent = new TextDecoder().decode(arrayBuffer);
       } else if (file.type === 'application/pdf') {
-        // Extract text from PDF using pdfjs-dist
         const { extractTextFromPdf } = await import('@/lib/rag/pdf-extract');
         const arrayBuffer = await file.arrayBuffer();
         textContent = await extractTextFromPdf(arrayBuffer);
       }
-      
-      // Process RAG upload
+
+      // Process RAG (synchronous with embedded zvec)
       const ragResult = await processRagUpload(
         docRecord, textContent, file, name, tags, userId, projectUuid
       );
       ragProcessed = ragResult.ragProcessed;
       ragError = ragResult.ragError;
-      upload_id = ragResult.upload_id;
     } else if (process.env.ENABLE_RAG === 'true') {
       // File type not supported for RAG
       console.log(`File type ${file.type} not supported for RAG processing`);
@@ -759,7 +732,6 @@ export async function createDoc(
     return {
       success: true,
       doc,
-      upload_id, // Include upload_id for progress tracking
       ragProcessed,
       ragError,
     };

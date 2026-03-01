@@ -11,8 +11,6 @@
  * - document_chunks table for chunk text storage
  */
 
-import { randomUUID } from 'crypto';
-
 import { LRUCache } from './lru-cache';
 import { splitTextIntoChunks } from './rag/chunking';
 import {
@@ -47,30 +45,6 @@ export interface RagDocumentsResponse {
   error?: string;
 }
 
-export interface RagUploadResponse {
-  success: boolean;
-  upload_id?: string;
-  error?: string;
-}
-
-export interface UploadProgress {
-  status: 'processing' | 'completed' | 'failed';
-  progress: {
-    current: number;
-    total: number;
-    step: string;
-    step_progress: { percentage: number };
-  };
-  message: string;
-  document_id?: string;
-}
-
-export interface UploadStatusResponse {
-  success: boolean;
-  progress?: UploadProgress;
-  error?: string;
-}
-
 export interface RagStorageStatsResponse {
   success: boolean;
   documentsCount?: number;
@@ -80,20 +54,6 @@ export interface RagStorageStatsResponse {
   embeddingDimension?: number;
   error?: string;
   isEstimate?: boolean;
-}
-
-export interface RAGDocumentRequest {
-  id: string;
-  title: string;
-  content: string;
-  metadata?: {
-    filename: string;
-    mimeType: string;
-    fileSize: number;
-    tags: string[];
-    userId: string;
-    profileUuid?: string;
-  };
 }
 
 // ─── RAG Service Class ──────────────────────────────────────────────
@@ -216,7 +176,7 @@ export class RagService {
     projectUuid: string,
     text: string,
     _fileName: string,
-  ): Promise<{ success: boolean; uploadId?: string; error?: string }> {
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       if (!this.isEnabled()) {
         return { success: false, error: 'RAG is not enabled' };
@@ -248,19 +208,29 @@ export class RagService {
         .values(chunkRecords)
         .returning({ uuid: documentChunksTable.uuid });
 
-      // Step 4: Insert vectors to zvec via shared vector service
-      const vectorParams = embeddings.map((emb, i) => ({
-        id: `${documentUuid}-${i}`,
-        embedding: emb,
-        domain: 'rag' as const,
-        fields: {
-          project_uuid: projectUuid,
-          document_uuid: documentUuid,
-          chunk_uuid: insertedChunks[i]?.uuid || `${documentUuid}-chunk-${i}`,
-        },
-      }));
+      // Step 4: Insert vectors to zvec via shared vector service.
+      // If this fails, clean up PG rows to maintain atomicity.
+      try {
+        const vectorParams = embeddings.map((emb, i) => ({
+          id: `${documentUuid}-${i}`,
+          embedding: emb,
+          domain: 'rag' as const,
+          fields: {
+            project_uuid: projectUuid,
+            document_uuid: documentUuid,
+            chunk_uuid: insertedChunks[i]?.uuid || `${documentUuid}-chunk-${i}`,
+          },
+        }));
 
-      upsertVectors(vectorParams);
+        upsertVectors(vectorParams);
+      } catch (zvecError) {
+        // Roll back PG chunks to avoid orphaned rows
+        const { eq } = await import('drizzle-orm');
+        await db
+          .delete(documentChunksTable)
+          .where(eq(documentChunksTable.document_uuid, documentUuid));
+        throw zvecError;
+      }
 
       // Invalidate storage cache
       this.invalidateStorageCache(projectUuid);
@@ -275,36 +245,7 @@ export class RagService {
     }
   }
 
-  // Backward-compatible upload method
-  async uploadDocument(file: File, ragIdentifier: string): Promise<RagUploadResponse> {
-    try {
-      const text = await file.text();
-      const result = await this.processDocument(
-        randomUUID(),
-        ragIdentifier,
-        text,
-        file.name,
-      );
-      return {
-        success: result.success,
-        upload_id: result.uploadId,
-        error: result.error,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
-      };
-    }
-  }
-
-  // ─── Status & Stats ────────────────────────────────────────────────
-
-  async getUploadStatus(_uploadId: string, _ragIdentifier?: string): Promise<UploadStatusResponse> {
-    // Processing is synchronous with embedded zvec - no async progress to track.
-    // Client-side UploadProgressContext handles UI progress display.
-    return { success: false, error: 'Upload not found - may have completed' };
-  }
+  // ─── Document Management ─────────────────────────────────────────
 
   async removeDocument(documentId: string, _ragIdentifier: string): Promise<{ success: boolean; error?: string }> {
     try {

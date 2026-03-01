@@ -108,7 +108,7 @@ export interface UploadProgressState {
 export interface DocUploadResponse {
   success: boolean;
   doc?: Doc;
-  upload_id?: string; // New field for progress tracking
+  upload_id?: string; // Legacy: no longer used with synchronous zvec processing
   error?: string;
   ragProcessed?: boolean;
   ragError?: string;

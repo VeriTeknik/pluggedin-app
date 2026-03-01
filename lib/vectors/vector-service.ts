@@ -6,6 +6,14 @@
  *
  * Each domain gets its own zvec collection with domain-specific fields.
  * All collections share the same HNSW index configuration and embedding dimensions.
+ *
+ * PRODUCTION NOTE: zvec uses RocksDB which enforces a single-writer constraint.
+ * Only one OS process can hold the write lock on a collection at a time.
+ * In multi-worker deployments (PM2 cluster, multiple Kubernetes replicas),
+ * vector writes must be routed to a single worker or serialized via an
+ * external queue. Reads are safe from multiple processes once the lock is
+ * released after write. For multi-replica setups, consider a dedicated
+ * vector-write worker or migrating to a client/server vector store.
  */
 
 import {

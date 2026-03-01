@@ -3,6 +3,7 @@
  * Handles creation, storage, and retrieval of document versions
  */
 
+import { randomUUID } from 'crypto';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { access, constants, mkdir, readFile, unlink, writeFile } from 'fs/promises';
 import { basename, extname } from 'path';
@@ -198,71 +199,30 @@ export async function saveDocumentVersion(
     // Continue - we have the content in the database
   }
 
-  // STEP 3: Upload to RAG if enabled (non-critical, async)
-  let ragDocumentId: string | null = null;
-  if (process.env.ENABLE_RAG === 'true' && fileWritten) {
+  // STEP 3: Index in RAG if enabled (non-critical, synchronous with embedded zvec)
+  if (process.env.ENABLE_RAG === 'true' && fileWritten && projectUuid) {
     try {
-      const ragIdentifier = projectUuid || validatedUserId;
-      const versionFilename = basename(transactionResult.versionFilePath);
+      const docUuid = randomUUID();
+      const result = await ragService.processDocument(
+        docUuid,
+        projectUuid,
+        content,
+        basename(transactionResult.versionFilePath),
+      );
 
-      // Create a proper Blob/File object for Node.js environment
-      const contentBuffer = Buffer.from(content, 'utf-8');
-      const blob = new Blob([contentBuffer], { type: transactionResult.document.mime_type });
-
-      // Convert Blob to File with proper name
-      const fileData = new File([blob], versionFilename, {
-        type: transactionResult.document.mime_type,
-        lastModified: Date.now()
-      });
-
-      const uploadResult = await ragService.uploadDocument(fileData, ragIdentifier);
-
-      if (uploadResult.success && uploadResult.upload_id) {
-        // Poll for completion with exponential backoff (max 30 seconds total)
-        const maxAttempts = parseInt(process.env.RAG_POLL_MAX_ATTEMPTS || '10'); // Reduced from 30
-        const initialInterval = parseInt(process.env.RAG_POLL_INITIAL_INTERVAL_MS || '500'); // Start faster
-        const maxInterval = parseInt(process.env.RAG_POLL_MAX_INTERVAL_MS || '5000'); // Cap at 5 seconds
-        const backoffMultiplier = parseFloat(process.env.RAG_POLL_BACKOFF_MULTIPLIER || '1.5');
-
-        const startTime = Date.now();
-        const maxTotalTime = 30000; // Hard limit: 30 seconds total
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          // Check if we've exceeded total time limit
-          if (Date.now() - startTime > maxTotalTime) {
-            console.warn('RAG polling timeout exceeded, continuing without RAG');
-            break;
-          }
-
-          // Calculate exponential backoff with jitter
-          const baseDelay = Math.min(initialInterval * Math.pow(backoffMultiplier, attempt), maxInterval);
-          const jitter = Math.random() * 0.3 * baseDelay; // Add 0-30% jitter
-          const delay = Math.floor(baseDelay + jitter);
-
-          await new Promise(resolve => setTimeout(resolve, delay));
-
-          const statusResult = await ragService.getUploadStatus(
-            uploadResult.upload_id,
-            ragIdentifier
+      if (result.success) {
+        await db
+          .update(documentVersionsTable)
+          .set({ rag_document_id: docUuid })
+          .where(
+            and(
+              eq(documentVersionsTable.document_id, validatedDocumentId),
+              eq(documentVersionsTable.version_number, transactionResult.newVersionNumber)
+            )
           );
-
-          if (statusResult.progress?.status === 'completed' && statusResult.progress?.document_id) {
-            ragDocumentId = statusResult.progress.document_id;
-            console.log(`RAG upload completed after ${attempt + 1} attempts`);
-            break;
-          } else if (statusResult.progress?.status === 'failed') {
-            console.error('RAG upload failed for version');
-            break;
-          }
-
-          // Log progress for monitoring
-          if (attempt > 0 && attempt % 5 === 0) {
-            console.log(`RAG upload still processing, attempt ${attempt + 1}/${maxAttempts}, next delay: ${delay}ms`);
-          }
-        }
       }
     } catch (ragError) {
-      console.error('[Version Manager] Failed to upload version to RAG', {
+      console.error('[Version Manager] Failed to index version in RAG', {
         error: ragError instanceof Error ? ragError.message : String(ragError),
         documentId: validatedDocumentId,
         versionNumber: transactionResult.newVersionNumber,
@@ -272,29 +232,12 @@ export async function saveDocumentVersion(
     }
   }
 
-  // Update RAG document ID if successful (non-critical)
-  if (ragDocumentId) {
-    try {
-      await db
-        .update(documentVersionsTable)
-        .set({ rag_document_id: ragDocumentId })
-        .where(
-          and(
-            eq(documentVersionsTable.document_id, validatedDocumentId),
-            eq(documentVersionsTable.version_number, transactionResult.newVersionNumber)
-          )
-        );
-    } catch (updateError) {
-      console.error('Failed to update RAG document ID:', updateError);
-    }
-  }
-
   // Return the version info with file write status
   return {
     versionNumber: transactionResult.versionRecord.version_number,
     filePath: transactionResult.versionRecord.file_path || '',
     fileWritten, // Include the file write status
-    ragDocumentId: ragDocumentId || undefined,
+    ragDocumentId: undefined,
     createdAt: transactionResult.versionRecord.created_at,
     createdByModel: transactionResult.versionRecord.created_by_model as any,
     changeSummary: transactionResult.versionRecord.change_summary || undefined,

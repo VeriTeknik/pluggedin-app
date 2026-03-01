@@ -26,8 +26,8 @@ services:
       - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages
       - MCP_PNPM_STORE_DIR=/app/.cache/mcp-packages/pnpm-store
       - MCP_UV_CACHE_DIR=/app/.cache/mcp-packages/uv-cache
-      - ENABLE_RAG=true
       - ZVEC_DATA_PATH=/app/data/vectors
+      # Set ENABLE_RAG=true in .env to enable RAG vector search
     depends_on:
       pluggedin-postgres:
         condition: service_healthy
@@ -36,6 +36,7 @@ services:
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
+    # pgvector image provides the vector extension needed by the memory system
     image: pgvector/pgvector:pg18
     restart: always
     environment:
