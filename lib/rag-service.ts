@@ -11,15 +11,17 @@
  * - document_chunks table for chunk text storage
  */
 
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { documentChunksTable, docsTable } from '@/db/schema';
+
 import { LRUCache } from './lru-cache';
 import { splitTextIntoChunks } from './rag/chunking';
 import {
   calculateStorageFromVectorCount,
   estimateStorageFromDocumentCount,
 } from './rag-storage-utils';
-
-/** Number of chunks to retrieve per query. Override via RAG_SEARCH_TOP_K env var. */
-const RAG_SEARCH_TOP_K = parseInt(process.env.RAG_SEARCH_TOP_K || '5', 10);
 import {
   generateEmbedding,
   generateEmbeddings,
@@ -30,6 +32,9 @@ import {
   searchVectors,
   upsertVectors,
 } from './vectors/vector-service';
+
+/** Number of chunks to retrieve per query. Override via RAG_SEARCH_TOP_K env var. */
+const RAG_SEARCH_TOP_K = parseInt(process.env.RAG_SEARCH_TOP_K || '5', 10);
 
 // ─── Public Interfaces (backward compatible) ────────────────────────
 
@@ -66,7 +71,7 @@ export class RagService {
 
   constructor() {
     const cacheTtl = parseInt(process.env.RAG_CACHE_TTL_MS || '60000', 10);
-    this.storageStatsCache = new LRUCache<RagStorageStatsResponse>(1000, cacheTtl);
+    this.storageStatsCache = new LRUCache<RagStorageStatsResponse>(100, cacheTtl);
   }
 
   isEnabled(): boolean {
@@ -110,11 +115,6 @@ export class RagService {
           documentIds: [],
         };
       }
-
-      // Fetch chunk texts from PostgreSQL
-      const { db } = await import('@/db');
-      const { documentChunksTable, docsTable } = await import('@/db/schema');
-      const { inArray } = await import('drizzle-orm');
 
       const chunkUuids = results
         .map((r) => r.fields.chunk_uuid)
@@ -201,9 +201,6 @@ export class RagService {
       }
 
       // Step 3: Insert chunks to PostgreSQL
-      const { db } = await import('@/db');
-      const { documentChunksTable } = await import('@/db/schema');
-
       const chunkRecords = chunkTexts.map((chunkText, i) => ({
         document_uuid: documentUuid,
         project_uuid: projectUuid,
@@ -220,7 +217,6 @@ export class RagService {
       // Step 4: Validate DB returned all chunk UUIDs
       if (insertedChunks.length !== chunkTexts.length) {
         // Partial insert - clean up and fail rather than create phantom vectors
-        const { eq } = await import('drizzle-orm');
         await db
           .delete(documentChunksTable)
           .where(eq(documentChunksTable.document_uuid, documentUuid));
@@ -247,7 +243,6 @@ export class RagService {
         upsertVectors(vectorParams);
       } catch (zvecError) {
         // Roll back PG chunks to avoid orphaned rows
-        const { eq } = await import('drizzle-orm');
         await db
           .delete(documentChunksTable)
           .where(eq(documentChunksTable.document_uuid, documentUuid));
@@ -281,10 +276,6 @@ export class RagService {
       }
 
       // Delete chunks from PostgreSQL (also handled by CASCADE on doc delete)
-      const { db } = await import('@/db');
-      const { documentChunksTable } = await import('@/db/schema');
-      const { eq } = await import('drizzle-orm');
-
       await db
         .delete(documentChunksTable)
         .where(eq(documentChunksTable.document_uuid, documentId));
@@ -304,10 +295,6 @@ export class RagService {
       if (!this.isEnabled()) {
         return { success: false, error: 'RAG is not enabled' };
       }
-
-      const { db } = await import('@/db');
-      const { docsTable } = await import('@/db/schema');
-      const { eq, isNotNull, and } = await import('drizzle-orm');
 
       const docs = await db
         .select({
@@ -348,10 +335,6 @@ export class RagService {
       if (cached) return cached;
 
       // Get per-project chunk count from PostgreSQL (authoritative per-project count)
-      const { db } = await import('@/db');
-      const { documentChunksTable } = await import('@/db/schema');
-      const { eq, sql } = await import('drizzle-orm');
-
       const chunkCountResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(documentChunksTable)

@@ -53,6 +53,7 @@ export interface AiSearchAnswerProps {
       provider: string;
     };
     source?: string;
+    isUnresolved?: boolean;
   }>;
   isLoading: boolean;
   error: string | null;
@@ -162,7 +163,7 @@ export function AiSearchAnswer({ answer, sources = [], documentIds = [], documen
                                             'text-gray-600';
 
                       // Check if document is unresolved (couldn't be matched to database)
-                      const isUnresolved = (doc as any).isUnresolved === true;
+                      const isUnresolved = doc.isUnresolved === true;
 
                       if (isUnresolved) {
                         // Unresolved documents are non-clickable with visual indication

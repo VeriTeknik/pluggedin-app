@@ -1085,7 +1085,7 @@ export const documentChunksTable = pgTable(
       .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
     chunk_index: integer('chunk_index').notNull(),
     chunk_text: text('chunk_text').notNull(),
-    zvec_vector_id: varchar('zvec_vector_id', { length: 255 }),
+    zvec_vector_id: varchar('zvec_vector_id', { length: 255 }).notNull(),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

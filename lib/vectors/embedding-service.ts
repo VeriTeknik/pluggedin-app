@@ -23,7 +23,7 @@ function getEmbeddings(): OpenAIEmbeddings {
 
     embeddingsInstance = new OpenAIEmbeddings({
       openAIApiKey: apiKey,
-      modelName: process.env.MEMORY_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL,
+      modelName: process.env.EMBEDDING_MODEL || process.env.MEMORY_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL,
       dimensions: EMBEDDING_DIMENSIONS,
     });
   }

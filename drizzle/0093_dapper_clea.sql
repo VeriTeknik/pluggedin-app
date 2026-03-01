@@ -1,0 +1,1 @@
+ALTER TABLE "document_chunks" ALTER COLUMN "zvec_vector_id" SET NOT NULL;

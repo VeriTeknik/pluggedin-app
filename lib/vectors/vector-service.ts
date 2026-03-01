@@ -180,23 +180,40 @@ function getCollection(domain: VectorDomain): ZVecCollection {
 
 // ─── Filter Helpers ───────────────────────────────────────────────────
 
-/** Allowed field names for zvec filter expressions to prevent field injection */
-const ALLOWED_FILTER_FIELDS: ReadonlySet<string> = new Set([
+/** UUID fields are validated against UUID v4 format */
+const UUID_FIELDS: ReadonlySet<string> = new Set([
   'project_uuid', 'document_uuid', 'chunk_uuid',
-  'profile_uuid', 'agent_uuid', 'ring_type', 'pattern_type',
+  'profile_uuid', 'agent_uuid',
 ]);
 
-/** UUID v4 pattern — all current filter values are UUIDs */
+/** Non-UUID string fields accept alphanumeric + underscores/hyphens */
+const STRING_FIELDS: ReadonlySet<string> = new Set([
+  'ring_type', 'pattern_type',
+]);
+
+/** All allowed field names for zvec filter expressions */
+const ALLOWED_FILTER_FIELDS: ReadonlySet<string> = new Set([
+  ...UUID_FIELDS, ...STRING_FIELDS,
+]);
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Alphanumeric identifiers: letters, digits, underscores, hyphens (no quotes/backslashes) */
+const SAFE_STRING_REGEX = /^[a-zA-Z0-9_-]+$/;
+
 /**
- * Validate and sanitize a value for use in zvec filter expressions.
- * Since all current filter values are UUIDs, we validate against the UUID format
- * rather than trying to strip dangerous characters — rejecting non-UUIDs outright.
+ * Validate a filter value based on the field type.
+ * UUID fields must match UUID v4 format. String fields must be safe identifiers.
  */
-function sanitizeFilterValue(value: string): string {
-  if (!UUID_REGEX.test(value)) {
-    throw new Error(`Invalid filter value (expected UUID): ${value}`);
+function sanitizeFilterValue(field: string, value: string): string {
+  if (UUID_FIELDS.has(field)) {
+    if (!UUID_REGEX.test(value)) {
+      throw new Error(`Invalid UUID filter value for ${field}: ${value}`);
+    }
+  } else if (STRING_FIELDS.has(field)) {
+    if (!SAFE_STRING_REGEX.test(value)) {
+      throw new Error(`Invalid string filter value for ${field}: ${value}`);
+    }
   }
   return value;
 }
@@ -214,7 +231,7 @@ export function buildFilter(
       if (!ALLOWED_FILTER_FIELDS.has(field)) {
         throw new Error(`Invalid filter field: ${field}`);
       }
-      return `${field} = "${sanitizeFilterValue(value)}"`;
+      return `${field} = "${sanitizeFilterValue(field, value)}"`;
     });
 
   return parts.length > 0 ? parts.join(' AND ') : undefined;
@@ -244,7 +261,7 @@ export function upsertVector(params: VectorInsertParams): void {
  *
  * TODO: Move vector operations to a Worker thread to prevent event-loop
  * blocking during large document uploads (hundreds of chunks).
- * See: https://github.com/VeriTeknik/pluggedin-app/issues/XXX
+ * See: https://github.com/VeriTeknik/pluggedin-app/issues/135
  */
 export function upsertVectors(paramsList: VectorInsertParams[]): void {
   if (paramsList.length === 0) return;
