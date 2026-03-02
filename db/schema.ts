@@ -12,6 +12,7 @@ import {
   primaryKey,
   real,
   serial,
+  smallint,
   text,
   timestamp,
   unique,
@@ -3272,6 +3273,9 @@ export const memoryRingTable = pgTable(
     // Gut agent processing flag
     gut_processed: boolean('gut_processed').default(false),
 
+    // Dream consolidation cluster reference
+    dream_cluster_id: uuid('dream_cluster_id'),
+
     // Metadata
     metadata: jsonb('metadata').$type<{
       classification_reason?: string;
@@ -3307,6 +3311,7 @@ export const memoryRingTable = pgTable(
     memoryRingGutNotProcessedIdx: index('memory_ring_gut_not_processed_idx')
       .on(table.gut_processed)
       .where(sql`gut_processed IS NOT TRUE`),
+    memoryRingDreamClusterIdx: index('idx_memory_ring_dream_cluster').on(table.dream_cluster_id),
   })
 );
 
@@ -3468,6 +3473,108 @@ export const collectiveFeedbackTable = pgTable(
   })
 );
 
+// Jungian Intelligence Layer (v3.2.0)
+
+/**
+ * Temporal Events
+ *
+ * Privacy-first event logging using profile_hash instead of profile_uuid.
+ * Tracks tool usage patterns, outcomes, and timing for temporal intelligence.
+ */
+export const temporalEventsTable = pgTable(
+  'temporal_events',
+  {
+    id: bigserial({ mode: 'number' }).primaryKey(),
+    profile_hash: text('profile_hash').notNull(),
+    tool_name: varchar('tool_name', { length: 255 }),
+    event_type: varchar('event_type', { length: 30 }),
+    outcome: varchar('outcome', { length: 10 }),
+    context_hash: varchar('context_hash', { length: 64 }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('idx_temporal_tool_outcome_time').on(
+      table.tool_name,
+      table.outcome,
+      table.created_at
+    ),
+    index('idx_temporal_time').on(table.created_at),
+    index('idx_temporal_profile_time').on(
+      table.profile_hash,
+      table.created_at
+    ),
+  ]
+);
+
+/**
+ * Dream Consolidations
+ *
+ * Records of memory consolidation events ("dreaming").
+ * Clusters similar memories and merges them into compressed representations,
+ * tracking token savings and source provenance.
+ */
+export const dreamConsolidationsTable = pgTable(
+  'dream_consolidations',
+  {
+    uuid: uuid('uuid')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid),
+    result_memory_uuid: uuid('result_memory_uuid').references(
+      () => memoryRingTable.uuid
+    ),
+    source_memory_uuids: text('source_memory_uuids')
+      .array()
+      .notNull(),
+    cluster_similarity: real('cluster_similarity'),
+    token_savings: integer('token_savings'),
+    source_count: integer('source_count'),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index('idx_dream_profile').on(table.profile_uuid),
+    index('idx_dream_result').on(table.result_memory_uuid),
+  ]
+);
+
+/**
+ * Individuation Snapshots
+ *
+ * Daily snapshots of an agent/profile's psychological maturity score.
+ * Tracks growth across dimensions inspired by Jungian individuation:
+ * memory depth, learning velocity, collective contribution, and self-awareness.
+ */
+export const individuationSnapshotsTable = pgTable(
+  'individuation_snapshots',
+  {
+    id: bigserial({ mode: 'number' }).primaryKey(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid),
+    total_score: smallint('total_score').notNull(),
+    memory_depth: smallint('memory_depth'),
+    learning_velocity: smallint('learning_velocity'),
+    collective_contribution: smallint('collective_contribution'),
+    self_awareness: smallint('self_awareness'),
+    maturity_level: varchar('maturity_level', { length: 20 }),
+    snapshot_date: date('snapshot_date').notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_individuation_profile_date').on(
+      table.profile_uuid,
+      table.snapshot_date
+    ),
+    uniqueIndex('idx_individuation_unique_daily').on(
+      table.profile_uuid,
+      table.snapshot_date
+    ),
+  ]
+);
+
 // Type exports for new tables
 export type ModelRouterService = typeof modelRouterServicesTable.$inferSelect;
 export type NewModelRouterService = typeof modelRouterServicesTable.$inferInsert;
@@ -3489,3 +3596,11 @@ export type CollectiveContribution = typeof collectiveContributionsTable.$inferS
 export type NewCollectiveContribution = typeof collectiveContributionsTable.$inferInsert;
 export type CollectiveFeedback = typeof collectiveFeedbackTable.$inferSelect;
 export type NewCollectiveFeedback = typeof collectiveFeedbackTable.$inferInsert;
+
+// Jungian Intelligence Layer type exports
+export type TemporalEvent = typeof temporalEventsTable.$inferSelect;
+export type NewTemporalEvent = typeof temporalEventsTable.$inferInsert;
+export type DreamConsolidation = typeof dreamConsolidationsTable.$inferSelect;
+export type NewDreamConsolidation = typeof dreamConsolidationsTable.$inferInsert;
+export type IndividuationSnapshot = typeof individuationSnapshotsTable.$inferSelect;
+export type NewIndividuationSnapshot = typeof individuationSnapshotsTable.$inferInsert;
