@@ -245,6 +245,7 @@ async function detectEmergentWorkflows(
     SELECT tool_name, tool_2, tool_3, COUNT(DISTINCT profile_hash) as unique_profiles
     FROM ordered
     WHERE tool_2 IS NOT NULL AND tool_3 IS NOT NULL
+      AND tool_name != tool_2 AND tool_2 != tool_3
       AND total_gap < INTERVAL '1 minute' * ${SYNC_WORKFLOW_GAP_MINUTES}
     GROUP BY tool_name, tool_2, tool_3
     HAVING COUNT(DISTINCT profile_hash) >= ${GUT_K_ANONYMITY_THRESHOLD}
@@ -346,7 +347,7 @@ function formatPatternDescription(
     case 'co_occurrence':
       return `After using ${pattern.toolName}, users frequently use ${pattern.relatedTool} (${pattern.uniqueProfiles} profiles)`;
     case 'failure_correlation':
-      return `${pattern.toolName} has ${Math.round((pattern.failureRate ?? 0) * 100)}% failure rate on day ${pattern.dayOfWeek} hour ${pattern.hourOfDay} (${pattern.uniqueProfiles} profiles, ${pattern.total} events)`;
+      return `${pattern.toolName} has ${Math.round((pattern.failureRate ?? 0) * 100)}% failure rate on day ${pattern.dayOfWeek ?? 0} hour ${pattern.hourOfDay ?? 0} (${pattern.uniqueProfiles} profiles, ${pattern.total ?? 0} events)`;
     case 'emergent_workflow':
       return `Common workflow: ${pattern.toolName} → ${pattern.relatedTool} → ${pattern.thirdTool} (${pattern.uniqueProfiles} profiles)`;
     default:

@@ -694,6 +694,13 @@
       "when": 1772430846596,
       "tag": "0098_goofy_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1772432179032,
+      "tag": "0099_chilly_hulk",
+      "breakpoints": true
     }
   ]
 }

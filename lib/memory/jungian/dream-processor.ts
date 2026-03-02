@@ -8,8 +8,6 @@
  * Source memories are NOT deleted; they decay naturally.
  */
 
-import { createHash } from 'crypto';
-
 import { and, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -17,6 +15,7 @@ import {
   dreamConsolidationsTable,
   memoryRingTable,
 } from '@/db/schema';
+import { hashPattern } from '../cbp/hash-utils';
 import { createMemoryLLM } from '../llm-factory';
 import { extractResponseText } from '../llm-utils';
 import { generateEmbedding } from '../embedding-service';
@@ -45,11 +44,12 @@ type MemoryRow = typeof memoryRingTable.$inferSelect;
 
 /**
  * Derive a per-profile numeric lock key from the profile UUID.
- * Uses SHA-256 for uniform distribution across the 32-bit integer space.
+ * Reuses hashPattern (SHA-256) for uniform distribution, then parses
+ * 8 hex chars into a 32-bit integer for the advisory lock namespace.
  */
 function profileLockKey(profileUuid: string): number {
-  const hash = createHash('sha256').update(profileUuid).digest().readUInt32BE(0);
-  return (DREAM_PROCESSING_ADVISORY_LOCK_KEY * 1000) + (hash % 2147483647);
+  const hex = hashPattern(profileUuid);
+  return (DREAM_PROCESSING_ADVISORY_LOCK_KEY * 1000) + (parseInt(hex.slice(0, 8), 16) % 2147483647);
 }
 
 // ============================================================================
@@ -320,7 +320,7 @@ async function consolidateCluster(
   for (const m of members) {
     const content = getCurrentContent(m);
     if (!content) continue;
-    const tokenEstimate = Math.ceil(content.length / 4);
+    const tokenEstimate = Math.ceil(content.length / 3);
     if (totalInputTokens + tokenEstimate > DREAM_CONSOLIDATION_MAX_INPUT_TOKENS) break;
     contents.push(content);
     totalInputTokens += tokenEstimate;
@@ -410,18 +410,17 @@ async function consolidateCluster(
       .set({ dream_cluster_id: clusterId, dream_processed_at: new Date() })
       .where(inArray(memoryRingTable.uuid, cluster.memberUuids));
 
-    // 4. Upsert vector for new consolidated memory
+    // 4. Upsert vector for new consolidated memory.
+    // No try/catch — if this fails the transaction rolls back, preventing
+    // a memory record that's invisible to semantic search. The cluster
+    // will be retried on the next dream processing run.
     if (embedding && newMemory) {
-      try {
-        await upsertMemoryRingVector(
-          newMemory.uuid,
-          embedding,
-          cluster.profileUuid,
-          cluster.dominantRingType
-        );
-      } catch (err) {
-        console.warn('Failed to upsert vector for dream consolidated memory:', err);
-      }
+      await upsertMemoryRingVector(
+        newMemory.uuid,
+        embedding,
+        cluster.profileUuid,
+        cluster.dominantRingType
+      );
     }
   });
 

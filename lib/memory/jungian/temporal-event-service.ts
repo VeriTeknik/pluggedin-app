@@ -66,8 +66,8 @@ export async function recordTemporalEvent(
       context_hash: contextHash ?? null,
     });
   } catch (error) {
-    // Non-fatal: temporal events are for analytics, not critical path
-    console.warn('Failed to record temporal event:', error);
+    // Non-fatal for the caller, but log as error so monitoring catches persistent failures
+    console.error('[temporal-event-service] Failed to record temporal event:', error);
   }
 }
 

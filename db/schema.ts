@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   bigserial,
   boolean,
+  check,
   date,
   decimal,
   index,
@@ -3510,6 +3511,7 @@ export const temporalEventsTable = pgTable(
       table.profile_hash,
       table.created_at
     ),
+    check('temporal_events_outcome_check', sql`outcome IS NULL OR outcome IN ('success', 'failure', 'neutral')`),
   ]
 );
 

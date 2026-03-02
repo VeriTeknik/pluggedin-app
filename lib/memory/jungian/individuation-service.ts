@@ -34,19 +34,22 @@ import type {
 } from './types';
 
 // ============================================================================
-// In-Memory Cache
+// In-Memory Cache (Bounded LRU)
 // ============================================================================
 
-// Best-effort in-memory cache. In serverless environments this resets per
-// invocation (making the TTL largely a no-op). In long-lived processes it
-// grows unboundedly — acceptable at current scale but should be replaced
-// with a bounded LRU or Redis-backed cache if profile count exceeds ~500.
-const scoreCache = new Map<
-  string,
-  { score: IndividuationScore; cachedAt: number }
->();
+// Maximum number of profiles to cache. Map iteration order is insertion order,
+// so we delete the oldest entry when the limit is reached (simple LRU).
+const SCORE_CACHE_MAX_SIZE = 500;
 
-function getCachedScore(profileUuid: string): IndividuationScore | null {
+interface CacheEntry {
+  score: IndividuationScore;
+  trend: 'accelerating' | 'stable' | 'decelerating';
+  cachedAt: number;
+}
+
+const scoreCache = new Map<string, CacheEntry>();
+
+function getCachedEntry(profileUuid: string): CacheEntry | null {
   const entry = scoreCache.get(profileUuid);
   if (!entry) return null;
   const ageMs = Date.now() - entry.cachedAt;
@@ -54,14 +57,23 @@ function getCachedScore(profileUuid: string): IndividuationScore | null {
     scoreCache.delete(profileUuid);
     return null;
   }
-  return entry.score;
+  // Move to end (most recently used) by re-inserting
+  scoreCache.delete(profileUuid);
+  scoreCache.set(profileUuid, entry);
+  return entry;
 }
 
-function setCachedScore(
+function setCachedEntry(
   profileUuid: string,
-  score: IndividuationScore
+  score: IndividuationScore,
+  trend: 'accelerating' | 'stable' | 'decelerating'
 ): void {
-  scoreCache.set(profileUuid, { score, cachedAt: Date.now() });
+  // Evict oldest entry if at capacity
+  if (scoreCache.size >= SCORE_CACHE_MAX_SIZE && !scoreCache.has(profileUuid)) {
+    const oldest = scoreCache.keys().next().value;
+    if (oldest) scoreCache.delete(oldest);
+  }
+  scoreCache.set(profileUuid, { score, trend, cachedAt: Date.now() });
 }
 
 // ============================================================================
@@ -93,15 +105,21 @@ export async function getIndividuationScore(
   }
 
   try {
-    // Check cache
-    let score = getCachedScore(profileUuid);
-    if (!score) {
-      score = await calculateScore(profileUuid);
-      setCachedScore(profileUuid, score);
-    }
+    // Check cache (includes both score and trend)
+    const cached = getCachedEntry(profileUuid);
+    let score: IndividuationScore;
+    let trend: 'accelerating' | 'stable' | 'decelerating';
 
-    // Calculate weekly trend from snapshots
-    const trend = await calculateTrend(profileUuid);
+    if (cached) {
+      score = cached.score;
+      trend = cached.trend;
+    } else {
+      [score, trend] = await Promise.all([
+        calculateScore(profileUuid),
+        calculateTrend(profileUuid),
+      ]);
+      setCachedEntry(profileUuid, score, trend);
+    }
 
     // Generate contextual tip
     const tip = generateTip(score);
@@ -187,8 +205,11 @@ export async function saveIndividuationSnapshot(
   if (!INDIVIDUATION_ENABLED) return;
 
   try {
-    const score = await calculateScore(profileUuid);
-    setCachedScore(profileUuid, score);
+    const [score, trend] = await Promise.all([
+      calculateScore(profileUuid),
+      calculateTrend(profileUuid),
+    ]);
+    setCachedEntry(profileUuid, score, trend);
 
     await db
       .insert(individuationSnapshotsTable)

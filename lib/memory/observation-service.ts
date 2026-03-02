@@ -80,7 +80,7 @@ export async function addObservation(
         params.type,
         params.outcome,
         params.metadata?.context_hash as string | undefined
-      ).catch((err) => console.warn('[temporal-event] non-fatal:', err));
+      ).catch((err) => console.error('[temporal-event] failed — synchronicity data may be incomplete:', err));
     }
 
     return { success: true, data: { uuid: observation.uuid } };
