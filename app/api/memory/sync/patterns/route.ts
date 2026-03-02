@@ -81,16 +81,19 @@ export async function GET(request: NextRequest) {
     }
 
     // With query: vector search filtered to synchronicity patterns
-    const result = await queryIntuition(query, topK ?? 5);
+    // Over-fetch by 3x since queryIntuition returns all pattern types,
+    // then trim to topK after filtering to synchronicity only
+    const effectiveTopK = topK ?? 5;
+    const result = await queryIntuition(query, effectiveTopK * 3);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 500 });
     }
 
-    // Filter to synchronicity patterns only
-    const filtered = (result.data ?? []).filter(
-      (p) => p.patternType === 'synchronicity'
-    );
+    // Filter to synchronicity patterns only, then trim to requested topK
+    const filtered = (result.data ?? [])
+      .filter((p) => p.patternType === 'synchronicity')
+      .slice(0, effectiveTopK);
 
     return NextResponse.json({ success: true, data: filtered });
   } catch (error) {

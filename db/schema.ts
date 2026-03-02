@@ -3273,7 +3273,8 @@ export const memoryRingTable = pgTable(
     // Gut agent processing flag
     gut_processed: boolean('gut_processed').default(false),
 
-    // Dream consolidation cluster reference
+    // Transient dream cluster grouping key (not a FK — cluster IDs are ephemeral,
+    // generated per-run and used only to mark memories as already-consolidated)
     dream_cluster_id: uuid('dream_cluster_id'),
 
     // Metadata
@@ -3564,7 +3565,7 @@ export const individuationSnapshotsTable = pgTable(
     collective_contribution: smallint('collective_contribution'),
     self_awareness: smallint('self_awareness'),
     maturity_level: varchar('maturity_level', { length: 20 }),
-    snapshot_date: date('snapshot_date').notNull().defaultNow(),
+    snapshot_date: date('snapshot_date').notNull().default(sql`(now() AT TIME ZONE 'UTC')::date`),
   },
   (table) => [
     index('idx_individuation_profile_date').on(

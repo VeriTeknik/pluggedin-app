@@ -211,7 +211,7 @@ export async function injectWithArchetype(
  */
 function classifyPatternArchetype(patternType: string): Archetype {
   for (const [archetype, types] of Object.entries(ARCHETYPE_PATTERN_TYPES)) {
-    if (types.includes(patternType as any)) {
+    if ((types as string[]).includes(patternType)) {
       return archetype as Archetype;
     }
   }

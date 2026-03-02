@@ -38,6 +38,19 @@ import type { DreamCluster, DreamProcessingResult } from './types';
 type MemoryRow = typeof memoryRingTable.$inferSelect;
 
 // ============================================================================
+// Advisory Lock Helpers
+// ============================================================================
+
+/**
+ * Derive a per-profile numeric lock key from the profile UUID.
+ * Uses first 8 hex chars of UUID as a 32-bit integer, offset by the base key.
+ */
+function profileLockKey(profileUuid: string): number {
+  const hash = parseInt(profileUuid.replace(/-/g, '').slice(0, 8), 16);
+  return (DREAM_PROCESSING_ADVISORY_LOCK_KEY * 1000) + (hash % 1000000);
+}
+
+// ============================================================================
 // Public API
 // ============================================================================
 
@@ -52,14 +65,16 @@ export async function processDreams(
     return { success: true, data: { clustersFound: 0, consolidated: 0, totalTokenSavings: 0, errors: 0 } };
   }
 
+  const lockKey = profileLockKey(profileUuid);
+
   try {
-    // Advisory lock to prevent concurrent runs
+    // Advisory lock to prevent concurrent runs for the same profile
     const lockQueryResult = await db.execute(
-      sql`SELECT pg_try_advisory_lock(${DREAM_PROCESSING_ADVISORY_LOCK_KEY}) as acquired`
+      sql`SELECT pg_try_advisory_lock(${lockKey}) as acquired`
     );
     const lockResult = lockQueryResult.rows[0] as { acquired: boolean } | undefined;
     if (!lockResult?.acquired) {
-      return { success: false, error: 'Dream processing already running' };
+      return { success: false, error: 'Dream processing already running for this profile' };
     }
 
     try {
@@ -100,7 +115,7 @@ export async function processDreams(
       };
     } finally {
       await db.execute(
-        sql`SELECT pg_advisory_unlock(${DREAM_PROCESSING_ADVISORY_LOCK_KEY})`
+        sql`SELECT pg_advisory_unlock(${lockKey})`
       );
     }
   } catch (error) {
