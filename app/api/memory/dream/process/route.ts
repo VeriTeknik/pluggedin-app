@@ -11,6 +11,11 @@ const bodySchema = z.object({
 /**
  * POST /api/memory/dream/process - Trigger dream processing (memory consolidation)
  * Restricted: requires CRON_SECRET header.
+ *
+ * Security note: the caller selects which profile_uuid to process.
+ * A compromised CRON_SECRET grants cross-profile dream processing.
+ * In production, the cron job should iterate profiles server-side
+ * rather than accepting profile_uuid from the request body.
  */
 export async function POST(request: NextRequest) {
   try {

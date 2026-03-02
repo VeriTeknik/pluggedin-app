@@ -9,9 +9,17 @@
 import { lt, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { temporalEventsTable } from '@/db/schema';
+import {
+  dreamConsolidationsTable,
+  individuationSnapshotsTable,
+  temporalEventsTable,
+} from '@/db/schema';
 import { hashProfileUuid } from '../cbp/hash-utils';
-import { SYNC_RETENTION_DAYS } from './constants';
+import {
+  DREAM_CONSOLIDATION_RETENTION_DAYS,
+  INDIVIDUATION_SNAPSHOT_RETENTION_DAYS,
+  SYNC_RETENTION_DAYS,
+} from './constants';
 import type { MemoryResult } from '../types';
 import type { TemporalEventInput } from './types';
 
@@ -90,6 +98,52 @@ export async function cleanupTemporalEvents(): Promise<MemoryResult<{ deleted: n
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to cleanup temporal events',
+    };
+  }
+}
+
+/**
+ * Cleanup dream consolidation records older than retention period.
+ * Called from cron endpoint alongside temporal event cleanup.
+ */
+export async function cleanupDreamConsolidations(): Promise<MemoryResult<{ deleted: number }>> {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - DREAM_CONSOLIDATION_RETENTION_DAYS);
+
+    const result = await db
+      .delete(dreamConsolidationsTable)
+      .where(lt(dreamConsolidationsTable.created_at, cutoff))
+      .returning({ uuid: dreamConsolidationsTable.uuid });
+
+    return { success: true, data: { deleted: result.length } };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cleanup dream consolidations',
+    };
+  }
+}
+
+/**
+ * Cleanup individuation snapshots older than retention period.
+ * Called from cron endpoint alongside temporal event cleanup.
+ */
+export async function cleanupIndividuationSnapshots(): Promise<MemoryResult<{ deleted: number }>> {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - INDIVIDUATION_SNAPSHOT_RETENTION_DAYS);
+
+    const result = await db
+      .delete(individuationSnapshotsTable)
+      .where(lt(individuationSnapshotsTable.snapshot_date, cutoff.toISOString().split('T')[0]))
+      .returning({ id: individuationSnapshotsTable.id });
+
+    return { success: true, data: { deleted: result.length } };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cleanup individuation snapshots',
     };
   }
 }

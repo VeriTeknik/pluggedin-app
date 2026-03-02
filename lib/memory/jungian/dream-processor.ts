@@ -51,6 +51,9 @@ type MemoryRow = typeof memoryRingTable.$inferSelect;
  * will serialize their dream processing (one waits for the other's lock).
  * This is intentionally accepted — it causes a brief delay, not data
  * corruption, and the probability is ~1/(2^31) per profile pair.
+ *
+ * The resulting value can reach ~2.885 billion, which exceeds int32 range
+ * but fits within pg_try_advisory_lock's bigint (8-byte) parameter.
  */
 function profileLockKey(profileUuid: string): number {
   const hex = hashPattern(profileUuid);
@@ -347,6 +350,9 @@ async function consolidateCluster(
   const consolidatedText = extractResponseText(response);
   if (!consolidatedText || consolidatedText.length < 20) return null;
 
+  // Input uses /3 (conservative, avoids budget overruns), output uses /4
+  // (closer to actual tokenization for LLM output). This asymmetry means
+  // tokenSavings is an optimistic estimate — acceptable for a heuristic metric.
   const consolidatedTokens = Math.ceil(consolidatedText.length / 4);
   const tokenSavings = Math.max(0, totalInputTokens - consolidatedTokens);
 

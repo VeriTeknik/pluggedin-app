@@ -39,6 +39,10 @@ import type {
 
 // Maximum number of profiles to cache. Map iteration order is insertion order,
 // so we delete the oldest entry when the limit is reached (simple LRU).
+// NOTE: In serverless environments (e.g. Vercel), this module-level Map won't
+// survive across function invocations, so effective cache hit rate may be low.
+// This is acceptable — the cache is a performance optimization, not a correctness
+// requirement. The DB queries will simply run on every cold invocation.
 const SCORE_CACHE_MAX_SIZE = 500;
 
 interface CacheEntry {
@@ -436,21 +440,22 @@ async function calcSelfAwareness(
   const totalAccess = searchStats?.totalAccess ?? 0;
   const searchScore = Math.min(10, Math.round(Math.log2(1 + totalAccess)));
 
-  // Decay acceptance: 0-10 (having memories in late decay stages is healthy)
+  // Access engagement: 0-10 (higher avg access count = more active memory retrieval)
   const avgAccess = searchStats?.avgAccessCount ?? 0;
-  const decayScore = Math.min(10, Math.round(avgAccess));
+  const accessEngagement = Math.min(10, Math.round(avgAccess));
 
   // Dream consolidation: 0-5 (active consolidation = self-awareness)
   const dreamScore = Math.min(5, dreamStats?.dreamCount ?? 0);
 
-  return Math.min(25, searchScore + decayScore + dreamScore);
+  return Math.min(25, searchScore + accessEngagement + dreamScore);
 }
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
-function getMaturityLevel(total: number): MaturityLevel {
+/** Exported for unit testing. */
+export function getMaturityLevel(total: number): MaturityLevel {
   if (total >= 81) return 'individuated';
   if (total >= 61) return 'mature';
   if (total >= 41) return 'established';
@@ -458,7 +463,8 @@ function getMaturityLevel(total: number): MaturityLevel {
   return 'nascent';
 }
 
-function generateTip(score: IndividuationScore): string {
+/** Exported for unit testing. */
+export function generateTip(score: IndividuationScore): string {
   // Find weakest component
   const components = [
     { name: 'Memory Depth', score: score.memoryDepth, max: 25 },

@@ -3492,8 +3492,8 @@ export const temporalEventsTable = pgTable(
   {
     id: bigserial({ mode: 'number' }).primaryKey(),
     profile_hash: text('profile_hash').notNull(),
-    tool_name: varchar('tool_name', { length: 255 }),
-    event_type: varchar('event_type', { length: 30 }),
+    tool_name: varchar('tool_name', { length: 255 }).notNull(),
+    event_type: varchar('event_type', { length: 30 }).notNull(),
     outcome: varchar('outcome', { length: 10 }),
     context_hash: varchar('context_hash', { length: 64 }),
     created_at: timestamp('created_at', { withTimezone: true })
@@ -3535,7 +3535,7 @@ export const dreamConsolidationsTable = pgTable(
       () => memoryRingTable.uuid,
       { onDelete: 'set null' }
     ),
-    source_memory_uuids: text('source_memory_uuids')
+    source_memory_uuids: uuid('source_memory_uuids')
       .array()
       .notNull(),
     cluster_similarity: real('cluster_similarity'),

@@ -24,11 +24,13 @@ export type {
 // Public constants (feature flags only)
 export { SYNC_CRON_ENABLED } from './constants';
 
-// Temporal events
+// Temporal events + retention cleanup
 export {
   recordTemporalEvents,
   recordTemporalEvent,
   cleanupTemporalEvents,
+  cleanupDreamConsolidations,
+  cleanupIndividuationSnapshots,
   getApproxTemporalEventCount,
 } from './temporal-event-service';
 

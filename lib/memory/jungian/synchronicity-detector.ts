@@ -276,7 +276,7 @@ async function detectEmergentWorkflows(
     SELECT tool_name, tool_2, tool_3, COUNT(DISTINCT profile_hash) as unique_profiles
     FROM ordered
     WHERE tool_2 IS NOT NULL AND tool_3 IS NOT NULL
-      AND tool_name != tool_2 AND tool_2 != tool_3
+      AND tool_name != tool_2 AND tool_2 != tool_3 AND tool_name != tool_3
       AND total_gap < INTERVAL '1 minute' * ${SYNC_WORKFLOW_GAP_MINUTES}
     GROUP BY tool_name, tool_2, tool_3
     HAVING COUNT(DISTINCT profile_hash) >= ${GUT_K_ANONYMITY_THRESHOLD}
@@ -366,12 +366,14 @@ async function storeAsGutPattern(
     }
 
     return true;
-  } catch {
+  } catch (error) {
+    console.error('[synchronicity] Failed to store gut pattern:', error);
     return false;
   }
 }
 
-function formatPatternDescription(
+/** Exported for unit testing. */
+export function formatPatternDescription(
   pattern: SynchronicityPattern & { analysisType: string }
 ): string {
   switch (pattern.analysisType) {

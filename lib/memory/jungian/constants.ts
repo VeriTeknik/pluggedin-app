@@ -114,6 +114,17 @@ export const INDIVIDUATION_HISTORY_DAYS = clampInt(
 );
 
 // ============================================================================
+// Data Retention (shared by all Jungian tables)
+// ============================================================================
+
+export const DREAM_CONSOLIDATION_RETENTION_DAYS = clampInt(
+  process.env.DREAM_CONSOLIDATION_RETENTION_DAYS, 180, 30, 730
+);
+export const INDIVIDUATION_SNAPSHOT_RETENTION_DAYS = clampInt(
+  process.env.INDIVIDUATION_SNAPSHOT_RETENTION_DAYS, 365, 30, 730
+);
+
+// ============================================================================
 // Advisory Lock Keys (must be globally unique across all modules)
 // ============================================================================
 
