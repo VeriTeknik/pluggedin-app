@@ -687,6 +687,13 @@
       "when": 1772428743686,
       "tag": "0097_closed_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1772430846596,
+      "tag": "0098_goofy_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

@@ -116,7 +116,7 @@ async function detectCoOccurrences(
   useSampling: boolean
 ): Promise<SynchronicityPattern[]> {
   const sampleClause = useSampling
-    ? sql`TABLESAMPLE BERNOULLI(${SYNC_TABLESAMPLE_PERCENT})`
+    ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
     : sql``;
 
   const result = await db.execute(sql`
@@ -136,7 +136,7 @@ async function detectCoOccurrences(
         LEAD(t.tool_name) OVER (PARTITION BY t.profile_hash ORDER BY t.created_at) as next_tool,
         t.outcome,
         LEAD(t.created_at) OVER (PARTITION BY t.profile_hash ORDER BY t.created_at) - t.created_at as gap
-      FROM temporal_events t
+      FROM temporal_events ${sampleClause} t
       WHERE t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_COOCCURRENCE_WINDOW_DAYS}
         AND t.tool_name IN (SELECT tool_name FROM active_tools)
     )
@@ -167,7 +167,7 @@ async function detectFailureCorrelations(
   useSampling: boolean
 ): Promise<SynchronicityPattern[]> {
   const sampleClause = useSampling
-    ? sql`TABLESAMPLE BERNOULLI(${SYNC_TABLESAMPLE_PERCENT})`
+    ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
     : sql``;
 
   const result = await db.execute(sql`
@@ -187,7 +187,7 @@ async function detectFailureCorrelations(
       COUNT(*) as total,
       ROUND(COUNT(*) FILTER (WHERE t.outcome = 'failure')::numeric / NULLIF(COUNT(*), 0), 2) as failure_rate,
       COUNT(DISTINCT t.profile_hash) as unique_profiles
-    FROM temporal_events t
+    FROM temporal_events ${sampleClause} t
     WHERE t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_FAILURE_WINDOW_DAYS}
       AND t.tool_name IN (SELECT tool_name FROM active_tools)
     GROUP BY t.tool_name, day_of_week, hour_of_day
@@ -216,7 +216,7 @@ async function detectEmergentWorkflows(
   useSampling: boolean
 ): Promise<SynchronicityPattern[]> {
   const sampleClause = useSampling
-    ? sql`TABLESAMPLE BERNOULLI(${SYNC_TABLESAMPLE_PERCENT})`
+    ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
     : sql``;
 
   const result = await db.execute(sql`
@@ -236,7 +236,7 @@ async function detectEmergentWorkflows(
         LEAD(t.tool_name, 1) OVER w as tool_2,
         LEAD(t.tool_name, 2) OVER w as tool_3,
         LEAD(t.created_at, 2) OVER w - t.created_at as total_gap
-      FROM temporal_events t
+      FROM temporal_events ${sampleClause} t
       WHERE t.event_type = 'tool_call'
         AND t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_WORKFLOW_WINDOW_DAYS}
         AND t.tool_name IN (SELECT tool_name FROM active_tools)

@@ -49,6 +49,11 @@ function normalize(weights: ArchetypeWeight): ArchetypeWeight {
 /**
  * Determine archetype weights from context.
  * Public for testing and for the weights API endpoint.
+ *
+ * The raw weights set in each branch are pre-normalization signals — they
+ * express relative importance and may include boost multipliers (SHADOW_BOOST,
+ * SAGE_BOOST). The `normalize()` call at the end rescales them to sum to 1.0,
+ * so it is safe for individual weights to exceed 1.0 before normalization.
  */
 export function determineArchetypeWeights(
   ctx: ArchetypeContext

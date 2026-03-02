@@ -8,6 +8,8 @@
  * Source memories are NOT deleted; they decay naturally.
  */
 
+import { createHash } from 'crypto';
+
 import { and, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
@@ -43,10 +45,10 @@ type MemoryRow = typeof memoryRingTable.$inferSelect;
 
 /**
  * Derive a per-profile numeric lock key from the profile UUID.
- * Uses first 8 hex chars of UUID as a 32-bit integer, offset by the base key.
+ * Uses SHA-256 for uniform distribution across the 32-bit integer space.
  */
 function profileLockKey(profileUuid: string): number {
-  const hash = parseInt(profileUuid.replace(/-/g, '').slice(0, 8), 16);
+  const hash = createHash('sha256').update(profileUuid).digest().readUInt32BE(0);
   return (DREAM_PROCESSING_ADVISORY_LOCK_KEY * 1000) + (hash % 2147483647);
 }
 
@@ -144,7 +146,7 @@ async function discoverClusters(profileUuid: string): Promise<DreamCluster[]> {
         ne(memoryRingTable.current_decay_stage, 'essence'),
         or(
           isNull(memoryRingTable.dream_cluster_id),
-          lt(memoryRingTable.updated_at, cooldownCutoff)
+          lt(memoryRingTable.dream_processed_at, cooldownCutoff)
         )
       )
     )
@@ -402,23 +404,23 @@ async function consolidateCluster(
       source_count: members.length,
     });
 
-    // 3. Mark source memories with cluster ID
+    // 3. Mark source memories with cluster ID and processing timestamp
     await tx
       .update(memoryRingTable)
-      .set({ dream_cluster_id: clusterId })
+      .set({ dream_cluster_id: clusterId, dream_processed_at: new Date() })
       .where(inArray(memoryRingTable.uuid, cluster.memberUuids));
 
     // 4. Upsert vector for new consolidated memory
     if (embedding && newMemory) {
       try {
-        upsertMemoryRingVector(
+        await upsertMemoryRingVector(
           newMemory.uuid,
           embedding,
           cluster.profileUuid,
           cluster.dominantRingType
         );
-      } catch {
-        console.warn('Failed to upsert vector for dream consolidated memory');
+      } catch (err) {
+        console.warn('Failed to upsert vector for dream consolidated memory:', err);
       }
     }
   });

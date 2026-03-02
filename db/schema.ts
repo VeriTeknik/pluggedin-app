@@ -3277,6 +3277,10 @@ export const memoryRingTable = pgTable(
     // generated per-run and used only to mark memories as already-consolidated)
     dream_cluster_id: uuid('dream_cluster_id'),
 
+    // When this memory was last processed by the dream consolidator.
+    // Separate from updated_at which changes for many reasons (decay, access, etc.)
+    dream_processed_at: timestamp('dream_processed_at', { withTimezone: true }),
+
     // Metadata
     metadata: jsonb('metadata').$type<{
       classification_reason?: string;

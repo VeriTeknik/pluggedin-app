@@ -330,7 +330,14 @@ async function calcLearningVelocity(
   return Math.min(25, weeklyRate + relevanceScore + reinforcementScore);
 }
 
-/** Collective Contribution (0-25): CBP promoted + pattern diversity + feedback */
+/**
+ * Collective Contribution (0-25): CBP promoted + pattern diversity + feedback.
+ *
+ * Note: collectiveContributionsTable is keyed by profile_hash (anonymized SHA-256)
+ * for k-anonymity in shared patterns, while collectiveFeedbackTable uses profile_uuid
+ * directly since feedback is a private, profile-scoped action. We derive the hash
+ * from the UUID to query both sides.
+ */
 async function calcCollectiveContribution(
   profileUuid: string,
   windowDate: Date
