@@ -84,14 +84,14 @@
     },
     "memory": {
       "title": "Intelligent Memory System",
-      "description": "Human cognition-inspired memory with concentric rings, intelligent forgetting, and collective wisdom. From clipboard storage to long-term memories that decay naturally and community patterns that emerge anonymously.",
+      "description": "Human cognition-inspired memory with concentric rings, intelligent forgetting, and collective wisdom. High-quality patterns are anonymized through a 3-stage pipeline (PII removal, AI generalization, re-scanning) and shared only when 3+ users independently discover the same insight.",
       "features": {
         "1": "Concentric memory rings: Fresh observations, procedures, practice, long-term, and shocks",
-        "2": "Collective Best Practices: Privacy-preserving patterns aggregated across the community",
-        "3": "Clipboard, sessions, Z-reports, and progressive retrieval with 10x token efficiency"
+        "2": "3-stage anonymization: regex PII strip, AI generalization, post-scan — no personal data in collective pool",
+        "3": "k-Anonymity (k≥3): patterns only visible when independently confirmed by multiple users"
       },
       "highlightLabel": "NEW in v3.1.0",
-      "highlight": "Collective Best Practices (CBP) system now live. Your agents learn from anonymized community patterns — error recovery, workflows, and best practices — without exposing private data."
+      "highlight": "Collective Best Practices (CBP) system now live. Your agents learn from community patterns anonymized via HMAC-SHA256 hashing and 3-stage PII removal — your data stays private, the community gets smarter."
     },
     "agents": {
       "title": "Autonomous Agents with Military-Grade Governance",
@@ -235,7 +235,7 @@
     },
     "collectiveBestPractices": {
       "title": "Collective Best Practices",
-      "description": "Privacy-preserving patterns aggregated from the community. Error recovery, workflows, and best practices emerge anonymously with k-anonymity protection."
+      "description": "We anonymize high-quality usage patterns through a 3-stage pipeline — regex PII removal, AI generalization, and re-scanning — then share them only when 3+ users independently discover the same insight (k-anonymity). Your data stays private; the community gets smarter."
     },
     "crossModelMemory": {
       "title": "Cross-Model Memory",
