@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { getServerSession } from 'next-auth/next';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -68,25 +68,37 @@ export async function validateDeviceAuthAction(
 
   const { user_code } = validated.data;
 
+  // Look up only pending, non-expired codes to avoid matching stale records
+  // that could shadow a fresh pending code with the same user_code
   const record = await db.query.deviceAuthCodesTable.findFirst({
-    where: eq(deviceAuthCodesTable.user_code, user_code),
+    where: and(
+      eq(deviceAuthCodesTable.user_code, user_code),
+      eq(deviceAuthCodesTable.status, 'pending'),
+      gt(deviceAuthCodesTable.expires_at, new Date())
+    ),
   });
 
   if (!record) {
-    return { ok: false, response: ErrorResponses.notFound() };
-  }
+    // Check if there's a non-pending record to give a more specific error
+    const anyRecord = await db.query.deviceAuthCodesTable.findFirst({
+      where: eq(deviceAuthCodesTable.user_code, user_code),
+    });
 
-  if (record.status !== 'pending') {
-    return {
-      ok: false,
-      response: createErrorResponse('Authorization code already used', 409, 'ALREADY_USED'),
-    };
-  }
+    if (!anyRecord) {
+      return { ok: false, response: ErrorResponses.notFound() };
+    }
 
-  if (new Date() > record.expires_at) {
+    if (anyRecord.status !== 'pending') {
+      return {
+        ok: false,
+        response: createErrorResponse('Authorization code already used', 409, 'ALREADY_USED'),
+      };
+    }
+
+    // Must be expired
     await db.update(deviceAuthCodesTable)
       .set({ status: 'expired' })
-      .where(eq(deviceAuthCodesTable.uuid, record.uuid));
+      .where(eq(deviceAuthCodesTable.uuid, anyRecord.uuid));
     return {
       ok: false,
       response: createErrorResponse('Authorization code expired', 410, 'EXPIRED'),

@@ -22,6 +22,7 @@
     },
     "error": {
       "title": "Hata",
+      "invalidRequest": "Gecersiz Istek",
       "noCode": "Dogrulama kodu saglanamladi.",
       "loadProjects": "Hub'lariniz yuklenemedi.",
       "noHubs": "Hub bulunamadi. Lutfen once bir Hub olusturun.",

@@ -31,7 +31,7 @@ function NoCodeCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('cliAuth.error.title', 'Invalid Request')}</CardTitle>
+        <CardTitle>{t('cliAuth.error.invalidRequest', 'Invalid Request')}</CardTitle>
         <CardDescription>{t('cliAuth.error.noCode', 'No verification code provided.')}</CardDescription>
       </CardHeader>
     </Card>

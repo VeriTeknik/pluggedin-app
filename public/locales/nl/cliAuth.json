@@ -22,6 +22,7 @@
     },
     "error": {
       "title": "Fout",
+      "invalidRequest": "Ongeldig verzoek",
       "noCode": "Geen verificatiecode opgegeven.",
       "loadProjects": "Kan uw Hubs niet laden.",
       "noHubs": "Geen Hubs gevonden. Maak eerst een Hub aan.",

@@ -22,6 +22,7 @@
     },
     "error": {
       "title": "Error",
+      "invalidRequest": "Invalid Request",
       "noCode": "No verification code provided.",
       "loadProjects": "Failed to load your Hubs.",
       "noHubs": "No Hubs found. Please create a Hub first.",

@@ -22,6 +22,7 @@
     },
     "error": {
       "title": "\u9519\u8bef",
+      "invalidRequest": "\u65e0\u6548\u8bf7\u6c42",
       "noCode": "\u672a\u63d0\u4f9b\u9a8c\u8bc1\u4ee3\u7801\u3002",
       "loadProjects": "\u65e0\u6cd5\u52a0\u8f7d\u60a8\u7684 Hub\u3002",
       "noHubs": "\u672a\u627e\u5230 Hub\u3002\u8bf7\u5148\u521b\u5efa\u4e00\u4e2a Hub\u3002",
