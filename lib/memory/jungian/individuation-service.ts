@@ -37,6 +37,10 @@ import type {
 // In-Memory Cache
 // ============================================================================
 
+// Best-effort in-memory cache. In serverless environments this resets per
+// invocation (making the TTL largely a no-op). In long-lived processes it
+// grows unboundedly — acceptable at current scale but should be replaced
+// with a bounded LRU or Redis-backed cache if profile count exceeds ~500.
 const scoreCache = new Map<
   string,
   { score: IndividuationScore; cachedAt: number }

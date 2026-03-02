@@ -3540,7 +3540,7 @@ export const dreamConsolidationsTable = pgTable(
       .notNull(),
   },
   (table) => [
-    index('idx_dream_profile').on(table.profile_uuid),
+    index('idx_dream_profile').on(table.profile_uuid, table.created_at),
     index('idx_dream_result').on(table.result_memory_uuid),
   ]
 );

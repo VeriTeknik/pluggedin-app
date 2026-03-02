@@ -10,7 +10,7 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { authenticate } from '../../auth';
 
 const historySchema = z.object({
-  history: z.literal('true').optional(),
+  history: z.enum(['true', 'false']).optional(),
   days: z.number().int().min(1).max(365).optional(),
 });
 

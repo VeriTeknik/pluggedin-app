@@ -24,7 +24,7 @@ const querySchema = z.object({
  * NOTE: Synchronicity patterns are intentionally NOT scoped to a single profile.
  * They represent cross-profile collective intelligence — emergent patterns that only
  * become visible when multiple users independently exhibit similar behaviors.
- * K-anonymity is guaranteed by requiring 3+ distinct profiles before a pattern is
+ * K-anonymity is approximated by requiring 3+ distinct profile hashes before a pattern is
  * surfaced, so no individual profile's data is exposed.
  */
 export async function GET(request: NextRequest) {

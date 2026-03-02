@@ -47,7 +47,7 @@ type MemoryRow = typeof memoryRingTable.$inferSelect;
  */
 function profileLockKey(profileUuid: string): number {
   const hash = parseInt(profileUuid.replace(/-/g, '').slice(0, 8), 16);
-  return (DREAM_PROCESSING_ADVISORY_LOCK_KEY * 1000) + (hash % 1000000);
+  return (DREAM_PROCESSING_ADVISORY_LOCK_KEY * 1000) + (hash % 2147483647);
 }
 
 // ============================================================================
@@ -99,7 +99,8 @@ export async function processDreams(
             consolidated++;
             totalTokenSavings += result.tokenSavings;
           }
-        } catch {
+        } catch (err) {
+          console.warn('[dream-processor] consolidation failed for cluster:', err);
           errors++;
         }
       }

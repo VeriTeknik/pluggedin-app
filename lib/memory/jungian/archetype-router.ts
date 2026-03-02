@@ -61,8 +61,16 @@ export function determineArchetypeWeights(
     trickster: 0.1,
   };
 
+  // Priority order: most specific context wins (else-if prevents overwrites)
+  // 2+ consecutive failures → Trickster (creative solutions needed)
+  if ((ctx.consecutiveFailures ?? 0) >= 2) {
+    weights.trickster = 0.4;
+    weights.sage = 0.3;
+    weights.shadow = 0.2;
+    weights.hero = 0.1;
+  }
   // Error/failure → Shadow + Sage dominant
-  if (
+  else if (
     ctx.outcome === 'failure' ||
     ctx.observationType === 'error_pattern' ||
     ctx.observationType === 'failure_pattern'
@@ -72,9 +80,8 @@ export function determineArchetypeWeights(
     weights.hero = 0.1;
     weights.trickster = 0.1;
   }
-
   // Workflow/tool → Hero dominant
-  if (
+  else if (
     ctx.observationType === 'workflow_step' ||
     ctx.observationType === 'tool_call'
   ) {
@@ -83,9 +90,8 @@ export function determineArchetypeWeights(
     weights.shadow = 0.1;
     weights.trickster = 0.1;
   }
-
   // Success → Sage + Hero
-  if (
+  else if (
     ctx.outcome === 'success' ||
     ctx.observationType === 'success_pattern'
   ) {
@@ -93,14 +99,6 @@ export function determineArchetypeWeights(
     weights.hero = 0.4;
     weights.shadow = 0.1;
     weights.trickster = 0.1;
-  }
-
-  // 2+ consecutive failures → Trickster (creative solutions needed)
-  if ((ctx.consecutiveFailures ?? 0) >= 2) {
-    weights.trickster = 0.4;
-    weights.sage = 0.3;
-    weights.shadow = 0.2;
-    weights.hero = 0.1;
   }
 
   return normalize(weights);

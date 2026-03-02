@@ -678,6 +678,10 @@ const ArchetypeInjectInputSchema = z.object({
   consecutiveFailures: z.number().int().min(0).optional(),
 });
 
+// No explicit profileUuid is forwarded here — injectWithArchetype operates on
+// cross-profile collective patterns (gut_patterns) that are not profile-scoped.
+// The archetype router uses context signals (tool, outcome) to rank patterns,
+// not profile identity.
 export const injectWithArchetypeAction = createProfileAction(
   ArchetypeInjectInputSchema,
   async (parsed) => {
