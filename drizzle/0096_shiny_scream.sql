@@ -2,7 +2,7 @@ CREATE TABLE "dream_consolidations" (
 	"uuid" uuid PRIMARY KEY NOT NULL,
 	"profile_uuid" uuid NOT NULL,
 	"result_memory_uuid" uuid,
-	"source_memory_uuids" text[] NOT NULL,
+	"source_memory_uuids" uuid[] NOT NULL,
 	"cluster_similarity" real,
 	"token_savings" integer,
 	"source_count" integer,
@@ -24,8 +24,8 @@ CREATE TABLE "individuation_snapshots" (
 CREATE TABLE "temporal_events" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"profile_hash" text NOT NULL,
-	"tool_name" varchar(255),
-	"event_type" varchar(30),
+	"tool_name" varchar(255) NOT NULL,
+	"event_type" varchar(30) NOT NULL,
 	"outcome" varchar(10),
 	"context_hash" varchar(64),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -44,4 +44,5 @@ CREATE UNIQUE INDEX "idx_individuation_unique_daily" ON "individuation_snapshots
 CREATE INDEX "idx_temporal_tool_outcome_time" ON "temporal_events" USING btree ("tool_name","outcome","created_at");--> statement-breakpoint
 CREATE INDEX "idx_temporal_time" ON "temporal_events" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "idx_temporal_profile_time" ON "temporal_events" USING btree ("profile_hash","created_at");--> statement-breakpoint
-CREATE INDEX "idx_memory_ring_dream_cluster" ON "memory_ring" USING btree ("dream_cluster_id");
+CREATE INDEX "idx_memory_ring_dream_cluster" ON "memory_ring" USING btree ("dream_cluster_id");--> statement-breakpoint
+CREATE INDEX "idx_memory_ring_dream_processed" ON "memory_ring" USING btree ("dream_processed_at") WHERE dream_processed_at IS NOT NULL;

@@ -516,11 +516,13 @@ async function calculateTrend(
 
   if (snapshots.length < 2) return 'stable';
 
+  // Explicit UTC parsing — Drizzle's date column serialization is driver-dependent,
+  // so we append 'T00:00:00Z' to ensure consistent timezone interpretation.
   const recentSnapshots = snapshots.filter(
-    (s) => new Date(String(s.snapshot_date)) >= oneWeekAgo
+    (s) => new Date(String(s.snapshot_date) + 'T00:00:00Z') >= oneWeekAgo
   );
   const olderSnapshots = snapshots.filter(
-    (s) => new Date(String(s.snapshot_date)) < oneWeekAgo
+    (s) => new Date(String(s.snapshot_date) + 'T00:00:00Z') < oneWeekAgo
   );
 
   const recentAvg =

@@ -3318,6 +3318,10 @@ export const memoryRingTable = pgTable(
       .on(table.gut_processed)
       .where(sql`gut_processed IS NOT TRUE`),
     memoryRingDreamClusterIdx: index('idx_memory_ring_dream_cluster').on(table.dream_cluster_id),
+    // Partial index for dream cooldown filter: only memories that have been processed
+    memoryRingDreamProcessedIdx: index('idx_memory_ring_dream_processed')
+      .on(table.dream_processed_at)
+      .where(sql`dream_processed_at IS NOT NULL`),
   })
 );
 

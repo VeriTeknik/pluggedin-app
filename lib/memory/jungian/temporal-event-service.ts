@@ -80,7 +80,8 @@ export async function recordTemporalEvent(
 }
 
 /**
- * Cleanup events older than retention period.
+ * Cleanup events older than retention period in batches.
+ * Batching avoids long-held table locks on large tables (1M+ rows).
  * Called from cron endpoint.
  */
 export async function cleanupTemporalEvents(): Promise<MemoryResult<{ deleted: number }>> {
@@ -88,12 +89,25 @@ export async function cleanupTemporalEvents(): Promise<MemoryResult<{ deleted: n
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - SYNC_RETENTION_DAYS);
 
-    const result = await db
-      .delete(temporalEventsTable)
-      .where(lt(temporalEventsTable.created_at, cutoff))
-      .returning({ id: temporalEventsTable.id });
+    const BATCH_SIZE = 10_000;
+    let totalDeleted = 0;
 
-    return { success: true, data: { deleted: result.length } };
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const result = await db.execute(sql`
+        DELETE FROM temporal_events
+        WHERE id IN (
+          SELECT id FROM temporal_events
+          WHERE created_at < ${cutoff}
+          LIMIT ${BATCH_SIZE}
+        )
+      `);
+      const batchDeleted = Number(result.rowCount ?? 0);
+      totalDeleted += batchDeleted;
+      if (batchDeleted < BATCH_SIZE) break;
+    }
+
+    return { success: true, data: { deleted: totalDeleted } };
   } catch (error) {
     return {
       success: false,

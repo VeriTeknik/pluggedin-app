@@ -1,5 +1,5 @@
 {
-  "id": "595d1e58-e4d4-4302-83b4-ae641a6a7c50",
+  "id": "093332a7-99f2-4682-8ecc-6b08a8131972",
   "prevId": "ba60139e-c3b1-4eee-b17b-dfd33abac211",
   "version": "7",
   "dialect": "postgresql",
@@ -4196,7 +4196,7 @@
         },
         "source_memory_uuids": {
           "name": "source_memory_uuids",
-          "type": "text[]",
+          "type": "uuid[]",
           "primaryKey": false,
           "notNull": true
         },
@@ -7635,6 +7635,22 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "idx_memory_ring_dream_processed": {
+          "name": "idx_memory_ring_dream_processed",
+          "columns": [
+            {
+              "expression": "dream_processed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "dream_processed_at IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -10860,13 +10876,13 @@
           "name": "tool_name",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "event_type": {
           "name": "event_type",
           "type": "varchar(30)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "outcome": {
           "name": "outcome",

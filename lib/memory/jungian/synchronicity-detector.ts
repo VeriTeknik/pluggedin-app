@@ -119,6 +119,9 @@ async function detectCoOccurrences(
   // those profiles. This preserves temporal sequences for LEAD() window functions.
   // Row-level TABLESAMPLE would destroy adjacency by randomly dropping events
   // within a profile, making LEAD() compute gaps between non-adjacent events.
+  //
+  // Safety: SYNC_TABLESAMPLE_PERCENT is clamped to [1, 100] by clampInt,
+  // so sql.raw injection is not possible.
   const profileSampleCte = useSampling
     ? sql`sampled_profiles AS (
         SELECT DISTINCT profile_hash
@@ -183,14 +186,24 @@ async function detectFailureCorrelations(
 ): Promise<SynchronicityPattern[]> {
   // Row-level TABLESAMPLE is safe here — failure correlations use only aggregates
   // (COUNT, EXTRACT), not window functions, so row ordering doesn't matter.
+  // IMPORTANT: TABLESAMPLE is applied once (in the sampled_events CTE) so both
+  // active_tools and the main query operate on the same random sample. Applying
+  // TABLESAMPLE independently to each scan would draw different samples, causing
+  // tools in active_tools to be absent from the main query.
+  //
+  // Safety: SYNC_TABLESAMPLE_PERCENT is clamped to [1, 100] by clampInt,
+  // so sql.raw injection is not possible.
   const sampleClause = useSampling
     ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
     : sql``;
 
   const result = await db.execute(sql`
-    WITH active_tools AS (
-      SELECT tool_name FROM temporal_events ${sampleClause}
+    WITH sampled_events AS (
+      SELECT * FROM temporal_events ${sampleClause}
       WHERE created_at > NOW() - INTERVAL '1 day' * ${SYNC_FAILURE_WINDOW_DAYS}
+    ),
+    active_tools AS (
+      SELECT tool_name FROM sampled_events
       GROUP BY tool_name
       HAVING COUNT(*) >= ${SYNC_MIN_EVENTS_THRESHOLD}
       ORDER BY COUNT(*) DESC
@@ -204,9 +217,8 @@ async function detectFailureCorrelations(
       COUNT(*) as total,
       ROUND(COUNT(*) FILTER (WHERE t.outcome = 'failure')::numeric / NULLIF(COUNT(*), 0), 2) as failure_rate,
       COUNT(DISTINCT t.profile_hash) as unique_profiles
-    FROM temporal_events ${sampleClause} t
-    WHERE t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_FAILURE_WINDOW_DAYS}
-      AND t.tool_name IN (SELECT tool_name FROM active_tools)
+    FROM sampled_events t
+    WHERE t.tool_name IN (SELECT tool_name FROM active_tools)
     GROUP BY t.tool_name, day_of_week, hour_of_day
     HAVING COUNT(DISTINCT t.profile_hash) >= ${GUT_K_ANONYMITY_THRESHOLD}
       AND COUNT(*) >= ${SYNC_MIN_EVENTS_THRESHOLD}
@@ -234,6 +246,9 @@ async function detectEmergentWorkflows(
 ): Promise<SynchronicityPattern[]> {
   // Profile-level sampling (same rationale as detectCoOccurrences):
   // LEAD() window functions require intact per-profile event sequences.
+  //
+  // Safety: SYNC_TABLESAMPLE_PERCENT is clamped to [1, 100] by clampInt,
+  // so sql.raw injection is not possible.
   const profileSampleCte = useSampling
     ? sql`sampled_profiles AS (
         SELECT DISTINCT profile_hash
@@ -304,27 +319,8 @@ async function storeAsGutPattern(
     const description = formatPatternDescription(pattern);
     const hash = hashPattern(description);
 
-    // Check if already exists
-    const existing = await db
-      .select({ uuid: gutPatternsTable.uuid })
-      .from(gutPatternsTable)
-      .where(sql`${gutPatternsTable.pattern_hash} = ${hash}`)
-      .limit(1);
-
-    if (existing.length > 0) {
-      // Reinforce existing pattern
-      await db
-        .update(gutPatternsTable)
-        .set({
-          occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
-          unique_profile_count: pattern.uniqueProfiles,
-          updated_at: new Date(),
-        })
-        .where(sql`${gutPatternsTable.uuid} = ${existing[0].uuid}`);
-      return false;
-    }
-
-    // Generate embedding for the pattern description
+    // Generate embedding for the pattern description (before INSERT so we
+    // don't create a DB row we'd have to delete if embedding fails)
     let embedding: number[] | null = null;
     try {
       embedding = await generateEmbedding(description);
@@ -332,7 +328,10 @@ async function storeAsGutPattern(
       console.warn('Failed to generate embedding for synchronicity pattern');
     }
 
-    const [newPattern] = await db
+    // Atomic INSERT ... ON CONFLICT to avoid SELECT-then-INSERT race condition.
+    // If two concurrent callers hash the same pattern, one wins the INSERT and
+    // the other increments occurrence_count via the ON CONFLICT clause.
+    const [result] = await db
       .insert(gutPatternsTable)
       .values({
         pattern_hash: hash,
@@ -350,22 +349,37 @@ async function storeAsGutPattern(
           last_seen: new Date().toISOString(),
         } as typeof gutPatternsTable.$inferInsert.metadata,
       })
-      .returning({ uuid: gutPatternsTable.uuid });
+      .onConflictDoUpdate({
+        target: gutPatternsTable.pattern_hash,
+        set: {
+          occurrence_count: sql`${gutPatternsTable.occurrence_count} + 1`,
+          unique_profile_count: pattern.uniqueProfiles,
+          updated_at: new Date(),
+        },
+      })
+      .returning({
+        uuid: gutPatternsTable.uuid,
+        occurrenceCount: gutPatternsTable.occurrence_count,
+      });
 
-    if (embedding && newPattern) {
+    // occurrence_count === 1 means this is a newly inserted pattern;
+    // > 1 means it was an existing pattern that got reinforced.
+    const isNew = result?.occurrenceCount === 1;
+
+    if (isNew && embedding && result) {
       try {
-        await upsertGutPatternVector(newPattern.uuid, embedding, 'synchronicity');
+        await upsertGutPatternVector(result.uuid, embedding, 'synchronicity');
       } catch (error) {
         // Rollback on vector failure
         console.error('Vector storage failed for synchronicity pattern:', error);
         await db
           .delete(gutPatternsTable)
-          .where(sql`${gutPatternsTable.uuid} = ${newPattern.uuid}`);
+          .where(sql`${gutPatternsTable.uuid} = ${result.uuid}`);
         return false;
       }
     }
 
-    return true;
+    return isNew;
   } catch (error) {
     console.error('[synchronicity] Failed to store gut pattern:', error);
     return false;

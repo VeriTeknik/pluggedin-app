@@ -12,10 +12,13 @@ const bodySchema = z.object({
  * POST /api/memory/dream/process - Trigger dream processing (memory consolidation)
  * Restricted: requires CRON_SECRET header.
  *
- * Security note: the caller selects which profile_uuid to process.
- * A compromised CRON_SECRET grants cross-profile dream processing.
- * In production, the cron job should iterate profiles server-side
- * rather than accepting profile_uuid from the request body.
+ * SECURITY: CRON_SECRET carries admin-equivalent privileges — it grants the
+ * ability to trigger dream processing for ANY profile_uuid. Treat CRON_SECRET
+ * with the same sensitivity as a database password.
+ *
+ * TODO: Remove profile_uuid from the request body and iterate all active
+ * profiles server-side (via DB query) to eliminate the lateral access vector.
+ * Until then, CRON_SECRET compromise = full cross-profile processing access.
  */
 export async function POST(request: NextRequest) {
   try {
