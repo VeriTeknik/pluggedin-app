@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       columns: { uuid: true },
     });
     if (!project) {
-      return createErrorResponse('No Hub found for user', 500);
+      return createErrorResponse('No Hub found for user', 400, 'NO_HUB');
     }
     targetProjectUuid = project.uuid;
   }

@@ -24,6 +24,7 @@
       "title": "Hata",
       "noCode": "Dogrulama kodu saglanamladi.",
       "loadProjects": "Hub'lariniz yuklenemedi.",
+      "noHubs": "Hub bulunamadi. Lutfen once bir Hub olusturun.",
       "generic": "Yetkilendirme basarisiz. Lutfen tekrar deneyin."
     }
   }

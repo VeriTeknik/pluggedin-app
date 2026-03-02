@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -57,22 +57,40 @@ export async function GET(request: NextRequest) {
       if (!record.api_key_uuid) {
         return createErrorResponse('Internal error', 500);
       }
-      const apiKey = await db.query.apiKeysTable.findFirst({
-        where: eq(apiKeysTable.uuid, record.api_key_uuid),
-        columns: { api_key: true },
-      });
-      if (!apiKey) {
-        return createErrorResponse('API key not found', 500);
-      }
 
-      // Mark as consumed so the API key cannot be retrieved again
-      await db.update(deviceAuthCodesTable)
-        .set({ status: 'consumed' })
-        .where(eq(deviceAuthCodesTable.uuid, record.uuid));
+      // Atomically mark as consumed and retrieve the API key
+      // The WHERE status='approved' guard prevents two simultaneous polls
+      // from both retrieving the key
+      const result = await db.transaction(async (tx) => {
+        const updated = await tx.update(deviceAuthCodesTable)
+          .set({ status: 'consumed' })
+          .where(
+            and(
+              eq(deviceAuthCodesTable.uuid, record.uuid),
+              eq(deviceAuthCodesTable.status, 'approved')
+            )
+          )
+          .returning({ uuid: deviceAuthCodesTable.uuid });
+
+        if (updated.length === 0) {
+          // Another poll already consumed this — treat as consumed
+          return null;
+        }
+
+        return await tx.query.apiKeysTable.findFirst({
+          where: eq(apiKeysTable.uuid, record.api_key_uuid!),
+          columns: { api_key: true },
+        });
+      });
+
+      if (!result) {
+        // Already consumed by a concurrent poll
+        return NextResponse.json({ status: 'approved' });
+      }
 
       return NextResponse.json({
         status: 'approved',
-        api_key: apiKey.api_key,
+        api_key: result.api_key,
       });
     }
 

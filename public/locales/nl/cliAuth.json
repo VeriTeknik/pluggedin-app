@@ -24,6 +24,7 @@
       "title": "Fout",
       "noCode": "Geen verificatiecode opgegeven.",
       "loadProjects": "Kan uw Hubs niet laden.",
+      "noHubs": "Geen Hubs gevonden. Maak eerst een Hub aan.",
       "generic": "Autorisatie mislukt. Probeer het opnieuw."
     }
   }
