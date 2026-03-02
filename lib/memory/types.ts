@@ -74,6 +74,8 @@ export const PatternType = {
   COMPATIBILITY: 'compatibility',
   PERFORMANCE_TIP: 'performance_tip',
   SECURITY_WARNING: 'security_warning',
+  // Jungian Intelligence Layer (v3.2.0)
+  SYNCHRONICITY: 'synchronicity',
 } as const;
 export type PatternType = (typeof PatternType)[keyof typeof PatternType];
 
