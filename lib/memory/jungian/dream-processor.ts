@@ -8,7 +8,7 @@
  * Source memories are NOT deleted; they decay naturally.
  */
 
-import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
@@ -22,15 +22,17 @@ import { searchMemoryRing, upsertMemoryRingVector } from '../vector-service';
 
 import {
   DREAM_CONSOLIDATION_MAX_INPUT_TOKENS,
+  DREAM_CONSOLIDATION_MAX_OUTPUT_TOKENS,
   DREAM_CONSOLIDATION_PROMPT,
   DREAM_COOLDOWN_DAYS,
   DREAM_ENABLED,
   DREAM_MAX_CLUSTERS_PER_RUN,
   DREAM_MIN_CLUSTER_SIZE,
+  DREAM_PROCESSING_ADVISORY_LOCK_KEY,
   DREAM_SIMILARITY_THRESHOLD,
   DREAM_TOP_K_NEIGHBORS,
 } from './constants';
-import type { MemoryResult } from '../types';
+import type { MemoryResult, RingType } from '../types';
 import type { DreamCluster, DreamProcessingResult } from './types';
 
 type MemoryRow = typeof memoryRingTable.$inferSelect;
@@ -51,41 +53,56 @@ export async function processDreams(
   }
 
   try {
-    // Phase 1: Cluster Discovery
-    const clusters = await discoverClusters(profileUuid);
-
-    if (clusters.length === 0) {
-      return { success: true, data: { clustersFound: 0, consolidated: 0, totalTokenSavings: 0, errors: 0 } };
+    // Advisory lock to prevent concurrent runs
+    const lockQueryResult = await db.execute(
+      sql`SELECT pg_try_advisory_lock(${DREAM_PROCESSING_ADVISORY_LOCK_KEY}) as acquired`
+    );
+    const lockResult = lockQueryResult.rows[0] as { acquired: boolean } | undefined;
+    if (!lockResult?.acquired) {
+      return { success: false, error: 'Dream processing already running' };
     }
 
-    // Phase 2 & 3: Consolidation
-    let consolidated = 0;
-    let totalTokenSavings = 0;
-    let errors = 0;
+    try {
+      // Phase 1: Cluster Discovery
+      const clusters = await discoverClusters(profileUuid);
 
-    const clustersToProcess = clusters.slice(0, DREAM_MAX_CLUSTERS_PER_RUN);
-
-    for (const cluster of clustersToProcess) {
-      try {
-        const result = await consolidateCluster(cluster);
-        if (result) {
-          consolidated++;
-          totalTokenSavings += result.tokenSavings;
-        }
-      } catch {
-        errors++;
+      if (clusters.length === 0) {
+        return { success: true, data: { clustersFound: 0, consolidated: 0, totalTokenSavings: 0, errors: 0 } };
       }
-    }
 
-    return {
-      success: true,
-      data: {
-        clustersFound: clusters.length,
-        consolidated,
-        totalTokenSavings,
-        errors,
-      },
-    };
+      // Phase 2 & 3: Consolidation
+      let consolidated = 0;
+      let totalTokenSavings = 0;
+      let errors = 0;
+
+      const clustersToProcess = clusters.slice(0, DREAM_MAX_CLUSTERS_PER_RUN);
+
+      for (const cluster of clustersToProcess) {
+        try {
+          const result = await consolidateCluster(cluster);
+          if (result) {
+            consolidated++;
+            totalTokenSavings += result.tokenSavings;
+          }
+        } catch {
+          errors++;
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          clustersFound: clusters.length,
+          consolidated,
+          totalTokenSavings,
+          errors,
+        },
+      };
+    } finally {
+      await db.execute(
+        sql`SELECT pg_advisory_unlock(${DREAM_PROCESSING_ADVISORY_LOCK_KEY})`
+      );
+    }
   } catch (error) {
     return {
       success: false,
@@ -99,7 +116,8 @@ export async function processDreams(
 // ============================================================================
 
 async function discoverClusters(profileUuid: string): Promise<DreamCluster[]> {
-  // Get active memories not already clustered
+  // Get active memories not already clustered (or past cooldown period)
+  const cooldownCutoff = new Date(Date.now() - DREAM_COOLDOWN_DAYS * 86_400_000);
   const memories = await db
     .select()
     .from(memoryRingTable)
@@ -108,7 +126,10 @@ async function discoverClusters(profileUuid: string): Promise<DreamCluster[]> {
         eq(memoryRingTable.profile_uuid, profileUuid),
         ne(memoryRingTable.current_decay_stage, 'forgotten'),
         ne(memoryRingTable.current_decay_stage, 'essence'),
-        isNull(memoryRingTable.dream_cluster_id)
+        or(
+          isNull(memoryRingTable.dream_cluster_id),
+          lt(memoryRingTable.updated_at, cooldownCutoff)
+        )
       )
     )
     .limit(200); // Cap to prevent excessive vector queries
@@ -122,42 +143,55 @@ async function discoverClusters(profileUuid: string): Promise<DreamCluster[]> {
   const adjacency = new Map<string, Set<string>>();
   const memoryUuids = new Set(memories.map((m) => m.uuid));
 
-  for (const memory of memories) {
-    const content = getCurrentContent(memory);
-    if (!content) continue;
+  // Pre-filter memories that have content
+  const memoriesWithContent = memories
+    .map((m) => ({ memory: m, content: getCurrentContent(m) }))
+    .filter((entry): entry is { memory: MemoryRow; content: string } => entry.content != null);
 
-    // Generate embedding from memory content to use as query vector
-    let queryEmbedding: number[];
-    try {
-      queryEmbedding = await generateEmbedding(content);
-    } catch {
-      // Skip this memory if embedding fails
-      continue;
-    }
-
-    const neighbors = searchMemoryRing({
-      queryEmbedding,
-      profileUuid,
-      topK: DREAM_TOP_K_NEIGHBORS + 1, // +1 to exclude self
-      threshold: DREAM_SIMILARITY_THRESHOLD,
-    });
-
-    // Filter to only memories in our candidate set
-    const validNeighbors = neighbors
-      .filter((n) => n.uuid !== memory.uuid && memoryUuids.has(n.uuid))
-      .slice(0, DREAM_TOP_K_NEIGHBORS);
-
-    if (validNeighbors.length > 0) {
-      if (!adjacency.has(memory.uuid)) {
-        adjacency.set(memory.uuid, new Set());
-      }
-      for (const neighbor of validNeighbors) {
-        adjacency.get(memory.uuid)!.add(neighbor.uuid);
-        // Bidirectional
-        if (!adjacency.has(neighbor.uuid)) {
-          adjacency.set(neighbor.uuid, new Set());
+  // Generate embeddings in parallel chunks to avoid N+1 sequential calls
+  const CHUNK_SIZE = 10;
+  for (let i = 0; i < memoriesWithContent.length; i += CHUNK_SIZE) {
+    const chunk = memoriesWithContent.slice(i, i + CHUNK_SIZE);
+    const embeddings = await Promise.all(
+      chunk.map(async ({ content }) => {
+        try {
+          return await generateEmbedding(content);
+        } catch {
+          return null; // Skip this memory if embedding fails
         }
-        adjacency.get(neighbor.uuid)!.add(memory.uuid);
+      })
+    );
+
+    for (let j = 0; j < chunk.length; j++) {
+      const queryEmbedding = embeddings[j];
+      if (!queryEmbedding) continue;
+
+      const { memory } = chunk[j];
+
+      const neighbors = await searchMemoryRing({
+        queryEmbedding,
+        profileUuid,
+        topK: DREAM_TOP_K_NEIGHBORS + 1, // +1 to exclude self
+        threshold: DREAM_SIMILARITY_THRESHOLD,
+      });
+
+      // Filter to only memories in our candidate set
+      const validNeighbors = neighbors
+        .filter((n) => n.uuid !== memory.uuid && memoryUuids.has(n.uuid))
+        .slice(0, DREAM_TOP_K_NEIGHBORS);
+
+      if (validNeighbors.length > 0) {
+        if (!adjacency.has(memory.uuid)) {
+          adjacency.set(memory.uuid, new Set());
+        }
+        for (const neighbor of validNeighbors) {
+          adjacency.get(memory.uuid)!.add(neighbor.uuid);
+          // Bidirectional
+          if (!adjacency.has(neighbor.uuid)) {
+            adjacency.set(neighbor.uuid, new Set());
+          }
+          adjacency.get(neighbor.uuid)!.add(memory.uuid);
+        }
       }
     }
   }
@@ -228,7 +262,7 @@ async function discoverClusters(profileUuid: string): Promise<DreamCluster[]> {
     }
     const dominantRingType = [...ringCounts.entries()].sort(
       (a, b) => b[1] - a[1]
-    )[0][0];
+    )[0][0] as RingType;
 
     clusters.push({
       id: crypto.randomUUID(),
@@ -277,7 +311,7 @@ async function consolidateCluster(
   if (contents.length < DREAM_MIN_CLUSTER_SIZE) return null;
 
   // LLM consolidation
-  const llm = createMemoryLLM('compression');
+  const llm = createMemoryLLM('compression', { maxTokens: DREAM_CONSOLIDATION_MAX_OUTPUT_TOKENS });
   const userContent = contents
     .map((c, i) => `--- MEMORY ${i + 1} ---\n${c}`)
     .join('\n\n');
@@ -291,7 +325,7 @@ async function consolidateCluster(
   if (!consolidatedText || consolidatedText.length < 20) return null;
 
   const consolidatedTokens = Math.ceil(consolidatedText.length / 4);
-  const tokenSavings = totalInputTokens - consolidatedTokens;
+  const tokenSavings = Math.max(0, totalInputTokens - consolidatedTokens);
 
   // Calculate aggregate scores
   const avgSuccess =

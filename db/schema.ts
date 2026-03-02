@@ -3523,9 +3523,10 @@ export const dreamConsolidationsTable = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     profile_uuid: uuid('profile_uuid')
       .notNull()
-      .references(() => profilesTable.uuid),
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     result_memory_uuid: uuid('result_memory_uuid').references(
-      () => memoryRingTable.uuid
+      () => memoryRingTable.uuid,
+      { onDelete: 'set null' }
     ),
     source_memory_uuids: text('source_memory_uuids')
       .array()
@@ -3533,7 +3534,9 @@ export const dreamConsolidationsTable = pgTable(
     cluster_similarity: real('cluster_similarity'),
     token_savings: integer('token_savings'),
     source_count: integer('source_count'),
-    created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     index('idx_dream_profile').on(table.profile_uuid),
@@ -3554,7 +3557,7 @@ export const individuationSnapshotsTable = pgTable(
     id: bigserial({ mode: 'number' }).primaryKey(),
     profile_uuid: uuid('profile_uuid')
       .notNull()
-      .references(() => profilesTable.uuid),
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     total_score: smallint('total_score').notNull(),
     memory_depth: smallint('memory_depth'),
     learning_velocity: smallint('learning_velocity'),

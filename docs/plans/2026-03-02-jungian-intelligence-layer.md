@@ -823,7 +823,7 @@ Content: Problem statement, Jung parallel, real-world scenarios, privacy paradox
 
 ---
 
-## Lansman Timeline
+## Launch Timeline
 
 ```
 Phase A: Core Implementation (pluggedin-app)

@@ -10,8 +10,8 @@ import { authenticate } from '../../auth';
 const temporalEventSchema = z.object({
   tool_name: z.string().min(1).max(200),
   event_type: z.string().min(1).max(100),
-  outcome: z.string().max(100).optional(),
-  context_hash: z.string().max(128).optional(),
+  outcome: z.enum(['success', 'failure', 'neutral']).optional(),
+  context_hash: z.string().max(64).optional(),
 });
 
 const bodySchema = z.object({

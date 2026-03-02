@@ -1,27 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
+import { verifyCronSecret } from '@/lib/cron-auth';
 import { processDreams } from '@/lib/memory/jungian/dream-processor';
-import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
-import { authenticate } from '../../../auth';
+const bodySchema = z.object({
+  profile_uuid: z.string().uuid(),
+});
 
 /**
  * POST /api/memory/dream/process - Trigger dream processing (memory consolidation)
+ * Restricted: requires CRON_SECRET header.
  */
 export async function POST(request: NextRequest) {
   try {
-    const rateLimitResult = await EnhancedRateLimiters.api(request);
-    if (!rateLimitResult.allowed) {
+    if (!verifyCronSecret(request.headers.get('x-cron-secret'))) {
       return NextResponse.json(
-        { error: 'Too many requests', retryAfter: rateLimitResult.retryAfter },
-        { status: 429 }
+        { success: false, error: 'Forbidden: this endpoint requires cron authorization' },
+        { status: 403 }
       );
     }
 
-    const auth = await authenticate(request);
-    if (auth.error) return auth.error;
+    const body = await request.json();
+    const parsed = bodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request body', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-    const result = await processDreams(auth.activeProfile.uuid);
+    const result = await processDreams(parsed.data.profile_uuid);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

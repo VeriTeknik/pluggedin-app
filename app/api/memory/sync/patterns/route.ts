@@ -20,6 +20,12 @@ const querySchema = z.object({
  *
  * Without ?query: returns all synchronicity patterns (most recent first).
  * With ?query=...: performs a semantic vector search filtered to synchronicity patterns.
+ *
+ * NOTE: Synchronicity patterns are intentionally NOT scoped to a single profile.
+ * They represent cross-profile collective intelligence — emergent patterns that only
+ * become visible when multiple users independently exhibit similar behaviors.
+ * K-anonymity is guaranteed by requiring 3+ distinct profiles before a pattern is
+ * surfaced, so no individual profile's data is exposed.
  */
 export async function GET(request: NextRequest) {
   try {

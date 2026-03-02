@@ -15,7 +15,6 @@ import {
   collectiveContributionsTable,
   collectiveFeedbackTable,
   dreamConsolidationsTable,
-  freshMemoryTable,
   individuationSnapshotsTable,
   memoryRingTable,
 } from '@/db/schema';
@@ -289,40 +288,42 @@ async function calcMemoryDepth(
   return Math.min(25, ringDiversity + decaySurvival + shockRecovery);
 }
 
-/** Learning Velocity (0-25): Weekly rate + classification confidence + reinforcement */
+/** Learning Velocity (0-25): Weekly rate + relevance quality + reinforcement */
 async function calcLearningVelocity(
   profileUuid: string,
   windowDate: Date
 ): Promise<number> {
+  // Use memoryRingTable (long-term) instead of freshMemoryTable (7-day TTL)
+  // so the 90-day window actually captures the full history.
   const [stats] = await db
     .select({
-      weeklyRate: sql<number>`COUNT(*) / GREATEST(1, EXTRACT(EPOCH FROM (NOW() - ${windowDate})) / 604800)`,
-      avgConfidence: sql<number>`AVG(${freshMemoryTable.classification_confidence})`,
-      reinforcedCount: sql<number>`COUNT(*) FILTER (WHERE ${freshMemoryTable.classified} = true)`,
       totalCount: sql<number>`COUNT(*)`,
+      weeklyRate: sql<number>`COUNT(*) / GREATEST(1, EXTRACT(EPOCH FROM (NOW() - ${windowDate})) / 604800)`,
+      avgRelevance: sql<number>`AVG(${memoryRingTable.relevance_score})`,
+      reinforcedCount: sql<number>`SUM(COALESCE(${memoryRingTable.reinforcement_count}, 0))`,
     })
-    .from(freshMemoryTable)
+    .from(memoryRingTable)
     .where(
       and(
-        eq(freshMemoryTable.profile_uuid, profileUuid),
-        gte(freshMemoryTable.created_at, windowDate)
+        eq(memoryRingTable.profile_uuid, profileUuid),
+        gte(memoryRingTable.created_at, windowDate)
       )
     );
 
   // Weekly memory rate: 0-10 (10+ memories/week = max)
   const weeklyRate = Math.min(10, Math.round(stats?.weeklyRate ?? 0));
 
-  // Classification confidence: 0-10
-  const avgConfidence = stats?.avgConfidence ?? 0;
-  const confidenceScore = Math.min(10, Math.round(avgConfidence * 10));
+  // Relevance quality: 0-10 (avg relevance score of ring memories)
+  const avgRelevance = stats?.avgRelevance ?? 0;
+  const relevanceScore = Math.min(10, Math.round(avgRelevance * 10));
 
-  // Reinforcement rate: 0-5
+  // Reinforcement: 0-5 (based on ratio of total reinforcements to memories)
   const total = stats?.totalCount ?? 0;
   const reinforced = stats?.reinforcedCount ?? 0;
   const reinforcementRate = total > 0 ? reinforced / total : 0;
-  const reinforcementScore = Math.min(5, Math.round(reinforcementRate * 5));
+  const reinforcementScore = Math.min(5, Math.round(Math.min(1, reinforcementRate) * 5));
 
-  return Math.min(25, weeklyRate + confidenceScore + reinforcementScore);
+  return Math.min(25, weeklyRate + relevanceScore + reinforcementScore);
 }
 
 /** Collective Contribution (0-25): CBP promoted + pattern diversity + feedback */

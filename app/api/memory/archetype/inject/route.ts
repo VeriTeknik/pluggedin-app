@@ -9,8 +9,12 @@ import { authenticate } from '../../../auth';
 const bodySchema = z.object({
   query: z.string().max(2000).optional(),
   tool_name: z.string().max(200).optional(),
-  outcome: z.string().max(100).optional(),
-  observation_type: z.string().max(100).optional(),
+  outcome: z.enum(['success', 'failure', 'neutral']).optional(),
+  observation_type: z.enum([
+    'tool_call', 'tool_result', 'user_preference', 'error_pattern',
+    'decision', 'success_pattern', 'failure_pattern', 'workflow_step',
+    'insight', 'context_switch',
+  ]).optional(),
   error_message: z.string().max(1000).optional(),
   consecutive_failures: z.number().int().min(0).max(100).optional(),
 });
@@ -46,8 +50,8 @@ export async function POST(request: NextRequest) {
     const result = await injectWithArchetype({
       query,
       toolName: tool_name,
-      outcome: outcome as 'success' | 'failure' | 'neutral' | undefined,
-      observationType: observation_type as any,
+      outcome,
+      observationType: observation_type,
       errorMessage: error_message,
       consecutiveFailures: consecutive_failures,
     });

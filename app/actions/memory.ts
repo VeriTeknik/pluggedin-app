@@ -669,7 +669,11 @@ const ArchetypeInjectInputSchema = z.object({
   query: z.string().max(500).optional(),
   toolName: z.string().max(255).optional(),
   outcome: z.enum(['success', 'failure', 'neutral']).optional(),
-  observationType: z.string().max(30).optional(),
+  observationType: z.enum([
+    'tool_call', 'tool_result', 'user_preference', 'error_pattern',
+    'decision', 'success_pattern', 'failure_pattern', 'workflow_step',
+    'insight', 'context_switch',
+  ]).optional(),
   errorMessage: z.string().max(500).optional(),
   consecutiveFailures: z.number().int().min(0).optional(),
 });
@@ -681,7 +685,7 @@ export const injectWithArchetypeAction = createProfileAction(
       query: parsed.query,
       toolName: parsed.toolName,
       outcome: parsed.outcome,
-      observationType: parsed.observationType as any,
+      observationType: parsed.observationType,
       errorMessage: parsed.errorMessage,
       consecutiveFailures: parsed.consecutiveFailures,
     });

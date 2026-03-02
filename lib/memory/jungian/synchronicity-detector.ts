@@ -131,6 +131,7 @@ async function detectCoOccurrences(
     ),
     sequences AS (
       SELECT
+        t.profile_hash,
         t.tool_name,
         LEAD(t.tool_name) OVER (PARTITION BY t.profile_hash ORDER BY t.created_at) as next_tool,
         t.outcome,
