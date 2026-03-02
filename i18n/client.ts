@@ -27,6 +27,7 @@ import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
+import enCliAuth from '../public/locales/en/cliAuth.json';
 import enWhatsNew from '../public/locales/en/whatsNew.json';
 // Import Hindi chunks
 import hiAgents from '../public/locales/hi/agents.json';
@@ -53,6 +54,7 @@ import hiSearch from '../public/locales/hi/search.json';
 import hiSettings from '../public/locales/hi/settings.json';
 import hiSetupGuide from '../public/locales/hi/setupGuide.json';
 import hiSidebar from '../public/locales/hi/sidebar.json';
+import hiCliAuth from '../public/locales/hi/cliAuth.json';
 import hiWhatsNew from '../public/locales/hi/whatsNew.json';
 // Import Japanese chunks
 import jaAgents from '../public/locales/ja/agents.json';
@@ -79,6 +81,7 @@ import jaSearch from '../public/locales/ja/search.json';
 import jaSettings from '../public/locales/ja/settings.json';
 import jaSetupGuide from '../public/locales/ja/setupGuide.json';
 import jaSidebar from '../public/locales/ja/sidebar.json';
+import jaCliAuth from '../public/locales/ja/cliAuth.json';
 import jaWhatsNew from '../public/locales/ja/whatsNew.json';
 // Import Dutch chunks
 import nlAgents from '../public/locales/nl/agents.json';
@@ -105,6 +108,7 @@ import nlSearch from '../public/locales/nl/search.json';
 import nlSettings from '../public/locales/nl/settings.json';
 import nlSetupGuide from '../public/locales/nl/setupGuide.json';
 import nlSidebar from '../public/locales/nl/sidebar.json';
+import nlCliAuth from '../public/locales/nl/cliAuth.json';
 import nlWhatsNew from '../public/locales/nl/whatsNew.json';
 // Import Turkish chunks
 import trAgents from '../public/locales/tr/agents.json';
@@ -131,6 +135,7 @@ import trSearch from '../public/locales/tr/search.json';
 import trSettings from '../public/locales/tr/settings.json';
 import trSetupGuide from '../public/locales/tr/setupGuide.json';
 import trSidebar from '../public/locales/tr/sidebar.json';
+import trCliAuth from '../public/locales/tr/cliAuth.json';
 import trWhatsNew from '../public/locales/tr/whatsNew.json';
 // Import Chinese chunks
 import zhAgents from '../public/locales/zh/agents.json';
@@ -157,6 +162,7 @@ import zhSearch from '../public/locales/zh/search.json';
 import zhSettings from '../public/locales/zh/settings.json';
 import zhSetupGuide from '../public/locales/zh/setupGuide.json';
 import zhSidebar from '../public/locales/zh/sidebar.json';
+import zhCliAuth from '../public/locales/zh/cliAuth.json';
 import zhWhatsNew from '../public/locales/zh/whatsNew.json';
 import { defaultLocale, locales, namespaces } from './config';
 
@@ -178,7 +184,8 @@ const resources = {
       ...enSetupGuide,
       ...enPlayground,
       ...enNotifications,
-      ...enWhatsNew
+      ...enWhatsNew,
+      ...enCliAuth
     },
     agents: enAgents,
     analytics: enAnalytics,
@@ -205,6 +212,7 @@ const resources = {
     setupGuide: enSetupGuide,
     sidebar: enSidebar,
     whatsNew: enWhatsNew,
+    cliAuth: enCliAuth,
   },
   hi: {
     translation: {
@@ -222,7 +230,8 @@ const resources = {
       ...hiSetupGuide,
       ...hiPlayground,
       ...hiNotifications,
-      ...hiWhatsNew
+      ...hiWhatsNew,
+      ...hiCliAuth
     },
     agents: hiAgents,
     analytics: hiAnalytics,
@@ -249,6 +258,7 @@ const resources = {
     setupGuide: hiSetupGuide,
     sidebar: hiSidebar,
     whatsNew: hiWhatsNew,
+    cliAuth: hiCliAuth,
   },
   ja: {
     translation: {
@@ -266,7 +276,8 @@ const resources = {
       ...jaSetupGuide,
       ...jaPlayground,
       ...jaNotifications,
-      ...jaWhatsNew
+      ...jaWhatsNew,
+      ...jaCliAuth
     },
     agents: jaAgents,
     analytics: jaAnalytics,
@@ -293,6 +304,7 @@ const resources = {
     setupGuide: jaSetupGuide,
     sidebar: jaSidebar,
     whatsNew: jaWhatsNew,
+    cliAuth: jaCliAuth,
   },
   nl: {
     translation: {
@@ -310,7 +322,8 @@ const resources = {
       ...nlSetupGuide,
       ...nlPlayground,
       ...nlNotifications,
-      ...nlWhatsNew
+      ...nlWhatsNew,
+      ...nlCliAuth
     },
     agents: nlAgents,
     analytics: nlAnalytics,
@@ -337,6 +350,7 @@ const resources = {
     setupGuide: nlSetupGuide,
     sidebar: nlSidebar,
     whatsNew: nlWhatsNew,
+    cliAuth: nlCliAuth,
   },
   tr: {
     translation: {
@@ -354,7 +368,8 @@ const resources = {
       ...trSetupGuide,
       ...trPlayground,
       ...trNotifications,
-      ...trWhatsNew
+      ...trWhatsNew,
+      ...trCliAuth
     },
     agents: trAgents,
     analytics: trAnalytics,
@@ -381,6 +396,7 @@ const resources = {
     setupGuide: trSetupGuide,
     sidebar: trSidebar,
     whatsNew: trWhatsNew,
+    cliAuth: trCliAuth,
   },
   zh: {
     translation: {
@@ -398,7 +414,8 @@ const resources = {
       ...zhSetupGuide,
       ...zhPlayground,
       ...zhNotifications,
-      ...zhWhatsNew
+      ...zhWhatsNew,
+      ...zhCliAuth
     },
     agents: zhAgents,
     analytics: zhAnalytics,
@@ -425,6 +442,7 @@ const resources = {
     setupGuide: zhSetupGuide,
     sidebar: zhSidebar,
     whatsNew: zhWhatsNew,
+    cliAuth: zhCliAuth,
   }
 };
 

@@ -1,0 +1,30 @@
+{
+  "cliAuth": {
+    "title": "CLI Autorisatie",
+    "description": "Een CLI-tool vraagt toegang tot uw Plugged.in account.",
+    "verifyMatch": "Controleer of deze code overeenkomt met uw terminal:",
+    "selectHub": "Hub selecteren",
+    "authorize": "Autoriseren",
+    "authorizing": "Autoriseren...",
+    "deny": "Weigeren",
+    "tryAgain": "Opnieuw proberen",
+    "success": {
+      "title": "Autorisatie voltooid",
+      "message": "U kunt dit tabblad sluiten. Uw CLI-sessie wordt automatisch geconfigureerd."
+    },
+    "denied": {
+      "title": "Autorisatie geweigerd",
+      "message": "Het autorisatieverzoek is geweigerd. U kunt dit tabblad sluiten."
+    },
+    "expired": {
+      "title": "Code verlopen",
+      "message": "Deze autorisatiecode is verlopen. Voer het setup-commando opnieuw uit."
+    },
+    "error": {
+      "title": "Fout",
+      "noCode": "Geen verificatiecode opgegeven.",
+      "loadProjects": "Kan uw Hubs niet laden.",
+      "generic": "Autorisatie mislukt. Probeer het opnieuw."
+    }
+  }
+}
