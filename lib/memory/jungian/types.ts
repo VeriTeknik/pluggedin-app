@@ -10,13 +10,7 @@
  */
 
 import type { InjectedPattern } from '../cbp/injection-engine';
-import type { ObservationType, Outcome, PatternType } from '../types';
-
-// ============================================================================
-// Re-export upstream types used by this module's consumers
-// ============================================================================
-
-export type { ObservationType, Outcome, PatternType };
+import type { ObservationType, Outcome, PatternType, RingType } from '../types';
 
 // ============================================================================
 // Archetypes
@@ -68,8 +62,8 @@ export interface ArchetypedInjection extends InjectedPattern {
   archetype: Archetype;
   /** Human-readable label for the archetype (e.g. "Shadow") */
   archetypeLabel: string;
-  /** Numerical weights that led to the archetype selection */
-  archetypeWeight: ArchetypeWeight;
+  /** Weight of this archetype in the current context (0.0-1.0) */
+  archetypeWeight: number;
 }
 
 /**
@@ -82,17 +76,17 @@ export const ARCHETYPE_PATTERN_TYPES: Record<Archetype, PatternType[]> = {
   sage: ['best_practice', 'error_solution', 'performance_tip', 'migration_note'],
   hero: ['workflow', 'tool_sequence', 'migration_note'],
   trickster: ['gotcha', 'compatibility', 'error_recovery'],
-} as const;
+};
 
 /**
  * Display labels for each archetype, suitable for UI rendering.
  */
 export const ARCHETYPE_LABELS: Record<Archetype, string> = {
-  shadow: 'Shadow',
-  sage: 'Sage',
-  hero: 'Hero',
-  trickster: 'Trickster',
-} as const;
+  shadow: 'Shadow Warning',
+  sage: 'Sage Advice',
+  hero: 'Hero Path',
+  trickster: 'Trickster Insight',
+};
 
 // ============================================================================
 // Synchronicity
@@ -147,7 +141,7 @@ export interface TemporalEventInput {
   /** MCP tool name that was invoked */
   toolName: string;
   /** Observation type recorded for this event */
-  eventType: ObservationType;
+  eventType: string;
   /** Outcome of the tool invocation */
   outcome?: Outcome;
   /** Hash of any additional context (e.g. error message hash) */
@@ -174,7 +168,7 @@ export interface DreamCluster {
   /** Mean pairwise cosine similarity within the cluster */
   avgSimilarity: number;
   /** The ring type that the majority of members belong to */
-  dominantRingType: string;
+  dominantRingType: RingType;
   /** Sum of token counts across all cluster members (before consolidation) */
   totalTokens: number;
 }
@@ -251,8 +245,8 @@ export interface IndividuationResponse {
   total: number;
   /** Maturity level label */
   level: MaturityLevel;
-  /** Score delta compared with the previous week's snapshot */
-  weeklyTrend: number;
+  /** Trend direction compared with the previous week */
+  weeklyTrend: 'accelerating' | 'stable' | 'decelerating';
   /** Actionable human-readable tip for improving the score */
   tip: string;
   /** Breakdown of the four component scores */
@@ -293,6 +287,6 @@ export interface DreamProcessingResult {
   consolidated: number;
   /** Aggregate token savings across all consolidated clusters */
   totalTokenSavings: number;
-  /** Any non-fatal errors encountered during the pass */
-  errors: string[];
+  /** Number of non-fatal errors encountered during the pass */
+  errors: number;
 }
