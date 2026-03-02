@@ -1,8 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { MetadataRoute } from 'next';
 
 import { db } from '@/db';
-import { blogPostsTable, BlogPostStatus } from '@/db/schema';
+import { blogPostsTable, BlogPostStatus, users } from '@/db/schema';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://plugged.in';
@@ -18,6 +18,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   });
 
+  // Fetch public user profiles (users with usernames who opted in)
+  const publicUsers = await db
+    .select({ username: users.username, updated_at: users.updated_at })
+    .from(users)
+    .where(and(isNotNull(users.username), eq(users.is_public, true)))
+    .limit(50_000);
+
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -27,10 +34,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/search?source=REGISTRY&amp;offset=0`,
+      url: `${baseUrl}/search?source=REGISTRY&offset=0`,
       lastModified: currentDate,
       changeFrequency: 'daily',
       priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/to`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/login`,
@@ -108,5 +121,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...blogRoutes];
+  // Public user profile routes
+  const userRoutes: MetadataRoute.Sitemap = publicUsers.map((user) => ({
+    url: `${baseUrl}/to/${encodeURIComponent(user.username!)}`,
+    lastModified: user.updated_at || currentDate,
+    changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...blogRoutes, ...userRoutes];
 }

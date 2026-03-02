@@ -43,7 +43,7 @@ const JungianIntelligenceSection = dynamicImport(
   () => import('@/components/landing-sections/jungian-intelligence').then(mod => ({ default: mod.JungianIntelligenceSection })),
   {
     loading: () => <SectionLoader />,
-    ssr: false
+    ssr: true
   }
 );
 

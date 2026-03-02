@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // www → non-www redirect (fixes duplicate canonical issues in Google Search Console)
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.plugged.in' }],
+        destination: 'https://plugged.in/:path*',
+        permanent: true,
+      },
       {
         source: '/privacy',
         destination: '/legal/privacy-policy',
@@ -27,6 +34,12 @@ const nextConfig: NextConfig = {
       {
         source: '/terms',
         destination: '/legal/terms-of-service',
+        permanent: true,
+      },
+      // Fix typo in blog slug
+      {
+        source: '/blog/why-autonomy-is-essentialfor-ai-agents',
+        destination: '/blog/why-autonomy-is-essential-for-ai-agents',
         permanent: true,
       },
     ];
