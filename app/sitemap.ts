@@ -18,11 +18,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   });
 
-  // Fetch public user profiles (users with usernames)
+  // Fetch public user profiles (users with usernames who opted in)
   const publicUsers = await db
     .select({ username: users.username, updated_at: users.updated_at })
     .from(users)
-    .where(and(isNotNull(users.username)));
+    .where(and(isNotNull(users.username), eq(users.is_public, true)))
+    .limit(50_000);
 
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -121,14 +122,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Public user profile routes
-  const userRoutes: MetadataRoute.Sitemap = publicUsers
-    .filter((user) => user.username)
-    .map((user) => ({
-      url: `${baseUrl}/to/${user.username}`,
-      lastModified: user.updated_at || currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.6,
-    }));
+  const userRoutes: MetadataRoute.Sitemap = publicUsers.map((user) => ({
+    url: `${baseUrl}/to/${encodeURIComponent(user.username!)}`,
+    lastModified: user.updated_at || currentDate,
+    changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }));
 
   return [...staticRoutes, ...blogRoutes, ...userRoutes];
 }
