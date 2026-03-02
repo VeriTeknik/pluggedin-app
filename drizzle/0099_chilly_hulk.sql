@@ -1,1 +1,0 @@
-ALTER TABLE "temporal_events" ADD CONSTRAINT "temporal_events_outcome_check" CHECK (outcome IS NULL OR outcome IN ('success', 'failure', 'neutral'));

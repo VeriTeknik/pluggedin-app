@@ -96,10 +96,15 @@ export async function cleanupTemporalEvents(): Promise<MemoryResult<{ deleted: n
 
 /**
  * Get approximate row count for sampling decisions.
+ * Uses pg_class.reltuples (~10% accurate) instead of COUNT(*) to avoid
+ * a full sequential scan on potentially large tables. Sufficient for the
+ * sampling threshold decision (SYNC_TABLESAMPLE_TRIGGER_ROWS).
  */
-export async function getTemporalEventCount(): Promise<number> {
-  const [result] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(temporalEventsTable);
-  return result?.count ?? 0;
+export async function getApproxTemporalEventCount(): Promise<number> {
+  const result = await db.execute(
+    sql`SELECT reltuples::bigint AS count FROM pg_class WHERE relname = 'temporal_events'`
+  );
+  const row = result.rows[0] as { count: number } | undefined;
+  // reltuples can be -1 before first ANALYZE; fall back to 0
+  return Math.max(0, row?.count ?? 0);
 }

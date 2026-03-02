@@ -46,6 +46,11 @@ type MemoryRow = typeof memoryRingTable.$inferSelect;
  * Derive a per-profile numeric lock key from the profile UUID.
  * Reuses hashPattern (SHA-256) for uniform distribution, then parses
  * 8 hex chars into a 32-bit integer for the advisory lock namespace.
+ *
+ * Collision tolerance: two profiles that hash to the same lower 31 bits
+ * will serialize their dream processing (one waits for the other's lock).
+ * This is intentionally accepted — it causes a brief delay, not data
+ * corruption, and the probability is ~1/(2^31) per profile pair.
  */
 function profileLockKey(profileUuid: string): number {
   const hex = hashPattern(profileUuid);

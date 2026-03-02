@@ -29,7 +29,7 @@ import {
   SYNC_WORKFLOW_GAP_MINUTES,
   SYNC_WORKFLOW_WINDOW_DAYS,
 } from './constants';
-import { getTemporalEventCount } from './temporal-event-service';
+import { getApproxTemporalEventCount } from './temporal-event-service';
 import type { MemoryResult } from '../types';
 import type { SynchronicityDetectionResult, SynchronicityPattern } from './types';
 
@@ -51,7 +51,7 @@ export async function detectSynchronicities(): Promise<
     }
 
     try {
-      const rowCount = await getTemporalEventCount();
+      const rowCount = await getApproxTemporalEventCount();
       const useSampling = rowCount > SYNC_TABLESAMPLE_TRIGGER_ROWS;
 
       const [coOccurrences, failureCorrelations, emergentWorkflows] =
@@ -115,15 +115,29 @@ export async function detectSynchronicities(): Promise<
 async function detectCoOccurrences(
   useSampling: boolean
 ): Promise<SynchronicityPattern[]> {
-  const sampleClause = useSampling
-    ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
+  // Profile-level sampling: sample distinct profiles, then fetch ALL events for
+  // those profiles. This preserves temporal sequences for LEAD() window functions.
+  // Row-level TABLESAMPLE would destroy adjacency by randomly dropping events
+  // within a profile, making LEAD() compute gaps between non-adjacent events.
+  const profileSampleCte = useSampling
+    ? sql`sampled_profiles AS (
+        SELECT DISTINCT profile_hash
+        FROM temporal_events TABLESAMPLE BERNOULLI(${sql.raw(String(Number(SYNC_TABLESAMPLE_PERCENT)))})
+        WHERE created_at > NOW() - INTERVAL '1 day' * ${SYNC_COOCCURRENCE_WINDOW_DAYS}
+      ),`
+    : sql``;
+
+  const profileFilter = useSampling
+    ? sql`AND t.profile_hash IN (SELECT profile_hash FROM sampled_profiles)`
     : sql``;
 
   const result = await db.execute(sql`
-    WITH active_tools AS (
+    WITH ${profileSampleCte}
+    active_tools AS (
       SELECT tool_name, COUNT(*) as cnt
-      FROM temporal_events ${sampleClause}
+      FROM temporal_events t
       WHERE created_at > NOW() - INTERVAL '1 day' * ${SYNC_COOCCURRENCE_WINDOW_DAYS}
+        ${profileFilter}
       GROUP BY tool_name
       HAVING COUNT(*) >= ${SYNC_MIN_EVENTS_THRESHOLD}
       ORDER BY cnt DESC
@@ -136,9 +150,10 @@ async function detectCoOccurrences(
         LEAD(t.tool_name) OVER (PARTITION BY t.profile_hash ORDER BY t.created_at) as next_tool,
         t.outcome,
         LEAD(t.created_at) OVER (PARTITION BY t.profile_hash ORDER BY t.created_at) - t.created_at as gap
-      FROM temporal_events ${sampleClause} t
+      FROM temporal_events t
       WHERE t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_COOCCURRENCE_WINDOW_DAYS}
         AND t.tool_name IN (SELECT tool_name FROM active_tools)
+        ${profileFilter}
     )
     SELECT tool_name, next_tool, COUNT(DISTINCT profile_hash) as unique_profiles
     FROM sequences
@@ -166,6 +181,8 @@ async function detectCoOccurrences(
 async function detectFailureCorrelations(
   useSampling: boolean
 ): Promise<SynchronicityPattern[]> {
+  // Row-level TABLESAMPLE is safe here — failure correlations use only aggregates
+  // (COUNT, EXTRACT), not window functions, so row ordering doesn't matter.
   const sampleClause = useSampling
     ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
     : sql``;
@@ -215,15 +232,28 @@ async function detectFailureCorrelations(
 async function detectEmergentWorkflows(
   useSampling: boolean
 ): Promise<SynchronicityPattern[]> {
-  const sampleClause = useSampling
-    ? sql.raw(`TABLESAMPLE BERNOULLI(${Number(SYNC_TABLESAMPLE_PERCENT)})`)
+  // Profile-level sampling (same rationale as detectCoOccurrences):
+  // LEAD() window functions require intact per-profile event sequences.
+  const profileSampleCte = useSampling
+    ? sql`sampled_profiles AS (
+        SELECT DISTINCT profile_hash
+        FROM temporal_events TABLESAMPLE BERNOULLI(${sql.raw(String(Number(SYNC_TABLESAMPLE_PERCENT)))})
+        WHERE event_type = 'tool_call'
+          AND created_at > NOW() - INTERVAL '1 day' * ${SYNC_WORKFLOW_WINDOW_DAYS}
+      ),`
+    : sql``;
+
+  const profileFilter = useSampling
+    ? sql`AND t.profile_hash IN (SELECT profile_hash FROM sampled_profiles)`
     : sql``;
 
   const result = await db.execute(sql`
-    WITH active_tools AS (
-      SELECT tool_name FROM temporal_events ${sampleClause}
-      WHERE event_type = 'tool_call'
-        AND created_at > NOW() - INTERVAL '1 day' * ${SYNC_WORKFLOW_WINDOW_DAYS}
+    WITH ${profileSampleCte}
+    active_tools AS (
+      SELECT tool_name FROM temporal_events t
+      WHERE t.event_type = 'tool_call'
+        AND t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_WORKFLOW_WINDOW_DAYS}
+        ${profileFilter}
       GROUP BY tool_name
       HAVING COUNT(*) >= ${SYNC_MIN_EVENTS_THRESHOLD}
       ORDER BY COUNT(*) DESC
@@ -236,10 +266,11 @@ async function detectEmergentWorkflows(
         LEAD(t.tool_name, 1) OVER w as tool_2,
         LEAD(t.tool_name, 2) OVER w as tool_3,
         LEAD(t.created_at, 2) OVER w - t.created_at as total_gap
-      FROM temporal_events ${sampleClause} t
+      FROM temporal_events t
       WHERE t.event_type = 'tool_call'
         AND t.created_at > NOW() - INTERVAL '1 day' * ${SYNC_WORKFLOW_WINDOW_DAYS}
         AND t.tool_name IN (SELECT tool_name FROM active_tools)
+        ${profileFilter}
       WINDOW w AS (PARTITION BY t.profile_hash ORDER BY t.created_at)
     )
     SELECT tool_name, tool_2, tool_3, COUNT(DISTINCT profile_hash) as unique_profiles

@@ -677,29 +677,8 @@
     {
       "idx": 96,
       "version": "7",
-      "when": 1772417746513,
-      "tag": "0096_stale_maddog",
-      "breakpoints": true
-    },
-    {
-      "idx": 97,
-      "version": "7",
-      "when": 1772428743686,
-      "tag": "0097_closed_northstar",
-      "breakpoints": true
-    },
-    {
-      "idx": 98,
-      "version": "7",
-      "when": 1772430846596,
-      "tag": "0098_goofy_goblin_queen",
-      "breakpoints": true
-    },
-    {
-      "idx": 99,
-      "version": "7",
-      "when": 1772432179032,
-      "tag": "0099_chilly_hulk",
+      "when": 1772433371434,
+      "tag": "0096_lovely_nicolaos",
       "breakpoints": true
     }
   ]

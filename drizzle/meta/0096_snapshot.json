@@ -1,5 +1,5 @@
 {
-  "id": "d35ef793-ccbf-40ad-80de-da4af9e612b9",
+  "id": "595d1e58-e4d4-4302-83b4-ae641a6a7c50",
   "prevId": "ba60139e-c3b1-4eee-b17b-dfd33abac211",
   "version": "7",
   "dialect": "postgresql",
@@ -4222,7 +4222,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -4232,6 +4232,12 @@
           "columns": [
             {
               "expression": "profile_uuid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4269,7 +4275,7 @@
           "columnsTo": [
             "uuid"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "dream_consolidations_result_memory_uuid_memory_ring_uuid_fk": {
@@ -4282,7 +4288,7 @@
           "columnsTo": [
             "uuid"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5800,7 +5806,7 @@
           "type": "date",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": "(now() AT TIME ZONE 'UTC')::date"
         }
       },
       "indexes": {
@@ -5858,7 +5864,7 @@
           "columnsTo": [
             "uuid"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -7390,6 +7396,12 @@
         "dream_cluster_id": {
           "name": "dream_cluster_id",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dream_processed_at": {
+          "name": "dream_processed_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -10945,7 +10957,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "temporal_events_outcome_check": {
+          "name": "temporal_events_outcome_check",
+          "value": "outcome IS NULL OR outcome IN ('success', 'failure', 'neutral')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.tools": {
