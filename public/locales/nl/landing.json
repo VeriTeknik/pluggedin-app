@@ -758,5 +758,19 @@
     "subtitle": "Ontdek de meest geïnstalleerde en hoogst gewaardeerde MCP servers van onze community",
     "viewDetails": "Details Bekijken",
     "exploreAll": "Explore All {{count}}+ Servers"
+  },
+  "jungian": {
+    "title": "Intelligentie die met je meegroeit",
+    "subtitle": "Geïnspireerd door Carl Jungs collectief onbewuste — je AI onthoudt niet alleen, het leert, consolideert en evolueert.",
+    "archetypes": {
+      "shadow": "Schaduw",
+      "shadowDesc": "Waarschuwt voor wat je NIET moet doen — anti-patronen, beveiligingsrisico's, bekende valkuilen",
+      "sage": "Wijze",
+      "sageDesc": "Begeleidt de juiste aanpak — best practices, bewezen oplossingen, expertwijsheid",
+      "hero": "Held",
+      "heroDesc": "Toont wat je moet doen — workflows, toolsequenties, actieplannen",
+      "trickster": "Bedrieger",
+      "tricksterDesc": "Biedt creatieve oplossingen — workarounds, randgevallen, onconventionele fixes"
+    }
   }
 }

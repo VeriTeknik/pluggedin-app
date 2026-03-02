@@ -39,6 +39,14 @@ const FourPillarsSection = dynamicImport(
   }
 );
 
+const JungianIntelligenceSection = dynamicImport(
+  () => import('@/components/landing-sections/jungian-intelligence').then(mod => ({ default: mod.JungianIntelligenceSection })),
+  {
+    loading: () => <SectionLoader />,
+    ssr: true
+  }
+);
+
 const VideoTutorialsSection = dynamicImport(
   () => import('@/components/landing-sections/video-tutorials').then(mod => ({ default: mod.VideoTutorialsSection })),
   {
@@ -202,6 +210,13 @@ export default function Home() {
         <Suspense fallback={<SectionLoader height="800px" />}>
           <ErrorBoundary sectionName="Four Pillars">
             <FourPillarsSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Jungian Intelligence Section */}
+        <Suspense fallback={<SectionLoader />}>
+          <ErrorBoundary sectionName="Jungian Intelligence">
+            <JungianIntelligenceSection />
           </ErrorBoundary>
         </Suspense>
 

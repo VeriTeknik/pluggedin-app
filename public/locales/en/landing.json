@@ -769,5 +769,19 @@
     "subtitle": "Discover the most installed and highly-rated MCP servers from our community",
     "viewDetails": "View Details",
     "exploreAll": "Explore All {{count}}+ Servers"
+  },
+  "jungian": {
+    "title": "Intelligence That Grows With You",
+    "subtitle": "Inspired by Carl Jung's collective unconscious — your AI doesn't just remember, it learns, consolidates, and evolves.",
+    "archetypes": {
+      "shadow": "Shadow",
+      "shadowDesc": "Warns you about what NOT to do — anti-patterns, security risks, known pitfalls",
+      "sage": "Sage",
+      "sageDesc": "Guides the right approach — best practices, proven solutions, expert wisdom",
+      "hero": "Hero",
+      "heroDesc": "Shows what to do — workflows, tool sequences, action plans",
+      "trickster": "Trickster",
+      "tricksterDesc": "Offers creative solutions — workarounds, edge cases, unconventional fixes"
+    }
   }
 }
