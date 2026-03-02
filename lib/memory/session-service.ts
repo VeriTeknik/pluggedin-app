@@ -11,6 +11,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { memorySessionsTable } from '@/db/schema';
 
+import { saveIndividuationSnapshot } from './jungian/individuation-service';
 import type {
   FocusItem,
   MemoryResult,
@@ -40,6 +41,11 @@ export async function startSession(
         started_at: new Date(),
       })
       .returning({ uuid: memorySessionsTable.uuid });
+
+    // Save daily individuation snapshot (fire-and-forget, non-fatal)
+    saveIndividuationSnapshot(params.profileUuid).catch((err) =>
+      console.warn('[session-service] individuation snapshot failed:', err)
+    );
 
     return {
       success: true,

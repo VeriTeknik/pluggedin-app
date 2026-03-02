@@ -41,6 +41,11 @@ import { aggregatePatterns, queryIntuition } from '@/lib/memory/gut-agent';
 import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
 import { submitFeedback, injectContextual } from '@/lib/memory/cbp/injection-engine';
 import { getPromotionStats } from '@/lib/memory/cbp/promotion-service';
+import {
+  injectWithArchetype,
+  getIndividuationScore,
+  getIndividuationHistory,
+} from '@/lib/memory/jungian';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -655,3 +660,58 @@ export async function getCBPStats(): Promise<MemoryResult> {
     return formatError(error);
   }
 }
+
+// ============================================================================
+// Jungian Intelligence Layer (v3.2.0)
+// ============================================================================
+
+const ArchetypeInjectInputSchema = z.object({
+  query: z.string().max(500).optional(),
+  toolName: z.string().max(255).optional(),
+  outcome: z.enum(['success', 'failure', 'neutral']).optional(),
+  observationType: z.enum([
+    'tool_call', 'tool_result', 'user_preference', 'error_pattern',
+    'decision', 'success_pattern', 'failure_pattern', 'workflow_step',
+    'insight', 'context_switch',
+  ]).optional(),
+  errorMessage: z.string().max(500).optional(),
+  consecutiveFailures: z.number().int().min(0).optional(),
+});
+
+// No explicit profileUuid is forwarded here — injectWithArchetype operates on
+// cross-profile collective patterns (gut_patterns) that are not profile-scoped.
+// The archetype router uses context signals (tool, outcome) to rank patterns,
+// not profile identity.
+export const injectWithArchetypeAction = createProfileAction(
+  ArchetypeInjectInputSchema,
+  async (parsed) => {
+    return injectWithArchetype({
+      query: parsed.query,
+      toolName: parsed.toolName,
+      outcome: parsed.outcome,
+      observationType: parsed.observationType,
+      errorMessage: parsed.errorMessage,
+      consecutiveFailures: parsed.consecutiveFailures,
+    });
+  }
+);
+
+const IndividuationInputSchema = z.object({});
+
+export const getIndividuationScoreAction = createProfileAction(
+  IndividuationInputSchema,
+  async (_parsed, profileUuid) => {
+    return getIndividuationScore(profileUuid);
+  }
+);
+
+const IndividuationHistoryInputSchema = z.object({
+  days: z.number().int().min(1).max(365).optional(),
+});
+
+export const getIndividuationHistoryAction = createProfileAction(
+  IndividuationHistoryInputSchema,
+  async (parsed, profileUuid) => {
+    return getIndividuationHistory(profileUuid, parsed.days);
+  }
+);

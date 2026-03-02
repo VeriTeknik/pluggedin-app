@@ -266,5 +266,47 @@
       "helpful": "Mark as helpful",
       "inaccurate": "Mark as inaccurate"
     }
+  },
+  "jungian": {
+    "title": "Jungian Intelligence",
+    "individuation": {
+      "title": "Individuation Score",
+      "level": "Maturity Level",
+      "trend": "Weekly Trend",
+      "memoryDepth": "Memory Depth",
+      "learningVelocity": "Learning Velocity",
+      "collectiveContribution": "Collective Contribution",
+      "selfAwareness": "Self-Awareness",
+      "nascent": "Nascent",
+      "developing": "Developing",
+      "established": "Established",
+      "mature": "Mature",
+      "individuated": "Individuated",
+      "accelerating": "Accelerating",
+      "stable": "Stable",
+      "decelerating": "Decelerating"
+    },
+    "archetypes": {
+      "shadow": "Shadow",
+      "sage": "Sage",
+      "hero": "Hero",
+      "trickster": "Trickster",
+      "shadowDesc": "What NOT to do",
+      "sageDesc": "Right approach",
+      "heroDesc": "Do this",
+      "tricksterDesc": "Creative solution"
+    },
+    "dreams": {
+      "title": "Dream Processing",
+      "consolidated": "Consolidated",
+      "tokenSavings": "Token Savings",
+      "clusters": "Clusters Found"
+    },
+    "synchronicity": {
+      "title": "Synchronicity Patterns",
+      "coOccurrence": "Co-occurrence",
+      "failureCorrelation": "Failure Correlation",
+      "emergentWorkflow": "Emergent Workflow"
+    }
   }
 }

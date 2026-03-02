@@ -708,5 +708,19 @@
     "subtitle": "发现我们社区中安装次数最多和评分最高的MCP服务器",
     "viewDetails": "查看详情",
     "exploreAll": "Explore All {{count}}+ Servers"
+  },
+  "jungian": {
+    "title": "与您共同成长的智能",
+    "subtitle": "灵感来自荣格的集体无意识——您的AI不仅仅是记忆，它在学习、整合和进化。",
+    "archetypes": {
+      "shadow": "阴影",
+      "shadowDesc": "警告您不该做的事——反模式、安全风险、已知陷阱",
+      "sage": "智者",
+      "sageDesc": "指导正确的方法——最佳实践、经过验证的解决方案、专家智慧",
+      "hero": "英雄",
+      "heroDesc": "展示该做什么——工作流程、工具序列、行动计划",
+      "trickster": "诡计者",
+      "tricksterDesc": "提供创意解决方案——变通方法、边缘情况、非常规修复"
+    }
   }
 }

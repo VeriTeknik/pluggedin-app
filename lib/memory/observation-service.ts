@@ -13,6 +13,7 @@ import { freshMemoryTable } from '@/db/schema';
 
 import { FRESH_MEMORY_TTL_HOURS } from './constants';
 import { generateEmbedding, estimateTokenCount } from './embedding-service';
+import { recordTemporalEvent } from './jungian/temporal-event-service';
 import { incrementObservationCount } from './session-service';
 import { upsertFreshMemoryVector, deleteFreshMemoryVector } from './vector-service';
 import type { AddObservationParams, MemoryResult, RingType } from './types';
@@ -70,6 +71,17 @@ export async function addObservation(
 
     // Update session counters
     await incrementObservationCount(params.sessionUuid, tokenCount);
+
+    // Fire-and-forget: record temporal event for synchronicity detection
+    if (params.type === 'tool_call' || params.type === 'tool_result') {
+      recordTemporalEvent(
+        params.profileUuid,
+        params.metadata?.tool_name ?? 'unknown',
+        params.type,
+        params.outcome,
+        params.metadata?.context_hash as string | undefined
+      ).catch((err) => console.error('[temporal-event] failed — synchronicity data may be incomplete:', err));
+    }
 
     return { success: true, data: { uuid: observation.uuid } };
   } catch (error) {

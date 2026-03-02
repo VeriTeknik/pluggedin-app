@@ -43,6 +43,8 @@ const VALID_PATTERN_TYPES: ReadonlySet<string> = new Set([
   // CBP extended types
   'error_solution', 'anti_pattern', 'gotcha', 'migration_note',
   'compatibility', 'performance_tip', 'security_warning',
+  // Jungian Intelligence Layer (v3.2.0)
+  'synchronicity',
 ]);
 
 const PATTERN_EXTRACTION_PROMPT = `You are a Pattern Extractor. Given a memory, extract the generalizable pattern.

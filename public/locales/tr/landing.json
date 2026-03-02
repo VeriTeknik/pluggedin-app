@@ -737,5 +737,19 @@
     "subtitle": "Topluluğumuzdan en çok yüklenen ve en yüksek puanlı MCP sunucularını keşfedin",
     "viewDetails": "Detayları Görüntüle",
     "exploreAll": "Explore All {{count}}+ Servers"
+  },
+  "jungian": {
+    "title": "Sizinle Birlikte Büyüyen Zeka",
+    "subtitle": "Carl Jung'un kolektif bilinçdışından ilham alıyor — yapay zekanız sadece hatırlamıyor, öğreniyor, pekiştiriyor ve evrimleşiyor.",
+    "archetypes": {
+      "shadow": "Gölge",
+      "shadowDesc": "Yapmamanız gerekenleri uyarır — anti-kalıplar, güvenlik riskleri, bilinen tuzaklar",
+      "sage": "Bilge",
+      "sageDesc": "Doğru yaklaşımı gösterir — en iyi uygulamalar, kanıtlanmış çözümler, uzman bilgeliği",
+      "hero": "Kahraman",
+      "heroDesc": "Ne yapmanız gerektiğini gösterir — iş akışları, araç dizileri, eylem planları",
+      "trickster": "Hileci",
+      "tricksterDesc": "Yaratıcı çözümler sunar — geçici çözümler, uç durumlar, alışılmadık düzeltmeler"
+    }
   }
 }

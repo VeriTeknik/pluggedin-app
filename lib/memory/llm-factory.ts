@@ -57,11 +57,17 @@ interface MemoryLLM {
 /**
  * Create an LLM instance for the given memory role.
  * Returns an object with `.invoke()` that delegates to the provider abstraction.
+ *
+ * Optional `overrides` allow callers to override role defaults (e.g. maxTokens).
  */
-export function createMemoryLLM(role: MemoryLLMRole): MemoryLLM {
+export function createMemoryLLM(
+  role: MemoryLLMRole,
+  overrides?: { maxTokens?: number }
+): MemoryLLM {
   const config = ROLE_DEFAULTS[role];
   const model = process.env[config.envKey] || undefined;
   const provider = getLLMProvider(model);
+  const maxTokens = overrides?.maxTokens ?? config.maxTokens;
 
   return {
     async invoke(messages: Array<{ role: string; content: string }>): Promise<LLMResponse> {
@@ -72,7 +78,7 @@ export function createMemoryLLM(role: MemoryLLMRole): MemoryLLM {
 
       const text = await provider.complete(chatMessages, {
         temperature: config.temperature,
-        maxTokens: config.maxTokens,
+        maxTokens,
       });
 
       return { content: text };

@@ -256,5 +256,47 @@
       "helpful": "标记为有用",
       "inaccurate": "标记为不准确"
     }
+  },
+  "jungian": {
+    "title": "荣格智能",
+    "individuation": {
+      "title": "个体化评分",
+      "level": "成熟度等级",
+      "trend": "每周趋势",
+      "memoryDepth": "记忆深度",
+      "learningVelocity": "学习速度",
+      "collectiveContribution": "集体贡献",
+      "selfAwareness": "自我意识",
+      "nascent": "萌芽期",
+      "developing": "发展期",
+      "established": "稳定期",
+      "mature": "成熟期",
+      "individuated": "个体化",
+      "accelerating": "加速中",
+      "stable": "稳定",
+      "decelerating": "减速中"
+    },
+    "archetypes": {
+      "shadow": "阴影",
+      "sage": "智者",
+      "hero": "英雄",
+      "trickster": "诡计者",
+      "shadowDesc": "不应该做的",
+      "sageDesc": "正确方法",
+      "heroDesc": "这样做",
+      "tricksterDesc": "创造性解决方案"
+    },
+    "dreams": {
+      "title": "梦境处理",
+      "consolidated": "已整合",
+      "tokenSavings": "令牌节省",
+      "clusters": "发现的聚类"
+    },
+    "synchronicity": {
+      "title": "共时性模式",
+      "coOccurrence": "共现",
+      "failureCorrelation": "失败关联",
+      "emergentWorkflow": "涌现工作流"
+    }
   }
 }

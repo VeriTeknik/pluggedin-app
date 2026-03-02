@@ -21,3 +21,6 @@ export * from './decay-engine';
 export * from './retrieval-service';
 export * from './focus-agent';
 export * from './gut-agent';
+
+// Jungian Intelligence Layer (v3.2.0)
+export * from './jungian';

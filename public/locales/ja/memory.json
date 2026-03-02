@@ -256,5 +256,47 @@
       "helpful": "役に立ったとマーク",
       "inaccurate": "不正確とマーク"
     }
+  },
+  "jungian": {
+    "title": "ユング的知能",
+    "individuation": {
+      "title": "個性化スコア",
+      "level": "成熟度レベル",
+      "trend": "週間トレンド",
+      "memoryDepth": "記憶の深さ",
+      "learningVelocity": "学習速度",
+      "collectiveContribution": "集合的貢献",
+      "selfAwareness": "自己認識",
+      "nascent": "萌芽期",
+      "developing": "発展中",
+      "established": "確立済み",
+      "mature": "成熟",
+      "individuated": "個性化済み",
+      "accelerating": "加速中",
+      "stable": "安定",
+      "decelerating": "減速中"
+    },
+    "archetypes": {
+      "shadow": "影",
+      "sage": "賢者",
+      "hero": "英雄",
+      "trickster": "トリックスター",
+      "shadowDesc": "やってはいけないこと",
+      "sageDesc": "正しいアプローチ",
+      "heroDesc": "これを実行",
+      "tricksterDesc": "創造的な解決策"
+    },
+    "dreams": {
+      "title": "夢の処理",
+      "consolidated": "統合済み",
+      "tokenSavings": "トークン節約",
+      "clusters": "発見されたクラスター"
+    },
+    "synchronicity": {
+      "title": "シンクロニシティパターン",
+      "coOccurrence": "共起",
+      "failureCorrelation": "障害相関",
+      "emergentWorkflow": "創発的ワークフロー"
+    }
   }
 }

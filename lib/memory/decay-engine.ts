@@ -12,6 +12,7 @@
  */
 
 import { and, eq, inArray, lt, ne, sql } from 'drizzle-orm';
+import { processDreams } from './jungian/dream-processor';
 
 import { db } from '@/db';
 import { memoryRingTable } from '@/db/schema';
@@ -228,9 +229,21 @@ export async function processDecay(profileUuid?: string): Promise<MemoryResult<{
       else errors++;
     }
 
+    // Dream Processing (consolidation) — only for specific profile
+    let dreamResult = null;
+    if (profileUuid) {
+      dreamResult = await processDreams(profileUuid);
+    }
+
     return {
       success: true,
-      data: { processed, compressed, forgotten, errors },
+      data: {
+        processed,
+        compressed,
+        forgotten,
+        errors,
+        ...(dreamResult?.success ? { dream: dreamResult.data } : {}),
+      },
     };
   } catch (error) {
     return {
