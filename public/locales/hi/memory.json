@@ -256,5 +256,47 @@
       "helpful": "सहायक के रूप में चिह्नित करें",
       "inaccurate": "गलत के रूप में चिह्नित करें"
     }
+  },
+  "jungian": {
+    "title": "जुंगियन बुद्धिमत्ता",
+    "individuation": {
+      "title": "व्यक्तिकरण स्कोर",
+      "level": "परिपक्वता स्तर",
+      "trend": "साप्ताहिक रुझान",
+      "memoryDepth": "स्मृति गहराई",
+      "learningVelocity": "सीखने की गति",
+      "collectiveContribution": "सामूहिक योगदान",
+      "selfAwareness": "आत्म-जागरूकता",
+      "nascent": "उदीयमान",
+      "developing": "विकासशील",
+      "established": "स्थापित",
+      "mature": "परिपक्व",
+      "individuated": "व्यक्तिकृत",
+      "accelerating": "तेज हो रहा है",
+      "stable": "स्थिर",
+      "decelerating": "धीमा हो रहा है"
+    },
+    "archetypes": {
+      "shadow": "छाया",
+      "sage": "ऋषि",
+      "hero": "नायक",
+      "trickster": "चालबाज",
+      "shadowDesc": "क्या नहीं करना चाहिए",
+      "sageDesc": "सही दृष्टिकोण",
+      "heroDesc": "यह करें",
+      "tricksterDesc": "रचनात्मक समाधान"
+    },
+    "dreams": {
+      "title": "स्वप्न प्रसंस्करण",
+      "consolidated": "समेकित",
+      "tokenSavings": "टोकन बचत",
+      "clusters": "पाए गए क्लस्टर"
+    },
+    "synchronicity": {
+      "title": "समकालिकता पैटर्न",
+      "coOccurrence": "सह-घटना",
+      "failureCorrelation": "विफलता सहसंबंध",
+      "emergentWorkflow": "उभरता कार्यप्रवाह"
+    }
   }
 }

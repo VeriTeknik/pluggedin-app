@@ -256,5 +256,47 @@
       "helpful": "Markeer als nuttig",
       "inaccurate": "Markeer als onjuist"
     }
+  },
+  "jungian": {
+    "title": "Jungiaanse Intelligentie",
+    "individuation": {
+      "title": "Individuatiescore",
+      "level": "Volwassenheidsniveau",
+      "trend": "Wekelijkse Trend",
+      "memoryDepth": "Geheugendiepte",
+      "learningVelocity": "Leersnelheid",
+      "collectiveContribution": "Collectieve Bijdrage",
+      "selfAwareness": "Zelfbewustzijn",
+      "nascent": "Ontluikend",
+      "developing": "In ontwikkeling",
+      "established": "Gevestigd",
+      "mature": "Volwassen",
+      "individuated": "Ge\u00efndividueerd",
+      "accelerating": "Versnellend",
+      "stable": "Stabiel",
+      "decelerating": "Vertragend"
+    },
+    "archetypes": {
+      "shadow": "Schaduw",
+      "sage": "Wijze",
+      "hero": "Held",
+      "trickster": "Bedrieger",
+      "shadowDesc": "Wat NIET te doen",
+      "sageDesc": "Juiste aanpak",
+      "heroDesc": "Doe dit",
+      "tricksterDesc": "Creatieve oplossing"
+    },
+    "dreams": {
+      "title": "Droomverwerking",
+      "consolidated": "Geconsolideerd",
+      "tokenSavings": "Tokenbesparing",
+      "clusters": "Gevonden Clusters"
+    },
+    "synchronicity": {
+      "title": "Synchroniciteitspatronen",
+      "coOccurrence": "Gelijktijdig voorkomen",
+      "failureCorrelation": "Foutcorrelatie",
+      "emergentWorkflow": "Opkomende Workflow"
+    }
   }
 }

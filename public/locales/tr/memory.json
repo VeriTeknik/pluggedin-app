@@ -256,5 +256,47 @@
       "helpful": "Faydalı olarak işaretle",
       "inaccurate": "Yanlış olarak işaretle"
     }
+  },
+  "jungian": {
+    "title": "Jungçu Zeka",
+    "individuation": {
+      "title": "Bireyleşme Skoru",
+      "level": "Olgunluk Seviyesi",
+      "trend": "Haftalık Eğilim",
+      "memoryDepth": "Bellek Derinliği",
+      "learningVelocity": "Öğrenme Hızı",
+      "collectiveContribution": "Kolektif Katkı",
+      "selfAwareness": "Öz Farkındalık",
+      "nascent": "Başlangıç",
+      "developing": "Gelişen",
+      "established": "Yerleşik",
+      "mature": "Olgun",
+      "individuated": "Bireyleşmiş",
+      "accelerating": "Hızlanıyor",
+      "stable": "Kararlı",
+      "decelerating": "Yavaşlıyor"
+    },
+    "archetypes": {
+      "shadow": "Gölge",
+      "sage": "Bilge",
+      "hero": "Kahraman",
+      "trickster": "Düzenbaz",
+      "shadowDesc": "Yapılmaması gereken",
+      "sageDesc": "Doğru yaklaşım",
+      "heroDesc": "Bunu yap",
+      "tricksterDesc": "Yaratıcı çözüm"
+    },
+    "dreams": {
+      "title": "Rüya İşleme",
+      "consolidated": "Birleştirildi",
+      "tokenSavings": "Token Tasarrufu",
+      "clusters": "Bulunan Kümeler"
+    },
+    "synchronicity": {
+      "title": "Eşzamanlılık Örüntüleri",
+      "coOccurrence": "Birlikte Oluşum",
+      "failureCorrelation": "Hata Korelasyonu",
+      "emergentWorkflow": "Beliren İş Akışı"
+    }
   }
 }
