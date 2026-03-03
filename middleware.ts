@@ -143,7 +143,7 @@ export async function middleware(request: NextRequest) {
     '/legal/disclaimer',
     '/legal/privacy-policy',
     '/legal/terms-of-service',
-    '/cli'
+    '/cli/authorize'
   ];
 
   // Process MCP API requests for audit logging

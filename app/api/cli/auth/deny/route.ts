@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
@@ -7,6 +7,8 @@ import { createErrorResponse } from '@/lib/api-errors';
 
 import { validateDeviceAuthAction } from '../_shared';
 
+// Note: No CSRF token needed — the user_code (visible only in the user's terminal
+// and on this authenticated page) acts as an implicit CSRF token.
 export async function POST(request: NextRequest) {
   const result = await validateDeviceAuthAction(request);
   if (!result.ok) return result.response;
@@ -16,7 +18,8 @@ export async function POST(request: NextRequest) {
     .where(
       and(
         eq(deviceAuthCodesTable.uuid, result.record.uuid),
-        eq(deviceAuthCodesTable.status, 'pending')
+        eq(deviceAuthCodesTable.status, 'pending'),
+        gt(deviceAuthCodesTable.expires_at, new Date())
       )
     )
     .returning({ uuid: deviceAuthCodesTable.uuid });

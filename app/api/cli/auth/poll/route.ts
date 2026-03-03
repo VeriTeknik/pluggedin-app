@@ -61,27 +61,42 @@ export async function GET(request: NextRequest) {
       // Atomically mark as consumed and retrieve the API key
       // The WHERE status='approved' guard prevents two simultaneous polls
       // from both retrieving the key
-      const result = await db.transaction(async (tx) => {
-        const updated = await tx.update(deviceAuthCodesTable)
-          .set({ status: 'consumed' })
-          .where(
-            and(
-              eq(deviceAuthCodesTable.uuid, record.uuid),
-              eq(deviceAuthCodesTable.status, 'approved')
+      let result: { api_key: string } | null;
+      try {
+        result = await db.transaction(async (tx) => {
+          const updated = await tx.update(deviceAuthCodesTable)
+            .set({ status: 'consumed' })
+            .where(
+              and(
+                eq(deviceAuthCodesTable.uuid, record.uuid),
+                eq(deviceAuthCodesTable.status, 'approved')
+              )
             )
-          )
-          .returning({ uuid: deviceAuthCodesTable.uuid });
+            .returning({ uuid: deviceAuthCodesTable.uuid });
 
-        if (updated.length === 0) {
-          // Another poll already consumed this — treat as consumed
-          return null;
-        }
+          if (updated.length === 0) {
+            // Another poll already consumed this — treat as consumed
+            return null;
+          }
 
-        return await tx.query.apiKeysTable.findFirst({
-          where: eq(apiKeysTable.uuid, record.api_key_uuid!),
-          columns: { api_key: true },
+          const apiKey = await tx.query.apiKeysTable.findFirst({
+            where: eq(apiKeysTable.uuid, record.api_key_uuid!),
+            columns: { api_key: true },
+          });
+
+          if (!apiKey) {
+            // API key row was deleted — roll back the consumed transition
+            throw new Error('API_KEY_MISSING');
+          }
+
+          return apiKey;
         });
-      });
+      } catch (err) {
+        if (err instanceof Error && err.message === 'API_KEY_MISSING') {
+          return createErrorResponse('Internal error', 500);
+        }
+        throw err;
+      }
 
       if (!result) {
         // Already consumed by a concurrent poll
