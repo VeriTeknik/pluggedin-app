@@ -14,13 +14,11 @@ import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useKeyPress } from '@/hooks/useKeyPress';
 
-// Navigation links
+// Navigation links — simplified for plugin-first landing
 const navLinks: Array<{ href: string; labelKey: string; external?: boolean }> = [
-  { href: '#features', labelKey: 'navigation.features' },
-  { href: '#ai-models', labelKey: 'navigation.aiModels' },
-  { href: '#pricing', labelKey: 'navigation.pricing' },
-  { href: '/blog', labelKey: 'navigation.blog' },
+  { href: '#terminal-demo', labelKey: 'navigation.howItWorks' },
   { href: 'https://docs.plugged.in', labelKey: 'navigation.documentation', external: true },
+  { href: 'https://github.com/VeriTeknik/pluggedin-plugin', labelKey: 'navigation.github', external: true },
 ];
 
 export function LandingNavbar() {

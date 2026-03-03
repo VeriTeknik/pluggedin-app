@@ -10,7 +10,9 @@
     "playground": "Playground",
     "documentation": "Documentation",
     "blog": "Blog",
-    "getStarted": "Connect"
+    "getStarted": "Install",
+    "howItWorks": "How It Works",
+    "github": "GitHub"
   },
   "hero": {
     "badge": "World's First AI-CMS",
@@ -783,5 +785,91 @@
       "trickster": "Trickster",
       "tricksterDesc": "Offers creative solutions — workarounds, edge cases, unconventional fixes"
     }
+  },
+  "terminal": {
+    "title": "Zero Configuration. Everything Automatic.",
+    "subtitle": "Five lifecycle hooks manage your entire memory session — from start to finish, no manual intervention needed."
+  },
+  "heroPlugin": {
+    "badge": "Claude Code Plugin",
+    "headline": "AI Memory That Grows With You",
+    "subtitle": "Stop explaining context. Start building faster. Install the plugin and your AI remembers across sessions, learns from the community, and delivers the right pattern at the right moment.",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "starOnGithub": "Star on GitHub",
+    "howItWorks": "How It Works",
+    "stats": "24 tools \u00b7 9 commands \u00b7 5 hooks \u00b7 MIT"
+  },
+  "oneLiner": {
+    "statement": "Your AI Remembers. Learns. Evolves.",
+    "subtitle": "Three layers of intelligence that transform every AI interaction from a blank slate into a continuity of context, wisdom, and insight.",
+    "personal": {
+      "title": "Personal Memory",
+      "desc": "Every session builds on the last. Your AI retains context, preferences, and working patterns across conversations and platforms — nothing starts from zero again."
+    },
+    "collective": {
+      "title": "Collective Intelligence",
+      "desc": "Anonymized best practices from the community surface automatically. When multiple users independently discover the same insight, it becomes shared wisdom — private data stays private."
+    },
+    "archetypal": {
+      "title": "Archetypal Guidance",
+      "desc": "Inspired by Jungian psychology, your AI develops nuanced judgment — knowing what to do, what to avoid, and when to try something unconventional."
+    }
+  },
+  "ctaPlugin": {
+    "headline": "Start Building in Seconds",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "starOnGithub": "Star on GitHub",
+    "readDocs": "Read the Docs",
+    "platform": "Platform",
+    "footer": "Open source \u00b7 MIT \u00b7 Made by VeriTeknik"
+  },
+  "dream": {
+    "title": "Dream Processing: Memory Consolidation",
+    "subtitle": "Like the human brain during sleep, your AI consolidates scattered fragments into authoritative knowledge \u2014 dramatically reducing token overhead.",
+    "before": "15 fragmented memories",
+    "after": "1 authoritative guide",
+    "decay": "Memories decay naturally through stages, preserving only what matters:",
+    "full": "Full",
+    "compressed": "Compressed",
+    "summary": "Summary",
+    "essence": "Essence"
+  },
+  "individuation": {
+    "title": "Individuation Score",
+    "subtitle": "Track your AI's growth journey from blank slate to fully individuated intelligence with measurable dimensions.",
+    "bars": {
+      "memoryDepth": "Memory Depth",
+      "learningVelocity": "Learning Velocity",
+      "collectiveContribution": "Collective Contribution",
+      "selfAwareness": "Self-Awareness"
+    },
+    "tip": "Tip: Contribute to collective best practices and enable reflection to accelerate your individuation score.",
+    "levels": {
+      "nascent": "Nascent",
+      "developing": "Developing",
+      "established": "Established",
+      "mature": "Mature",
+      "individuated": "Individuated"
+    },
+    "teamEffect": "New team members inherit collective wisdom from day one."
+  },
+  "privacy": {
+    "title": "Privacy is math, not promises.",
+    "subtitle": "We don\u2019t ask you to trust us. We built the system so trust isn\u2019t required.",
+    "identity": {
+      "title": "Identity Erasure",
+      "desc": "HMAC-SHA256 one-way hashing ensures contributor identities are mathematically irreversible. We cannot unmask you \u2014 even if we wanted to."
+    },
+    "kanonymity": {
+      "title": "k-Anonymity (k\u22653)",
+      "desc": "Patterns remain invisible until 3 or more profiles independently discover the same insight. Individual behavior is never exposed."
+    },
+    "temporal": {
+      "title": "Temporal Aggregation",
+      "desc": "Time-based patterns are generalized. The system knows \"Fridays are risky\" without knowing which Friday, which user, or which project."
+    },
+    "tagline": "Learn from everyone. Identified by no one."
   }
 }
