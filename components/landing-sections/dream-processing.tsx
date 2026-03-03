@@ -105,13 +105,13 @@ export function DreamProcessingSection() {
             className="flex flex-col items-center gap-2 shrink-0"
           >
             <motion.div
-              animate={{
+              animate={inView ? {
                 boxShadow: [
                   '0 0 10px rgba(147, 51, 234, 0.3)',
                   '0 0 25px rgba(147, 51, 234, 0.6)',
                   '0 0 10px rgba(147, 51, 234, 0.3)',
                 ],
-              }}
+              } : {}}
               transition={{ duration: 2, repeat: Infinity }}
               className="px-4 py-2 rounded-full bg-neon-purple/10 border border-neon-purple/30"
             >
@@ -124,7 +124,7 @@ export function DreamProcessingSection() {
             </div>
             <div className="block md:hidden">
               <motion.div
-                animate={{ y: [0, 4, 0] }}
+                animate={inView ? { y: [0, 4, 0] } : {}}
                 transition={{ duration: 1.5, repeat: Infinity }}
               >
                 <ArrowRight className="w-8 h-8 text-neon-purple/60 rotate-90" />

@@ -63,7 +63,7 @@ export function IndividuationScoreSection() {
             {/* Score Header */}
             <div className="text-center mb-6">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-3">
-                {t('individuation.title')}
+                {t('individuation.cardLabel')}
               </p>
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-electric-cyan">
@@ -97,7 +97,11 @@ export function IndividuationScoreSection() {
                       {bar.value}/{bar.max}
                     </span>
                   </div>
-                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    role="progressbar"
+                    aria-label={`${t(`individuation.bars.${bar.key}`)} ${bar.value}/${bar.max}`}
+                    className="h-2.5 bg-muted rounded-full overflow-hidden"
+                  >
                     <motion.div
                       initial={{ width: 0 }}
                       animate={inView ? { width: `${(bar.value / bar.max) * 100}%` } : {}}

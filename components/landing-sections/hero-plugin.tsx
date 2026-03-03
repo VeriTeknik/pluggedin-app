@@ -19,7 +19,18 @@ export function HeroPluginSection() {
   });
 
   if (!mounted || !ready) {
-    return null;
+    return (
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-gradient-to-br from-tech-blue-900 via-background to-tech-blue-900">
+        <div className="container mx-auto px-4 py-24">
+          <div className="max-w-4xl mx-auto text-center animate-pulse">
+            <div className="h-8 w-48 bg-muted rounded-full mx-auto mb-6" />
+            <div className="h-12 w-3/4 bg-muted rounded mx-auto mb-6" />
+            <div className="h-6 w-2/3 bg-muted rounded mx-auto mb-12" />
+            <div className="h-24 w-full max-w-2xl bg-muted rounded-lg mx-auto mb-10" />
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (

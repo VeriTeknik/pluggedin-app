@@ -847,6 +847,7 @@
   },
   "individuation": {
     "title": "Individuation Score",
+    "cardLabel": "Individuation Score",
     "subtitle": "Track your AI's growth journey from blank slate to fully individuated intelligence with measurable dimensions.",
     "bars": {
       "memoryDepth": "Memory Depth",
@@ -912,6 +913,7 @@
       "title": "Temporal Aggregation",
       "desc": "Time-based patterns are generalized. The system knows \"Fridays are risky\" without knowing which Friday, which user, or which project."
     },
-    "tagline": "Learn from everyone. Identified by no one."
+    "tagline": "Learn from everyone. Identified by no one.",
+    "openSource": "Open source \u00b7 Self-hostable \u00b7 MIT licensed"
   }
 }

@@ -815,6 +815,7 @@
   },
   "individuation": {
     "title": "Bireyselleşme Skoru",
+    "cardLabel": "Bireyselleşme Skoru",
     "subtitle": "AI'ınızın boş sayfadan tam bireyselleşmiş zekaya kadar büyüme yolculuğunu ölçülebilir boyutlarla takip edin.",
     "bars": {
       "memoryDepth": "Hafıza Derinliği",
@@ -880,6 +881,7 @@
       "title": "Zamansal Kümeleme",
       "desc": "Zaman bazlı pattern'ler genelleştirilir. Sistem \"Cumalar riskli\" bilir ama hangi Cuma, hangi kullanıcı veya hangi proje olduğunu bilmez."
     },
-    "tagline": "Herkesten öğren. Kimse tarafından tanımlanma."
+    "tagline": "Herkesten öğren. Kimse tarafından tanımlanma.",
+    "openSource": "A\u00e7\u0131k kaynak \u00b7 Kendi bar\u0131nd\u0131rma \u00b7 MIT lisansl\u0131"
   }
 }

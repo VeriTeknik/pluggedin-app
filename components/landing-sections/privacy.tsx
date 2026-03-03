@@ -90,7 +90,7 @@ export function PrivacySection() {
             {t('privacy.tagline')}
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Open source &middot; Self-hostable &middot; MIT licensed
+            {t('privacy.openSource')}
           </p>
         </motion.div>
       </div>

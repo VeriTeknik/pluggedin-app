@@ -16,6 +16,7 @@ export function AnimatedNumber({ target, inView, duration = 1500 }: AnimatedNumb
     if (inView && !hasAnimated.current) {
       hasAnimated.current = true;
       const startTime = Date.now();
+      let rafId: number;
 
       const tick = () => {
         const elapsed = Date.now() - startTime;
@@ -24,11 +25,12 @@ export function AnimatedNumber({ target, inView, duration = 1500 }: AnimatedNumb
         setValue(Math.round(eased * target));
 
         if (progress < 1) {
-          requestAnimationFrame(tick);
+          rafId = requestAnimationFrame(tick);
         }
       };
 
-      requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(rafId);
     }
   }, [inView, target, duration]);
 
