@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   if (!result.ok) return result.response;
 
   const updated = await db.update(deviceAuthCodesTable)
-    .set({ status: 'denied' })
+    .set({ status: 'denied', denied_at: new Date() })
     .where(
       and(
         eq(deviceAuthCodesTable.uuid, result.record.uuid),

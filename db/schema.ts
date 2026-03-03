@@ -414,6 +414,7 @@ export const deviceAuthCodesTable = pgTable(
       .notNull()
       .defaultNow(),
     approved_at: timestamp('approved_at', { withTimezone: true }),
+    denied_at: timestamp('denied_at', { withTimezone: true }),
     consumed_at: timestamp('consumed_at', { withTimezone: true }),
   },
   (table) => ({

@@ -1,4 +1,4 @@
-import { and, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     const project = await db.query.projectsTable.findFirst({
       where: eq(projectsTable.user_id, session.user.id),
       columns: { uuid: true },
+      orderBy: asc(projectsTable.created_at),
     });
     if (!project) {
       return createErrorResponse('No Hub found for user', 400, 'NO_HUB');

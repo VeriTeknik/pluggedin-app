@@ -13,7 +13,7 @@ const pollRateLimiter = createRateLimiter({
 });
 
 const pollSchema = z.object({
-  device_code: z.string().min(1).max(64),
+  device_code: z.string().regex(/^[0-9A-Za-z]{48}$/),
 });
 
 export async function GET(request: NextRequest) {

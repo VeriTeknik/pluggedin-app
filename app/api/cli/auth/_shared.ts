@@ -83,6 +83,13 @@ export async function validateDeviceAuthAction(
     return { ok: false, response: ErrorResponses.notFound() };
   }
 
+  if (record.status === 'expired') {
+    return {
+      ok: false,
+      response: createErrorResponse('Authorization code expired', 410, 'EXPIRED'),
+    };
+  }
+
   if (record.status !== 'pending') {
     return {
       ok: false,

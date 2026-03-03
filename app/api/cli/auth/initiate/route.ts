@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const baseUrl = process.env.NEXTAUTH_URL;
+  if (!baseUrl) {
+    return NextResponse.json(
+      { error: 'Server configuration error', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
+
   const forwardedFor = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
   const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || 'unknown';
@@ -47,13 +55,6 @@ export async function POST(request: NextRequest) {
     expires_at: expiresAt,
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL;
-  if (!baseUrl) {
-    return NextResponse.json(
-      { error: 'Server configuration error', code: 'SERVER_ERROR' },
-      { status: 500 }
-    );
-  }
   const verificationUrl = `${baseUrl}/cli/authorize?code=${encodeURIComponent(userCode)}`;
 
   return NextResponse.json({

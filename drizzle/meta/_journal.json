@@ -701,6 +701,13 @@
       "when": 1772496764679,
       "tag": "0099_fearless_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1772497651438,
+      "tag": "0100_unknown_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }

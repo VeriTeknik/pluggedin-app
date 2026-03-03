@@ -1,0 +1,1 @@
+ALTER TABLE "device_auth_codes" ADD COLUMN "denied_at" timestamp with time zone;
