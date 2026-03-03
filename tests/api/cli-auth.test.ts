@@ -208,6 +208,21 @@ describe('Device Auth Flow', () => {
       const insertValues = mocks.mockValues.mock.calls[0][0];
       expect(insertValues.client_ip).toBe('203.0.113.50');
     });
+
+    it('should return 429 when rate limited', async () => {
+      mockRateLimiterFn.mockResolvedValueOnce({ allowed: false, limit: 5, remaining: 0, reset: 0 });
+
+      const req = createNextRequest('http://localhost:12005/api/cli/auth/initiate', {
+        method: 'POST',
+      });
+
+      const res = await initiateHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(429);
+      expect(data.code).toBe('RATE_LIMIT_EXCEEDED');
+      expect(db.insert).not.toHaveBeenCalled();
+    });
   });
 
   // =========================================================================
@@ -293,6 +308,24 @@ describe('Device Auth Flow', () => {
       expect(db.update).toHaveBeenCalled();
     });
 
+    it('should auto-expire stale approved records on read', async () => {
+      vi.mocked(db.query.deviceAuthCodesTable.findFirst).mockResolvedValueOnce(
+        approvedRecord({ expires_at: new Date(Date.now() - 1000) }) as any
+      );
+
+      const req = createNextRequest(
+        `http://localhost:12005/api/cli/auth/poll?device_code=${VALID_DEVICE_CODE}`
+      );
+
+      const res = await pollHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(410);
+      expect(data.status).toBe('expired');
+      // Should have updated the approved record to expired in DB
+      expect(db.update).toHaveBeenCalled();
+    });
+
     it('should return approved with api_key on first successful poll', async () => {
       const record = approvedRecord();
       vi.mocked(db.query.deviceAuthCodesTable.findFirst).mockResolvedValueOnce(
@@ -328,6 +361,42 @@ describe('Device Auth Flow', () => {
       expect(res.status).toBe(200);
       expect(data.status).toBe('approved');
       expect(data.api_key).toBe('pg_in_test_key_123');
+    });
+
+    it('should set consumed_at timestamp when consuming an approved code', async () => {
+      const record = approvedRecord();
+      vi.mocked(db.query.deviceAuthCodesTable.findFirst).mockResolvedValueOnce(
+        record as any
+      );
+
+      const capturedSet = vi.fn();
+      vi.mocked(db.transaction).mockImplementationOnce(async (callback) => {
+        const tx = {
+          update: vi.fn().mockReturnValue({
+            set: capturedSet.mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ uuid: 'record-uuid' }]),
+              }),
+            }),
+          }),
+          query: {
+            apiKeysTable: {
+              findFirst: vi.fn().mockResolvedValue({ api_key: 'pg_in_test_key_123' }),
+            },
+          },
+        };
+        return callback(tx as any);
+      });
+
+      const req = createNextRequest(
+        `http://localhost:12005/api/cli/auth/poll?device_code=${VALID_DEVICE_CODE}`
+      );
+
+      await pollHandler(req);
+
+      const setArg = capturedSet.mock.calls[0][0];
+      expect(setArg.status).toBe('consumed');
+      expect(setArg.consumed_at).toBeInstanceOf(Date);
     });
 
     it('should return approved without api_key when already consumed by concurrent poll', async () => {
@@ -557,6 +626,11 @@ describe('Device Auth Flow', () => {
 
       expect(res.status).toBe(410);
       expect(data.code).toBe('EXPIRED');
+      // Should have written 'expired' to the DB
+      expect(db.update).toHaveBeenCalled();
+      const mocks = (db as any).__mocks;
+      const setArg = mocks.mockSet.mock.calls[0][0];
+      expect(setArg.status).toBe('expired');
     });
 
     it('should approve with default project when no project_uuid provided', async () => {
@@ -596,6 +670,46 @@ describe('Device Auth Flow', () => {
 
       expect(res.status).toBe(200);
       expect(data.status).toBe('approved');
+    });
+
+    it('should set approved_at timestamp in the transaction', async () => {
+      vi.mocked(db.query.deviceAuthCodesTable.findFirst).mockResolvedValueOnce(
+        pendingRecord() as any
+      );
+
+      vi.mocked(db.query.projectsTable.findFirst).mockResolvedValueOnce({
+        uuid: 'default-project-uuid',
+      } as any);
+
+      const capturedSet = vi.fn();
+      vi.mocked(db.transaction).mockImplementationOnce(async (callback) => {
+        const tx = {
+          insert: vi.fn().mockReturnValue({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ uuid: 'new-api-key-uuid' }]),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            set: capturedSet.mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ uuid: 'record-uuid' }]),
+              }),
+            }),
+          }),
+        };
+        return callback(tx as any);
+      });
+
+      const req = createNextRequest('http://localhost:12005/api/cli/auth/approve', {
+        method: 'POST',
+        body: { user_code: 'ABCD-5678' },
+      });
+
+      await approveHandler(req);
+
+      const setArg = capturedSet.mock.calls[0][0];
+      expect(setArg.status).toBe('approved');
+      expect(setArg.approved_at).toBeInstanceOf(Date);
     });
 
     it('should return 400 NO_HUB when user has no projects', async () => {

@@ -39,12 +39,12 @@ export async function GET(request: NextRequest) {
     return ErrorResponses.notFound();
   }
 
-  // Auto-expire stale pending codes
+  // Auto-expire stale non-terminal records (pending or approved-but-never-consumed)
   if (new Date() > record.expires_at) {
-    if (record.status === 'pending') {
+    if (record.status === 'pending' || record.status === 'approved') {
       await db.update(deviceAuthCodesTable)
         .set({ status: 'expired' })
-        .where(eq(deviceAuthCodesTable.uuid, record.uuid));
+        .where(and(eq(deviceAuthCodesTable.uuid, record.uuid), eq(deviceAuthCodesTable.status, record.status)));
     }
     return NextResponse.json({ status: 'expired' }, { status: 410 });
   }

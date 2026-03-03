@@ -9,7 +9,7 @@ import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
 
 import { validateDeviceAuthAction } from '../_shared';
 
-const nanoid = customAlphabet(
+const apiKeyGen = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
   64
 );
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   // Create API key and approve device code atomically
   // The WHERE clause includes status='pending' and expires_at check
   // to prevent TOCTOU race conditions
-  const apiKey = `pg_in_${nanoid()}`;
+  const apiKey = `pg_in_${apiKeyGen()}`;
 
   const approved = await db.transaction(async (tx) => {
     const [newKey] = await tx.insert(apiKeysTable).values({

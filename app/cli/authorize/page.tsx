@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+import { USER_CODE_PATTERN } from '@/lib/cli-auth-constants';
+
 import { type Project, useCliAuthorize } from './use-cli-authorize';
 
 function LoadingCard() {
@@ -19,7 +21,7 @@ function LoadingCard() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" aria-label="Loading" role="status" />
         </div>
       </CardContent>
     </Card>
@@ -174,6 +176,10 @@ function MainFormCard({
 function AuthorizeContent() {
   const searchParams = useSearchParams();
   const userCode = searchParams.get('code');
+  const isValidFormat = userCode && USER_CODE_PATTERN.test(userCode);
+
+  // Pass null when format is invalid to avoid unnecessary session/project fetches.
+  // Hook is always called (Rules of Hooks) but skips side effects when null.
   const {
     sessionStatus,
     state,
@@ -184,9 +190,8 @@ function AuthorizeContent() {
     handleAuthorize,
     handleDeny,
     handleRetry,
-  } = useCliAuthorize(userCode);
+  } = useCliAuthorize(isValidFormat ? userCode : null);
 
-  const isValidFormat = userCode && /^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(userCode);
   if (!isValidFormat) return <NoCodeCard />;
   if (sessionStatus === 'loading' || state === 'loading') return <LoadingCard />;
   if (state === 'success') return <SuccessCard />;
@@ -213,7 +218,7 @@ export default function CliAuthorizePage() {
       <Card>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" aria-label="Loading" role="status" />
           </div>
         </CardContent>
       </Card>
