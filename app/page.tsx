@@ -72,72 +72,72 @@ const CtaPluginSection = dynamicImport(
 export default function Home() {
   return (
     <MetricsProvider>
-    <div className="flex flex-col min-h-screen">
-      <LandingNavbar />
-      <main className="flex-grow">
-        {/* Section 1: Hero — plugin install CTA */}
-        <ErrorBoundary sectionName="Hero">
-          <HeroPluginSection />
-        </ErrorBoundary>
-
-        {/* Section 2: One-liner — Personal / Collective / Archetypal */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="One Liner">
-            <OneLinerSection />
+      <div className="flex flex-col min-h-screen">
+        <LandingNavbar />
+        <main className="flex-grow">
+          {/* Section 1: Hero — plugin install CTA */}
+          <ErrorBoundary sectionName="Hero">
+            <HeroPluginSection />
           </ErrorBoundary>
-        </Suspense>
 
-        {/* Section 3: Terminal Demo — animated hook lifecycle */}
-        <Suspense fallback={<SectionLoader height="600px" />}>
-          <ErrorBoundary sectionName="Terminal Demo">
-            <TerminalDemoSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 2: One-liner — Personal / Collective / Archetypal */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="One Liner">
+              <OneLinerSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Section 4: Jungian Archetypes */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Jungian Intelligence">
-            <JungianIntelligenceSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 3: Terminal Demo — animated hook lifecycle */}
+          <Suspense fallback={<SectionLoader height="600px" />}>
+            <ErrorBoundary sectionName="Terminal Demo">
+              <TerminalDemoSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Section 5: Dream Processing — token economics */}
-        <Suspense fallback={<SectionLoader height="500px" />}>
-          <ErrorBoundary sectionName="Dream Processing">
-            <DreamProcessingSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 4: Jungian Archetypes */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Jungian Intelligence">
+              <JungianIntelligenceSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Section 6: Individuation Score */}
-        <Suspense fallback={<SectionLoader height="500px" />}>
-          <ErrorBoundary sectionName="Individuation Score">
-            <IndividuationScoreSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 5: Dream Processing — token economics */}
+          <Suspense fallback={<SectionLoader height="500px" />}>
+            <ErrorBoundary sectionName="Dream Processing">
+              <DreamProcessingSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Section 7: Privacy */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Privacy">
-            <PrivacySection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 6: Individuation Score */}
+          <Suspense fallback={<SectionLoader height="500px" />}>
+            <ErrorBoundary sectionName="Individuation Score">
+              <IndividuationScoreSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Section 8: Platform Capabilities — general features */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Platform Capabilities">
-            <PlatformCapabilitiesSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 7: Privacy */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Privacy">
+              <PrivacySection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Section 9: CTA — mirrors hero */}
-        <Suspense fallback={<SectionLoader height="300px" />}>
-          <ErrorBoundary sectionName="CTA">
-            <CtaPluginSection />
-          </ErrorBoundary>
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
+          {/* Section 8: Platform Capabilities — general features */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Platform Capabilities">
+              <PlatformCapabilitiesSection />
+            </ErrorBoundary>
+          </Suspense>
+
+          {/* Section 9: CTA — mirrors hero */}
+          <Suspense fallback={<SectionLoader height="300px" />}>
+            <ErrorBoundary sectionName="CTA">
+              <CtaPluginSection />
+            </ErrorBoundary>
+          </Suspense>
+        </main>
+        <Footer />
+      </div>
     </MetricsProvider>
   );
 }

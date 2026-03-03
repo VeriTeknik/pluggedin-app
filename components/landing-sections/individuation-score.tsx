@@ -67,6 +67,7 @@ export function IndividuationScoreSection() {
               </p>
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-electric-cyan">
+                  {/* Demo score: 18+22+16+11 = 67 out of 100 */}
                   <AnimatedNumber target={67} inView={inView} duration={1800} />
                 </span>
                 <span className="text-2xl text-muted-foreground font-medium">{t('individuation.maxScore')}</span>

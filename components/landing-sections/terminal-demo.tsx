@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 
 interface TerminalLine {
+  id: string;
   text: string;
   color: string;
   indent?: boolean;
@@ -17,31 +18,31 @@ interface TerminalLine {
 
 const terminalLines: TerminalLine[] = [
   // Session start block
-  { text: '> Session started', color: 'text-emerald-400', bold: true },
-  { text: '\u2713 Memory session created (id: mem_7f3a)', color: 'text-emerald-400', indent: true },
-  { text: '\u2713 Individuation score: 42/100 \u2014 Established', color: 'text-emerald-400', indent: true },
-  { text: '\u{1F4A1} "Focus on contributing patterns to accelerate growth"', color: 'text-slate-400', indent: true },
+  { id: 'session-start', text: '> Session started', color: 'text-emerald-400', bold: true },
+  { id: 'mem-created', text: '\u2713 Memory session created (id: mem_7f3a)', color: 'text-emerald-400', indent: true },
+  { id: 'indiv-score', text: '\u2713 Individuation score: 42/100 \u2014 Established', color: 'text-emerald-400', indent: true },
+  { id: 'focus-tip', text: '\u{1F4A1} "Focus on contributing patterns to accelerate growth"', color: 'text-slate-400', indent: true },
 
   // PreToolUse block
-  { text: '> PreToolUse: git push origin main', color: 'text-emerald-400', bold: true },
-  { text: '\u{1F534} Shadow: "Friday 2PM deploys fail 3.4\u00D7 more often"', color: 'text-red-400', indent: true },
-  { text: '\u{1F535} Sage: "Run staging verification first"', color: 'text-blue-400', indent: true },
+  { id: 'pre-tool', text: '> PreToolUse: git push origin main', color: 'text-emerald-400', bold: true },
+  { id: 'shadow-warn', text: '\u{1F534} Shadow: "Friday 2PM deploys fail 3.4\u00D7 more often"', color: 'text-red-400', indent: true },
+  { id: 'sage-advice', text: '\u{1F535} Sage: "Run staging verification first"', color: 'text-blue-400', indent: true },
 
   // PostToolUse block
-  { text: '> PostToolUse: docker build . (exit: 1)', color: 'text-emerald-400', bold: true },
-  { text: '\u{1F4DD} Observation recorded: error_pattern', color: 'text-slate-400', indent: true },
-  { text: '\u{1F50D} CBP match found (3 profiles):', color: 'text-amber-400', indent: true },
-  { text: '"Docker EACCES \u2192 chmod 755 on host mount dir"', color: 'text-amber-400', indent: true },
-  { text: '\u23F1\uFE0F Temporal event recorded', color: 'text-slate-400', indent: true },
+  { id: 'post-tool', text: '> PostToolUse: docker build . (exit: 1)', color: 'text-emerald-400', bold: true },
+  { id: 'obs-recorded', text: '\u{1F4DD} Observation recorded: error_pattern', color: 'text-slate-400', indent: true },
+  { id: 'cbp-match', text: '\u{1F50D} CBP match found (3 profiles):', color: 'text-amber-400', indent: true },
+  { id: 'cbp-fix', text: '"Docker EACCES \u2192 chmod 755 on host mount dir"', color: 'text-amber-400', indent: true },
+  { id: 'temporal-evt', text: '\u23F1\uFE0F Temporal event recorded', color: 'text-slate-400', indent: true },
 
   // PreCompact block
-  { text: '> PreCompact triggered', color: 'text-emerald-400', bold: true },
-  { text: '\u{1F4BE} 5 relevant memories injected before compression', color: 'text-slate-400', indent: true },
+  { id: 'pre-compact', text: '> PreCompact triggered', color: 'text-emerald-400', bold: true },
+  { id: 'mem-injected', text: '\u{1F4BE} 5 relevant memories injected before compression', color: 'text-slate-400', indent: true },
 
   // Session ending block
-  { text: '> Session ending...', color: 'text-emerald-400', bold: true },
-  { text: '\u{1F4CA} Z-report generated: 12 observations, 3 patterns discovered', color: 'text-slate-400', indent: true },
-  { text: '\u2713 Session complete', color: 'text-emerald-400', indent: true },
+  { id: 'session-end', text: '> Session ending...', color: 'text-emerald-400', bold: true },
+  { id: 'z-report', text: '\u{1F4CA} Z-report generated: 12 observations, 3 patterns discovered', color: 'text-slate-400', indent: true },
+  { id: 'session-done', text: '\u2713 Session complete', color: 'text-emerald-400', indent: true },
 ];
 
 const containerVariants = {
@@ -87,6 +88,7 @@ export function TerminalDemoSection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
   const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true });
+  const shouldReduceMotion = useReducedMotion();
 
   if (!mounted || !ready) return null;
 
@@ -153,7 +155,7 @@ export function TerminalDemoSection() {
 
                   return (
                     <motion.div
-                      key={i}
+                      key={line.id}
                       variants={lineVariants}
                       className={`${needsTopSpacing ? 'mt-4' : ''}`}
                     >
@@ -173,7 +175,7 @@ export function TerminalDemoSection() {
                 >
                   <motion.span
                     variants={cursorVariants}
-                    animate="blink"
+                    animate={inView && !shouldReduceMotion ? 'blink' : ''}
                     className="inline-block w-2 h-4 bg-emerald-400 align-middle"
                   />
                 </motion.div>

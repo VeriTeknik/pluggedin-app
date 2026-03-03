@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
@@ -20,6 +20,7 @@ export function DreamProcessingSection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
   const { ref, inView } = useInView({ threshold: 0.1, triggerOnce: true });
+  const shouldReduceMotion = useReducedMotion();
 
   if (!mounted || !ready) return null;
 
@@ -105,7 +106,7 @@ export function DreamProcessingSection() {
             className="flex flex-col items-center gap-2 shrink-0"
           >
             <motion.div
-              animate={inView ? {
+              animate={inView && !shouldReduceMotion ? {
                 boxShadow: [
                   '0 0 10px rgba(147, 51, 234, 0.3)',
                   '0 0 25px rgba(147, 51, 234, 0.6)',
@@ -124,7 +125,7 @@ export function DreamProcessingSection() {
             </div>
             <div className="block md:hidden">
               <motion.div
-                animate={inView ? { y: [0, 4, 0] } : {}}
+                animate={inView && !shouldReduceMotion ? { y: [0, 4, 0] } : {}}
                 transition={{ duration: 1.5, repeat: Infinity }}
               >
                 <ArrowRight className="w-8 h-8 text-neon-purple/60 rotate-90" />
@@ -172,6 +173,7 @@ export function DreamProcessingSection() {
         >
           <div className="inline-flex items-baseline gap-1 text-4xl md:text-5xl font-bold">
             <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-glow-green">
+              {/* 500t raw → 40t essence = 92% reduction in dream processing */}
               <AnimatedNumber target={92} inView={inView} />
             </motion.span>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-glow-green">
