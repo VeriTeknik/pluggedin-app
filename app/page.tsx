@@ -56,7 +56,13 @@ const PrivacySection = dynamicImport(
   { loading: () => <SectionLoader />, ssr: true }
 );
 
-// Section 8: CTA
+// Section 8: Platform Capabilities
+const PlatformCapabilitiesSection = dynamicImport(
+  () => import('@/components/landing-sections/platform-capabilities').then(mod => ({ default: mod.PlatformCapabilitiesSection })),
+  { loading: () => <SectionLoader />, ssr: true }
+);
+
+// Section 9: CTA
 const CtaPluginSection = dynamicImport(
   () => import('@/components/landing-sections/cta-plugin').then(mod => ({ default: mod.CtaPluginSection })),
   { loading: () => <SectionLoader height="300px" />, ssr: true }
@@ -114,7 +120,14 @@ export default function Home() {
           </ErrorBoundary>
         </Suspense>
 
-        {/* Section 8: CTA — mirrors hero */}
+        {/* Section 8: Platform Capabilities — general features */}
+        <Suspense fallback={<SectionLoader />}>
+          <ErrorBoundary sectionName="Platform Capabilities">
+            <PlatformCapabilitiesSection />
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Section 9: CTA — mirrors hero */}
         <Suspense fallback={<SectionLoader height="300px" />}>
           <ErrorBoundary sectionName="CTA">
             <CtaPluginSection />

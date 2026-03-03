@@ -823,6 +823,37 @@
     },
     "teamEffect": "Yeni takım üyeleri ilk günden kolektif bilgeliği miras alır."
   },
+  "platformCapabilities": {
+    "title": "AI'ınızın İhtiyacı Olan Her Şey. Tek Platform.",
+    "subtitle": "Plugged.in 2.700+ MCP sunucusu, kalıcı hafıza, dokümanlar ve bilgi tabanlarını tek bir model-agnostik altyapıda birleştiriyor — verileriniz modelde değil, sizde kalıyor.",
+    "tagline": "Tek eklenti. Her model. Sizin verileriniz. Sıfır bağımlılık.",
+    "cards": {
+      "mcpHub": {
+        "title": "2.700+ MCP Sunucusu",
+        "desc": "Binlerce araç sunucusunu toplayan evrensel MCP proxy. Bir kez bağlan — Claude Code, Cursor, ChatGPT veya herhangi bir MCP istemcisinden kullan. STDIO, SSE ve Streamable HTTP desteği."
+      },
+      "memory": {
+        "title": "Kalıcı Hafıza",
+        "desc": "Oturumlar ve platformlar arası sıfırlanmayan hafıza. AI'ınız bağlamı, tercihleri ve çalışma kalıplarını korur — her konuşmada kendinizi baştan açıklamaya son."
+      },
+      "knowledge": {
+        "title": "Bilgi Tabanı (RAG)",
+        "desc": "Doküman yükleyin, gömülü vektör arama ile bilgi tabanları oluşturun. İşlem içi HNSW indeksleme — harici servis gerekmez. Kurumsal bilginiz her zaman erişilebilir."
+      },
+      "modelAgnostic": {
+        "title": "Model Agnostik",
+        "desc": "Her AI modeli ve platformla çalışır. Claude, ChatGPT, Cursor, Cline, LM Studio — modeli özgürce değiştirin, araçlarınız, hafızanız ve bilginiz sizinle gelir."
+      },
+      "dataOwnership": {
+        "title": "Veriler Sizde Kalır",
+        "desc": "Verileriniz modelin içinde değil, sizin altyapınızda yaşar. Platformlar arası parçalanma yok, oturumlar arası bağlam kaybı yok. Tam veri taşınabilirliği ve istediğiniz zaman dışa aktarma."
+      },
+      "openSource": {
+        "title": "Açık Kaynak ve Kendi Barındırma",
+        "desc": "MIT lisanslı, tamamen açık kaynak. Tam kontrol için kendi altyapınıza dağıtın. Satıcı bağımlılığı yok — AI kurulumunuz sonsuza kadar sizin."
+      }
+    }
+  },
   "privacy": {
     "title": "Gizlilik matematik, söz değil.",
     "subtitle": "Bize güvenmenizi istemiyoruz. Sistemi güvenin gerekmediği şekilde inşa ettik.",

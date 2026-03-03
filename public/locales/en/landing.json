@@ -855,6 +855,37 @@
     },
     "teamEffect": "New team members inherit collective wisdom from day one."
   },
+  "platformCapabilities": {
+    "title": "Everything Your AI Needs. One Platform.",
+    "subtitle": "Plugged.in unifies 2,700+ MCP servers, persistent memory, documents, and knowledge bases into a single model-agnostic infrastructure — your data stays with you, not the model.",
+    "tagline": "One plugin. Every model. Your data. Zero lock-in.",
+    "cards": {
+      "mcpHub": {
+        "title": "2,700+ MCP Servers",
+        "desc": "Universal MCP proxy aggregating thousands of tool servers. Connect once — use from Claude Code, Cursor, ChatGPT, or any MCP client. STDIO, SSE, and Streamable HTTP all supported."
+      },
+      "memory": {
+        "title": "Persistent Memory",
+        "desc": "Cross-session, cross-platform memory that never resets. Your AI retains context, preferences, and working patterns — no more explaining yourself from scratch every conversation."
+      },
+      "knowledge": {
+        "title": "Knowledge Base (RAG)",
+        "desc": "Upload documents, build knowledge bases with embedded vector search. In-process HNSW indexing — no external services needed. Your institutional knowledge, always accessible."
+      },
+      "modelAgnostic": {
+        "title": "Model Agnostic",
+        "desc": "Works with every AI model and platform. Claude, ChatGPT, Cursor, Cline, LM Studio — switch models freely, your tools, memory, and knowledge travel with you."
+      },
+      "dataOwnership": {
+        "title": "Data Stays With You",
+        "desc": "Your data lives in your infrastructure, not inside the model. No fragmentation across platforms, no context lost between sessions. Full data portability and export anytime."
+      },
+      "openSource": {
+        "title": "Open Source & Self-Hostable",
+        "desc": "MIT licensed, fully open source. Deploy on your own infrastructure for complete control. No vendor lock-in — your AI setup is yours forever."
+      }
+    }
+  },
   "privacy": {
     "title": "Privacy is math, not promises.",
     "subtitle": "We don\u2019t ask you to trust us. We built the system so trust isn\u2019t required.",
