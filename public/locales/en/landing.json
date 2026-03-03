@@ -784,11 +784,14 @@
       "heroDesc": "Shows what to do — workflows, tool sequences, action plans",
       "trickster": "Trickster",
       "tricksterDesc": "Offers creative solutions — workarounds, edge cases, unconventional fixes"
-    }
+    },
+    "learnMore": "Jungian Intelligence",
+    "archetypeGuide": "Archetype Guide"
   },
   "terminal": {
     "title": "Zero Configuration. Everything Automatic.",
-    "subtitle": "Five lifecycle hooks manage your entire memory session — from start to finish, no manual intervention needed."
+    "subtitle": "Five lifecycle hooks manage your entire memory session — from start to finish, no manual intervention needed.",
+    "learnMore": "How Synchronicity Detection Works"
   },
   "heroPlugin": {
     "badge": "Claude Code Plugin",
@@ -834,7 +837,8 @@
     "full": "Full",
     "compressed": "Compressed",
     "summary": "Summary",
-    "essence": "Essence"
+    "essence": "Essence",
+    "learnMore": "How Dream Processing Works"
   },
   "individuation": {
     "title": "Individuation Score",
@@ -853,7 +857,8 @@
       "mature": "Mature",
       "individuated": "Individuated"
     },
-    "teamEffect": "New team members inherit collective wisdom from day one."
+    "teamEffect": "New team members inherit collective wisdom from day one.",
+    "learnMore": "How Individuation Scoring Works"
   },
   "platformCapabilities": {
     "title": "Everything Your AI Needs. One Platform.",

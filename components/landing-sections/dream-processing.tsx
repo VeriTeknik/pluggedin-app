@@ -1,11 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 
 const decayStages = [
@@ -237,6 +238,21 @@ export function DreamProcessingSection() {
               </motion.div>
             ))}
           </div>
+        </motion.div>
+
+        {/* Doc link */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 1.5, duration: 0.5 }}
+          className="text-center mt-12"
+        >
+          <Button asChild variant="outline" size="sm" className="border-border/50 hover:border-neon-purple/40">
+            <a href="https://docs.plugged.in/guides/dream-processing" target="_blank" rel="noopener noreferrer">
+              <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+              {t('dream.learnMore')}
+            </a>
+          </Button>
         </motion.div>
       </div>
     </section>

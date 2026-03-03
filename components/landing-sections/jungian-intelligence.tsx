@@ -1,10 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Brain, Moon, Shield, Sparkles } from 'lucide-react';
+import { ArrowRight, Brain, Moon, Shield, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 
 const archetypes = [
@@ -56,6 +57,27 @@ export function JungianIntelligenceSection() {
             </motion.div>
           ))}
         </div>
+
+        {/* Doc links */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 0.6 }}
+          className="flex flex-wrap justify-center gap-3 mt-12"
+        >
+          <Button asChild variant="outline" size="sm" className="border-border/50 hover:border-electric-cyan/40">
+            <a href="https://docs.plugged.in/platform/jungian-intelligence" target="_blank" rel="noopener noreferrer">
+              {t('jungian.learnMore')}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="border-border/50 hover:border-neon-purple/40">
+            <a href="https://docs.plugged.in/guides/archetype-system" target="_blank" rel="noopener noreferrer">
+              {t('jungian.archetypeGuide')}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </a>
+          </Button>
+        </motion.div>
       </div>
     </section>
   );

@@ -752,11 +752,14 @@
       "heroDesc": "Ne yapmanız gerektiğini gösterir — iş akışları, araç dizileri, eylem planları",
       "trickster": "Hileci",
       "tricksterDesc": "Yaratıcı çözümler sunar — geçici çözümler, uç durumlar, alışılmadık düzeltmeler"
-    }
+    },
+    "learnMore": "Jungian Zeka",
+    "archetypeGuide": "Arketip Rehberi"
   },
   "terminal": {
     "title": "Sıfır Yapılandırma. Her Şey Otomatik.",
-    "subtitle": "Beş yaşam döngüsü hook'u tüm hafıza oturumunuzu baştan sona yönetiyor — manuel müdahale gerekmez."
+    "subtitle": "Beş yaşam döngüsü hook'u tüm hafıza oturumunuzu baştan sona yönetiyor — manuel müdahale gerekmez.",
+    "learnMore": "Senkronisite Algılama Nasıl Çalışır"
   },
   "heroPlugin": {
     "badge": "Claude Code Eklentisi",
@@ -802,7 +805,8 @@
     "full": "Tam",
     "compressed": "Sıkıştırılmış",
     "summary": "Özet",
-    "essence": "Öz"
+    "essence": "Öz",
+    "learnMore": "Rüya İşleme Nasıl Çalışır"
   },
   "individuation": {
     "title": "Bireyselleşme Skoru",
@@ -821,7 +825,8 @@
       "mature": "Olgun",
       "individuated": "Bireyselleşmiş"
     },
-    "teamEffect": "Yeni takım üyeleri ilk günden kolektif bilgeliği miras alır."
+    "teamEffect": "Yeni takım üyeleri ilk günden kolektif bilgeliği miras alır.",
+    "learnMore": "Bireyselleşme Skorlaması Nasıl Çalışır"
   },
   "platformCapabilities": {
     "title": "AI'ınızın İhtiyacı Olan Her Şey. Tek Platform.",

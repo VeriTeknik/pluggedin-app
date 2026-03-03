@@ -1,10 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { BookOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 import { cn } from '@/lib/utils';
 
@@ -210,9 +212,15 @@ export function IndividuationScoreSection() {
           transition={{ delay: 1.6, duration: 0.5 }}
           className="text-center"
         >
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-6">
             {t('individuation.teamEffect')}
           </p>
+          <Button asChild variant="outline" size="sm" className="border-border/50 hover:border-electric-cyan/40">
+            <a href="https://docs.plugged.in/guides/individuation-scoring" target="_blank" rel="noopener noreferrer">
+              <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+              {t('individuation.learnMore')}
+            </a>
+          </Button>
         </motion.div>
       </div>
     </section>
