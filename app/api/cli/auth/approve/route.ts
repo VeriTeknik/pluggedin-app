@@ -16,8 +16,6 @@ const apiKeyGen = customAlphabet(
 
 const projectUuidSchema = z.string().uuid().optional();
 
-// Note: No CSRF token needed — the user_code (visible only in the user's terminal
-// and on this authenticated page) acts as an implicit CSRF token.
 export async function POST(request: NextRequest) {
   const result = await validateDeviceAuthAction(request);
   if (!result.ok) return result.response;

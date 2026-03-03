@@ -8,6 +8,7 @@ import enAnalytics from '../public/locales/en/analytics.json';
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enBlog from '../public/locales/en/blog.json';
+import enCliAuth from '../public/locales/en/cliAuth.json';
 import enCollections from '../public/locales/en/collections.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
@@ -27,7 +28,6 @@ import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
-import enCliAuth from '../public/locales/en/cliAuth.json';
 import enWhatsNew from '../public/locales/en/whatsNew.json';
 // Import Hindi chunks
 import hiAgents from '../public/locales/hi/agents.json';

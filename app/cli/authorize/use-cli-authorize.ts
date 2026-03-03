@@ -45,10 +45,10 @@ export function useCliAuthorize(userCode: string | null): UseCliAuthorizeResult 
   const [errorSource, setErrorSource] = useState<'projects' | 'action'>('projects');
   const [retryToken, setRetryToken] = useState(0);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (skip when no valid code to preserve)
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      const callbackUrl = encodeURIComponent(`/cli/authorize?code=${userCode || ''}`);
+    if (status === 'unauthenticated' && userCode) {
+      const callbackUrl = encodeURIComponent(`/cli/authorize?code=${userCode}`);
       router.push(`/login?callbackUrl=${callbackUrl}`);
     }
   }, [status, router, userCode]);

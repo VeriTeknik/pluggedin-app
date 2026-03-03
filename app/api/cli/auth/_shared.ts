@@ -48,7 +48,7 @@ export async function validateDeviceAuthAction(
       ok: false,
       response: NextResponse.json(
         { error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' },
-        { status: 429 }
+        { status: 429, headers: { 'Retry-After': '5' } }
       ),
     };
   }

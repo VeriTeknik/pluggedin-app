@@ -3,6 +3,7 @@ import { customAlphabet } from 'nanoid';
 
 import { db } from '@/db';
 import { deviceAuthCodesTable } from '@/db/schema';
+import { USER_CODE_ALPHABET } from '@/lib/cli-auth-constants';
 import { createRateLimiter } from '@/lib/rate-limiter';
 
 const initiateRateLimiter = createRateLimiter({
@@ -15,8 +16,7 @@ const deviceCodeGen = customAlphabet(
   48
 );
 
-// No ambiguous chars: 0/O, 1/I/L excluded
-const userCodeGen = customAlphabet('ABCDEFGHJKMNPQRSTUVWXYZ23456789', 8);
+const userCodeGen = customAlphabet(USER_CODE_ALPHABET, 8);
 
 const DEVICE_CODE_TTL_SECONDS = 300; // 5 minutes
 

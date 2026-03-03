@@ -163,7 +163,7 @@ describe('Device Auth Flow', () => {
       expect(res.status).toBe(200);
       expect(data.device_code).toBeDefined();
       expect(data.device_code).toHaveLength(48);
-      expect(data.user_code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+      expect(data.user_code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}$/);
       expect(data.verification_url).toContain('/cli/authorize?code=');
       expect(data.expires_in).toBe(300);
       expect(data.interval).toBe(5);
@@ -958,15 +958,17 @@ describe('Device Auth Flow', () => {
     });
 
     it('should reject user_code with ambiguous characters (0, O, 1, I, L)', async () => {
-      // '0' and 'O' are not in the unambiguous alphabet
-      const req = createNextRequest('http://localhost:12005/api/cli/auth/approve', {
-        method: 'POST',
-        body: { user_code: 'ABCO-0123' }, // contains O and 0
-      });
+      // O, I, L, 0, 1 are excluded from the unambiguous alphabet
+      const ambiguousCodes = ['ABCO-DEFG', 'ABCI-DEFG', 'ABCL-DEFG', 'ABC0-DEFG', 'ABC1-DEFG'];
+      for (const code of ambiguousCodes) {
+        const req = createNextRequest('http://localhost:12005/api/cli/auth/approve', {
+          method: 'POST',
+          body: { user_code: code },
+        });
 
-      const res = await approveHandler(req);
-
-      expect(res.status).toBe(400);
+        const res = await approveHandler(req);
+        expect(res.status).toBe(400);
+      }
     });
 
     it('should reject lowercase user_code', async () => {
