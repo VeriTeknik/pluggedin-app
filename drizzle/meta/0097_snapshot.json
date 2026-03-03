@@ -3515,6 +3515,18 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "denied_at": {
+          "name": "denied_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3553,6 +3565,21 @@
           "columns": [
             {
               "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "device_auth_user_code_idx": {
+          "name": "device_auth_user_code_idx",
+          "columns": [
+            {
+              "expression": "user_code",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3616,7 +3643,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "device_auth_status_check": {
+          "name": "device_auth_status_check",
+          "value": "\"device_auth_codes\".\"status\" IN ('pending', 'approved', 'consumed', 'denied', 'expired')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.docs": {

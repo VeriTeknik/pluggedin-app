@@ -55,6 +55,11 @@ export async function POST(request: NextRequest) {
     expires_at: expiresAt,
   });
 
+  // user_code in the URL is an accepted trade-off per RFC 8628 §3.3.
+  // It is short-lived (5 min TTL), single-use, and acts as the implicit
+  // CSRF token for the authorize page. The page sets no outbound links,
+  // so Referer leakage is not a concern. client_ip is for audit logging
+  // only and is not used in any security decision.
   const verificationUrl = `${baseUrl}/cli/authorize?code=${encodeURIComponent(userCode)}`;
 
   return NextResponse.json({

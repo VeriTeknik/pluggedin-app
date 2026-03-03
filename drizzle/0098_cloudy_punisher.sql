@@ -1,1 +1,0 @@
-CREATE INDEX "device_auth_user_code_idx" ON "device_auth_codes" USING btree ("user_code");

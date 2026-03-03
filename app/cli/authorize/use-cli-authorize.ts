@@ -42,6 +42,7 @@ export function useCliAuthorize(userCode: string | null): UseCliAuthorizeResult 
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [state, setState] = useState<CliAuthState>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [errorSource, setErrorSource] = useState<'projects' | 'action'>('projects');
   const [retryToken, setRetryToken] = useState(0);
 
   // Redirect to login if not authenticated
@@ -72,6 +73,7 @@ export function useCliAuthorize(userCode: string | null): UseCliAuthorizeResult 
         }
       } catch {
         setState('error');
+        setErrorSource('projects');
         setErrorMessage(t('cliAuth.error.loadProjects', 'Failed to load your Hubs'));
       }
     }
@@ -101,14 +103,17 @@ export function useCliAuthorize(userCode: string | null): UseCliAuthorizeResult 
           setState('expired');
         } else if (data.code === 'NO_HUB') {
           setState('error');
+          setErrorSource('action');
           setErrorMessage(t('cliAuth.error.noHubs', 'No Hubs found. Please create a Hub first.'));
         } else {
           setState('error');
+          setErrorSource('action');
           setErrorMessage(data.error || t('cliAuth.error.generic', 'Authorization failed'));
         }
       }
     } catch {
       setState('error');
+      setErrorSource('action');
       setErrorMessage(t('cliAuth.error.generic', 'Authorization failed'));
     }
   }, [userCode, selectedProject, t]);
@@ -132,19 +137,27 @@ export function useCliAuthorize(userCode: string | null): UseCliAuthorizeResult 
           setState('expired');
         } else {
           setState('error');
+          setErrorSource('action');
           setErrorMessage(data.error || t('cliAuth.error.generic', 'Request failed'));
         }
       }
     } catch {
       setState('error');
+      setErrorSource('action');
       setErrorMessage(t('cliAuth.error.generic', 'Request failed'));
     }
   }, [userCode, t]);
 
   const handleRetry = useCallback(() => {
-    setState('loading');
-    setRetryToken(prev => prev + 1);
-  }, []);
+    if (errorSource === 'projects') {
+      // Re-fetch project list
+      setState('loading');
+      setRetryToken(prev => prev + 1);
+    } else {
+      // Action error (authorize/deny failed) — projects are already loaded
+      setState('ready');
+    }
+  }, [errorSource]);
 
   return {
     sessionStatus: status,

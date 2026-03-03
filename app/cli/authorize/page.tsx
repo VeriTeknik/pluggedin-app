@@ -186,7 +186,8 @@ function AuthorizeContent() {
     handleRetry,
   } = useCliAuthorize(userCode);
 
-  if (!userCode) return <NoCodeCard />;
+  const isValidFormat = userCode && /^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(userCode);
+  if (!isValidFormat) return <NoCodeCard />;
   if (sessionStatus === 'loading' || state === 'loading') return <LoadingCard />;
   if (state === 'success') return <SuccessCard />;
   if (state === 'denied') return <DeniedCard />;

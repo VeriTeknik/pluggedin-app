@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
       .returning({ uuid: deviceAuthCodesTable.uuid });
 
     if (updated.length === 0) {
-      // Status changed or code expired between validation and UPDATE — roll back
+      // Status changed or code expired between validation and UPDATE.
+      // Must throw (not return) to roll back the apiKeysTable insert above.
       throw new Error('DEVICE_CODE_CONFLICT');
     }
 

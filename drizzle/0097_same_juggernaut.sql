@@ -10,12 +10,16 @@ CREATE TABLE "device_auth_codes" (
 	"expires_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"approved_at" timestamp with time zone,
-	CONSTRAINT "device_auth_codes_device_code_unique" UNIQUE("device_code")
+	"denied_at" timestamp with time zone,
+	"consumed_at" timestamp with time zone,
+	CONSTRAINT "device_auth_codes_device_code_unique" UNIQUE("device_code"),
+	CONSTRAINT "device_auth_status_check" CHECK ("device_auth_codes"."status" IN ('pending', 'approved', 'consumed', 'denied', 'expired'))
 );
 --> statement-breakpoint
 ALTER TABLE "device_auth_codes" ADD CONSTRAINT "device_auth_codes_api_key_uuid_api_keys_uuid_fk" FOREIGN KEY ("api_key_uuid") REFERENCES "public"."api_keys"("uuid") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "device_auth_codes" ADD CONSTRAINT "device_auth_codes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "device_auth_codes" ADD CONSTRAINT "device_auth_codes_project_uuid_projects_uuid_fk" FOREIGN KEY ("project_uuid") REFERENCES "public"."projects"("uuid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "device_auth_device_code_idx" ON "device_auth_codes" USING btree ("device_code");--> statement-breakpoint
+CREATE INDEX "device_auth_user_code_idx" ON "device_auth_codes" USING btree ("user_code");--> statement-breakpoint
 CREATE INDEX "device_auth_status_idx" ON "device_auth_codes" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "device_auth_expires_at_idx" ON "device_auth_codes" USING btree ("expires_at");

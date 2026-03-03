@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' },
-      { status: 429 }
+      { status: 429, headers: { 'Retry-After': '5' } }
     );
   }
 

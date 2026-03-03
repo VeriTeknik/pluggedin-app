@@ -1,2 +1,0 @@
-ALTER TABLE "device_auth_codes" ADD COLUMN "consumed_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "device_auth_codes" ADD CONSTRAINT "device_auth_status_check" CHECK ("device_auth_codes"."status" IN ('pending', 'approved', 'consumed', 'denied', 'expired'));

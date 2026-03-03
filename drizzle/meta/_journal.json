@@ -687,27 +687,6 @@
       "when": 1772489028607,
       "tag": "0097_same_juggernaut",
       "breakpoints": true
-    },
-    {
-      "idx": 98,
-      "version": "7",
-      "when": 1772490995801,
-      "tag": "0098_cloudy_punisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 99,
-      "version": "7",
-      "when": 1772496764679,
-      "tag": "0099_fearless_viper",
-      "breakpoints": true
-    },
-    {
-      "idx": 100,
-      "version": "7",
-      "when": 1772497651438,
-      "tag": "0100_unknown_jasper_sitwell",
-      "breakpoints": true
     }
   ]
 }
