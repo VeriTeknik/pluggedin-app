@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       try {
         result = await db.transaction(async (tx) => {
           const updated = await tx.update(deviceAuthCodesTable)
-            .set({ status: 'consumed' })
+            .set({ status: 'consumed', consumed_at: new Date() })
             .where(
               and(
                 eq(deviceAuthCodesTable.uuid, record.uuid),

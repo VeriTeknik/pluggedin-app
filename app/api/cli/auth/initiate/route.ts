@@ -47,7 +47,13 @@ export async function POST(request: NextRequest) {
     expires_at: expiresAt,
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://plugged.in';
+  const baseUrl = process.env.NEXTAUTH_URL;
+  if (!baseUrl) {
+    return NextResponse.json(
+      { error: 'Server configuration error', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
   const verificationUrl = `${baseUrl}/cli/authorize?code=${encodeURIComponent(userCode)}`;
 
   return NextResponse.json({

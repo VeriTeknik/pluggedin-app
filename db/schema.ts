@@ -414,12 +414,17 @@ export const deviceAuthCodesTable = pgTable(
       .notNull()
       .defaultNow(),
     approved_at: timestamp('approved_at', { withTimezone: true }),
+    consumed_at: timestamp('consumed_at', { withTimezone: true }),
   },
   (table) => ({
     deviceAuthDeviceCodeIdx: index('device_auth_device_code_idx').on(table.device_code),
     deviceAuthUserCodeIdx: index('device_auth_user_code_idx').on(table.user_code),
     deviceAuthStatusIdx: index('device_auth_status_idx').on(table.status),
     deviceAuthExpiresAtIdx: index('device_auth_expires_at_idx').on(table.expires_at),
+    deviceAuthStatusCheck: check(
+      'device_auth_status_check',
+      sql`${table.status} IN ('pending', 'approved', 'consumed', 'denied', 'expired')`
+    ),
   })
 );
 
