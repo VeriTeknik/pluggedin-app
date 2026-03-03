@@ -9,6 +9,7 @@ import { LandingNavbar } from '@/components/landing-navbar';
 // Critical above-the-fold component loaded immediately
 import { HeroPluginSection } from '@/components/landing-sections/hero-plugin';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { MetricsProvider } from '@/contexts/metrics-context';
 
 // Loading skeleton component
 const SectionLoader = ({ height = '400px' }: { height?: string }) => (
@@ -70,6 +71,7 @@ const CtaPluginSection = dynamicImport(
 
 export default function Home() {
   return (
+    <MetricsProvider>
     <div className="flex flex-col min-h-screen">
       <LandingNavbar />
       <main className="flex-grow">
@@ -136,5 +138,6 @@ export default function Home() {
       </main>
       <Footer />
     </div>
+    </MetricsProvider>
   );
 }

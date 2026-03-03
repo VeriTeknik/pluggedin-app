@@ -73,7 +73,7 @@ export function CtaPluginSection() {
               className="border-electric-cyan/20 hover:bg-electric-cyan/10"
             >
               <a
-                href="https://github.com/veriteknik/pluggedin-app"
+                href="https://github.com/VeriTeknik/pluggedin-plugin"
                 target="_blank"
                 rel="noopener noreferrer"
               >
