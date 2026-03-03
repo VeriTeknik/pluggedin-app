@@ -91,7 +91,7 @@ export function TerminalDemoSection() {
   if (!mounted || !ready) return null;
 
   return (
-    <section ref={ref} className="py-16 sm:py-20 md:py-24">
+    <section id="terminal-demo" ref={ref} className="py-16 sm:py-20 md:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <motion.div

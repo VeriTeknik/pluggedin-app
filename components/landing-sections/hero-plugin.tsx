@@ -1,33 +1,22 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Copy, Star } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { ArrowRight, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { InstallSnippet } from '@/components/landing-sections/install-snippet';
 import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
-
-const installCommands = `/plugin marketplace add VeriTeknik/pluggedin-plugin
-/plugin install pluggedin`;
 
 export function HeroPluginSection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
-  const [copied, setCopied] = useState(false);
 
   const { ref, inView } = useInView({
     threshold: 0.1,
     triggerOnce: true,
   });
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(installCommands).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, []);
 
   if (!mounted || !ready) {
     return null;
@@ -91,36 +80,10 @@ export function HeroPluginSection() {
             transition={{ delay: 0.5 }}
             className="relative max-w-2xl mx-auto mb-10"
           >
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-electric-cyan/20 to-neon-purple/20 rounded-lg blur opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-              <div className="relative bg-[#0d1117] rounded-lg border border-border/50 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                  </div>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    {copied ? t('heroPlugin.copied') : t('heroPlugin.copy')}
-                  </button>
-                </div>
-                <pre className="px-6 py-5 text-left font-mono text-sm md:text-base leading-relaxed overflow-x-auto">
-                  <code>
-                    <span className="text-electric-cyan">/plugin</span>
-                    <span className="text-muted-foreground"> marketplace add </span>
-                    <span className="text-glow-green">VeriTeknik/pluggedin-plugin</span>
-                    {'\n'}
-                    <span className="text-electric-cyan">/plugin</span>
-                    <span className="text-muted-foreground"> install </span>
-                    <span className="text-glow-green">pluggedin</span>
-                  </code>
-                </pre>
-              </div>
-            </div>
+            <InstallSnippet
+              copyLabel={t('heroPlugin.copy')}
+              copiedLabel={t('heroPlugin.copied')}
+            />
           </motion.div>
 
           {/* Buttons */}

@@ -2,10 +2,10 @@
 
 import { motion } from 'framer-motion';
 import { ArrowRight, BookOpen } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { AnimatedNumber } from '@/components/landing-sections/animated-number';
 import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 
@@ -15,34 +15,6 @@ const decayStages = [
   { key: 'summary', tokens: 150, color: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   { key: 'essence', tokens: 50, color: 'bg-glow-green/10 text-glow-green border-glow-green/20' },
 ];
-
-function AnimatedCounter({ target, inView }: { target: number; inView: boolean }) {
-  const [value, setValue] = useState(0);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    if (inView && !hasAnimated.current) {
-      hasAnimated.current = true;
-      const duration = 1500;
-      const startTime = Date.now();
-
-      const tick = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        setValue(Math.round(eased * target));
-
-        if (progress < 1) {
-          requestAnimationFrame(tick);
-        }
-      };
-
-      requestAnimationFrame(tick);
-    }
-  }, [inView, target]);
-
-  return <span>{value}</span>;
-}
 
 export function DreamProcessingSection() {
   const mounted = useMounted();
@@ -121,7 +93,7 @@ export function DreamProcessingSection() {
             </div>
             <div className="text-center mt-4">
               <p className="font-semibold text-red-400">{t('dream.before')}</p>
-              <p className="text-sm text-muted-foreground">7,500 tokens</p>
+              <p className="text-sm text-muted-foreground">{t('dream.tokensBefore')}</p>
             </div>
           </div>
 
@@ -144,7 +116,7 @@ export function DreamProcessingSection() {
               className="px-4 py-2 rounded-full bg-neon-purple/10 border border-neon-purple/30"
             >
               <span className="text-sm font-medium text-neon-purple whitespace-nowrap">
-                Dream Processing
+                {t('dream.processingLabel')}
               </span>
             </motion.div>
             <div className="hidden md:block">
@@ -180,13 +152,13 @@ export function DreamProcessingSection() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-glow-green/60" />
-                  <span className="text-xs text-glow-green/60 font-medium">Consolidated</span>
+                  <span className="text-xs text-glow-green/60 font-medium">{t('dream.consolidated')}</span>
                 </div>
               </motion.div>
             </div>
             <div className="text-center mt-4">
               <p className="font-semibold text-glow-green">{t('dream.after')}</p>
-              <p className="text-sm text-muted-foreground">600 tokens</p>
+              <p className="text-sm text-muted-foreground">{t('dream.tokensAfter')}</p>
             </div>
           </div>
         </motion.div>
@@ -200,13 +172,13 @@ export function DreamProcessingSection() {
         >
           <div className="inline-flex items-baseline gap-1 text-4xl md:text-5xl font-bold">
             <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-glow-green">
-              <AnimatedCounter target={92} inView={inView} />
+              <AnimatedNumber target={92} inView={inView} />
             </motion.span>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-glow-green">
               %
             </span>
           </div>
-          <p className="text-muted-foreground mt-2 text-lg">token reduction</p>
+          <p className="text-muted-foreground mt-2 text-lg">{t('dream.tokenReduction')}</p>
         </motion.div>
 
         {/* Decay Stages */}
@@ -229,7 +201,7 @@ export function DreamProcessingSection() {
                 className="flex items-center gap-2 md:gap-3"
               >
                 <div className={`px-3 py-1.5 rounded-full border text-sm font-medium ${stage.color}`}>
-                  <span className="uppercase text-xs tracking-wide">{stage.key}</span>
+                  <span className="uppercase text-xs tracking-wide">{t(`dream.${stage.key}`)}</span>
                   <span className="ml-1.5 opacity-70 text-xs">{stage.tokens}t</span>
                 </div>
                 {i < decayStages.length - 1 && (

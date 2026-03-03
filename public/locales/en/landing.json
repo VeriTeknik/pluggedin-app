@@ -833,6 +833,11 @@
     "subtitle": "Like the human brain during sleep, your AI consolidates scattered fragments into authoritative knowledge \u2014 dramatically reducing token overhead.",
     "before": "15 fragmented memories",
     "after": "1 authoritative guide",
+    "processingLabel": "Dream Processing",
+    "consolidated": "Consolidated",
+    "tokensBefore": "7,500 tokens",
+    "tokensAfter": "600 tokens",
+    "tokenReduction": "token reduction",
     "decay": "Memories decay naturally through stages, preserving only what matters:",
     "full": "Full",
     "compressed": "Compressed",
@@ -849,6 +854,7 @@
       "collectiveContribution": "Collective Contribution",
       "selfAwareness": "Self-Awareness"
     },
+    "maxScore": "/100",
     "tip": "Tip: Contribute to collective best practices and enable reflection to accelerate your individuation score.",
     "levels": {
       "nascent": "Nascent",

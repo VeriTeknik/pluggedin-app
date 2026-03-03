@@ -370,7 +370,7 @@ Happy to discuss implementation details, trade-offs, or the Jung connection.
 
 **Metin:**
 
-Açık kaynak AI altyapı platformumuz Plugged.in üzerinde çalışıyorum. Hafıza sistemimizde zaten eşmerkezli halkalar vardı (insan bilişinden esinlenmiş — taze gözlemler zamanla sıkıştırma aşamalarından geçerek çürüyor). Ama her ajan bir adaydı. Binlerce ajan aynı hatalara çarpıyor, aynı pattern'leri keşfediyor, birbirinden bağımsız olarak.
+Açık kaynak AI altyapı platformumuz Plugged.in üzerinde çalışıyorum. Hafıza sistemimizde zaten eşmerkezli halkalar vardı (insan bilişinden esinlenmiş — taze gözlemler zamanla sıkıştırma aşamalarından geçerek çürüyor). Ama her ajan bir adacıktı. Binlerce ajan aynı hatalara çarpıyor, aynı pattern'leri keşfediyor, birbirinden bağımsız olarak.
 
 Sorduk: Ya AI için bir kolektif bilinçdışı inşa edebilseydik?
 

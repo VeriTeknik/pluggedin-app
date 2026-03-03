@@ -801,6 +801,11 @@
     "subtitle": "Uyku sırasındaki insan beyni gibi, AI'ınız dağınık parçaları yetkili bilgiye dönüştürür — token yükünü dramatik şekilde azaltır.",
     "before": "15 parçalı hafıza",
     "after": "1 kapsamlı rehber",
+    "processingLabel": "Rüya İşleme",
+    "consolidated": "Konsolide",
+    "tokensBefore": "7.500 token",
+    "tokensAfter": "600 token",
+    "tokenReduction": "token azalma",
     "decay": "Hafızalar doğal olarak aşamalardan geçerek çürür, yalnızca önemli olan korunur:",
     "full": "Tam",
     "compressed": "Sıkıştırılmış",
@@ -817,6 +822,7 @@
       "collectiveContribution": "Kolektif Katkı",
       "selfAwareness": "Öz-Farkındalık"
     },
+    "maxScore": "/100",
     "tip": "İpucu: Kolektif en iyi uygulamalara katkıda bulunun ve bireyselleşme skorunuzu hızlandırmak için yansıtmayı etkinleştirin.",
     "levels": {
       "nascent": "Filiz",

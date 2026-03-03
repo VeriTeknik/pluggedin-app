@@ -2,10 +2,10 @@
 
 import { motion } from 'framer-motion';
 import { BookOpen } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { AnimatedNumber } from '@/components/landing-sections/animated-number';
 import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 import { cn } from '@/lib/utils';
@@ -25,33 +25,7 @@ const maturityLevels = [
   { key: 'individuated', active: false },
 ];
 
-function AnimatedScore({ target, inView }: { target: number; inView: boolean }) {
-  const [value, setValue] = useState(0);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    if (inView && !hasAnimated.current) {
-      hasAnimated.current = true;
-      const duration = 1800;
-      const startTime = Date.now();
-
-      const tick = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        setValue(Math.round(eased * target));
-
-        if (progress < 1) {
-          requestAnimationFrame(tick);
-        }
-      };
-
-      requestAnimationFrame(tick);
-    }
-  }, [inView, target]);
-
-  return <span>{value}</span>;
-}
+const ACTIVE_INDEX = maturityLevels.findIndex(l => l.active);
 
 export function IndividuationScoreSection() {
   const mounted = useMounted();
@@ -89,13 +63,13 @@ export function IndividuationScoreSection() {
             {/* Score Header */}
             <div className="text-center mb-6">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-3">
-                Individuation Score
+                {t('individuation.title')}
               </p>
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-electric-cyan">
-                  <AnimatedScore target={67} inView={inView} />
+                  <AnimatedNumber target={67} inView={inView} duration={1800} />
                 </span>
-                <span className="text-2xl text-muted-foreground font-medium">/100</span>
+                <span className="text-2xl text-muted-foreground font-medium">{t('individuation.maxScore')}</span>
               </div>
             </div>
 
@@ -107,7 +81,7 @@ export function IndividuationScoreSection() {
                 transition={{ delay: 0.5 }}
                 className="px-4 py-1.5 rounded-full bg-neon-purple/10 text-neon-purple text-sm font-semibold uppercase tracking-wider border border-neon-purple/20"
               >
-                Mature
+                {t('individuation.levels.mature')}
               </motion.span>
             </div>
 
@@ -176,7 +150,7 @@ export function IndividuationScoreSection() {
                     'w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all',
                     level.active
                       ? 'border-neon-purple bg-neon-purple/20 ring-4 ring-neon-purple/10'
-                      : i < maturityLevels.findIndex(l => l.active)
+                      : i < ACTIVE_INDEX
                         ? 'border-glow-green/60 bg-glow-green/10'
                         : 'border-border bg-muted/50'
                   )}
@@ -184,7 +158,7 @@ export function IndividuationScoreSection() {
                   {level.active && (
                     <div className="w-3 h-3 rounded-full bg-neon-purple" />
                   )}
-                  {!level.active && i < maturityLevels.findIndex(l => l.active) && (
+                  {!level.active && i < ACTIVE_INDEX && (
                     <div className="w-2.5 h-2.5 rounded-full bg-glow-green/60" />
                   )}
                 </div>
@@ -193,7 +167,7 @@ export function IndividuationScoreSection() {
                     'text-xs mt-2 font-medium capitalize',
                     level.active
                       ? 'text-neon-purple'
-                      : i < maturityLevels.findIndex(l => l.active)
+                      : i < ACTIVE_INDEX
                         ? 'text-muted-foreground'
                         : 'text-muted-foreground/50'
                   )}
