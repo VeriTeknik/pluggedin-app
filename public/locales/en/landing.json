@@ -10,7 +10,9 @@
     "playground": "Playground",
     "documentation": "Documentation",
     "blog": "Blog",
-    "getStarted": "Connect"
+    "getStarted": "Install",
+    "howItWorks": "How It Works",
+    "github": "GitHub"
   },
   "hero": {
     "badge": "World's First AI-CMS",
@@ -782,6 +784,136 @@
       "heroDesc": "Shows what to do — workflows, tool sequences, action plans",
       "trickster": "Trickster",
       "tricksterDesc": "Offers creative solutions — workarounds, edge cases, unconventional fixes"
+    },
+    "learnMore": "Jungian Intelligence",
+    "archetypeGuide": "Archetype Guide"
+  },
+  "terminal": {
+    "title": "Zero Configuration. Everything Automatic.",
+    "subtitle": "Five lifecycle hooks manage your entire memory session — from start to finish, no manual intervention needed.",
+    "learnMore": "How Synchronicity Detection Works"
+  },
+  "heroPlugin": {
+    "badge": "Claude Code Plugin",
+    "headline": "AI Memory That Grows With You",
+    "subtitle": "Stop explaining context. Start building faster. Install the plugin and your AI remembers across sessions, learns from the community, and delivers the right pattern at the right moment.",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "starOnGithub": "Star on GitHub",
+    "howItWorks": "How It Works",
+    "stats": "24 tools \u00b7 9 commands \u00b7 5 hooks \u00b7 MIT"
+  },
+  "oneLiner": {
+    "statement": "Your AI Remembers. Learns. Evolves.",
+    "subtitle": "Three layers of intelligence that transform every AI interaction from a blank slate into a continuity of context, wisdom, and insight.",
+    "personal": {
+      "title": "Personal Memory",
+      "desc": "Every session builds on the last. Your AI retains context, preferences, and working patterns across conversations and platforms — nothing starts from zero again."
+    },
+    "collective": {
+      "title": "Collective Intelligence",
+      "desc": "Anonymized best practices from the community surface automatically. When multiple users independently discover the same insight, it becomes shared wisdom — private data stays private."
+    },
+    "archetypal": {
+      "title": "Archetypal Guidance",
+      "desc": "Inspired by Jungian psychology, your AI develops nuanced judgment — knowing what to do, what to avoid, and when to try something unconventional."
     }
+  },
+  "ctaPlugin": {
+    "headline": "Start Building in Seconds",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "starOnGithub": "Star on GitHub",
+    "readDocs": "Read the Docs",
+    "platform": "Platform",
+    "footer": "Open source \u00b7 MIT \u00b7 Made by VeriTeknik"
+  },
+  "dream": {
+    "title": "Dream Processing: Memory Consolidation",
+    "subtitle": "Like the human brain during sleep, your AI consolidates scattered fragments into authoritative knowledge \u2014 dramatically reducing token overhead.",
+    "before": "15 fragmented memories",
+    "after": "1 authoritative guide",
+    "processingLabel": "Dream Processing",
+    "consolidated": "Consolidated",
+    "tokensBefore": "7,500 tokens",
+    "tokensAfter": "600 tokens",
+    "tokenReduction": "token reduction",
+    "decay": "Memories decay naturally through stages, preserving only what matters:",
+    "full": "Full",
+    "compressed": "Compressed",
+    "summary": "Summary",
+    "essence": "Essence",
+    "learnMore": "How Dream Processing Works"
+  },
+  "individuation": {
+    "title": "Individuation Score",
+    "cardLabel": "Individuation Score",
+    "subtitle": "Track your AI's growth journey from blank slate to fully individuated intelligence with measurable dimensions.",
+    "bars": {
+      "memoryDepth": "Memory Depth",
+      "learningVelocity": "Learning Velocity",
+      "collectiveContribution": "Collective Contribution",
+      "selfAwareness": "Self-Awareness"
+    },
+    "maxScore": "/100",
+    "tip": "Tip: Contribute to collective best practices and enable reflection to accelerate your individuation score.",
+    "levels": {
+      "nascent": "Nascent",
+      "developing": "Developing",
+      "established": "Established",
+      "mature": "Mature",
+      "individuated": "Individuated"
+    },
+    "teamEffect": "New team members inherit collective wisdom from day one.",
+    "learnMore": "How Individuation Scoring Works"
+  },
+  "platformCapabilities": {
+    "title": "Everything Your AI Needs. One Platform.",
+    "subtitle": "Plugged.in unifies 2,700+ MCP servers, persistent memory, documents, and knowledge bases into a single model-agnostic infrastructure — your data stays with you, not the model.",
+    "tagline": "One plugin. Every model. Your data. Zero lock-in.",
+    "cards": {
+      "mcpHub": {
+        "title": "2,700+ MCP Servers",
+        "desc": "Universal MCP proxy aggregating thousands of tool servers. Connect once — use from Claude Code, Cursor, ChatGPT, or any MCP client. STDIO, SSE, and Streamable HTTP all supported."
+      },
+      "memory": {
+        "title": "Persistent Memory",
+        "desc": "Cross-session, cross-platform memory that never resets. Your AI retains context, preferences, and working patterns — no more explaining yourself from scratch every conversation."
+      },
+      "knowledge": {
+        "title": "Knowledge Base (RAG)",
+        "desc": "Upload documents, build knowledge bases with embedded vector search. In-process HNSW indexing — no external services needed. Your institutional knowledge, always accessible."
+      },
+      "modelAgnostic": {
+        "title": "Model Agnostic",
+        "desc": "Works with every AI model and platform. Claude, ChatGPT, Cursor, Cline, LM Studio — switch models freely, your tools, memory, and knowledge travel with you."
+      },
+      "dataOwnership": {
+        "title": "Data Stays With You",
+        "desc": "Your data lives in your infrastructure, not inside the model. No fragmentation across platforms, no context lost between sessions. Full data portability and export anytime."
+      },
+      "openSource": {
+        "title": "Open Source & Self-Hostable",
+        "desc": "MIT licensed, fully open source. Deploy on your own infrastructure for complete control. No vendor lock-in — your AI setup is yours forever."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Privacy is math, not promises.",
+    "subtitle": "We don\u2019t ask you to trust us. We built the system so trust isn\u2019t required.",
+    "identity": {
+      "title": "Identity Erasure",
+      "desc": "HMAC-SHA256 one-way hashing ensures contributor identities are mathematically irreversible. We cannot unmask you \u2014 even if we wanted to."
+    },
+    "kanonymity": {
+      "title": "k-Anonymity (k\u22653)",
+      "desc": "Patterns remain invisible until 3 or more profiles independently discover the same insight. Individual behavior is never exposed."
+    },
+    "temporal": {
+      "title": "Temporal Aggregation",
+      "desc": "Time-based patterns are generalized. The system knows \"Fridays are risky\" without knowing which Friday, which user, or which project."
+    },
+    "tagline": "Learn from everyone. Identified by no one.",
+    "openSource": "Open source \u00b7 Self-hostable \u00b7 MIT licensed"
   }
 }

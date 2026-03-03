@@ -772,5 +772,133 @@
       "trickster": "Bedrieger",
       "tricksterDesc": "Biedt creatieve oplossingen — workarounds, randgevallen, onconventionele fixes"
     }
+  },
+  "terminal": {
+    "title": "Nul configuratie. Alles automatisch.",
+    "subtitle": "Vijf lifecycle hooks beheren je hele geheugensessie van begin tot eind — geen handmatige tussenkomst nodig.",
+    "learnMore": "Hoe Synchroniciteitsdetectie Werkt"
+  },
+  "heroPlugin": {
+    "badge": "Claude Code Plugin",
+    "headline": "AI-geheugen dat met je meegroeit",
+    "subtitle": "Stop met context uitleggen. Begin sneller te ontwikkelen. Installeer de plugin, laat AI onthouden tussen sessies, leren van de community, en het juiste patroon op het juiste moment presenteren.",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd!",
+    "starOnGithub": "Ster op GitHub",
+    "howItWorks": "Hoe het werkt",
+    "stats": "24 tools · 9 commando's · 5 hooks · MIT"
+  },
+  "oneLiner": {
+    "statement": "AI onthoudt. Leert. Evolueert.",
+    "subtitle": "Drie intelligentielagen transformeren elke AI-interactie van een blanco pagina naar een continuüm van context, wijsheid en inzicht.",
+    "personal": {
+      "title": "Persoonlijk Geheugen",
+      "desc": "Elke sessie bouwt voort op de vorige. Je AI behoudt context, voorkeuren en werkpatronen over gesprekken en platformen — niets begint vanaf nul."
+    },
+    "collective": {
+      "title": "Collectieve Intelligentie",
+      "desc": "Geanonimiseerde best practices van de community komen automatisch naar boven. Wanneer meerdere gebruikers onafhankelijk hetzelfde inzicht ontdekken, wordt het gedeelde wijsheid."
+    },
+    "archetypal": {
+      "title": "Archetypische Begeleiding",
+      "desc": "Geïnspireerd door de Jungiaanse psychologie ontwikkelt je AI een genuanceerd beoordelingsvermogen dat weet wat te doen, wat te vermijden en wanneer iets onconventioneels te proberen."
+    }
+  },
+  "ctaPlugin": {
+    "headline": "Begin in seconden met ontwikkelen",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd!",
+    "starOnGithub": "Ster op GitHub",
+    "readDocs": "Lees documentatie",
+    "platform": "Platform",
+    "footer": "Open source · MIT · Door VeriTeknik"
+  },
+  "dream": {
+    "title": "Droomverwerking: Geheugenconsolidatie",
+    "subtitle": "Net als het menselijk brein tijdens slaap, transformeert je AI verspreide fragmenten tot gezaghebbende kennis — en vermindert token-overhead dramatisch.",
+    "before": "15 gefragmenteerde herinneringen",
+    "after": "1 uitgebreide gids",
+    "processingLabel": "Droomverwerking",
+    "consolidated": "Geconsolideerd",
+    "tokensBefore": "7.500 tokens",
+    "tokensAfter": "600 tokens",
+    "tokenReduction": "tokenreductie",
+    "decay": "Herinneringen vervallen natuurlijk door fases, waarbij alleen het belangrijke bewaard blijft:",
+    "full": "Volledig",
+    "compressed": "Gecomprimeerd",
+    "summary": "Samenvatting",
+    "essence": "Essentie",
+    "learnMore": "Hoe Droomverwerking Werkt"
+  },
+  "individuation": {
+    "title": "Individuatiescore",
+    "cardLabel": "Individuatiescore",
+    "subtitle": "Volg de groeireis van je AI van blanco canvas naar volledig geïndividueerde intelligentie met meetbare dimensies.",
+    "bars": {
+      "memoryDepth": "Geheugendiepte",
+      "learningVelocity": "Leersnelheid",
+      "collectiveContribution": "Collectieve Bijdrage",
+      "selfAwareness": "Zelfbewustzijn"
+    },
+    "maxScore": "/100",
+    "tip": "Tip: Draag bij aan collectieve best practices en schakel reflectie in om je individuatiescore te versnellen.",
+    "levels": {
+      "nascent": "Ontluikend",
+      "developing": "Ontwikkelend",
+      "established": "Gevestigd",
+      "mature": "Volwassen",
+      "individuated": "Geïndividueerd"
+    },
+    "teamEffect": "Nieuwe teamleden erven collectieve wijsheid vanaf dag één.",
+    "learnMore": "Hoe Individuatiescoring Werkt"
+  },
+  "platformCapabilities": {
+    "title": "Alles wat je AI nodig heeft. Eén platform.",
+    "subtitle": "Plugged.in verenigt 2.700+ MCP-servers, persistent geheugen, documenten en kennisbanken in één modelonafhankelijke infrastructuur — je data blijft bij jou, niet bij het model.",
+    "tagline": "Eén plugin. Elk model. Jouw data. Geen lock-in.",
+    "cards": {
+      "mcpHub": {
+        "title": "2.700+ MCP-servers",
+        "desc": "Universele MCP-proxy die duizenden toolservers aggregeert. Eenmaal verbinden — gebruiken vanuit Claude Code, Cursor, ChatGPT of elke MCP-client. STDIO, SSE en Streamable HTTP allemaal ondersteund."
+      },
+      "memory": {
+        "title": "Persistent Geheugen",
+        "desc": "Geheugen dat niet reset tussen sessies en platformen. Je AI behoudt context, voorkeuren en werkpatronen — stop met jezelf opnieuw uitleggen bij elk gesprek."
+      },
+      "knowledge": {
+        "title": "Kennisbank (RAG)",
+        "desc": "Upload documenten, bouw kennisbanken met ingebedde vectorzoekopdrachten. In-process HNSW-indexering — geen externe service nodig. Bedrijfskennis altijd toegankelijk."
+      },
+      "modelAgnostic": {
+        "title": "Modelonafhankelijk",
+        "desc": "Werkt met elk AI-model en platform. Claude, ChatGPT, Cursor, Cline, LM Studio — wissel vrij van model, je tools, geheugen en kennis gaan met je mee."
+      },
+      "dataOwnership": {
+        "title": "Data blijft bij jou",
+        "desc": "Je data leeft in jouw infrastructuur, niet in het model. Geen cross-platform fragmentatie, geen cross-sessie contextverlies. Volledige dataportabiliteit en exporteer wanneer je wilt."
+      },
+      "openSource": {
+        "title": "Open Source & Zelf Hosten",
+        "desc": "MIT-gelicentieerd, volledig open source. Deploy op je eigen infrastructuur voor volledige controle. Geen vendorlock-in — je AI-setup is voor altijd van jou."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Privacy is wiskunde, geen beloftes.",
+    "subtitle": "We vragen je niet ons te vertrouwen. We hebben het systeem zo gebouwd dat vertrouwen niet nodig is.",
+    "identity": {
+      "title": "Identiteitswissing",
+      "desc": "HMAC-SHA256 eenrichtingshashing zorgt ervoor dat bijdrager-identiteiten wiskundig onomkeerbaar zijn. We kunnen je niet ontmaskeren — zelfs als we dat zouden willen."
+    },
+    "kanonymity": {
+      "title": "k-Anonimiteit (k≥3)",
+      "desc": "Patronen blijven onzichtbaar totdat 3 of meer profielen onafhankelijk hetzelfde inzicht ontdekken. Individueel gedrag wordt nooit blootgesteld."
+    },
+    "temporal": {
+      "title": "Temporele Aggregatie",
+      "desc": "Tijdgebaseerde patronen worden gegeneraliseerd. Het systeem weet \"vrijdagen zijn risicovol\" zonder te weten welke vrijdag, welke gebruiker of welk project."
+    },
+    "tagline": "Leer van iedereen. Door niemand geïdentificeerd.",
+    "openSource": "Open source · Zelf te hosten · MIT-licentie"
   }
 }

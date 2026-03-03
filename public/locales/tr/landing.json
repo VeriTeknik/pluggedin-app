@@ -10,7 +10,9 @@
     "playground": "Oyun Alanı",
     "documentation": "Dokümantasyon",
     "blog": "Blog",
-    "getStarted": "Bağlan"
+    "getStarted": "Kur",
+    "howItWorks": "Nasıl Çalışır",
+    "github": "GitHub"
   },
   "hero": {
     "badge": "Dünyanın İlk AI-CMS'i",
@@ -750,6 +752,136 @@
       "heroDesc": "Ne yapmanız gerektiğini gösterir — iş akışları, araç dizileri, eylem planları",
       "trickster": "Hileci",
       "tricksterDesc": "Yaratıcı çözümler sunar — geçici çözümler, uç durumlar, alışılmadık düzeltmeler"
+    },
+    "learnMore": "Jungian Zeka",
+    "archetypeGuide": "Arketip Rehberi"
+  },
+  "terminal": {
+    "title": "Sıfır Yapılandırma. Her Şey Otomatik.",
+    "subtitle": "Beş yaşam döngüsü hook'u tüm hafıza oturumunuzu baştan sona yönetiyor — manuel müdahale gerekmez.",
+    "learnMore": "Senkronisite Algılama Nasıl Çalışır"
+  },
+  "heroPlugin": {
+    "badge": "Claude Code Eklentisi",
+    "headline": "Seninle Birlikte Büyüyen AI Hafızası",
+    "subtitle": "Bağlam açıklamayı bırak. Daha hızlı geliştirmeye başla. Eklentiyi kur, AI'ın oturumlar arası hatırlasın, topluluktan öğrensin ve doğru pattern'i doğru anda sunsun.",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı!",
+    "starOnGithub": "GitHub'da Yıldızla",
+    "howItWorks": "Nasıl Çalışır",
+    "stats": "24 araç · 9 komut · 5 hook · MIT"
+  },
+  "oneLiner": {
+    "statement": "AI'ın Hatırlıyor. Öğreniyor. Gelişiyor.",
+    "subtitle": "Her AI etkileşimini boş bir sayfadan bağlam, bilgelik ve içgörü sürekliliğine dönüştüren üç zeka katmanı.",
+    "personal": {
+      "title": "Kişisel Hafıza",
+      "desc": "Her oturum bir öncekinin üzerine inşa edilir. AI'ınız konuşmalar ve platformlar arasında bağlamı, tercihleri ve çalışma kalıplarını korur — hiçbir şey sıfırdan başlamaz."
+    },
+    "collective": {
+      "title": "Kolektif Zeka",
+      "desc": "Topluluktan anonimleştirilmiş en iyi uygulamalar otomatik olarak yüzeye çıkar. Birden fazla kullanıcı bağımsız olarak aynı içgörüyü keşfettiğinde, paylaşılan bilgeliğe dönüşür."
+    },
+    "archetypal": {
+      "title": "Arketipsel Rehberlik",
+      "desc": "Jung psikolojisinden ilham alan AI'ınız, ne yapacağını, neden kaçınacağını ve ne zaman alışılmadık bir şey deneyeceğini bilen incelikli bir yargılama geliştirir."
     }
+  },
+  "ctaPlugin": {
+    "headline": "Saniyeler İçinde Geliştirmeye Başla",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı!",
+    "starOnGithub": "GitHub'da Yıldızla",
+    "readDocs": "Dokümanları Oku",
+    "platform": "Platform",
+    "footer": "Açık kaynak · MIT · VeriTeknik tarafından"
+  },
+  "dream": {
+    "title": "Rüya İşleme: Hafıza Konsolidasyonu",
+    "subtitle": "Uyku sırasındaki insan beyni gibi, AI'ınız dağınık parçaları yetkili bilgiye dönüştürür — token yükünü dramatik şekilde azaltır.",
+    "before": "15 parçalı hafıza",
+    "after": "1 kapsamlı rehber",
+    "processingLabel": "Rüya İşleme",
+    "consolidated": "Konsolide",
+    "tokensBefore": "7.500 token",
+    "tokensAfter": "600 token",
+    "tokenReduction": "token azalma",
+    "decay": "Hafızalar doğal olarak aşamalardan geçerek çürür, yalnızca önemli olan korunur:",
+    "full": "Tam",
+    "compressed": "Sıkıştırılmış",
+    "summary": "Özet",
+    "essence": "Öz",
+    "learnMore": "Rüya İşleme Nasıl Çalışır"
+  },
+  "individuation": {
+    "title": "Bireyselleşme Skoru",
+    "cardLabel": "Bireyselleşme Skoru",
+    "subtitle": "AI'ınızın boş sayfadan tam bireyselleşmiş zekaya kadar büyüme yolculuğunu ölçülebilir boyutlarla takip edin.",
+    "bars": {
+      "memoryDepth": "Hafıza Derinliği",
+      "learningVelocity": "Öğrenme Hızı",
+      "collectiveContribution": "Kolektif Katkı",
+      "selfAwareness": "Öz-Farkındalık"
+    },
+    "maxScore": "/100",
+    "tip": "İpucu: Kolektif en iyi uygulamalara katkıda bulunun ve bireyselleşme skorunuzu hızlandırmak için yansıtmayı etkinleştirin.",
+    "levels": {
+      "nascent": "Filiz",
+      "developing": "Gelişen",
+      "established": "Yerleşik",
+      "mature": "Olgun",
+      "individuated": "Bireyselleşmiş"
+    },
+    "teamEffect": "Yeni takım üyeleri ilk günden kolektif bilgeliği miras alır.",
+    "learnMore": "Bireyselleşme Skorlaması Nasıl Çalışır"
+  },
+  "platformCapabilities": {
+    "title": "AI'ınızın İhtiyacı Olan Her Şey. Tek Platform.",
+    "subtitle": "Plugged.in 2.700+ MCP sunucusu, kalıcı hafıza, dokümanlar ve bilgi tabanlarını tek bir model-agnostik altyapıda birleştiriyor — verileriniz modelde değil, sizde kalıyor.",
+    "tagline": "Tek eklenti. Her model. Sizin verileriniz. Sıfır bağımlılık.",
+    "cards": {
+      "mcpHub": {
+        "title": "2.700+ MCP Sunucusu",
+        "desc": "Binlerce araç sunucusunu toplayan evrensel MCP proxy. Bir kez bağlan — Claude Code, Cursor, ChatGPT veya herhangi bir MCP istemcisinden kullan. STDIO, SSE ve Streamable HTTP desteği."
+      },
+      "memory": {
+        "title": "Kalıcı Hafıza",
+        "desc": "Oturumlar ve platformlar arası sıfırlanmayan hafıza. AI'ınız bağlamı, tercihleri ve çalışma kalıplarını korur — her konuşmada kendinizi baştan açıklamaya son."
+      },
+      "knowledge": {
+        "title": "Bilgi Tabanı (RAG)",
+        "desc": "Doküman yükleyin, gömülü vektör arama ile bilgi tabanları oluşturun. İşlem içi HNSW indeksleme — harici servis gerekmez. Kurumsal bilginiz her zaman erişilebilir."
+      },
+      "modelAgnostic": {
+        "title": "Model Agnostik",
+        "desc": "Her AI modeli ve platformla çalışır. Claude, ChatGPT, Cursor, Cline, LM Studio — modeli özgürce değiştirin, araçlarınız, hafızanız ve bilginiz sizinle gelir."
+      },
+      "dataOwnership": {
+        "title": "Veriler Sizde Kalır",
+        "desc": "Verileriniz modelin içinde değil, sizin altyapınızda yaşar. Platformlar arası parçalanma yok, oturumlar arası bağlam kaybı yok. Tam veri taşınabilirliği ve istediğiniz zaman dışa aktarma."
+      },
+      "openSource": {
+        "title": "Açık Kaynak ve Kendi Barındırma",
+        "desc": "MIT lisanslı, tamamen açık kaynak. Tam kontrol için kendi altyapınıza dağıtın. Satıcı bağımlılığı yok — AI kurulumunuz sonsuza kadar sizin."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Gizlilik matematik, söz değil.",
+    "subtitle": "Bize güvenmenizi istemiyoruz. Sistemi güvenin gerekmediği şekilde inşa ettik.",
+    "identity": {
+      "title": "Kimlik Silme",
+      "desc": "HMAC-SHA256 tek yönlü hashleme, katkıda bulunan kimliklerin matematiksel olarak geri döndürülemez olmasını sağlar. İstesek bile sizi ifşa edemeyiz."
+    },
+    "kanonymity": {
+      "title": "k-Anonimlik (k≥3)",
+      "desc": "Pattern'ler, 3 veya daha fazla profil bağımsız olarak aynı içgörüyü keşfedene kadar görünmez kalır. Bireysel davranış asla açığa çıkmaz."
+    },
+    "temporal": {
+      "title": "Zamansal Kümeleme",
+      "desc": "Zaman bazlı pattern'ler genelleştirilir. Sistem \"Cumalar riskli\" bilir ama hangi Cuma, hangi kullanıcı veya hangi proje olduğunu bilmez."
+    },
+    "tagline": "Herkesten öğren. Kimse tarafından tanımlanma.",
+    "openSource": "A\u00e7\u0131k kaynak \u00b7 Kendi bar\u0131nd\u0131rma \u00b7 MIT lisansl\u0131"
   }
 }

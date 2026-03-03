@@ -6,15 +6,14 @@ export const dynamic = 'force-dynamic';
 
 import { Footer } from '@/components/footer';
 import { LandingNavbar } from '@/components/landing-navbar';
-// Critical above-the-fold components loaded immediately
-import { LandingHeroEnterpriseSection } from '@/components/landing-sections/hero-enterprise';
-import { TrustIndicatorsSection } from '@/components/landing-sections/trust-indicators';
+// Critical above-the-fold component loaded immediately
+import { HeroPluginSection } from '@/components/landing-sections/hero-plugin';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { MetricsProvider } from '@/contexts/metrics-context';
 
 // Loading skeleton component
 const SectionLoader = ({ height = '400px' }: { height?: string }) => (
-  <div className={`flex items-center justify-center`} style={{ minHeight: height }}>
+  <div className="flex items-center justify-center" style={{ minHeight: height }}>
     <div className="animate-pulse">
       <div className="h-8 w-48 bg-muted rounded mb-4 mx-auto" />
       <div className="h-4 w-32 bg-muted rounded mx-auto" />
@@ -22,161 +21,53 @@ const SectionLoader = ({ height = '400px' }: { height?: string }) => (
   </div>
 );
 
-// New v3 sections
-const ProblemStatementSection = dynamicImport(
-  () => import('@/components/landing-sections/problem-statement').then(mod => ({ default: mod.ProblemStatementSection })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
+// Section 2: One-Liner (Personal / Collective / Archetypal)
+const OneLinerSection = dynamicImport(
+  () => import('@/components/landing-sections/one-liner').then(mod => ({ default: mod.OneLinerSection })),
+  { loading: () => <SectionLoader />, ssr: true }
 );
 
-const FourPillarsSection = dynamicImport(
-  () => import('@/components/landing-sections/four-pillars').then(mod => ({ default: mod.FourPillarsSection })),
-  {
-    loading: () => <SectionLoader height="800px" />,
-    ssr: true
-  }
+// Section 3: Terminal Demo (animated hook lifecycle)
+const TerminalDemoSection = dynamicImport(
+  () => import('@/components/landing-sections/terminal-demo').then(mod => ({ default: mod.TerminalDemoSection })),
+  { loading: () => <SectionLoader height="600px" />, ssr: true }
 );
 
+// Section 4: Jungian Archetypes
 const JungianIntelligenceSection = dynamicImport(
   () => import('@/components/landing-sections/jungian-intelligence').then(mod => ({ default: mod.JungianIntelligenceSection })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
+  { loading: () => <SectionLoader />, ssr: true }
 );
 
-const VideoTutorialsSection = dynamicImport(
-  () => import('@/components/landing-sections/video-tutorials').then(mod => ({ default: mod.VideoTutorialsSection })),
-  {
-    loading: () => <SectionLoader height="600px" />,
-    ssr: true
-  }
+// Section 5: Dream Processing (token economics)
+const DreamProcessingSection = dynamicImport(
+  () => import('@/components/landing-sections/dream-processing').then(mod => ({ default: mod.DreamProcessingSection })),
+  { loading: () => <SectionLoader height="500px" />, ssr: true }
 );
 
-const RoadmapSection = dynamicImport(
-  () => import('@/components/landing-sections/roadmap').then(mod => ({ default: mod.RoadmapSection })),
-  {
-    loading: () => <SectionLoader height="800px" />,
-    ssr: true
-  }
+// Section 6: Individuation Score
+const IndividuationScoreSection = dynamicImport(
+  () => import('@/components/landing-sections/individuation-score').then(mod => ({ default: mod.IndividuationScoreSection })),
+  { loading: () => <SectionLoader height="500px" />, ssr: true }
 );
 
-const PopularServersSection = dynamicImport(
-  () => import('@/components/landing-sections/popular-servers').then(mod => ({ default: mod.PopularServersSection })),
-  {
-    loading: () => <SectionLoader height="600px" />,
-    ssr: true
-  }
+// Section 7: Privacy
+const PrivacySection = dynamicImport(
+  () => import('@/components/landing-sections/privacy').then(mod => ({ default: mod.PrivacySection })),
+  { loading: () => <SectionLoader />, ssr: true }
 );
 
-const LatestBlogPostsSection = dynamicImport(
-  () => import('@/components/landing-sections/latest-blog-posts-server').then(mod => ({ default: mod.LatestBlogPostsSection })),
-  {
-    loading: () => <SectionLoader height="600px" />,
-    ssr: true
-  }
+// Section 8: Platform Capabilities
+const PlatformCapabilitiesSection = dynamicImport(
+  () => import('@/components/landing-sections/platform-capabilities').then(mod => ({ default: mod.PlatformCapabilitiesSection })),
+  { loading: () => <SectionLoader />, ssr: true }
 );
 
-// Dynamically imported sections with code splitting
-const LandingOpenSourceSection = dynamicImport(
-  () => import('@/components/landing-sections/opensource').then(mod => ({ default: mod.LandingOpenSourceSection })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
+// Section 9: CTA
+const CtaPluginSection = dynamicImport(
+  () => import('@/components/landing-sections/cta-plugin').then(mod => ({ default: mod.CtaPluginSection })),
+  { loading: () => <SectionLoader height="300px" />, ssr: true }
 );
-
-const LandingWhyPluggedin = dynamicImport(
-  () => import('@/components/landing-sections/why-pluggedin').then(mod => ({ default: mod.LandingWhyPluggedin })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
-);
-
-const LandingFeaturesOverview = dynamicImport(
-  () => import('@/components/landing-sections/features-overview').then(mod => ({ default: mod.LandingFeaturesOverview })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
-);
-
-const LandingAiModelsSection = dynamicImport(
-  () => import('@/components/landing-sections/ai-models').then(mod => ({ default: mod.LandingAiModelsSection })),
-  {
-    loading: () => <SectionLoader height="500px" />,
-    ssr: true
-  }
-);
-
-const LandingPricingSection = dynamicImport(
-  () => import('@/components/landing-sections/pricing').then(mod => ({ default: mod.LandingPricingSection })),
-  {
-    loading: () => <SectionLoader height="600px" />,
-    ssr: true
-  }
-);
-
-const LandingCollectionManagement = dynamicImport(
-  () => import('@/components/landing-sections/collection-management').then(mod => ({ default: mod.LandingCollectionManagement })),
-  {
-    loading: () => <SectionLoader />,
-  }
-);
-
-const LandingSearchFunctionality = dynamicImport(
-  () => import('@/components/landing-sections/search-functionality').then(mod => ({ default: mod.LandingSearchFunctionality })),
-  {
-    loading: () => <SectionLoader />,
-  }
-);
-
-const LandingMcpPlayground = dynamicImport(
-  () => import('@/components/landing-sections/mcp-playground').then(mod => ({ default: mod.LandingMcpPlayground })),
-  {
-    loading: () => <SectionLoader height="500px" />,
-  }
-);
-
-const LandingSecuritySection = dynamicImport(
-  () => import('@/components/landing-sections/security').then(mod => ({ default: mod.LandingSecuritySection })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
-);
-
-const LandingDevelopersSection = dynamicImport(
-  () => import('@/components/landing-sections/developers').then(mod => ({ default: mod.LandingDevelopersSection })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
-);
-
-const LandingGettingStartedSection = dynamicImport(
-  () => import('@/components/landing-sections/getting-started').then(mod => ({ default: mod.LandingGettingStartedSection })),
-  {
-    loading: () => <SectionLoader />,
-    ssr: true
-  }
-);
-
-const LandingCta = dynamicImport(
-  () => import('@/components/landing-sections/cta').then(mod => ({ default: mod.LandingCta })),
-  {
-    loading: () => <SectionLoader height="200px" />,
-    ssr: true
-  }
-);
-
-// const LandingTestimonials = dynamicImport(
-//   () => import('@/components/landing-sections/testimonials').then(mod => ({ default: mod.LandingTestimonials })),
-//   { loading: () => <SectionLoader /> }
-// );
 
 export default function Home() {
   return (
@@ -184,139 +75,69 @@ export default function Home() {
       <div className="flex flex-col min-h-screen">
         <LandingNavbar />
         <main className="flex-grow">
-        {/* Critical above-the-fold content */}
-        <ErrorBoundary sectionName="Hero">
-        <LandingHeroEnterpriseSection />
-      </ErrorBoundary>
-
-        <ErrorBoundary sectionName="Trust Indicators">
-          <TrustIndicatorsSection />
-        </ErrorBoundary>
-
-        {/* Popular Servers Section */}
-        <Suspense fallback={<SectionLoader height="600px" />}>
-          <ErrorBoundary sectionName="Popular Servers">
-            <PopularServersSection />
+          {/* Section 1: Hero — plugin install CTA */}
+          <ErrorBoundary sectionName="Hero">
+            <HeroPluginSection />
           </ErrorBoundary>
-        </Suspense>
 
-        {/* New v3 sections */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Problem Statement">
-            <ProblemStatementSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 2: One-liner — Personal / Collective / Archetypal */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="One Liner">
+              <OneLinerSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        <Suspense fallback={<SectionLoader height="800px" />}>
-          <ErrorBoundary sectionName="Four Pillars">
-            <FourPillarsSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 3: Terminal Demo — animated hook lifecycle */}
+          <Suspense fallback={<SectionLoader height="600px" />}>
+            <ErrorBoundary sectionName="Terminal Demo">
+              <TerminalDemoSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Jungian Intelligence Section */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Jungian Intelligence">
-            <JungianIntelligenceSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 4: Jungian Archetypes */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Jungian Intelligence">
+              <JungianIntelligenceSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Video Tutorials Section */}
-        <Suspense fallback={<SectionLoader height="600px" />}>
-          <ErrorBoundary sectionName="Video Tutorials">
-            <VideoTutorialsSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 5: Dream Processing — token economics */}
+          <Suspense fallback={<SectionLoader height="500px" />}>
+            <ErrorBoundary sectionName="Dream Processing">
+              <DreamProcessingSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Roadmap Section */}
-        <Suspense fallback={<SectionLoader height="800px" />}>
-          <ErrorBoundary sectionName="Roadmap">
-            <RoadmapSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 6: Individuation Score */}
+          <Suspense fallback={<SectionLoader height="500px" />}>
+            <ErrorBoundary sectionName="Individuation Score">
+              <IndividuationScoreSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Latest Blog Posts Section */}
-        <Suspense fallback={<SectionLoader height="600px" />}>
-          <ErrorBoundary sectionName="Blog">
-            <LatestBlogPostsSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 7: Privacy */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Privacy">
+              <PrivacySection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Open Source Section */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Open Source">
-            <LandingOpenSourceSection />
-          </ErrorBoundary>
-        </Suspense>
+          {/* Section 8: Platform Capabilities — general features */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Platform Capabilities">
+              <PlatformCapabilitiesSection />
+            </ErrorBoundary>
+          </Suspense>
 
-        {/* Progressively loaded sections */}
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Features">
-            <LandingFeaturesOverview />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader height="500px" />}>
-          <ErrorBoundary sectionName="AI Models">
-            <LandingAiModelsSection />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader height="600px" />}>
-          <ErrorBoundary sectionName="Pricing">
-            <LandingPricingSection />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Collections">
-            <LandingCollectionManagement />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Search">
-            <LandingSearchFunctionality />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader height="500px" />}>
-          <ErrorBoundary sectionName="Playground">
-            <LandingMcpPlayground />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Security">
-            <LandingSecuritySection />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Developers">
-            <LandingDevelopersSection />
-          </ErrorBoundary>
-        </Suspense>
-
-        <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Getting Started">
-            <LandingGettingStartedSection />
-          </ErrorBoundary>
-        </Suspense>
-
-        {/* <Suspense fallback={<SectionLoader />}>
-          <ErrorBoundary sectionName="Testimonials">
-            <LandingTestimonials />
-          </ErrorBoundary>
-        </Suspense> */}
-
-        <Suspense fallback={<SectionLoader height="200px" />}>
-          <ErrorBoundary sectionName="CTA">
-            <LandingCta />
-          </ErrorBoundary>
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
+          {/* Section 9: CTA — mirrors hero */}
+          <Suspense fallback={<SectionLoader height="300px" />}>
+            <ErrorBoundary sectionName="CTA">
+              <CtaPluginSection />
+            </ErrorBoundary>
+          </Suspense>
+        </main>
+        <Footer />
+      </div>
     </MetricsProvider>
   );
 }

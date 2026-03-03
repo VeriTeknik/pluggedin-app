@@ -722,5 +722,133 @@
       "trickster": "诡计者",
       "tricksterDesc": "提供创意解决方案——变通方法、边缘情况、非常规修复"
     }
+  },
+  "terminal": {
+    "title": "零配置。一切自动化。",
+    "subtitle": "五个生命周期钩子从头到尾管理你的整个内存会话——无需手动干预。",
+    "learnMore": "同步检测工作原理"
+  },
+  "heroPlugin": {
+    "badge": "Claude Code 插件",
+    "headline": "与你一起成长的 AI 记忆",
+    "subtitle": "停止解释上下文。开始更快地开发。安装插件，让 AI 跨会话记忆、从社区学习，并在正确的时刻提供正确的模式。",
+    "copy": "复制",
+    "copied": "已复制！",
+    "starOnGithub": "在 GitHub 上加星",
+    "howItWorks": "工作原理",
+    "stats": "24 工具 · 9 命令 · 5 钩子 · MIT"
+  },
+  "oneLiner": {
+    "statement": "AI 记忆。学习。进化。",
+    "subtitle": "三个智能层将每次 AI 交互从空白页面转变为上下文、智慧和洞察的连续体。",
+    "personal": {
+      "title": "个人记忆",
+      "desc": "每次会话都建立在上一次的基础上。你的 AI 在对话和平台之间保持上下文、偏好和工作模式——一切都不会从零开始。"
+    },
+    "collective": {
+      "title": "集体智慧",
+      "desc": "来自社区的匿名最佳实践自动浮现。当多个用户独立发现相同的洞察时，它就变成了共享智慧。"
+    },
+    "archetypal": {
+      "title": "原型指导",
+      "desc": "受荣格心理学启发，你的 AI 发展出一种微妙的判断力，知道该做什么、避免什么，以及何时尝试非常规的方法。"
+    }
+  },
+  "ctaPlugin": {
+    "headline": "几秒内开始开发",
+    "copy": "复制",
+    "copied": "已复制！",
+    "starOnGithub": "在 GitHub 上加星",
+    "readDocs": "阅读文档",
+    "platform": "平台",
+    "footer": "开源 · MIT · 由 VeriTeknik 开发"
+  },
+  "dream": {
+    "title": "梦境处理：记忆整合",
+    "subtitle": "就像睡眠中的人脑一样，你的 AI 将分散的片段转化为权威知识——大幅减少令牌开销。",
+    "before": "15 个碎片记忆",
+    "after": "1 个全面指南",
+    "processingLabel": "梦境处理",
+    "consolidated": "已整合",
+    "tokensBefore": "7,500 令牌",
+    "tokensAfter": "600 令牌",
+    "tokenReduction": "令牌减少",
+    "decay": "记忆自然经历各阶段衰减，只保留重要的内容：",
+    "full": "完整",
+    "compressed": "压缩",
+    "summary": "摘要",
+    "essence": "精华",
+    "learnMore": "梦境处理工作原理"
+  },
+  "individuation": {
+    "title": "个体化评分",
+    "cardLabel": "个体化评分",
+    "subtitle": "通过可衡量的维度追踪你的 AI 从空白到完全个体化智能的成长旅程。",
+    "bars": {
+      "memoryDepth": "记忆深度",
+      "learningVelocity": "学习速度",
+      "collectiveContribution": "集体贡献",
+      "selfAwareness": "自我意识"
+    },
+    "maxScore": "/100",
+    "tip": "提示：贡献集体最佳实践并启用反思来加速你的个体化评分。",
+    "levels": {
+      "nascent": "萌芽",
+      "developing": "发展中",
+      "established": "已建立",
+      "mature": "成熟",
+      "individuated": "已个体化"
+    },
+    "teamEffect": "新团队成员从第一天起就继承集体智慧。",
+    "learnMore": "个体化评分工作原理"
+  },
+  "platformCapabilities": {
+    "title": "你的 AI 所需的一切。一个平台。",
+    "subtitle": "Plugged.in 将 2,700+ MCP 服务器、持久记忆、文档和知识库统一到一个模型无关的基础设施中——你的数据留在你手中，而不是模型中。",
+    "tagline": "一个插件。每个模型。你的数据。零锁定。",
+    "cards": {
+      "mcpHub": {
+        "title": "2,700+ MCP 服务器",
+        "desc": "聚合数千个工具服务器的通用 MCP 代理。连接一次——从 Claude Code、Cursor、ChatGPT 或任何 MCP 客户端使用。支持 STDIO、SSE 和 Streamable HTTP。"
+      },
+      "memory": {
+        "title": "持久记忆",
+        "desc": "跨会话和平台不会重置的记忆。你的 AI 保持上下文、偏好和工作模式——不再在每次对话中重新解释自己。"
+      },
+      "knowledge": {
+        "title": "知识库 (RAG)",
+        "desc": "上传文档，使用嵌入式向量搜索构建知识库。进程内 HNSW 索引——无需外部服务。企业知识始终可访问。"
+      },
+      "modelAgnostic": {
+        "title": "模型无关",
+        "desc": "与每个 AI 模型和平台兼容。Claude、ChatGPT、Cursor、Cline、LM Studio——自由切换模型，你的工具、记忆和知识随你而行。"
+      },
+      "dataOwnership": {
+        "title": "数据归你所有",
+        "desc": "你的数据存在于你的基础设施中，而不是模型内部。没有跨平台碎片化，没有跨会话上下文丢失。完全的数据可移植性和随时导出。"
+      },
+      "openSource": {
+        "title": "开源和自托管",
+        "desc": "MIT 许可，完全开源。部署到你自己的基础设施以获得完全控制。没有供应商锁定——你的 AI 设置永远属于你。"
+      }
+    }
+  },
+  "privacy": {
+    "title": "隐私是数学，不是承诺。",
+    "subtitle": "我们不要求你信任我们。我们构建的系统不需要信任。",
+    "identity": {
+      "title": "身份擦除",
+      "desc": "HMAC-SHA256 单向哈希确保贡献者身份在数学上不可逆。即使我们想，也无法揭露你的身份。"
+    },
+    "kanonymity": {
+      "title": "k-匿名性 (k≥3)",
+      "desc": "模式在 3 个或更多配置文件独立发现相同洞察之前保持不可见。个人行为永远不会被暴露。"
+    },
+    "temporal": {
+      "title": "时间聚合",
+      "desc": "基于时间的模式被泛化。系统知道\u201c周五有风险\u201d，但不知道哪个周五、哪个用户或哪个项目。"
+    },
+    "tagline": "从所有人学习。不被任何人识别。",
+    "openSource": "开源 · 可自托管 · MIT 许可"
   }
 }
