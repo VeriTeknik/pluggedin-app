@@ -1,0 +1,32 @@
+{
+  "cliAuth": {
+    "title": "CLI Yetkilendirme",
+    "description": "Bir CLI araci Plugged.in hesabiniza erisim talep ediyor.",
+    "verifyMatch": "Bu kodun terminalinizdeki kodla eslesti\u011fini dogrulayin:",
+    "selectHub": "Hub Secin",
+    "authorize": "Yetkilendir",
+    "authorizing": "Yetkilendiriliyor...",
+    "deny": "Reddet",
+    "tryAgain": "Tekrar Dene",
+    "success": {
+      "title": "Yetkilendirme Tamamlandi",
+      "message": "Bu sekmeyi kapatabilirsiniz. CLI oturumunuz otomatik olarak yapilandirilacak."
+    },
+    "denied": {
+      "title": "Yetkilendirme Reddedildi",
+      "message": "Yetkilendirme istegi reddedildi. Bu sekmeyi kapatabilirsiniz."
+    },
+    "expired": {
+      "title": "Kod Suresi Doldu",
+      "message": "Bu yetkilendirme kodunun suresi doldu. Lutfen kurulum komutunu tekrar calistirin."
+    },
+    "error": {
+      "title": "Hata",
+      "invalidRequest": "Gecersiz Istek",
+      "noCode": "Dogrulama kodu saglanamladi.",
+      "loadProjects": "Hub'lariniz yuklenemedi.",
+      "noHubs": "Hub bulunamadi. Lutfen once bir Hub olusturun.",
+      "generic": "Yetkilendirme basarisiz. Lutfen tekrar deneyin."
+    }
+  }
+}

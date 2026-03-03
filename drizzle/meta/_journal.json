@@ -680,6 +680,13 @@
       "when": 1772447915670,
       "tag": "0096_shiny_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1772489028607,
+      "tag": "0097_same_juggernaut",
+      "breakpoints": true
     }
   ]
 }

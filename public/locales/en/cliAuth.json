@@ -1,0 +1,32 @@
+{
+  "cliAuth": {
+    "title": "CLI Authorization",
+    "description": "A CLI tool is requesting access to your Plugged.in account.",
+    "verifyMatch": "Verify this code matches your terminal:",
+    "selectHub": "Select Hub",
+    "authorize": "Authorize",
+    "authorizing": "Authorizing...",
+    "deny": "Deny",
+    "tryAgain": "Try Again",
+    "success": {
+      "title": "Authorization Complete",
+      "message": "You can close this tab. Your CLI session will be configured automatically."
+    },
+    "denied": {
+      "title": "Authorization Denied",
+      "message": "The authorization request was denied. You can close this tab."
+    },
+    "expired": {
+      "title": "Code Expired",
+      "message": "This authorization code has expired. Please run the setup command again."
+    },
+    "error": {
+      "title": "Error",
+      "invalidRequest": "Invalid Request",
+      "noCode": "No verification code provided.",
+      "loadProjects": "Failed to load your Hubs.",
+      "noHubs": "No Hubs found. Please create a Hub first.",
+      "generic": "Authorization failed. Please try again."
+    }
+  }
+}

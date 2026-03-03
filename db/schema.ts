@@ -393,6 +393,57 @@ export const apiKeysRelations = relations(apiKeysTable, ({ one }) => ({
   }),
 }));
 
+// ===== Device Authorization Codes (CLI Auth Flow) =====
+
+export const deviceAuthCodesTable = pgTable(
+  'device_auth_codes',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    device_code: varchar('device_code', { length: 64 }).notNull().unique(),
+    user_code: varchar('user_code', { length: 12 }).notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('pending'),
+    api_key_uuid: uuid('api_key_uuid')
+      .references(() => apiKeysTable.uuid, { onDelete: 'set null' }),
+    user_id: text('user_id')
+      .references(() => users.id, { onDelete: 'cascade' }),
+    project_uuid: uuid('project_uuid')
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
+    client_ip: varchar('client_ip', { length: 45 }),
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    approved_at: timestamp('approved_at', { withTimezone: true }),
+    denied_at: timestamp('denied_at', { withTimezone: true }),
+    consumed_at: timestamp('consumed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    deviceAuthDeviceCodeIdx: index('device_auth_device_code_idx').on(table.device_code),
+    deviceAuthUserCodeIdx: index('device_auth_user_code_idx').on(table.user_code),
+    deviceAuthStatusIdx: index('device_auth_status_idx').on(table.status),
+    deviceAuthExpiresAtIdx: index('device_auth_expires_at_idx').on(table.expires_at),
+    deviceAuthStatusCheck: check(
+      'device_auth_status_check',
+      sql`${table.status} IN ('pending', 'approved', 'consumed', 'denied', 'expired')`
+    ),
+  })
+);
+
+export const deviceAuthCodesRelations = relations(deviceAuthCodesTable, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceAuthCodesTable.user_id],
+    references: [users.id],
+  }),
+  project: one(projectsTable, {
+    fields: [deviceAuthCodesTable.project_uuid],
+    references: [projectsTable.uuid],
+  }),
+  apiKey: one(apiKeysTable, {
+    fields: [deviceAuthCodesTable.api_key_uuid],
+    references: [apiKeysTable.uuid],
+  }),
+}));
+
 export const mcpServersTable = pgTable(
   'mcp_servers',
   {
