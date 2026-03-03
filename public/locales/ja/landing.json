@@ -743,7 +743,8 @@
     "copied": "コピーしました！",
     "starOnGithub": "GitHubでスターを付ける",
     "howItWorks": "仕組み",
-    "stats": "24ツール · 9コマンド · 5フック · MIT"
+    "stats": "24ツール · 9コマンド · 5フック · MIT",
+    "setupHint": "# ブラウザ認証を開きます — 再起動後に使用可能"
   },
   "oneLiner": {
     "statement": "AIが記憶する。学ぶ。進化する。",
@@ -768,7 +769,8 @@
     "starOnGithub": "GitHubでスターを付ける",
     "readDocs": "ドキュメントを読む",
     "platform": "プラットフォーム",
-    "footer": "オープンソース · MIT · VeriTeknik製"
+    "footer": "オープンソース · MIT · VeriTeknik製",
+    "setupHint": "# ブラウザ認証を開きます — 再起動後に使用可能"
   },
   "dream": {
     "title": "ドリームプロセッシング：メモリ統合",

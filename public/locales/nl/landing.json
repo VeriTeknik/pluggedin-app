@@ -786,7 +786,8 @@
     "copied": "Gekopieerd!",
     "starOnGithub": "Ster op GitHub",
     "howItWorks": "Hoe het werkt",
-    "stats": "24 tools · 9 commando's · 5 hooks · MIT"
+    "stats": "24 tools · 9 commando's · 5 hooks · MIT",
+    "setupHint": "# opent browserautorisatie — klaar na herstart"
   },
   "oneLiner": {
     "statement": "AI onthoudt. Leert. Evolueert.",
@@ -811,7 +812,8 @@
     "starOnGithub": "Ster op GitHub",
     "readDocs": "Lees documentatie",
     "platform": "Platform",
-    "footer": "Open source · MIT · Door VeriTeknik"
+    "footer": "Open source · MIT · Door VeriTeknik",
+    "setupHint": "# opent browserautorisatie — klaar na herstart"
   },
   "dream": {
     "title": "Droomverwerking: Geheugenconsolidatie",

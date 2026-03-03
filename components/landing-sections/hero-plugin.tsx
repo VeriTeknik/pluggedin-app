@@ -94,6 +94,7 @@ export function HeroPluginSection() {
             <InstallSnippet
               copyLabel={t('heroPlugin.copy')}
               copiedLabel={t('heroPlugin.copied')}
+              setupHint={t('heroPlugin.setupHint')}
             />
           </motion.div>
 

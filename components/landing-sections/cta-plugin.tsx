@@ -56,6 +56,7 @@ export function CtaPluginSection() {
             <InstallSnippet
               copyLabel={t('ctaPlugin.copy')}
               copiedLabel={t('ctaPlugin.copied')}
+              setupHint={t('ctaPlugin.setupHint')}
             />
           </motion.div>
 

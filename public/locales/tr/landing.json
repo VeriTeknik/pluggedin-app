@@ -769,7 +769,8 @@
     "copied": "Kopyalandı!",
     "starOnGithub": "GitHub'da Yıldızla",
     "howItWorks": "Nasıl Çalışır",
-    "stats": "24 araç · 9 komut · 5 hook · MIT"
+    "stats": "24 araç · 9 komut · 5 hook · MIT",
+    "setupHint": "# tarayıcıda yetkilendirme açar — yeniden başlatınca hazır"
   },
   "oneLiner": {
     "statement": "AI'ın Hatırlıyor. Öğreniyor. Gelişiyor.",
@@ -794,7 +795,8 @@
     "starOnGithub": "GitHub'da Yıldızla",
     "readDocs": "Dokümanları Oku",
     "platform": "Platform",
-    "footer": "Açık kaynak · MIT · VeriTeknik tarafından"
+    "footer": "Açık kaynak · MIT · VeriTeknik tarafından",
+    "setupHint": "# tarayıcıda yetkilendirme açar — yeniden başlatınca hazır"
   },
   "dream": {
     "title": "Rüya İşleme: Hafıza Konsolidasyonu",

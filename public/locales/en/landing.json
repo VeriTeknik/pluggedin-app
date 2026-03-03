@@ -801,7 +801,8 @@
     "copied": "Copied!",
     "starOnGithub": "Star on GitHub",
     "howItWorks": "How It Works",
-    "stats": "24 tools \u00b7 9 commands \u00b7 5 hooks \u00b7 MIT"
+    "stats": "24 tools \u00b7 9 commands \u00b7 5 hooks \u00b7 MIT",
+    "setupHint": "# opens browser auth \u2014 ready to use after restart"
   },
   "oneLiner": {
     "statement": "Your AI Remembers. Learns. Evolves.",
@@ -826,7 +827,8 @@
     "starOnGithub": "Star on GitHub",
     "readDocs": "Read the Docs",
     "platform": "Platform",
-    "footer": "Open source \u00b7 MIT \u00b7 Made by VeriTeknik"
+    "footer": "Open source \u00b7 MIT \u00b7 Made by VeriTeknik",
+    "setupHint": "# opens browser auth \u2014 ready to use after restart"
   },
   "dream": {
     "title": "Dream Processing: Memory Consolidation",

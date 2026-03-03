@@ -4,14 +4,16 @@ import { Copy } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const INSTALL_COMMANDS = `/plugin marketplace add VeriTeknik/pluggedin-plugin
-/plugin install pluggedin`;
+/plugin install pluggedin
+/pluggedin:setup`;
 
 interface InstallSnippetProps {
   copyLabel: string;
   copiedLabel: string;
+  setupHint?: string;
 }
 
-export function InstallSnippet({ copyLabel, copiedLabel }: InstallSnippetProps) {
+export function InstallSnippet({ copyLabel, copiedLabel, setupHint }: InstallSnippetProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -58,6 +60,10 @@ export function InstallSnippet({ copyLabel, copiedLabel }: InstallSnippetProps) 
             <span className="text-electric-cyan">/plugin</span>
             <span className="text-muted-foreground"> install </span>
             <span className="text-glow-green">pluggedin</span>
+            {'\n'}
+            <span className="text-electric-cyan">/pluggedin:setup</span>
+            <span className="text-muted-foreground/50"> </span>
+            <span className="text-slate-500 italic text-xs">{setupHint}</span>
           </code>
         </pre>
       </div>
