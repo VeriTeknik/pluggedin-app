@@ -28,6 +28,9 @@ export async function startSession(
   params: StartSessionParams
 ): Promise<MemoryResult<{ uuid: string; memorySessionId: string }>> {
   try {
+    // Auto-abandon stale sessions (2+ hours old) for this profile before starting a new one
+    await abandonStaleSessions(params.profileUuid, 2).catch(() => {});
+
     const memorySessionId = `ms_${nanoid(21)}`;
 
     const [session] = await db
