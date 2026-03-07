@@ -1,21 +1,36 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Brain, Moon, Shield, Sparkles } from 'lucide-react';
+import { ArrowRight, CheckCircle, Lightbulb, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
-import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 
-const archetypes = [
-  { key: 'shadow', icon: Shield, color: 'text-red-400' },
-  { key: 'sage', icon: Brain, color: 'text-blue-400' },
-  { key: 'hero', icon: Sparkles, color: 'text-yellow-400' },
-  { key: 'trickster', icon: Moon, color: 'text-purple-400' },
+const cards = [
+  {
+    key: 'dontDoThis',
+    icon: ShieldAlert,
+    borderColor: 'border-red-500',
+    iconBg: 'bg-red-500/10 text-red-500',
+  },
+  {
+    key: 'tryThis',
+    icon: CheckCircle,
+    borderColor: 'border-glow-green',
+    iconBg: 'bg-glow-green/10 text-glow-green',
+  },
+  {
+    key: 'creative',
+    icon: Lightbulb,
+    borderColor: 'border-amber-500',
+    iconBg: 'bg-amber-500/10 text-amber-500',
+  },
 ];
 
-export function JungianIntelligenceSection() {
+const flowSteps = ['step1', 'step2', 'step3', 'step4'];
+
+export function HowItWorksSection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
   const { ref, inView } = useInView({ threshold: 0.1, triggerOnce: true });
@@ -31,52 +46,51 @@ export function JungianIntelligenceSection() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('jungian.title')}
+            {t('howItWorks.title')}
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            {t('jungian.subtitle')}
+            {t('howItWorks.subtitle')}
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-          {archetypes.map((archetype, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {cards.map((card, i) => (
             <motion.div
-              key={archetype.key}
+              key={card.key}
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.1 * i }}
-              className="rounded-xl border bg-card p-6 text-center"
+              className={`bg-card/50 border border-border/50 rounded-xl p-6 border-t-2 ${card.borderColor}`}
             >
-              <archetype.icon className={`w-10 h-10 mx-auto mb-4 ${archetype.color}`} />
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${card.iconBg}`}>
+                <card.icon className="w-6 h-6" />
+              </div>
               <h3 className="font-semibold mb-2">
-                {t(`jungian.archetypes.${archetype.key}`)}
+                {t(`howItWorks.${card.key}.title`)}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {t(`jungian.archetypes.${archetype.key}Desc`)}
+                {t(`howItWorks.${card.key}.desc`)}
               </p>
             </motion.div>
           ))}
         </div>
 
-        {/* Doc links */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.6 }}
-          className="flex flex-wrap justify-center gap-3 mt-12"
+          transition={{ delay: 0.5 }}
+          className="flex items-center justify-center gap-2 flex-wrap mt-10"
         >
-          <Button asChild variant="outline" size="sm" className="border-border/50 hover:border-electric-cyan/40">
-            <a href="https://docs.plugged.in/platform/jungian-intelligence" target="_blank" rel="noopener noreferrer">
-              {t('jungian.learnMore')}
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </a>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="border-border/50 hover:border-neon-purple/40">
-            <a href="https://docs.plugged.in/guides/archetype-system" target="_blank" rel="noopener noreferrer">
-              {t('jungian.archetypeGuide')}
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </a>
-          </Button>
+          {flowSteps.map((step, i) => (
+            <div key={step} className="flex items-center gap-2">
+              <span className="px-4 py-2 rounded-full bg-card border border-border/50 text-sm">
+                {t(`howItWorks.flow.${step}`)}
+              </span>
+              {i < flowSteps.length - 1 && (
+                <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+              )}
+            </div>
+          ))}
         </motion.div>
       </div>
     </section>
