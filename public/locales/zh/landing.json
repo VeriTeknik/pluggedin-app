@@ -729,15 +729,33 @@
     "learnMore": "同步检测工作原理"
   },
   "heroPlugin": {
-    "badge": "Claude Code 插件",
-    "headline": "与你一起成长的 AI 记忆",
-    "subtitle": "停止解释上下文。开始更快地开发。安装插件，让 AI 跨会话记忆、从社区学习，并在正确的时刻提供正确的模式。",
-    "copy": "复制",
+    "badge": "从所有人中学习的 AI 记忆",
+    "headline": "你的 AI 记住你。我们记住所有人。",
+    "subtitle": "从数千名开发者中提炼的集体记忆。你即将犯的错误？别人已经犯过了。Plugged.in 知道。",
+    "tagline": "个人记忆是有限的。集体记忆是超能力。",
+    "copy": "复制安装命令",
     "copied": "已复制！",
+    "setupHint": "支持 Claude Code、Cursor、Windsurf 等",
     "starOnGithub": "在 GitHub 上加星",
     "howItWorks": "工作原理",
-    "stats": "24 工具 · 9 命令 · 5 钩子 · MIT",
-    "setupHint": "# 打开浏览器授权 — 重启后即可使用"
+    "stats": "开源。永久免费。社区驱动。",
+    "contrast": {
+      "title": "为什么不直接用模型自带的记忆？",
+      "model": {
+        "col1": "仅限你的会话",
+        "col2": "上下文满了就遗忘",
+        "col3": "你重复同样的错误"
+      },
+      "pluggedin": {
+        "col1": "数千名开发者的经验",
+        "col2": "模式是永久的",
+        "col3": "警告你：别这样做"
+      },
+      "labels": {
+        "model": "模型记忆",
+        "pluggedin": "Plugged.in"
+      }
+    }
   },
   "oneLiner": {
     "statement": "AI 记忆。学习。进化。",
@@ -755,15 +773,61 @@
       "desc": "受荣格心理学启发，你的 AI 发展出一种微妙的判断力，知道该做什么、避免什么，以及何时尝试非常规的方法。"
     }
   },
+  "scenarios": {
+    "title": "这种事发生在你身上过吗？",
+    "subtitle": "每个开发者都经历过。区别在于你是独自学习，还是从所有人那里学习。",
+    "bug": {
+      "title": "3 小时，1 个 Bug",
+      "before": "递归查询无限循环。开了 14 个 Stack Overflow 标签页。问了 ChatGPT 3 次，每次答案都不一样。解决了——3 小时后。",
+      "after": "「此模式已出现 47 次。89% 由缺少基本条件引起。」——5 分钟。",
+      "label": "Debug 时间"
+    },
+    "production": {
+      "title": "凌晨 2 点的生产事故",
+      "before": "把 .env.staging 的值推到了 .env.production。告警炸了。回滚、事后分析、羞愧。",
+      "after": "「此配置曾 12 次被错误部署到生产环境。你确定吗？」——部署之前。",
+      "label": "部署安全"
+    },
+    "framework": {
+      "title": "新框架，老错误",
+      "before": "学习新框架。读文档、做教程。但生产环境中出现了意料之外的边界情况。",
+      "after": "「使用此框架最常见的 3 个错误：连接池、cache invalidation、缺少 error boundaries。」——在你开始之前。",
+      "label": "上手指引"
+    },
+    "beforeLabel": "没有 Plugged.in",
+    "afterLabel": "有 Plugged.in"
+  },
+  "howItWorks": {
+    "title": "你的 AI 已经知道别人学到的东西",
+    "subtitle": "无需设置。无需配置。模式自动流向你的 AI。",
+    "dontDoThis": {
+      "title": "别这样做",
+      "desc": "社区中反复出现的错误、反模式、已知陷阱。你的 AI 会警告你——因为别人已经掉过坑了。"
+    },
+    "tryThis": {
+      "title": "试试这样做",
+      "desc": "经过验证的解决方案、最佳实践、社区验证过的方法。不是一个人的观点——而是数百名开发者的经验。"
+    },
+    "creative": {
+      "title": "还没人试过，但是……",
+      "desc": "非常规但有效的解决方案。来自社区的创造性方法——超越标准答案。"
+    },
+    "flow": {
+      "step1": "你写代码",
+      "step2": "检测到模式",
+      "step3": "与社区匹配",
+      "step4": "你的 AI 告诉你"
+    }
+  },
   "ctaPlugin": {
-    "headline": "几秒内开始开发",
-    "copy": "复制",
+    "headline": "社区已经学到了。你还在独自摸索吗？",
+    "copy": "复制安装命令",
     "copied": "已复制！",
+    "setupHint": "30 秒安装。加入集体记忆。",
     "starOnGithub": "在 GitHub 上加星",
-    "readDocs": "阅读文档",
-    "platform": "平台",
-    "footer": "开源 · MIT · 由 VeriTeknik 开发",
-    "setupHint": "# 打开浏览器授权 — 重启后即可使用"
+    "readDocs": "文档",
+    "platform": "开放平台",
+    "footer": "永久免费。开源。你的模式保持私密。"
   },
   "dream": {
     "title": "梦境处理：记忆整合",
@@ -836,21 +900,21 @@
     }
   },
   "privacy": {
-    "title": "隐私是数学，不是承诺。",
-    "subtitle": "我们不要求你信任我们。我们构建的系统不需要信任。",
+    "title": "没有人看得到你的代码",
+    "subtitle": "模式是共享的。代码永远不会。",
     "identity": {
-      "title": "身份擦除",
-      "desc": "HMAC-SHA256 单向哈希确保贡献者身份在数学上不可逆。即使我们想，也无法揭露你的身份。"
+      "title": "你的身份已被擦除",
+      "desc": "你的经验经过单向加密。无法追溯到你。不可逆。"
     },
     "kanonymity": {
-      "title": "k-匿名性 (k≥3)",
-      "desc": "模式在 3 个或更多配置文件独立发现相同洞察之前保持不可见。个人行为永远不会被暴露。"
+      "title": "你独自时是不可见的",
+      "desc": "一个模式在至少 3 位不同开发者发现之前不会被共享。一个人的错误永远不会被暴露。"
     },
     "temporal": {
-      "title": "时间聚合",
-      "desc": "基于时间的模式被泛化。系统知道\u201c周五有风险\u201d，但不知道哪个周五、哪个用户或哪个项目。"
+      "title": "时间是模糊的",
+      "desc": "你做某事的时间也被匿名化了。不是「周二下午 2:32」，而是「这个月」。"
     },
-    "tagline": "从所有人学习。不被任何人识别。",
-    "openSource": "开源 · 可自托管 · MIT 许可"
+    "tagline": "隐私是数学，不是承诺。HMAC-SHA256 + k-anonymity (k>=3)。",
+    "openSource": "完全开源。一切可验证。"
   }
 }

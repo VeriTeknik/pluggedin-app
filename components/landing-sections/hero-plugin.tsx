@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -79,9 +80,19 @@ export function HeroPluginSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.4 }}
-            className="text-lg md:text-xl text-muted-foreground mb-12 leading-relaxed max-w-3xl mx-auto"
+            className="text-lg md:text-xl text-muted-foreground mb-6 leading-relaxed max-w-3xl mx-auto"
           >
             {t('heroPlugin.subtitle')}
+          </motion.p>
+
+          {/* Tagline */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.45 }}
+            className="text-base text-muted-foreground/80 italic mb-8"
+          >
+            {t('heroPlugin.tagline')}
           </motion.p>
 
           {/* Install Code Block */}
@@ -96,6 +107,38 @@ export function HeroPluginSection() {
               copiedLabel={t('heroPlugin.copied')}
               setupHint={t('heroPlugin.setupHint')}
             />
+          </motion.div>
+
+          {/* Contrast Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.55 }}
+            className="mb-10"
+          >
+            <p className="text-sm text-muted-foreground mb-4">
+              {t('heroPlugin.contrast.title')}
+            </p>
+            <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
+              {/* Column Headers */}
+              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                {t('heroPlugin.contrast.labels.model')}
+              </div>
+              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                {t('heroPlugin.contrast.labels.pluggedin')}
+              </div>
+
+              {(['col1', 'col2', 'col3'] as const).map((col) => (
+                <React.Fragment key={col}>
+                  <div className="p-3 rounded-lg text-sm bg-red-500/5 border border-red-500/20 text-muted-foreground">
+                    {t(`heroPlugin.contrast.model.${col}`)}
+                  </div>
+                  <div className="p-3 rounded-lg text-sm bg-glow-green/5 border border-glow-green/20 text-foreground">
+                    {t(`heroPlugin.contrast.pluggedin.${col}`)}
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
           </motion.div>
 
           {/* Buttons */}

@@ -17,32 +17,32 @@ interface TerminalLine {
 }
 
 const terminalLines: TerminalLine[] = [
-  // Session start block
-  { id: 'session-start', text: '> Session started', color: 'text-emerald-400', bold: true },
-  { id: 'mem-created', text: '\u2713 Memory session created (id: mem_7f3a)', color: 'text-emerald-400', indent: true },
-  { id: 'indiv-score', text: '\u2713 Individuation score: 42/100 \u2014 Established', color: 'text-emerald-400', indent: true },
-  { id: 'focus-tip', text: '\u{1F4A1} "Focus on contributing patterns to accelerate growth"', color: 'text-slate-400', indent: true },
+  // Command
+  { id: 'cmd', text: '$ claude "Fix the recursive query bug"', color: 'text-foreground', bold: true },
 
-  // PreToolUse block
-  { id: 'pre-tool', text: '> PreToolUse: git push origin main', color: 'text-emerald-400', bold: true },
-  { id: 'shadow-warn', text: '\u{1F534} Shadow: "Friday 2PM deploys fail 3.4\u00D7 more often"', color: 'text-red-400', indent: true },
-  { id: 'sage-advice', text: '\u{1F535} Sage: "Run staging verification first"', color: 'text-blue-400', indent: true },
+  // Session start
+  { id: 'session-start', text: '[plugged.in] Session started (mem_7f3a)', color: 'text-cyan-400', bold: true },
 
-  // PostToolUse block
-  { id: 'post-tool', text: '> PostToolUse: docker build . (exit: 1)', color: 'text-emerald-400', bold: true },
-  { id: 'obs-recorded', text: '\u{1F4DD} Observation recorded: error_pattern', color: 'text-slate-400', indent: true },
-  { id: 'cbp-match', text: '\u{1F50D} CBP match found (3 profiles):', color: 'text-amber-400', indent: true },
-  { id: 'cbp-fix', text: '"Docker EACCES \u2192 chmod 755 on host mount dir"', color: 'text-amber-400', indent: true },
-  { id: 'temporal-evt', text: '\u23F1\uFE0F Temporal event recorded', color: 'text-slate-400', indent: true },
+  // Pattern match
+  { id: 'pattern-header', text: '[plugged.in] Pattern match found:', color: 'text-cyan-400', bold: true },
+  { id: 'pattern-seen', text: '"Recursive query \u2192 infinite loop" seen 47 times', color: 'text-muted-foreground', indent: true },
+  { id: 'pattern-cause', text: '89% caused by missing base case', color: 'text-muted-foreground', indent: true },
 
-  // PreCompact block
-  { id: 'pre-compact', text: '> PreCompact triggered', color: 'text-emerald-400', bold: true },
-  { id: 'mem-injected', text: '\u{1F4BE} 5 relevant memories injected before compression', color: 'text-slate-400', indent: true },
+  // Community insight
+  { id: 'community-header', text: '[plugged.in] Community insight injected:', color: 'text-cyan-400', bold: true },
+  { id: 'community-tip', text: '"Don\'t forget to add LIMIT clause" (23 devs)', color: 'text-muted-foreground', indent: true },
 
-  // Session ending block
-  { id: 'session-end', text: '> Session ending...', color: 'text-emerald-400', bold: true },
-  { id: 'z-report', text: '\u{1F4CA} Z-report generated: 12 observations, 3 patterns discovered', color: 'text-slate-400', indent: true },
-  { id: 'session-done', text: '\u2713 Session complete', color: 'text-emerald-400', indent: true },
+  // Warning
+  { id: 'warning-1', text: '[plugged.in] Warning: This pattern led to production', color: 'text-cyan-400', bold: true },
+  { id: 'warning-2', text: 'issues 12 times. Consider circuit breaker.', color: 'text-muted-foreground', indent: true },
+
+  // Assistant response
+  { id: 'assistant-1', text: '[assistant]  Based on community patterns, your issue is', color: 'text-purple-400', bold: true },
+  { id: 'assistant-2', text: 'likely a missing base case. Here\'s the fix...', color: 'text-muted-foreground', indent: true },
+
+  // Session end
+  { id: 'obs-recorded', text: '[plugged.in] Observation recorded. Pattern strengthened.', color: 'text-cyan-400', bold: true },
+  { id: 'session-end', text: '[plugged.in] Session complete. Community contribution: +1', color: 'text-cyan-400', bold: true },
 ];
 
 const containerVariants = {
@@ -150,8 +150,8 @@ export function TerminalDemoSection() {
                 className="font-mono text-xs sm:text-sm leading-relaxed space-y-0.5"
               >
                 {terminalLines.map((line, i) => {
-                  const isPromptLine = line.text.startsWith('>');
-                  const needsTopSpacing = isPromptLine && i > 0;
+                  const isHeaderLine = line.bold && !line.indent;
+                  const needsTopSpacing = isHeaderLine && i > 0;
 
                   return (
                     <motion.div
