@@ -225,6 +225,16 @@
       "outcome": "Sonuç",
       "classified": "Sınıflandırma",
       "actions": "İşlemler"
+    },
+    "filter": {
+      "all": "Tüm Oturumlar"
+    },
+    "prune": "Eskileri Sil",
+    "pruneConfirm": "24 saatten eski terk edilmiş oturumlar silinsin mi? Bu işlem geri alınamaz.",
+    "pagination": {
+      "prev": "Önceki",
+      "next": "Sonraki",
+      "page": "Sayfa {{page}}"
     }
   },
   "collective": {

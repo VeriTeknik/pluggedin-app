@@ -225,6 +225,16 @@
       "outcome": "Uitkomst",
       "classified": "Geclassificeerd",
       "actions": "Acties"
+    },
+    "filter": {
+      "all": "Alle sessies"
+    },
+    "prune": "Oude opruimen",
+    "pruneConfirm": "Alle verlaten sessies ouder dan 24 uur verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "pagination": {
+      "prev": "Vorige",
+      "next": "Volgende",
+      "page": "Pagina {{page}}"
     }
   },
   "collective": {

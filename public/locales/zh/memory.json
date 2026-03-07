@@ -225,6 +225,16 @@
       "outcome": "结果",
       "classified": "分类",
       "actions": "操作"
+    },
+    "filter": {
+      "all": "所有会话"
+    },
+    "prune": "清理旧数据",
+    "pruneConfirm": "删除所有超过24小时的废弃会话？此操作无法撤销。",
+    "pagination": {
+      "prev": "上一页",
+      "next": "下一页",
+      "page": "第 {{page}} 页"
     }
   },
   "collective": {

@@ -4,11 +4,14 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Eye,
+  Filter,
   Loader2,
   Sparkles,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -24,6 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -65,13 +75,38 @@ interface ObservationData {
   created_at: string;
 }
 
+const PAGE_SIZE = 20;
+
 export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
   const { t } = useTranslation('memory');
-  const { sessions, isLoading } = useMemorySessions({ limit: 20 });
+  const [page, setPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'abandoned'>('all');
+  const [pruning, setPruning] = useState(false);
+  const { sessions, isLoading, refresh } = useMemorySessions({
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+  });
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [previewObs, setPreviewObs] = useState<ObservationData | null>(null);
   const [sessionObservations, setSessionObservations] = useState<Record<string, ObservationData[]>>({});
   const [loadingObs, setLoadingObs] = useState<string | null>(null);
+
+  const handlePrune = async () => {
+    if (!confirm(t('fresh.pruneConfirm'))) return;
+    setPruning(true);
+    try {
+      const res = await fetch('/api/memory/sessions/prune', { method: 'POST' });
+      if (res.ok) {
+        refresh();
+        onRefresh?.();
+      }
+    } catch {
+      // Non-fatal
+    } finally {
+      setPruning(false);
+    }
+  };
 
   const toggleSession = async (sessionUuid: string) => {
     if (expandedSession === sessionUuid) {
@@ -118,9 +153,9 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
     );
   }
 
-  const typedSessions = sessions as unknown as SessionData[];
+  const typedSessions = sessions as SessionData[];
 
-  if (typedSessions.length === 0) {
+  if (typedSessions.length === 0 && statusFilter === 'all') {
     return (
       <Card className="h-64 flex items-center justify-center">
         <CardContent className="text-center">
@@ -134,6 +169,46 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
 
   return (
     <div className="space-y-3">
+      {/* Filter bar */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => { setStatusFilter(v as typeof statusFilter); setPage(0); }}
+          >
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('fresh.filter.all')}</SelectItem>
+              <SelectItem value="active">{t('fresh.status.active')}</SelectItem>
+              <SelectItem value="completed">{t('fresh.status.completed')}</SelectItem>
+              <SelectItem value="abandoned">{t('fresh.status.abandoned')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrune}
+          disabled={pruning}
+          className="text-xs text-destructive hover:text-destructive"
+        >
+          {pruning ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+          {t('fresh.prune')}
+        </Button>
+      </div>
+
+      {typedSessions.length === 0 ? (
+        <Card className="h-48 flex items-center justify-center">
+          <CardContent className="text-center">
+            <Sparkles className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+            <CardDescription>{t('fresh.empty.description')}</CardDescription>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {typedSessions.map((session) => (
         <Card key={session.uuid} className="overflow-hidden">
           <CardHeader
@@ -256,6 +331,33 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
           )}
         </Card>
       ))}
+
+      {/* Pagination */}
+      {(page > 0 || typedSessions.length === PAGE_SIZE) && (
+        <div className="flex items-center justify-between pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => setPage(p => p - 1)}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            {t('fresh.pagination.prev')}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {t('fresh.pagination.page', { page: page + 1 })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={typedSessions.length < PAGE_SIZE}
+            onClick={() => setPage(p => p + 1)}
+          >
+            {t('fresh.pagination.next')}
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
 
       {/* Observation Preview Dialog */}
       <Dialog open={!!previewObs} onOpenChange={() => setPreviewObs(null)}>
