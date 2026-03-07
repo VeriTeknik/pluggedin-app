@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -127,29 +128,16 @@ export function HeroPluginSection() {
                 {t('heroPlugin.contrast.labels.pluggedin')}
               </div>
 
-              {/* Row 1 */}
-              <div className="p-3 rounded-lg text-sm bg-red-500/5 border border-red-500/20 text-muted-foreground">
-                {t('heroPlugin.contrast.model.col1')}
-              </div>
-              <div className="p-3 rounded-lg text-sm bg-glow-green/5 border border-glow-green/20 text-foreground">
-                {t('heroPlugin.contrast.pluggedin.col1')}
-              </div>
-
-              {/* Row 2 */}
-              <div className="p-3 rounded-lg text-sm bg-red-500/5 border border-red-500/20 text-muted-foreground">
-                {t('heroPlugin.contrast.model.col2')}
-              </div>
-              <div className="p-3 rounded-lg text-sm bg-glow-green/5 border border-glow-green/20 text-foreground">
-                {t('heroPlugin.contrast.pluggedin.col2')}
-              </div>
-
-              {/* Row 3 */}
-              <div className="p-3 rounded-lg text-sm bg-red-500/5 border border-red-500/20 text-muted-foreground">
-                {t('heroPlugin.contrast.model.col3')}
-              </div>
-              <div className="p-3 rounded-lg text-sm bg-glow-green/5 border border-glow-green/20 text-foreground">
-                {t('heroPlugin.contrast.pluggedin.col3')}
-              </div>
+              {(['col1', 'col2', 'col3'] as const).map((col) => (
+                <React.Fragment key={col}>
+                  <div className="p-3 rounded-lg text-sm bg-red-500/5 border border-red-500/20 text-muted-foreground">
+                    {t(`heroPlugin.contrast.model.${col}`)}
+                  </div>
+                  <div className="p-3 rounded-lg text-sm bg-glow-green/5 border border-glow-green/20 text-foreground">
+                    {t(`heroPlugin.contrast.pluggedin.${col}`)}
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
           </motion.div>
 

@@ -23,13 +23,13 @@ const SectionLoader = ({ height = '400px' }: { height?: string }) => (
 
 // Section 2: Scenarios
 const ScenariosSection = dynamicImport(
-  () => import('@/components/landing-sections/one-liner').then(mod => ({ default: mod.ScenariosSection })),
+  () => import('@/components/landing-sections/scenarios').then(mod => ({ default: mod.ScenariosSection })),
   { loading: () => <SectionLoader />, ssr: true }
 );
 
 // Section 3: How It Works
 const HowItWorksSection = dynamicImport(
-  () => import('@/components/landing-sections/jungian-intelligence').then(mod => ({ default: mod.HowItWorksSection })),
+  () => import('@/components/landing-sections/how-it-works').then(mod => ({ default: mod.HowItWorksSection })),
   { loading: () => <SectionLoader />, ssr: true }
 );
 

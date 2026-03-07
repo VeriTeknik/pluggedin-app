@@ -32,7 +32,7 @@
 ### Section 1: Hero
 
 **Badge**: "AI Memory That Learns From Everyone"
-**Headline**: "AI'in sadece seni hatirlıyor. Biz herkesi hatirlıyoruz." / "Your AI remembers you. We remember everyone."
+**Headline**: "Yapay Zekân Sadece Seni Hatırlıyor. Biz Herkesi Hatırlıyoruz." / "Your AI Remembers You. We Remember Everyone."
 **Subheadline**: "Collective memory distilled from thousands of developers. The mistake you're about to make? Someone already made it. Plugged.in knows."
 **Tagline**: "Individual memory is limited. Collective memory is a superpower."
 
@@ -292,7 +292,7 @@ Replace/add the following key groups in the English landing.json. Keep all exist
 
 **Step 2: Verify the file is valid JSON**
 
-Run: `cd /Users/ckaraca/Mns/pluggedin-app && node -e "JSON.parse(require('fs').readFileSync('public/locales/en/landing.json','utf8')); console.log('Valid JSON')"`
+Run: `node -e "JSON.parse(require('fs').readFileSync('public/locales/en/landing.json','utf8')); console.log('Valid JSON')"`
 Expected: "Valid JSON"
 
 **Step 3: Commit**
@@ -313,16 +313,16 @@ git commit -m "feat(landing): update English translations for collective memory 
 
 Use the same key structure as Task 1 but with Turkish text. Key translations:
 
-- heroPlugin.badge: "Herkesten Ogrenen AI Hafizasi"
-- heroPlugin.headline: "AI'in Sadece Seni Hatirliyor. Biz Herkesi Hatirliyoruz."
-- heroPlugin.subtitle: "Binlerce gelistiricinin deneyiminden damitilmis kollektif hafiza. Senin yapacagin hatayi, baskasi zaten yapti. Plugged.in bunu biliyor."
+- heroPlugin.badge: "Herkesten Öğrenen AI Hafızası"
+- heroPlugin.headline: "Yapay Zekân Sadece Seni Hatırlıyor. Biz Herkesi Hatırlıyoruz."
+- heroPlugin.subtitle: "Binlerce geliştiricinin deneyiminden damıtılmış kolektif hafıza. Senin yapacağın hatayı, başkası zaten yaptı. Plugged.in bunu biliyor."
 - scenarios.title: "Bu Sana Oldu mu?"
 - howItWorks.dontDoThis.title: "Bunu Yapma"
 - howItWorks.tryThis.title: "Bunu Dene"
 - howItWorks.creative.title: "Bunu Kimse Denemedi Ama..."
-- privacy.title: "Kimse Senin Kodunu Gormez"
-- privacy.subtitle: "Pattern'ler paylasilir. Kod asla."
-- ctaPlugin.headline: "Topluluk zaten ogrendi. Sen hala tek basina mi ogreniyorsun?"
+- privacy.title: "Kimse Senin Kodunu Görmez"
+- privacy.subtitle: "Pattern'ler paylaşılır. Kod asla."
+- ctaPlugin.headline: "Topluluk zaten öğrendi. Sen hâlâ tek başına mı öğreniyorsun?"
 
 **Step 2: Validate JSON**
 
@@ -384,7 +384,7 @@ Key changes:
 
 **Step 2: Verify component renders**
 
-Run: `cd /Users/ckaraca/Mns/pluggedin-app && pnpm build 2>&1 | head -30`
+Run: `pnpm build 2>&1 | head -30`
 Expected: No TypeScript errors in hero-plugin.tsx
 
 **Step 3: Commit**
@@ -604,7 +604,7 @@ git commit -m "feat(landing): update terminal demo to showcase collective memory
 
 **Step 1: Run full build**
 
-Run: `cd /Users/ckaraca/Mns/pluggedin-app && pnpm build`
+Run: `pnpm build`
 Expected: Build succeeds with no errors
 
 **Step 2: Run lint**
