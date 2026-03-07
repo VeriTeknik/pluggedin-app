@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, Hash, Users } from 'lucide-react';
+import { Clock, EyeOff, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
@@ -10,7 +10,7 @@ import { useMounted } from '@/hooks/use-mounted';
 const privacyCards = [
   {
     key: 'identity',
-    icon: Hash,
+    icon: EyeOff,
     accentColor: 'border-t-electric-cyan',
     iconBg: 'bg-electric-cyan/10',
     iconColor: 'text-electric-cyan',
