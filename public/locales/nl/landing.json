@@ -779,15 +779,33 @@
     "learnMore": "Hoe Synchroniciteitsdetectie Werkt"
   },
   "heroPlugin": {
-    "badge": "Claude Code Plugin",
-    "headline": "AI-geheugen dat met je meegroeit",
-    "subtitle": "Stop met context uitleggen. Begin sneller te ontwikkelen. Installeer de plugin, laat AI onthouden tussen sessies, leren van de community, en het juiste patroon op het juiste moment presenteren.",
-    "copy": "Kopiëren",
+    "badge": "AI-geheugen dat van iedereen leert",
+    "headline": "Je AI onthoudt jou. Wij onthouden iedereen.",
+    "subtitle": "Collectief geheugen gedistilleerd uit duizenden ontwikkelaars. De fout die je op het punt staat te maken? Iemand heeft het al gedaan. Plugged.in weet het.",
+    "tagline": "Individueel geheugen is beperkt. Collectief geheugen is een superkracht.",
+    "copy": "Installeercommando kopiëren",
     "copied": "Gekopieerd!",
+    "setupHint": "Werkt met Claude Code, Cursor, Windsurf en meer",
     "starOnGithub": "Ster op GitHub",
     "howItWorks": "Hoe het werkt",
-    "stats": "24 tools · 9 commando's · 5 hooks · MIT",
-    "setupHint": "# opent browserautorisatie — klaar na herstart"
+    "stats": "Open source. Voor altijd gratis. Community-aangedreven.",
+    "contrast": {
+      "title": "Waarom niet gewoon het geheugen van je model gebruiken?",
+      "model": {
+        "col1": "Alleen jouw sessie",
+        "col2": "Vergeet wanneer context vol raakt",
+        "col3": "Je herhaalt dezelfde fout"
+      },
+      "pluggedin": {
+        "col1": "Ervaring van duizenden ontwikkelaars",
+        "col2": "Patronen zijn permanent",
+        "col3": "Waarschuwt je: doe dit niet"
+      },
+      "labels": {
+        "model": "Modelgeheugen",
+        "pluggedin": "Plugged.in"
+      }
+    }
   },
   "oneLiner": {
     "statement": "AI onthoudt. Leert. Evolueert.",
@@ -805,15 +823,61 @@
       "desc": "Geïnspireerd door de Jungiaanse psychologie ontwikkelt je AI een genuanceerd beoordelingsvermogen dat weet wat te doen, wat te vermijden en wanneer iets onconventioneels te proberen."
     }
   },
+  "scenarios": {
+    "title": "Is dit je overkomen?",
+    "subtitle": "Elke ontwikkelaar heeft dit meegemaakt. Het verschil is of je alleen leert of van iedereen.",
+    "bug": {
+      "title": "3 uur, 1 bug",
+      "before": "Recursieve query infinite loop. 14 Stack Overflow-tabbladen. ChatGPT 3 keer gevraagd, elke keer een ander antwoord. Opgelost — 3 uur later.",
+      "after": "\"Dit patroon 47 keer gezien. 89% veroorzaakt door ontbrekende base case.\" — 5 minuten.",
+      "label": "Debug-tijd"
+    },
+    "production": {
+      "title": "2 uur 's nachts in productie",
+      "before": ".env.staging-waarden naar .env.production gepusht. Alerts gingen af. Rollback, postmortem, schaamte.",
+      "after": "\"Deze config is 12 keer foutief naar productie gedeployed. Weet je het zeker?\" — Vóór deploy.",
+      "label": "Deploy-veiligheid"
+    },
+    "framework": {
+      "title": "Nieuw framework, oude fouten",
+      "before": "Nieuw framework leren. Docs gelezen, tutorials gedaan. Maar onverwachte edge cases in productie.",
+      "after": "\"Top 3 fouten met dit framework: connection pooling, cache invalidation, missing error boundaries.\" — Voordat je begint.",
+      "label": "Onboarding"
+    },
+    "beforeLabel": "Zonder Plugged.in",
+    "afterLabel": "Met Plugged.in"
+  },
+  "howItWorks": {
+    "title": "Je AI weet al wat anderen hebben geleerd",
+    "subtitle": "Geen setup. Geen configuratie. Patronen stromen automatisch naar je AI.",
+    "dontDoThis": {
+      "title": "Doe dit niet",
+      "desc": "Terugkerende fouten, anti-patronen, bekende valkuilen uit de community. Je AI waarschuwt je — omdat anderen er al in zijn getrapt."
+    },
+    "tryThis": {
+      "title": "Probeer dit in plaats daarvan",
+      "desc": "Bewezen oplossingen, best practices, door de community gevalideerde benaderingen. Niet de mening van één persoon — de ervaring van honderden ontwikkelaars."
+    },
+    "creative": {
+      "title": "Niemand heeft dit geprobeerd, maar...",
+      "desc": "Onconventionele maar werkende oplossingen. Creatieve benaderingen uit de community — verder dan standaardantwoorden."
+    },
+    "flow": {
+      "step1": "Je codeert",
+      "step2": "Patroon gedetecteerd",
+      "step3": "Gematcht met community",
+      "step4": "Je AI vertelt het je"
+    }
+  },
   "ctaPlugin": {
-    "headline": "Begin in seconden met ontwikkelen",
-    "copy": "Kopiëren",
+    "headline": "De community heeft al geleerd. Leer jij nog steeds alleen?",
+    "copy": "Installeercommando kopiëren",
     "copied": "Gekopieerd!",
+    "setupHint": "Installeer in 30 seconden. Word deel van het collectieve geheugen.",
     "starOnGithub": "Ster op GitHub",
-    "readDocs": "Lees documentatie",
-    "platform": "Platform",
-    "footer": "Open source · MIT · Door VeriTeknik",
-    "setupHint": "# opent browserautorisatie — klaar na herstart"
+    "readDocs": "Documentatie",
+    "platform": "Open platform",
+    "footer": "Voor altijd gratis. Open source. Je patronen blijven privé."
   },
   "dream": {
     "title": "Droomverwerking: Geheugenconsolidatie",
@@ -886,21 +950,21 @@
     }
   },
   "privacy": {
-    "title": "Privacy is wiskunde, geen beloftes.",
-    "subtitle": "We vragen je niet ons te vertrouwen. We hebben het systeem zo gebouwd dat vertrouwen niet nodig is.",
+    "title": "Niemand ziet je code",
+    "subtitle": "Patronen worden gedeeld. Code nooit.",
     "identity": {
-      "title": "Identiteitswissing",
-      "desc": "HMAC-SHA256 eenrichtingshashing zorgt ervoor dat bijdrager-identiteiten wiskundig onomkeerbaar zijn. We kunnen je niet ontmaskeren — zelfs als we dat zouden willen."
+      "title": "Je identiteit is gewist",
+      "desc": "Je ervaringen zijn eenrichtings-versleuteld. Niet herleidbaar naar jou. Onomkeerbaar."
     },
     "kanonymity": {
-      "title": "k-Anonimiteit (k≥3)",
-      "desc": "Patronen blijven onzichtbaar totdat 3 of meer profielen onafhankelijk hetzelfde inzicht ontdekken. Individueel gedrag wordt nooit blootgesteld."
+      "title": "Alleen ben je onzichtbaar",
+      "desc": "Een patroon wordt pas gedeeld als minstens 3 verschillende ontwikkelaars het ontdekken. De fout van één persoon wordt nooit blootgesteld."
     },
     "temporal": {
-      "title": "Temporele Aggregatie",
-      "desc": "Tijdgebaseerde patronen worden gegeneraliseerd. Het systeem weet \"vrijdagen zijn risicovol\" zonder te weten welke vrijdag, welke gebruiker of welk project."
+      "title": "Tijd is vervaagd",
+      "desc": "Wanneer je iets deed is ook geanonimiseerd. Niet \"dinsdag om 14:32\" maar \"deze maand\"."
     },
-    "tagline": "Leer van iedereen. Door niemand geïdentificeerd.",
-    "openSource": "Open source · Zelf te hosten · MIT-licentie"
+    "tagline": "Privacy is wiskunde, geen beloftes. HMAC-SHA256 + k-anonymity (k>=3).",
+    "openSource": "Volledig open source. Verifieer alles."
   }
 }
