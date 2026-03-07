@@ -762,15 +762,33 @@
     "learnMore": "Senkronisite Algılama Nasıl Çalışır"
   },
   "heroPlugin": {
-    "badge": "Claude Code Eklentisi",
-    "headline": "Seninle Birlikte Büyüyen AI Hafızası",
-    "subtitle": "Bağlam açıklamayı bırak. Daha hızlı geliştirmeye başla. Eklentiyi kur, AI'ın oturumlar arası hatırlasın, topluluktan öğrensin ve doğru pattern'i doğru anda sunsun.",
-    "copy": "Kopyala",
+    "badge": "Herkesten Öğrenen Yapay Zekâ Hafızası",
+    "headline": "Yapay Zekân Sadece Seni Hatırlıyor. Biz Herkesi Hatırlıyoruz.",
+    "subtitle": "Binlerce geliştiricinin deneyiminden damıtılmış kolektif hafıza. Senin yapacağın hatayı başkası zaten yaptı. Plugged.in bunu biliyor.",
+    "tagline": "Bireysel hafıza sınırlıdır. Kolektif hafıza süper güçtür.",
+    "copy": "Kurulum komutunu kopyala",
     "copied": "Kopyalandı!",
+    "setupHint": "Claude Code, Cursor, Windsurf ve daha fazlasıyla çalışır",
     "starOnGithub": "GitHub'da Yıldızla",
     "howItWorks": "Nasıl Çalışır",
-    "stats": "24 araç · 9 komut · 5 hook · MIT",
-    "setupHint": "# tarayıcıda yetkilendirme açar — yeniden başlatınca hazır"
+    "stats": "Açık kaynak. Sonsuza kadar ücretsiz. Topluluk destekli.",
+    "contrast": {
+      "title": "Neden sadece modelinin hafızasını kullanmıyorsun?",
+      "model": {
+        "col1": "Sadece senin oturumun",
+        "col2": "Bağlam dolunca unutur",
+        "col3": "Aynı hatayı tekrar yaparsın"
+      },
+      "pluggedin": {
+        "col1": "Binlerce geliştiricinin deneyimi",
+        "col2": "Pattern'ler kalıcıdır",
+        "col3": "Seni uyarır: bunu yapma"
+      },
+      "labels": {
+        "model": "Model Hafızası",
+        "pluggedin": "Plugged.in"
+      }
+    }
   },
   "oneLiner": {
     "statement": "AI'ın Hatırlıyor. Öğreniyor. Gelişiyor.",
@@ -789,14 +807,14 @@
     }
   },
   "ctaPlugin": {
-    "headline": "Saniyeler İçinde Geliştirmeye Başla",
-    "copy": "Kopyala",
+    "headline": "Topluluk zaten öğrendi. Sen hâlâ tek başına mı öğreniyorsun?",
+    "copy": "Kurulum komutunu kopyala",
     "copied": "Kopyalandı!",
+    "setupHint": "30 saniyede kur. Kolektif hafızaya katıl.",
     "starOnGithub": "GitHub'da Yıldızla",
-    "readDocs": "Dokümanları Oku",
-    "platform": "Platform",
-    "footer": "Açık kaynak · MIT · VeriTeknik tarafından",
-    "setupHint": "# tarayıcıda yetkilendirme açar — yeniden başlatınca hazır"
+    "readDocs": "Dokümantasyon",
+    "platform": "Açık Platform",
+    "footer": "Sonsuza kadar ücretsiz. Açık kaynak. Pattern'lerin gizli kalır."
   },
   "dream": {
     "title": "Rüya İşleme: Hafıza Konsolidasyonu",
@@ -869,21 +887,67 @@
     }
   },
   "privacy": {
-    "title": "Gizlilik matematik, söz değil.",
-    "subtitle": "Bize güvenmenizi istemiyoruz. Sistemi güvenin gerekmediği şekilde inşa ettik.",
+    "title": "Kimse Senin Kodunu Görmez",
+    "subtitle": "Pattern'ler paylaşılır. Kod asla.",
     "identity": {
-      "title": "Kimlik Silme",
-      "desc": "HMAC-SHA256 tek yönlü hashleme, katkıda bulunan kimliklerin matematiksel olarak geri döndürülemez olmasını sağlar. İstesek bile sizi ifşa edemeyiz."
+      "title": "Kimliğin silinir",
+      "desc": "Deneyimlerin tek yönlü şifrelenir. Sana izlenemez. Geri dönüşümsüz."
     },
     "kanonymity": {
-      "title": "k-Anonimlik (k≥3)",
-      "desc": "Pattern'ler, 3 veya daha fazla profil bağımsız olarak aynı içgörüyü keşfedene kadar görünmez kalır. Bireysel davranış asla açığa çıkmaz."
+      "title": "Tek başına görünmezsin",
+      "desc": "Bir pattern en az 3 farklı geliştirici tarafından keşfedilmeden toplulukla paylaşılmaz. Tek kişinin hatası asla ifşa olmaz."
     },
     "temporal": {
-      "title": "Zamansal Kümeleme",
-      "desc": "Zaman bazlı pattern'ler genelleştirilir. Sistem \"Cumalar riskli\" bilir ama hangi Cuma, hangi kullanıcı veya hangi proje olduğunu bilmez."
+      "title": "Zaman bulanıklaştırılır",
+      "desc": "Ne zaman yaptığın da anonimleştirilir. \"Salı günü saat 14:32\" değil, \"bu ay\" olarak kaydedilir."
     },
-    "tagline": "Herkesten öğren. Kimse tarafından tanımlanma.",
-    "openSource": "A\u00e7\u0131k kaynak \u00b7 Kendi bar\u0131nd\u0131rma \u00b7 MIT lisansl\u0131"
+    "tagline": "Gizlilik söz değil, matematiktir. HMAC-SHA256 + k-anonymity (k>=3).",
+    "openSource": "Tamamen açık kaynak. Her şeyi doğrulayın."
+  },
+  "scenarios": {
+    "title": "Bu Sana Oldu mu?",
+    "subtitle": "Her geliştirici bunu yaşadı. Fark, tek başına mı yoksa herkesten mi öğrendiğin.",
+    "bug": {
+      "title": "3 Saat, 1 Bug",
+      "before": "Recursive query sonsuz döngü. 14 Stack Overflow sekme. ChatGPT'ye 3 kez sordun, her seferinde farklı cevap. Çözdüm — 3 saat sonra.",
+      "after": "\"Bu pattern 47 kez görüldü. %89'u eksik base case'den kaynaklanıyor.\" — 5 dakika.",
+      "label": "Debug Süresi"
+    },
+    "production": {
+      "title": "Gece 2'de Production'da",
+      "before": ".env.staging değerlerini .env.production'a pushladınız. Alertler çaldı. Rollback, postmortem, utanç.",
+      "after": "\"Bu konfigürasyon production'a 12 kez yanlış deploy edildi. Emin misiniz?\" — Deploy öncesi.",
+      "label": "Deploy Güvenliği"
+    },
+    "framework": {
+      "title": "Yeni Framework, Eski Hatalar",
+      "before": "Yeni framework öğreniyorsun. Dokümantasyon okudun, tutorial yaptın. Ama production'da beklenmedik edge case'ler.",
+      "after": "\"Bu framework'te en sık yapılan 3 hata: connection pooling, cache invalidation, eksik error boundary.\" — Başlamadan önce.",
+      "label": "İşe Alışma"
+    },
+    "beforeLabel": "Plugged.in Olmadan",
+    "afterLabel": "Plugged.in ile"
+  },
+  "howItWorks": {
+    "title": "Yapay Zekân Başkalarının Öğrendiğini Zaten Biliyor",
+    "subtitle": "Kurulum yok. Konfigürasyon yok. Pattern'ler otomatik olarak yapay zekâna akar.",
+    "dontDoThis": {
+      "title": "Bunu Yapma",
+      "desc": "Topluluktan gelen tekrarlayan hatalar, anti-pattern'ler, bilinen tuzaklar. Yapay zekân seni uyarır — çünkü başkaları zaten düştü."
+    },
+    "tryThis": {
+      "title": "Bunu Dene",
+      "desc": "Kanıtlanmış çözümler, en iyi pratikler, topluluk tarafından doğrulanmış yaklaşımlar. Tek kişinin görüşü değil — yüzlerce geliştiricinin deneyimi."
+    },
+    "creative": {
+      "title": "Bunu Kimse Denemedi Ama...",
+      "desc": "Alışılmadık ama işe yarayan çözümler. Topluluktan gelen yaratıcı yaklaşımlar — standart cevapların ötesi."
+    },
+    "flow": {
+      "step1": "Sen kodlarsın",
+      "step2": "Pattern tespit edilir",
+      "step3": "Toplulukla eşleştirilir",
+      "step4": "Yapay zekân sana söyler"
+    }
   }
 }
