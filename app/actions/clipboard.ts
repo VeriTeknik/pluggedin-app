@@ -1,11 +1,9 @@
 'use server';
 
 import { desc, eq, sql } from 'drizzle-orm';
-import { getServerSession } from 'next-auth';
 
 import { db } from '@/db';
 import { clipboardsTable, projectsTable } from '@/db/schema';
-import { authOptions } from '@/lib/auth';
 import {
   buildClipboardConditions,
   calculateClipboardSize,
@@ -16,6 +14,7 @@ import {
   validateClipboardSize,
   validateContentEncoding,
 } from '@/lib/clipboard';
+import { requireAuthUserId } from '@/lib/require-auth';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -31,17 +30,6 @@ interface ClipboardResult {
   error?: string;
 }
 
-/**
- * Resolve the authenticated user's ID from the server session.
- * Throws if not authenticated.
- */
-async function requireAuthUserId(): Promise<string> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('Authentication required');
-  }
-  return session.user.id;
-}
 
 /**
  * Get profile UUID from userId by finding their active project's active profile

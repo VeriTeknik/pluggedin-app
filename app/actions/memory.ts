@@ -1,18 +1,14 @@
 'use server';
 
-import { and, count, desc, eq, sql } from 'drizzle-orm';
-import { getServerSession } from 'next-auth';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import {
-  freshMemoryTable,
-  gutPatternsTable,
   memoryRingTable,
   memorySessionsTable,
   projectsTable,
 } from '@/db/schema';
-import { authOptions } from '@/lib/auth';
 import { classifyBatch } from '@/lib/memory/analytics-agent';
 import { injectContextual,submitFeedback } from '@/lib/memory/cbp/injection-engine';
 import { getPromotionStats } from '@/lib/memory/cbp/promotion-service';
@@ -27,6 +23,7 @@ import {
   addObservation as addObservationService,
   getSessionObservations as getSessionObservationsService,
 } from '@/lib/memory/observation-service';
+import { fetchMemoryRing, fetchMemoryStats } from '@/lib/memory/queries';
 import {
   getMemoryDetails as getMemoryDetailsService,
   getMemoryTimeline as getMemoryTimelineService,
@@ -38,7 +35,6 @@ import {
   startSession as startSessionService,
 } from '@/lib/memory/session-service';
 import type {
-  DecayStage,
   MemoryResult,
   MemoryStats,
   RingType,
@@ -48,6 +44,7 @@ import {
 } from '@/lib/memory/types';
 import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
 import { generateZReport, getZReports as getZReportsService } from '@/lib/memory/z-report-service';
+import { requireAuthUserId } from '@/lib/require-auth';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -65,17 +62,6 @@ function formatError<T = unknown>(error: unknown): MemoryResult<T> {
   };
 }
 
-/**
- * Resolve the authenticated user's ID from the server session.
- * Throws if not authenticated — callers catch via formatError.
- */
-async function requireAuthUserId(): Promise<string> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('Authentication required');
-  }
-  return session.user.id;
-}
 
 /**
  * Higher-order helper to DRY up profile-scoped server actions.
@@ -379,23 +365,13 @@ export async function getMemoryDetails(
 const _getMemoryRing = createProfileAction(
   getMemoryRingSchema,
   async (parsed, profileUuid) => {
-    const conditions = [eq(memoryRingTable.profile_uuid, profileUuid)];
-
-    if (parsed?.ringType) {
-      conditions.push(eq(memoryRingTable.ring_type, parsed.ringType));
-    }
-
-    if (parsed?.agentUuid) {
-      conditions.push(eq(memoryRingTable.agent_uuid, parsed.agentUuid));
-    }
-
-    const memories = await db
-      .select()
-      .from(memoryRingTable)
-      .where(and(...conditions))
-      .orderBy(desc(memoryRingTable.relevance_score))
-      .limit(parsed?.limit ?? 50)
-      .offset(parsed?.offset ?? 0);
+    const memories = await fetchMemoryRing({
+      profileUuid,
+      ringType: parsed?.ringType,
+      agentUuid: parsed?.agentUuid,
+      limit: parsed?.limit ?? 50,
+      offset: parsed?.offset ?? 0,
+    });
 
     return { success: true as const, data: memories };
   }
@@ -447,73 +423,11 @@ export async function getMemoryStats(): Promise<MemoryResult<MemoryStats>> {
       return { success: false, error: 'No active profile found' };
     }
 
-    // Session counts
-    const [sessionStats] = await db
-      .select({
-        total: sql<number>`count(*)`,
-        active: sql<number>`count(*) filter (where ${memorySessionsTable.status} = 'active')`,
-      })
-      .from(memorySessionsTable)
-      .where(eq(memorySessionsTable.profile_uuid, profileUuid));
-
-    // Fresh memory counts
-    const [freshStats] = await db
-      .select({
-        total: sql<number>`count(*)`,
-        unclassified: sql<number>`count(*) filter (where ${freshMemoryTable.classified} = false)`,
-      })
-      .from(freshMemoryTable)
-      .where(eq(freshMemoryTable.profile_uuid, profileUuid));
-
-    // Ring counts by type
-    const ringCounts = await db
-      .select({
-        ringType: memoryRingTable.ring_type,
-        count: count(),
-      })
-      .from(memoryRingTable)
-      .where(eq(memoryRingTable.profile_uuid, profileUuid))
-      .groupBy(memoryRingTable.ring_type);
-
-    // Decay stage counts
-    const decayCounts = await db
-      .select({
-        stage: memoryRingTable.current_decay_stage,
-        count: count(),
-      })
-      .from(memoryRingTable)
-      .where(eq(memoryRingTable.profile_uuid, profileUuid))
-      .groupBy(memoryRingTable.current_decay_stage);
-
-    // Gut patterns count: intentionally global (collective wisdom).
-    // Only patterns meeting k-anonymity threshold are returned to users via the query endpoint.
-    // This count reveals no per-profile data.
-    const [gutStats] = await db
-      .select({ total: count() })
-      .from(gutPatternsTable);
-
-    // Build stats object
-    const ringCountMap: Record<string, number> = {};
-    for (const r of ringCounts) {
-      ringCountMap[r.ringType] = r.count;
-    }
-
-    const decayCountMap: Record<string, number> = {};
-    for (const d of decayCounts) {
-      decayCountMap[d.stage] = d.count;
-    }
+    const stats = await fetchMemoryStats(profileUuid);
 
     return {
       success: true,
-      data: {
-        totalSessions: sessionStats?.total ?? 0,
-        activeSessions: sessionStats?.active ?? 0,
-        totalFreshMemories: freshStats?.total ?? 0,
-        unclassifiedCount: freshStats?.unclassified ?? 0,
-        ringCounts: ringCountMap as Record<RingType, number>,
-        decayStageCounts: decayCountMap as Record<DecayStage, number>,
-        totalGutPatterns: gutStats?.total ?? 0,
-      },
+      data: stats,
     };
   } catch (error) {
     return formatError(error);
@@ -614,13 +528,10 @@ export async function submitCBPFeedback(
   input: unknown
 ): Promise<MemoryResult> {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: 'Authentication required' };
-    }
+    const userId = await requireAuthUserId();
 
     const parsed = cbpFeedbackSchema.parse(input);
-    const profileUuid = await getActiveProfileUuid(session.user.id);
+    const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
     }
@@ -644,10 +555,7 @@ export async function queryCBPPatterns(
   try {
     // CBP patterns are k-anonymous collective data (no profile scoping needed),
     // but we still require an authenticated session.
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return { success: false, error: 'Authentication required' };
-    }
+    await requireAuthUserId();
 
     const parsed = cbpQuerySchema.parse({ query, maxResults });
     return injectContextual(parsed.query, parsed.maxResults);
@@ -658,10 +566,7 @@ export async function queryCBPPatterns(
 
 export async function getCBPStats(): Promise<MemoryResult> {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return { success: false, error: 'Authentication required' };
-    }
+    await requireAuthUserId();
 
     return getPromotionStats();
   } catch (error) {
