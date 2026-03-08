@@ -193,6 +193,20 @@ export async function getSessionByMemorySessionId(memorySessionId: string) {
   return session ?? null;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// memory_session_id = "ms_" + nanoid(21) → exactly 24 chars
+const MEMORY_SESSION_ID_RE = /^ms_[A-Za-z0-9_-]{21}$/;
+
+/**
+ * Resolve a session by either UUID or memory_session_id (ms_xxx) format.
+ * Returns null if the format is unrecognized.
+ */
+export async function resolveSession(id: string) {
+  if (UUID_RE.test(id)) return getSessionByUuid(id);
+  if (MEMORY_SESSION_ID_RE.test(id)) return getSessionByMemorySessionId(id);
+  return null;
+}
+
 /**
  * Store Z-report for a session
  */

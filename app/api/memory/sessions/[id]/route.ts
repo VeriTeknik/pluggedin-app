@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
-  getSessionByUuid,
-  getSessionByMemorySessionId,
+  resolveSession,
   endSession,
 } from '@/lib/memory/session-service';
 import { generateZReport } from '@/lib/memory/z-report-service';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../../auth';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MEMORY_SESSION_ID_RE = /^ms_[A-Za-z0-9_-]{10,30}$/;
-
-/** Resolve session by UUID or memory_session_id (ms_xxx) format */
-async function resolveSession(id: string) {
-  if (UUID_RE.test(id)) return getSessionByUuid(id);
-  if (MEMORY_SESSION_ID_RE.test(id)) return getSessionByMemorySessionId(id);
-  return null;
-}
 
 /**
  * GET /api/memory/sessions/[id] - Get session details
