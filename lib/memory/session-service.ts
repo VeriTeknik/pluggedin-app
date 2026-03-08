@@ -181,6 +181,19 @@ export async function getSessionByUuid(sessionUuid: string) {
 }
 
 /**
+ * Get session by memory_session_id (ms_xxx format)
+ */
+export async function getSessionByMemorySessionId(memorySessionId: string) {
+  const [session] = await db
+    .select()
+    .from(memorySessionsTable)
+    .where(eq(memorySessionsTable.memory_session_id, memorySessionId))
+    .limit(1);
+
+  return session ?? null;
+}
+
+/**
  * Store Z-report for a session
  */
 export async function storeZReport(

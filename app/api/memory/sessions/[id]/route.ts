@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   getSessionByUuid,
+  getSessionByMemorySessionId,
   endSession,
 } from '@/lib/memory/session-service';
 import { generateZReport } from '@/lib/memory/z-report-service';
@@ -9,8 +10,19 @@ import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../../auth';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MEMORY_SESSION_ID_RE = /^ms_[A-Za-z0-9_-]{10,30}$/;
+
+/** Resolve session by UUID or memory_session_id (ms_xxx) format */
+async function resolveSession(id: string) {
+  if (UUID_RE.test(id)) return getSessionByUuid(id);
+  if (MEMORY_SESSION_ID_RE.test(id)) return getSessionByMemorySessionId(id);
+  return null;
+}
+
 /**
  * GET /api/memory/sessions/[id] - Get session details
+ * Accepts either UUID or memory_session_id (ms_xxx) format.
  */
 export async function GET(
   request: NextRequest,
@@ -30,24 +42,9 @@ export async function GET(
 
     const { id } = await params;
 
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid session ID format' },
-        { status: 400 }
-      );
-    }
+    const session = await resolveSession(id);
 
-    const session = await getSessionByUuid(id);
-
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Session not found' },
-        { status: 404 }
-      );
-    }
-
-    if (session.profile_uuid !== auth.activeProfile.uuid) {
+    if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
       return NextResponse.json(
         { success: false, error: 'Session not found' },
         { status: 404 }
@@ -65,6 +62,7 @@ export async function GET(
 
 /**
  * PATCH /api/memory/sessions/[id] - End a session (status → completed)
+ * Accepts either UUID or memory_session_id (ms_xxx) format.
  */
 export async function PATCH(
   request: NextRequest,
@@ -84,16 +82,8 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid session ID format' },
-        { status: 400 }
-      );
-    }
-
-    // Verify ownership: look up session to get its memory_session_id
-    const session = await getSessionByUuid(id);
+    // Verify ownership: look up session by UUID or memory_session_id
+    const session = await resolveSession(id);
     if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
       return NextResponse.json(
         { success: false, error: 'Session not found' },
