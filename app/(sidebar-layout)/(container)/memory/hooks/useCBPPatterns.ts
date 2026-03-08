@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback,useState } from 'react';
 
-import { queryCBPPatterns, submitCBPFeedback, getCBPStats } from '@/app/actions/memory';
+import { getCBPStats,queryCBPPatterns, submitCBPFeedback } from '@/app/actions/memory';
 
 export interface CBPPattern {
   uuid: string;

@@ -25,12 +25,7 @@ export function useClipboard() {
     isLoading,
   } = useSWR(
     session?.user?.id ? ['clipboard', session.user.id] : null,
-    async () => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-      return await getClipboardEntries(session.user.id);
-    }
+    async () => getClipboardEntries()
   );
 
   const entries: ClipboardEntry[] = entriesResponse?.success ? entriesResponse.entries || [] : [];
@@ -47,11 +42,7 @@ export function useClipboard() {
       createdByModel?: string;
       ttlSeconds?: number;
     }) => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-
-      const result = await setClipboardEntry(session.user.id, options);
+      const result = await setClipboardEntry(options);
 
       if (result.success) {
         await mutate();
@@ -61,16 +52,12 @@ export function useClipboard() {
 
       return result.entry;
     },
-    [session?.user?.id, mutate]
+    [mutate]
   );
 
   const deleteEntry = useCallback(
     async (options: { name?: string; idx?: number; clearAll?: boolean }) => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-
-      const result = await deleteClipboardEntry(session.user.id, options);
+      const result = await deleteClipboardEntry(options);
 
       if (result.success) {
         await mutate();
@@ -80,7 +67,7 @@ export function useClipboard() {
 
       return result.success;
     },
-    [session?.user?.id, mutate]
+    [mutate]
   );
 
   const stats = useMemo((): ClipboardStats => {

@@ -24,7 +24,7 @@ export function useMemorySessions(options?: UseMemorySessionsOptions) {
     session?.user?.id
       ? ['memory-sessions', session.user.id, options?.agentUuid, options?.limit, options?.offset, options?.status]
       : null,
-    async () => getMemorySessions(session!.user!.id, options)
+    async () => getMemorySessions(options)
   );
 
   const sessions = response?.success && response.data ? (response.data as Array<Record<string, unknown>>) : [];
@@ -49,7 +49,7 @@ export function useZReports(options?: { agentUuid?: string; limit?: number }) {
     session?.user?.id
       ? ['z-reports', session.user.id, options?.agentUuid, options?.limit]
       : null,
-    async () => getZReports(session!.user!.id, options)
+    async () => getZReports(options)
   );
 
   const reports = response?.success && response.data ? (response.data as Array<Record<string, unknown>>) : [];

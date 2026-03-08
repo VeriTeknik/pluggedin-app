@@ -1,6 +1,7 @@
 'use server';
 
 import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -11,9 +12,31 @@ import {
   memorySessionsTable,
   projectsTable,
 } from '@/db/schema';
+import { authOptions } from '@/lib/auth';
+import { classifyBatch } from '@/lib/memory/analytics-agent';
+import { injectContextual,submitFeedback } from '@/lib/memory/cbp/injection-engine';
+import { getPromotionStats } from '@/lib/memory/cbp/promotion-service';
+import { processDecay } from '@/lib/memory/decay-engine';
+import { queryIntuition } from '@/lib/memory/gut-agent';
 import {
-  FEEDBACK_TYPE_VALUES,
-} from '@/lib/memory/types';
+  getIndividuationHistory,
+  getIndividuationScore,
+  injectWithArchetype,
+} from '@/lib/memory/jungian';
+import {
+  addObservation as addObservationService,
+  getSessionObservations as getSessionObservationsService,
+} from '@/lib/memory/observation-service';
+import {
+  getMemoryDetails as getMemoryDetailsService,
+  getMemoryTimeline as getMemoryTimelineService,
+  searchMemories as searchMemoriesService,
+} from '@/lib/memory/retrieval-service';
+import {
+  endSession as endSessionService,
+  getSessionHistory,
+  startSession as startSessionService,
+} from '@/lib/memory/session-service';
 import type {
   DecayStage,
   MemoryResult,
@@ -21,33 +44,10 @@ import type {
   RingType,
 } from '@/lib/memory/types';
 import {
-  startSession as startSessionService,
-  endSession as endSessionService,
-  getSessionHistory,
-} from '@/lib/memory/session-service';
-import {
-  addObservation as addObservationService,
-  getSessionObservations as getSessionObservationsService,
-} from '@/lib/memory/observation-service';
-import {
-  searchMemories as searchMemoriesService,
-  getMemoryTimeline as getMemoryTimelineService,
-  getMemoryDetails as getMemoryDetailsService,
-} from '@/lib/memory/retrieval-service';
-import { generateZReport, getZReports as getZReportsService } from '@/lib/memory/z-report-service';
-import { classifyBatch } from '@/lib/memory/analytics-agent';
-import { processDecay } from '@/lib/memory/decay-engine';
-import { aggregatePatterns, queryIntuition } from '@/lib/memory/gut-agent';
+  FEEDBACK_TYPE_VALUES,
+} from '@/lib/memory/types';
 import { deleteMemoryRingVector } from '@/lib/memory/vector-service';
-import { submitFeedback, injectContextual } from '@/lib/memory/cbp/injection-engine';
-import { getPromotionStats } from '@/lib/memory/cbp/promotion-service';
-import {
-  injectWithArchetype,
-  getIndividuationScore,
-  getIndividuationHistory,
-} from '@/lib/memory/jungian';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { generateZReport, getZReports as getZReportsService } from '@/lib/memory/z-report-service';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -66,15 +66,28 @@ function formatError<T = unknown>(error: unknown): MemoryResult<T> {
 }
 
 /**
+ * Resolve the authenticated user's ID from the server session.
+ * Throws if not authenticated — callers catch via formatError.
+ */
+async function requireAuthUserId(): Promise<string> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    throw new Error('Authentication required');
+  }
+  return session.user.id;
+}
+
+/**
  * Higher-order helper to DRY up profile-scoped server actions.
- * Handles: validate input → resolve profile → execute handler → catch errors.
+ * Handles: authenticate → validate input → resolve profile → execute handler → catch errors.
  */
 function createProfileAction<I, O = unknown>(
   schema: z.ZodSchema<I>,
   handler: (parsed: I, profileUuid: string) => Promise<MemoryResult<O>>
-): (userId: string, input: unknown) => Promise<MemoryResult<O>> {
-  return async (userId: string, input: unknown): Promise<MemoryResult<O>> => {
+): (input?: unknown) => Promise<MemoryResult<O>> {
+  return async (input?: unknown): Promise<MemoryResult<O>> => {
     try {
+      const userId = await requireAuthUserId();
       const parsed = schema.parse(input);
       const profileUuid = await getActiveProfileUuid(userId);
       if (!profileUuid) {
@@ -182,10 +195,10 @@ async function getActiveProfileUuid(userId: string): Promise<string | null> {
 // ============================================================================
 
 export async function startMemorySession(
-  userId: string,
   params: { contentSessionId: string; agentUuid?: string }
 ): Promise<MemoryResult<{ uuid: string; memorySessionId: string }>> {
   try {
+    const userId = await requireAuthUserId();
     const parsed = startSessionSchema.parse(params);
 
     const profileUuid = await getActiveProfileUuid(userId);
@@ -204,10 +217,10 @@ export async function startMemorySession(
 }
 
 export async function endMemorySession(
-  userId: string,
   memorySessionId: string
 ): Promise<MemoryResult<{ uuid: string }>> {
   try {
+    const userId = await requireAuthUserId();
     const parsed = endSessionSchema.parse({ memorySessionId });
 
     const profileUuid = await getActiveProfileUuid(userId);
@@ -230,10 +243,10 @@ export async function endMemorySession(
 }
 
 export async function getMemorySessions(
-  userId: string,
   options?: { agentUuid?: string; limit?: number; offset?: number; status?: 'active' | 'completed' | 'abandoned' }
 ): Promise<MemoryResult> {
   try {
+    const userId = await requireAuthUserId();
     const parsed = getSessionsSchema.parse(options);
 
     const profileUuid = await getActiveProfileUuid(userId);
@@ -253,10 +266,10 @@ export async function getMemorySessions(
 // ============================================================================
 
 export async function addObservation(
-  userId: string,
   params: z.infer<typeof addObservationSchema>
 ): Promise<MemoryResult<{ uuid: string }>> {
   try {
+    const userId = await requireAuthUserId();
     const parsed = addObservationSchema.parse(params);
 
     const profileUuid = await getActiveProfileUuid(userId);
@@ -274,11 +287,11 @@ export async function addObservation(
 }
 
 export async function getSessionObservations(
-  userId: string,
   sessionUuid: string,
   options?: { limit?: number; offset?: number }
 ): Promise<MemoryResult> {
   try {
+    const userId = await requireAuthUserId();
     const parsed = getSessionObservationsSchema.parse({
       sessionUuid,
       ...options,
@@ -330,10 +343,9 @@ const _searchMemories = createProfileAction(
 );
 
 export async function searchMemories(
-  userId: string,
   params: z.infer<typeof searchMemoriesSchema>
 ): Promise<MemoryResult> {
-  return _searchMemories(userId, params);
+  return _searchMemories(params);
 }
 
 const _getMemoryTimeline = createProfileAction(
@@ -343,10 +355,9 @@ const _getMemoryTimeline = createProfileAction(
 );
 
 export async function getMemoryTimeline(
-  userId: string,
   memoryUuids: string[]
 ): Promise<MemoryResult> {
-  return _getMemoryTimeline(userId, { memoryUuids });
+  return _getMemoryTimeline({ memoryUuids });
 }
 
 const _getMemoryDetails = createProfileAction(
@@ -356,10 +367,9 @@ const _getMemoryDetails = createProfileAction(
 );
 
 export async function getMemoryDetails(
-  userId: string,
   memoryUuids: string[]
 ): Promise<MemoryResult> {
-  return _getMemoryDetails(userId, { memoryUuids });
+  return _getMemoryDetails({ memoryUuids });
 }
 
 // ============================================================================
@@ -392,10 +402,9 @@ const _getMemoryRing = createProfileAction(
 );
 
 export async function getMemoryRing(
-  userId: string,
   options?: { ringType?: RingType; limit?: number; offset?: number; agentUuid?: string }
 ): Promise<MemoryResult> {
-  return _getMemoryRing(userId, options);
+  return _getMemoryRing(options);
 }
 
 const _deleteMemory = createProfileAction(
@@ -421,20 +430,18 @@ const _deleteMemory = createProfileAction(
 );
 
 export async function deleteMemory(
-  userId: string,
   memoryUuid: string
 ): Promise<MemoryResult> {
-  return _deleteMemory(userId, { memoryUuid });
+  return _deleteMemory({ memoryUuid });
 }
 
 // ============================================================================
 // Statistics
 // ============================================================================
 
-export async function getMemoryStats(
-  userId: string
-): Promise<MemoryResult<MemoryStats>> {
+export async function getMemoryStats(): Promise<MemoryResult<MemoryStats>> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -518,10 +525,10 @@ export async function getMemoryStats(
 // ============================================================================
 
 export async function getZReports(
-  userId: string,
   options?: { agentUuid?: string; limit?: number }
 ): Promise<MemoryResult> {
   try {
+    const userId = await requireAuthUserId();
     const parsed = getZReportsSchema.parse(options);
 
     const profileUuid = await getActiveProfileUuid(userId);
@@ -540,10 +547,9 @@ export async function getZReports(
 // Background Processing Triggers
 // ============================================================================
 
-export async function triggerClassification(
-  userId: string
-): Promise<MemoryResult> {
+export async function triggerClassification(): Promise<MemoryResult> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -555,8 +561,9 @@ export async function triggerClassification(
   }
 }
 
-export async function triggerDecay(userId: string): Promise<MemoryResult> {
+export async function triggerDecay(): Promise<MemoryResult> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };

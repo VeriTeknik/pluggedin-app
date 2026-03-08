@@ -40,7 +40,7 @@ export function useMemorySearch() {
       setError(null);
 
       try {
-        const response = await searchMemories(session.user.id, params);
+        const response = await searchMemories(params);
         if (response.success && response.data) {
           setResults(response.data as SearchResult[]);
         } else {
@@ -62,7 +62,7 @@ export function useMemorySearch() {
       if (!session?.user?.id) return null;
 
       try {
-        const response = await getMemoryTimeline(session.user.id, memoryUuids);
+        const response = await getMemoryTimeline(memoryUuids);
         if (response.success) {
           return response.data;
         }
@@ -79,7 +79,7 @@ export function useMemorySearch() {
       if (!session?.user?.id) return null;
 
       try {
-        const response = await getMemoryDetails(session.user.id, memoryUuids);
+        const response = await getMemoryDetails(memoryUuids);
         if (response.success) {
           return response.data;
         }

@@ -47,12 +47,7 @@ export function useMemoryRing(options?: UseMemoryRingOptions) {
     session?.user?.id
       ? ['memory-ring', session.user.id, options?.ringType, options?.agentUuid, options?.limit, options?.offset]
       : null,
-    async () => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-      return await getMemoryRing(session.user.id, options);
-    }
+    async () => getMemoryRing(options)
   );
 
   const memories: MemoryRingEntry[] = response?.success && response.data
@@ -61,18 +56,14 @@ export function useMemoryRing(options?: UseMemoryRingOptions) {
 
   const removeMemory = useCallback(
     async (memoryUuid: string) => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-
-      const result = await deleteMemory(session.user.id, memoryUuid);
+      const result = await deleteMemory(memoryUuid);
       if (result.success) {
         await mutate();
       } else {
         throw new Error(result.error || 'Failed to delete memory');
       }
     },
-    [session?.user?.id, mutate]
+    [mutate]
   );
 
   return {
