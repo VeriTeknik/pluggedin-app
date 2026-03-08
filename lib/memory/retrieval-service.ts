@@ -87,12 +87,17 @@ export async function searchMemories(
 
       // Record access for matched memories (fire-and-forget, non-blocking)
       if (uuids.length > 0) {
-        db.update(memoryRingTable)
+        void db.update(memoryRingTable)
           .set({
             access_count: sql`${memoryRingTable.access_count} + 1`,
             last_accessed_at: new Date(),
           })
-          .where(inArray(memoryRingTable.uuid, uuids))
+          .where(
+            and(
+              inArray(memoryRingTable.uuid, uuids),
+              eq(memoryRingTable.profile_uuid, params.profileUuid)
+            )
+          )
           .catch((error) => {
             console.error('Failed to update memory access metadata', { error, uuids });
           });
