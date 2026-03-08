@@ -19,6 +19,17 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -82,6 +93,7 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'abandoned'>('all');
   const [pruning, setPruning] = useState(false);
+  const [pruneError, setPruneError] = useState<string | null>(null);
   const { sessions, isLoading, refresh } = useMemorySessions({
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
@@ -93,16 +105,18 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
   const [loadingObs, setLoadingObs] = useState<string | null>(null);
 
   const handlePrune = async () => {
-    if (!confirm(t('fresh.pruneConfirm'))) return;
     setPruning(true);
+    setPruneError(null);
     try {
       const res = await fetch('/api/memory/sessions/prune', { method: 'POST' });
       if (res.ok) {
         refresh();
         onRefresh?.();
+      } else {
+        setPruneError('Failed to prune sessions');
       }
     } catch {
-      // Non-fatal
+      setPruneError('Network error while pruning sessions');
     } finally {
       setPruning(false);
     }
@@ -188,17 +202,40 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
             </SelectContent>
           </Select>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePrune}
-          disabled={pruning}
-          className="text-xs text-destructive hover:text-destructive"
-        >
-          {pruning ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
-          {t('fresh.prune')}
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pruning}
+              className="text-xs text-destructive hover:text-destructive"
+            >
+              {pruning ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+              {t('fresh.prune')}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('fresh.prune')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('fresh.pruneConfirm')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('clipboard.deleteDialog.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={handlePrune}>{t('clipboard.deleteDialog.delete')}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
+
+      {pruneError && (
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{pruneError}</span>
+          <Button variant="ghost" size="sm" className="ml-auto h-6 px-2 text-xs" onClick={() => setPruneError(null)}>
+            <XCircle className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
 
       {typedSessions.length === 0 ? (
         <Card className="h-48 flex items-center justify-center">

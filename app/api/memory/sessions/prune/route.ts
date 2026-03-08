@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
         and(
           inArray(memorySessionsTable.uuid, sessionUuids),
           eq(memorySessionsTable.profile_uuid, auth.activeProfile.uuid),
-          eq(memorySessionsTable.status, 'abandoned')
+          eq(memorySessionsTable.status, 'abandoned'),
+          lt(memorySessionsTable.ended_at, threshold)
         )
       )
       .returning({ uuid: memorySessionsTable.uuid });
