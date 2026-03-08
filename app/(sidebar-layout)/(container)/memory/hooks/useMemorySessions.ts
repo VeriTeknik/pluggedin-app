@@ -9,6 +9,7 @@ interface UseMemorySessionsOptions {
   agentUuid?: string;
   limit?: number;
   offset?: number;
+  status?: 'active' | 'completed' | 'abandoned';
 }
 
 export function useMemorySessions(options?: UseMemorySessionsOptions) {
@@ -21,14 +22,9 @@ export function useMemorySessions(options?: UseMemorySessionsOptions) {
     isLoading,
   } = useSWR(
     session?.user?.id
-      ? ['memory-sessions', session.user.id, options?.agentUuid, options?.limit, options?.offset]
+      ? ['memory-sessions', session.user.id, options?.agentUuid, options?.limit, options?.offset, options?.status]
       : null,
-    async () => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-      return await getMemorySessions(session.user.id, options);
-    }
+    async () => getMemorySessions(session!.user!.id, options)
   );
 
   const sessions = response?.success && response.data ? (response.data as Array<Record<string, unknown>>) : [];
@@ -53,12 +49,7 @@ export function useZReports(options?: { agentUuid?: string; limit?: number }) {
     session?.user?.id
       ? ['z-reports', session.user.id, options?.agentUuid, options?.limit]
       : null,
-    async () => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-      return await getZReports(session.user.id, options);
-    }
+    async () => getZReports(session!.user!.id, options)
   );
 
   const reports = response?.success && response.data ? (response.data as Array<Record<string, unknown>>) : [];

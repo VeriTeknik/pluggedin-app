@@ -235,6 +235,16 @@
       "outcome": "Outcome",
       "classified": "Classified",
       "actions": "Actions"
+    },
+    "filter": {
+      "all": "All Sessions"
+    },
+    "prune": "Prune Old",
+    "pruneConfirm": "Delete all abandoned sessions older than 24 hours? This cannot be undone.",
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}"
     }
   },
   "collective": {

@@ -104,6 +104,7 @@ const getSessionsSchema = z.object({
   agentUuid: z.string().uuid().optional(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
+  status: z.enum(['active', 'completed', 'abandoned']).optional(),
 }).optional();
 
 const addObservationSchema = z.object({
@@ -230,7 +231,7 @@ export async function endMemorySession(
 
 export async function getMemorySessions(
   userId: string,
-  options?: { agentUuid?: string; limit?: number; offset?: number }
+  options?: { agentUuid?: string; limit?: number; offset?: number; status?: 'active' | 'completed' | 'abandoned' }
 ): Promise<MemoryResult> {
   try {
     const parsed = getSessionsSchema.parse(options);

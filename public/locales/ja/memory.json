@@ -225,6 +225,16 @@
       "outcome": "結果",
       "classified": "分類",
       "actions": "アクション"
+    },
+    "filter": {
+      "all": "すべてのセッション"
+    },
+    "prune": "古いものを削除",
+    "pruneConfirm": "24時間以上前の放棄されたセッションを削除しますか？この操作は元に戻せません。",
+    "pagination": {
+      "prev": "前へ",
+      "next": "次へ",
+      "page": "ページ {{page}}"
     }
   },
   "collective": {
