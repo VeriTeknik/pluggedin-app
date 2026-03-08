@@ -850,7 +850,7 @@
   },
   "dream": {
     "title": "Dream Processing: Memory Consolidation",
-    "subtitle": "Like the human brain during sleep, your AI consolidates scattered fragments into authoritative knowledge \u2014 dramatically reducing token overhead.",
+    "subtitle": "Like the human brain during sleep, your AI consolidates scattered fragments into authoritative knowledge — dramatically reducing token overhead.",
     "before": "15 fragmented memories",
     "after": "1 authoritative guide",
     "processingLabel": "Dream Processing",
@@ -888,7 +888,7 @@
     "learnMore": "How Individuation Scoring Works"
   },
   "platformCapabilities": {
-    "title": "Everything Your AI Needs. One Platform.",
+    "title": "One Platform. Every Model. Zero Fragmentation.",
     "subtitle": "Plugged.in unifies 2,700+ MCP servers, persistent memory, documents, and knowledge bases into a single model-agnostic infrastructure — your data stays with you, not the model.",
     "tagline": "One plugin. Every model. Your data. Zero lock-in.",
     "cards": {
@@ -898,7 +898,7 @@
       },
       "memory": {
         "title": "Persistent Memory",
-        "desc": "Cross-session, cross-platform memory that never resets. Your AI retains context, preferences, and working patterns — no more explaining yourself from scratch every conversation."
+        "desc": "Individual + collective memory. Your AI learns from your sessions — and from patterns discovered by thousands of developers. Privacy-preserved via HMAC-SHA256 + k-anonymity."
       },
       "knowledge": {
         "title": "Knowledge Base (RAG)",
@@ -909,8 +909,8 @@
         "desc": "Works with every AI model and platform. Claude, ChatGPT, Cursor, Cline, LM Studio — switch models freely, your tools, memory, and knowledge travel with you."
       },
       "dataOwnership": {
-        "title": "Data Stays With You",
-        "desc": "Your data lives in your infrastructure, not inside the model. No fragmentation across platforms, no context lost between sessions. Full data portability and export anytime."
+        "title": "Enterprise Security",
+        "desc": "AES-256-GCM encryption, OAuth 2.1/PKCE, firejail sandboxing. Six security review rounds. SOC 2 ready architecture."
       },
       "openSource": {
         "title": "Open Source & Self-Hostable",
