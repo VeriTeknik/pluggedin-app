@@ -120,9 +120,6 @@ export function Footer({ className }: { className?: string }) {
         </div>
         <div className="mt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium mr-2">
-              Release Candidate
-            </span>
             &copy; {year} VeriTeknik B.V. All rights reserved.
           </p>
         </div>

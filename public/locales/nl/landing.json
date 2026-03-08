@@ -919,7 +919,7 @@
     "learnMore": "Hoe Individuatiescoring Werkt"
   },
   "platformCapabilities": {
-    "title": "Alles wat je AI nodig heeft. Eén platform.",
+    "title": "Één platform. Elk model. Nul fragmentatie.",
     "subtitle": "Plugged.in verenigt 2.700+ MCP-servers, persistent geheugen, documenten en kennisbanken in één modelonafhankelijke infrastructuur — je data blijft bij jou, niet bij het model.",
     "tagline": "Eén plugin. Elk model. Jouw data. Geen lock-in.",
     "cards": {
@@ -929,7 +929,7 @@
       },
       "memory": {
         "title": "Persistent Geheugen",
-        "desc": "Geheugen dat niet reset tussen sessies en platformen. Je AI behoudt context, voorkeuren en werkpatronen — stop met jezelf opnieuw uitleggen bij elk gesprek."
+        "desc": "Individueel + collectief geheugen. Je AI leert van je sessies — en van patronen die duizenden ontwikkelaars ontdekken. Privacy beschermd via HMAC-SHA256 + k-anonimiteit."
       },
       "knowledge": {
         "title": "Kennisbank (RAG)",
@@ -940,8 +940,8 @@
         "desc": "Werkt met elk AI-model en platform. Claude, ChatGPT, Cursor, Cline, LM Studio — wissel vrij van model, je tools, geheugen en kennis gaan met je mee."
       },
       "dataOwnership": {
-        "title": "Data blijft bij jou",
-        "desc": "Je data leeft in jouw infrastructuur, niet in het model. Geen cross-platform fragmentatie, geen cross-sessie contextverlies. Volledige dataportabiliteit en exporteer wanneer je wilt."
+        "title": "Zakelijke beveiliging",
+        "desc": "AES-256-GCM-versleuteling, OAuth 2.1/PKCE, firejail-sandboxing. Zes beveiligingsronden. SOC 2-klare architectuur."
       },
       "openSource": {
         "title": "Open Source & Zelf Hosten",

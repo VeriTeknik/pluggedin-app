@@ -70,8 +70,6 @@ import { UserMenu } from './user-menu';
 // Local storage key for sidebar state
 const SIDEBAR_STATE_KEY = 'sidebar:expanded';
 
-// Get version from environment variable (set in next.config.ts)
-const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.4.0';
 
 export default function SidebarLayout({
   children,
@@ -194,9 +192,7 @@ export default function SidebarLayout({
                   <NotificationBell />
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground mt-1 group-data-[collapsible=icon]:hidden">
-                {t('common.releaseCandidate', { version })}
-              </div>
+
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
               <ProjectSwitcher />

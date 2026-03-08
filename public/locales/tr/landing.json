@@ -856,7 +856,7 @@
     "learnMore": "Bireyselleşme Skorlaması Nasıl Çalışır"
   },
   "platformCapabilities": {
-    "title": "AI'ınızın İhtiyacı Olan Her Şey. Tek Platform.",
+    "title": "Tek Platform. Her Model. Sıfır Parçalanma.",
     "subtitle": "Plugged.in 2.700+ MCP sunucusu, kalıcı hafıza, dokümanlar ve bilgi tabanlarını tek bir model-agnostik altyapıda birleştiriyor — verileriniz modelde değil, sizde kalıyor.",
     "tagline": "Tek eklenti. Her model. Sizin verileriniz. Sıfır bağımlılık.",
     "cards": {
@@ -866,7 +866,7 @@
       },
       "memory": {
         "title": "Kalıcı Hafıza",
-        "desc": "Oturumlar ve platformlar arası sıfırlanmayan hafıza. AI'ınız bağlamı, tercihleri ve çalışma kalıplarını korur — her konuşmada kendinizi baştan açıklamaya son."
+        "desc": "Bireysel + kolektif hafıza. AI'ınız kendi oturumlarınızdan öğrenir — ve binlerce geliştirici tarafından keşfedilen örüntülerden. HMAC-SHA256 + k-anonimlik ile gizlilik korumalı."
       },
       "knowledge": {
         "title": "Bilgi Tabanı (RAG)",
@@ -877,8 +877,8 @@
         "desc": "Her AI modeli ve platformla çalışır. Claude, ChatGPT, Cursor, Cline, LM Studio — modeli özgürce değiştirin, araçlarınız, hafızanız ve bilginiz sizinle gelir."
       },
       "dataOwnership": {
-        "title": "Veriler Sizde Kalır",
-        "desc": "Verileriniz modelin içinde değil, sizin altyapınızda yaşar. Platformlar arası parçalanma yok, oturumlar arası bağlam kaybı yok. Tam veri taşınabilirliği ve istediğiniz zaman dışa aktarma."
+        "title": "Kurumsal Güvenlik",
+        "desc": "AES-256-GCM şifreleme, OAuth 2.1/PKCE, firejail sandbox. Altı güvenlik inceleme turu. SOC 2 hazır mimari."
       },
       "openSource": {
         "title": "Açık Kaynak ve Kendi Barındırma",

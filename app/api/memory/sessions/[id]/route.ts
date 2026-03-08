@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
-  getSessionByUuid,
+  resolveSession,
   endSession,
 } from '@/lib/memory/session-service';
 import { generateZReport } from '@/lib/memory/z-report-service';
@@ -11,6 +11,7 @@ import { authenticate } from '../../../auth';
 
 /**
  * GET /api/memory/sessions/[id] - Get session details
+ * Accepts either UUID or memory_session_id (ms_xxx) format.
  */
 export async function GET(
   request: NextRequest,
@@ -30,24 +31,9 @@ export async function GET(
 
     const { id } = await params;
 
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid session ID format' },
-        { status: 400 }
-      );
-    }
+    const session = await resolveSession(id);
 
-    const session = await getSessionByUuid(id);
-
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Session not found' },
-        { status: 404 }
-      );
-    }
-
-    if (session.profile_uuid !== auth.activeProfile.uuid) {
+    if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
       return NextResponse.json(
         { success: false, error: 'Session not found' },
         { status: 404 }
@@ -65,6 +51,7 @@ export async function GET(
 
 /**
  * PATCH /api/memory/sessions/[id] - End a session (status → completed)
+ * Accepts either UUID or memory_session_id (ms_xxx) format.
  */
 export async function PATCH(
   request: NextRequest,
@@ -84,16 +71,8 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid session ID format' },
-        { status: 400 }
-      );
-    }
-
-    // Verify ownership: look up session to get its memory_session_id
-    const session = await getSessionByUuid(id);
+    // Verify ownership: look up session by UUID or memory_session_id
+    const session = await resolveSession(id);
     if (!session || session.profile_uuid !== auth.activeProfile.uuid) {
       return NextResponse.json(
         { success: false, error: 'Session not found' },
