@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { fetchMemoryRing } from '@/lib/memory/queries';
+import type { RingType } from '@/lib/memory/types';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../auth';
-import { getMemoryRing } from '../../../actions/memory';
 
 /**
  * GET /api/memory/ring - List memory ring entries
- * Delegates to the getMemoryRing server action to avoid duplicated query logic.
+ * Uses authenticate() which supports both session and API key auth.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,23 +24,20 @@ export async function GET(request: NextRequest) {
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);
-    const ringType = searchParams.get('ring_type') as 'procedures' | 'practice' | 'longterm' | 'shocks' | null;
+    const ringType = searchParams.get('ring_type') as RingType | null;
     const agentUuid = searchParams.get('agent_uuid') ?? undefined;
-    const limit = parseInt(searchParams.get('limit') ?? '50', 10) || 50;
+    const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10) || 50, 200);
     const offset = parseInt(searchParams.get('offset') ?? '0', 10) || 0;
 
-    const result = await getMemoryRing(auth.user.id, {
-      ringType: ringType ?? undefined,
-      limit: Math.min(limit, 200),
-      offset,
+    const memories = await fetchMemoryRing({
+      profileUuid: auth.activeProfile.uuid,
+      ringType,
       agentUuid,
+      limit,
+      offset,
     });
 
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: memories });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Internal server error' },

@@ -167,7 +167,7 @@ export function FreshMemoryTab({ onRefresh }: FreshMemoryTabProps) {
     );
   }
 
-  const typedSessions = sessions as SessionData[];
+  const typedSessions = sessions as unknown as SessionData[];
 
   if (typedSessions.length === 0 && statusFilter === 'all') {
     return (

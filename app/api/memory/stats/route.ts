@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { fetchMemoryStats } from '@/lib/memory/queries';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 import { authenticate } from '../../auth';
-import { getMemoryStats } from '../../../actions/memory';
 
 /**
  * GET /api/memory/stats - Memory statistics
- * Delegates to the getMemoryStats server action to avoid duplicated query logic.
+ * Uses authenticate() which supports both session and API key auth.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,13 +22,9 @@ export async function GET(request: NextRequest) {
     const auth = await authenticate(request);
     if (auth.error) return auth.error;
 
-    const result = await getMemoryStats(auth.user.id);
+    const data = await fetchMemoryStats(auth.activeProfile.uuid);
 
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Internal server error' },

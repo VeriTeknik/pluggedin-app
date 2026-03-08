@@ -14,6 +14,7 @@ import {
   validateClipboardSize,
   validateContentEncoding,
 } from '@/lib/clipboard';
+import { requireAuthUserId } from '@/lib/require-auth';
 
 import { getProjectActiveProfile } from './profiles';
 
@@ -28,6 +29,7 @@ interface ClipboardResult {
   deleted?: number;
   error?: string;
 }
+
 
 /**
  * Get profile UUID from userId by finding their active project's active profile
@@ -52,7 +54,6 @@ async function getActiveProfileUuid(userId: string): Promise<string | null> {
  * Get all clipboard entries for the current user's active profile
  */
 export async function getClipboardEntries(
-  userId: string,
   options?: {
     name?: string;
     idx?: number;
@@ -62,6 +63,7 @@ export async function getClipboardEntries(
   }
 ): Promise<ClipboardResult> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -123,7 +125,6 @@ export async function getClipboardEntries(
  * Set a clipboard entry (upsert for named, error if idx exists)
  */
 export async function setClipboardEntry(
-  userId: string,
   options: {
     name?: string;
     idx?: number;
@@ -138,6 +139,7 @@ export async function setClipboardEntry(
   }
 ): Promise<ClipboardResult> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -239,10 +241,10 @@ export async function setClipboardEntry(
  * Delete clipboard entries
  */
 export async function deleteClipboardEntry(
-  userId: string,
   options: { name?: string; idx?: number; clearAll?: boolean }
 ): Promise<ClipboardResult> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };
@@ -293,7 +295,7 @@ export async function deleteClipboardEntry(
  * Get clipboard stats using SQL aggregation to avoid N+1 queries
  * This is more efficient than fetching all entries and processing in JS
  */
-export async function getClipboardStats(userId: string): Promise<{
+export async function getClipboardStats(): Promise<{
   success: boolean;
   stats?: {
     total: number;
@@ -304,6 +306,7 @@ export async function getClipboardStats(userId: string): Promise<{
   error?: string;
 }> {
   try {
+    const userId = await requireAuthUserId();
     const profileUuid = await getActiveProfileUuid(userId);
     if (!profileUuid) {
       return { success: false, error: 'No active profile found' };

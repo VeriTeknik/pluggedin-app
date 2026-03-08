@@ -16,12 +16,7 @@ export function useMemoryStats() {
     isLoading,
   } = useSWR(
     session?.user?.id ? ['memory-stats', session.user.id] : null,
-    async () => {
-      if (!session?.user?.id) {
-        throw new Error('Not authenticated');
-      }
-      return await getMemoryStats(session.user.id);
-    },
+    async () => getMemoryStats(),
     { refreshInterval: 30000 }
   );
 
