@@ -86,13 +86,17 @@ export async function searchMemories(
       results.sort((a, b) => b.similarity - a.similarity);
 
       // Record access for matched memories (fire-and-forget, non-blocking)
-      db.update(memoryRingTable)
-        .set({
-          access_count: sql`${memoryRingTable.access_count} + 1`,
-          last_accessed_at: new Date(),
-        })
-        .where(inArray(memoryRingTable.uuid, uuids))
-        .catch(() => {}); // silent — never block search results
+      if (uuids.length > 0) {
+        db.update(memoryRingTable)
+          .set({
+            access_count: sql`${memoryRingTable.access_count} + 1`,
+            last_accessed_at: new Date(),
+          })
+          .where(inArray(memoryRingTable.uuid, uuids))
+          .catch((error) => {
+            console.error('Failed to update memory access metadata', { error, uuids });
+          });
+      }
     }
 
     // Optionally include gut patterns
