@@ -7,7 +7,7 @@
  * Layer 3 - Full Details: Returns complete content for selected memories
  */
 
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { gutPatternsTable, memoryRingTable, memorySessionsTable } from '@/db/schema';
@@ -84,6 +84,24 @@ export async function searchMemories(
 
       // Sort by similarity (zvec order may not match DB order)
       results.sort((a, b) => b.similarity - a.similarity);
+
+      // Record access for matched memories (fire-and-forget, non-blocking)
+      if (uuids.length > 0) {
+        void db.update(memoryRingTable)
+          .set({
+            access_count: sql`${memoryRingTable.access_count} + 1`,
+            last_accessed_at: new Date(),
+          })
+          .where(
+            and(
+              inArray(memoryRingTable.uuid, uuids),
+              eq(memoryRingTable.profile_uuid, params.profileUuid)
+            )
+          )
+          .catch((error) => {
+            console.error('Failed to update memory access metadata', { error, uuids });
+          });
+      }
     }
 
     // Optionally include gut patterns
