@@ -42,7 +42,16 @@ if [ -z "$CRON_SECRET" ]; then
   exit 1
 fi
 
+if [ -z "$NEXTAUTH_URL" ]; then
+  echo "ERROR: NEXTAUTH_URL not found in $ENV_FILE"
+  exit 1
+fi
+
+# Strip trailing slash
+BASE_URL="${NEXTAUTH_URL%/}"
+
 # Reject values that would break cron/shell quoting
+# (checked AFTER BASE_URL is set so set -u doesn't fire)
 if [[ "$CRON_SECRET" =~ ["\'%*] ]]; then
   echo "ERROR: CRON_SECRET contains unsafe characters (quotes, %, *). Regenerate with: openssl rand -hex 32"
   exit 1
@@ -51,14 +60,6 @@ if [[ "$BASE_URL" =~ ["\'\`] ]]; then
   echo "ERROR: NEXTAUTH_URL contains unsafe characters. Fix the value in $ENV_FILE"
   exit 1
 fi
-
-if [ -z "$NEXTAUTH_URL" ]; then
-  echo "ERROR: NEXTAUTH_URL not found in $ENV_FILE"
-  exit 1
-fi
-
-# Strip trailing slash
-BASE_URL="${NEXTAUTH_URL%/}"
 
 # ── Remove mode ──────────────────────────────────────────────────────────────
 if [[ "${1:-}" == "--remove" ]]; then
@@ -72,7 +73,8 @@ fi
 # ── Build cron entries ───────────────────────────────────────────────────────
 mkdir -p "$LOG_DIR"
 
-CURL_BASE="curl -s -o /dev/null -w '%{http_code}' -X POST"
+# Note: % must be escaped as \% in crontab (unescaped % is treated as newline)
+CURL_BASE="curl -s -o /dev/null -w '\%{http_code}' -X POST"
 CURL_HEADERS="-H 'x-cron-secret: ${CRON_SECRET}' -H 'Content-Type: application/json'"
 
 # Every 15 minutes: classify unclassified fresh_memory observations
