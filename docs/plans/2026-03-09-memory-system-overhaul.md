@@ -190,41 +190,35 @@ When `memory-capture-procedure` is called:
 
 ## Implementation Sequence
 
-### Phase 1 — Week 1 (Security + Skills) ✅ COMPLETE (2026-03-09)
+### Phase 1 — Week 1 (Security + Skills)
+- [ ] `pci-scrubber.ts` in pluggedin-mcp
+- [ ] `pci-scrub.py` in pluggedin-plugin
+- [ ] Update all existing hook scripts to use scrubber
+- [ ] `memory-capture-solution` skill
+- [ ] `memory-capture-procedure` skill
+- [ ] `memory-capture-plan-step` skill
+- [ ] `memory-capture-cross-reference` skill
+- [ ] `memory-resume` skill
+- [ ] `memory-capture-shock` skill
+- [ ] Update all skill SKILL.md files with PCI preamble
 
-- [x] `pci-scrub.py` in `pluggedin-plugin/plugin/scripts/pci-scrub.py`
-- [x] `observe-tool-result.sh` updated to pipe through scrubber
-- [x] `memory-capture-solution` skill
-- [x] `memory-capture-procedure` skill
-- [x] `memory-capture-plan-step` skill
-- [x] `memory-capture-cross-reference` skill
-- [x] `memory-resume` skill
-- [x] `memory-capture-shock` skill
-- [x] All skills include PCI preamble in SKILL.md
-- [ ] `pci-scrubber.ts` in pluggedin-mcp (deferred — hooks are the capture point, MCP scrubber lower priority)
-- [ ] Update remaining hook scripts (session-start, pre-compact) to use scrubber if needed
+### Phase 2 — Week 2 (Pipeline)
+- [ ] Run `pnpm db:migrate` on prod
+- [ ] Verify analytics agent LLM factory in prod
+- [ ] Fix cron scheduling for memory/process endpoint
+- [ ] Backfill existing memory_ring records
+- [ ] Fix hook filtering (no more raw tool_results)
 
-### Phase 2 — Week 2 (Pipeline) ✅ COMPLETE (2026-03-09)
+### Phase 3 — Week 3 (Proactive Injection)
+- [ ] `/api/memory/resume` endpoint
+- [ ] session-start.sh: context brief injection
+- [ ] pre-tool-use.sh: extend with procedure warnings
+- [ ] Cross-reference check in memory-capture-procedure skill
 
-- [x] Run `pnpm db:migrate` on prod — confirmed to have run successfully, gut_patterns table now exists
-- [x] Verify analytics agent LLM factory in prod — CRON_SECRET confirmed set, endpoint functional
-- [x] Fix cron scheduling for memory/process endpoint — covered by `scripts/setup-memory-cron.sh`
-- [x] Backfill existing memory_ring records — trigger manually via `POST /api/memory/process` with Bearer + cron-secret
-- [x] Fix hook filtering (no more raw tool_results) — `observe-tool-result.sh` now only captures `error_pattern` type
-
-### Phase 3 — Week 3 (Proactive Injection) ✅ COMPLETE (2026-03-09)
-
-- [x] `/api/memory/resume` endpoint — parallel search procedures + longterm + shocks, returns formatted `<memory-context>` brief
-- [x] session-start.sh: context brief injection — calls resume endpoint after session start, injects if relevant memories found
-- [x] pre-tool-use.sh: procedure warnings for `db:migrate`, `git push`, `rm -rf`, `kubectl`, `docker` commands
-- [x] Cross-reference check in memory-capture-procedure skill — search before recording, amend if similarity > 0.8
-
-### Phase 4 — Week 4 (Collective Memory) ✅ COMPLETE (2026-03-09)
-
-- [x] CBP promotion from individual longterm memories — `runPromotionPipeline()` in `lib/memory/cbp/promotion-service.ts`, triggered via `POST /api/memory/cbp`
-- [x] Anonymization pipeline — regex PII strip + LLM generalization in `lib/memory/cbp/anonymizer.ts`
-- [x] Similarity clustering for collective patterns — cosine dedup via `searchGutPatterns()` in vector-service
-- [x] Cron scheduling — `scripts/setup-memory-cron.sh` installs 3 cron jobs (process: */15min, cbp: 3am, decay: 4am)
+### Phase 4 — Week 4 (Collective Memory)
+- [ ] CBP promotion from individual longterm memories
+- [ ] Anonymization pipeline
+- [ ] Similarity clustering for collective patterns
 
 ---
 
@@ -239,81 +233,9 @@ When `memory-capture-procedure` is called:
 
 ---
 
-## Design Section 2: Learning Loop — Two-Encounter Rule ✅ APPROVED
-
-### Core Model: "Bisiklet Öğrenmek" (Learning to Ride a Bike)
-
-Skills are primarily **automatic**. Manual invocation is always available as fallback.
-Z-report (session-end digest) is the **bridge between sessions** — it compresses what happened into retrievable memory.
-
-### The Learning Loop
-
-```
-1st encounter with error
-  → Hook auto-detects: observe as error_pattern (fresh_memory)
-  → Z-report at session end: digest includes this error
-         ↓
-2nd encounter (same or similar error)
-  → Hook detects familiar signature
-  → Auto-query: memory_search("similar error")
-  → Auto-query: CBP("post_error") ← Stack Overflow effect
-  → Surfaces: "You had this before: [description]"
-             + "Community solution: [pattern]"
-  → If fixed: capture-solution auto-triggered → longterm
-         ↓
-3rd+ encounter
-  → Pre-tool-use hook warns BEFORE error happens
-  → Already in longterm: proactive injection at session start
-```
-
-### Z-Report Role
-- Runs at `session-end` (already exists)
-- Compresses: what errors occurred, what was built, what decisions were made
-- Output stored as `fresh_memory` observations of type `insight`
-- These get classified by analytics agent → `longterm` if high quality
-- **Z-report IS the cross-session bridge** — without it context compact loses everything
-
-### Gut Feeling Trigger
-When pre-tool-use hook fires AND the tool/context matches a known error pattern:
-- Confidence score > 0.6: inject warning silently into context
-- Confidence score > 0.8: surface as explicit `<memory-warning>` block
-- Always query CBP for "has community seen this?" before complex operations
-
-### Stack Overflow Analogy
-CBP = Collective Stack Overflow:
-- When stuck: query it (`post_error` context)
-- When solved: contribute to it (capture-solution → CBP promotion if 3+ contributors)
-- Privacy: all entries anonymized before promotion
-
-### Trigger Mechanism per Skill
-
-| Skill | Primary Trigger | Manual Fallback |
-|-------|----------------|-----------------|
-| `memory-capture-solution` | Auto: success after ≥2 error_patterns | `/pluggedin:memory-capture-solution` |
-| `memory-capture-procedure` | Auto: PR merged / push to main | `/pluggedin:memory-capture-procedure` |
-| `memory-capture-plan-step` | Auto: plan step marked complete | `/pluggedin:memory-capture-plan-step` |
-| `memory-capture-cross-reference` | Auto: new file references existing procedure | `/pluggedin:memory-capture-cross-reference` |
-| `memory-resume` | Auto: session start + post-compact | `/pluggedin:memory-resume` |
-| `memory-capture-shock` | Auto: critical error keywords detected | `/pluggedin:memory-capture-shock` |
-
----
-
-## claude-mem Borrowings (Applied 2026-03-09)
-
-| Pattern | Applied Where | Status |
-| ------- | ------------ | ------ |
-| **`<private>` tag** | `observe-tool-result.sh` — exit 0 if found | ✅ Done |
-| **Recursion prevention** | `observe-tool-result.sh` — exit 0 on pluggedin system tags | ✅ Done |
-| **3-layer progressive disclosure** | `memory-resume` skill — compact index → timeline → full | ✅ Done |
-| **Skip guidance** | All 5 capture skills | ✅ Done |
-| **`<memory-context>` wrap tag** | `memory-resume` output — prevents re-capture by hooks | ✅ Done |
-| **Fire-and-forget async observation** | Not yet applied (future: reduce hook latency) | ⏳ Pending |
-| **MEMORY.md live sync** | Not yet applied (future: auto-update from ring) | ⏳ Pending |
-
----
-
-## Open Questions (Section 3 onwards)
-- Procedure format: free-form markdown or structured numbered schema (like DNS example)?
+## Open Questions (Section 2 onwards)
+- Skill trigger mechanism: manual (`/pluggedin:memory-capture-solution`) vs auto-detected by hook?
+- Procedure format: free-form markdown or structured JSON schema?
 - Resume endpoint: full REST or extend existing memory/search?
 
-*Design sections 3-5 to be approved in next session.*
+*Design sections 2-5 to be approved in next session.*
