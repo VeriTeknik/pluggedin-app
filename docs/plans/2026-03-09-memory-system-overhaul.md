@@ -233,9 +233,67 @@ When `memory-capture-procedure` is called:
 
 ---
 
-## Open Questions (Section 2 onwards)
-- Skill trigger mechanism: manual (`/pluggedin:memory-capture-solution`) vs auto-detected by hook?
-- Procedure format: free-form markdown or structured JSON schema?
+## Design Section 2: Learning Loop — Two-Encounter Rule ✅ APPROVED
+
+### Core Model: "Bisiklet Öğrenmek" (Learning to Ride a Bike)
+
+Skills are primarily **automatic**. Manual invocation is always available as fallback.
+Z-report (session-end digest) is the **bridge between sessions** — it compresses what happened into retrievable memory.
+
+### The Learning Loop
+
+```
+1st encounter with error
+  → Hook auto-detects: observe as error_pattern (fresh_memory)
+  → Z-report at session end: digest includes this error
+         ↓
+2nd encounter (same or similar error)
+  → Hook detects familiar signature
+  → Auto-query: memory_search("similar error")
+  → Auto-query: CBP("post_error") ← Stack Overflow effect
+  → Surfaces: "You had this before: [description]"
+             + "Community solution: [pattern]"
+  → If fixed: capture-solution auto-triggered → longterm
+         ↓
+3rd+ encounter
+  → Pre-tool-use hook warns BEFORE error happens
+  → Already in longterm: proactive injection at session start
+```
+
+### Z-Report Role
+- Runs at `session-end` (already exists)
+- Compresses: what errors occurred, what was built, what decisions were made
+- Output stored as `fresh_memory` observations of type `insight`
+- These get classified by analytics agent → `longterm` if high quality
+- **Z-report IS the cross-session bridge** — without it context compact loses everything
+
+### Gut Feeling Trigger
+When pre-tool-use hook fires AND the tool/context matches a known error pattern:
+- Confidence score > 0.6: inject warning silently into context
+- Confidence score > 0.8: surface as explicit `<memory-warning>` block
+- Always query CBP for "has community seen this?" before complex operations
+
+### Stack Overflow Analogy
+CBP = Collective Stack Overflow:
+- When stuck: query it (`post_error` context)
+- When solved: contribute to it (capture-solution → CBP promotion if 3+ contributors)
+- Privacy: all entries anonymized before promotion
+
+### Trigger Mechanism per Skill
+
+| Skill | Primary Trigger | Manual Fallback |
+|-------|----------------|-----------------|
+| `memory-capture-solution` | Auto: success after ≥2 error_patterns | `/pluggedin:memory-capture-solution` |
+| `memory-capture-procedure` | Auto: PR merged / push to main | `/pluggedin:memory-capture-procedure` |
+| `memory-capture-plan-step` | Auto: plan step marked complete | `/pluggedin:memory-capture-plan-step` |
+| `memory-capture-cross-reference` | Auto: new file references existing procedure | `/pluggedin:memory-capture-cross-reference` |
+| `memory-resume` | Auto: session start + post-compact | `/pluggedin:memory-resume` |
+| `memory-capture-shock` | Auto: critical error keywords detected | `/pluggedin:memory-capture-shock` |
+
+---
+
+## Open Questions (Section 3 onwards)
+- Procedure format: free-form markdown or structured numbered schema (like DNS example)?
 - Resume endpoint: full REST or extend existing memory/search?
 
-*Design sections 2-5 to be approved in next session.*
+*Design sections 3-5 to be approved in next session.*
