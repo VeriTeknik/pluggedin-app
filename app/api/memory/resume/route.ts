@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const rateLimitResult = await EnhancedRateLimiters.api(request);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
-        { error: 'Too many requests', retryAfter: rateLimitResult.retryAfter },
+        { success: false, error: 'Too many requests', retryAfter: rateLimitResult.retryAfter },
         { status: 429 }
       );
     }
@@ -85,9 +85,17 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    if (!proceduresResult.success) console.error('[memory/resume] procedures search failed:', proceduresResult.error);
+    if (!longtermResult.success) console.error('[memory/resume] longterm search failed:', longtermResult.error);
+    if (!shocksResult.success) console.error('[memory/resume] shocks search failed:', shocksResult.error);
+
     const procedures = proceduresResult.success ? (proceduresResult.data ?? []) : [];
     const longterm = longtermResult.success ? (longtermResult.data ?? []) : [];
     const shocks = shocksResult.success ? (shocksResult.data ?? []) : [];
+
+    // Strip </memory-context> to prevent prompt injection, then truncate and flatten.
+    const formatSnippet = (content: string, maxLength: number) =>
+      content.replace(/<\/memory-context>/gi, '[/memory-context]').trim().slice(0, maxLength).replace(/\n/g, ' ');
 
     // Build compact context brief (< 500 tokens target)
     const lines: string[] = ['<memory-context>', `## Memory Brief — ${new Date().toISOString().split('T')[0]}`, ''];
@@ -95,8 +103,7 @@ export async function GET(request: NextRequest) {
     if (procedures.length > 0) {
       lines.push('### Active Procedures');
       for (const p of procedures) {
-        const content = p.content.trim().slice(0, 200).replace(/\n/g, ' ');
-        lines.push(`- **[procedure]** ${content}`);
+        lines.push(`- **[procedure]** ${formatSnippet(p.content, 200)}`);
       }
       lines.push('');
     }
@@ -104,8 +111,7 @@ export async function GET(request: NextRequest) {
     if (longterm.length > 0) {
       lines.push('### Known Pitfalls & Insights');
       for (const m of longterm) {
-        const content = m.content.trim().slice(0, 150).replace(/\n/g, ' ');
-        lines.push(`- ${content}`);
+        lines.push(`- ${formatSnippet(m.content, 150)}`);
       }
       lines.push('');
     }
@@ -113,8 +119,7 @@ export async function GET(request: NextRequest) {
     if (shocks.length > 0) {
       lines.push('### Critical Warnings');
       for (const s of shocks) {
-        const content = s.content.trim().slice(0, 200).replace(/\n/g, ' ');
-        lines.push(`⚠️  ${content}`);
+        lines.push(`⚠️  ${formatSnippet(s.content, 200)}`);
       }
       lines.push('');
     }
@@ -137,8 +142,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error('[memory/resume] Unhandled error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

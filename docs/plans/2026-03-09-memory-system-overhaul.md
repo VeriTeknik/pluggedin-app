@@ -206,7 +206,7 @@ When `memory-capture-procedure` is called:
 
 ### Phase 2 — Week 2 (Pipeline) ✅ COMPLETE (2026-03-09)
 
-- [x] Run `pnpm db:migrate` on prod — confirmed run successfully, gut_patterns table now exists
+- [x] Run `pnpm db:migrate` on prod — confirmed to have run successfully, gut_patterns table now exists
 - [x] Verify analytics agent LLM factory in prod — CRON_SECRET confirmed set, endpoint functional
 - [x] Fix cron scheduling for memory/process endpoint — covered by `scripts/setup-memory-cron.sh`
 - [x] Backfill existing memory_ring records — trigger manually via `POST /api/memory/process` with Bearer + cron-secret
