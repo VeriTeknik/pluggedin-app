@@ -12,6 +12,7 @@ import { db } from '@/db';
 import { freshMemoryTable } from '@/db/schema';
 
 import { FRESH_MEMORY_TTL_HOURS } from './constants';
+import { stripPII } from './cbp/anonymizer';
 import { generateEmbedding, estimateTokenCount } from './embedding-service';
 import { recordTemporalEvent } from './jungian/temporal-event-service';
 import { incrementObservationCount } from './session-service';
@@ -25,12 +26,18 @@ export async function addObservation(
   params: AddObservationParams
 ): Promise<MemoryResult<{ uuid: string }>> {
   try {
-    const tokenCount = estimateTokenCount(params.content);
+    // Server-side PII scrub — defence-in-depth layer.
+    // Hook-side pci-scrub.py is Layer 1 (before sending over the wire).
+    // This is Layer 2 (on receipt, before writing to DB).
+    // Catches anything missed by the hook or submitted directly via the API.
+    const { sanitized: content } = stripPII(params.content);
+
+    const tokenCount = estimateTokenCount(content);
 
     // Generate embedding for semantic search
     let embedding: number[] | null = null;
     try {
-      embedding = await generateEmbedding(params.content);
+      embedding = await generateEmbedding(content);
     } catch {
       // Non-fatal: observation is still stored without embedding
       console.warn('Failed to generate embedding for observation, storing without vector');
@@ -47,7 +54,7 @@ export async function addObservation(
         session_uuid: params.sessionUuid,
         agent_uuid: params.agentUuid ?? null,
         observation_type: params.type,
-        content: params.content,
+        content,
         token_count: tokenCount,
         outcome: params.outcome ?? null,
         metadata: params.metadata ?? null,
