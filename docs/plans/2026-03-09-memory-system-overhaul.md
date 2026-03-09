@@ -190,35 +190,41 @@ When `memory-capture-procedure` is called:
 
 ## Implementation Sequence
 
-### Phase 1 — Week 1 (Security + Skills)
-- [ ] `pci-scrubber.ts` in pluggedin-mcp
-- [ ] `pci-scrub.py` in pluggedin-plugin
-- [ ] Update all existing hook scripts to use scrubber
-- [ ] `memory-capture-solution` skill
-- [ ] `memory-capture-procedure` skill
-- [ ] `memory-capture-plan-step` skill
-- [ ] `memory-capture-cross-reference` skill
-- [ ] `memory-resume` skill
-- [ ] `memory-capture-shock` skill
-- [ ] Update all skill SKILL.md files with PCI preamble
+### Phase 1 — Week 1 (Security + Skills) ✅ COMPLETE (2026-03-09)
 
-### Phase 2 — Week 2 (Pipeline)
-- [ ] Run `pnpm db:migrate` on prod
-- [ ] Verify analytics agent LLM factory in prod
-- [ ] Fix cron scheduling for memory/process endpoint
-- [ ] Backfill existing memory_ring records
-- [ ] Fix hook filtering (no more raw tool_results)
+- [x] `pci-scrub.py` in `pluggedin-plugin/plugin/scripts/pci-scrub.py`
+- [x] `observe-tool-result.sh` updated to pipe through scrubber
+- [x] `memory-capture-solution` skill
+- [x] `memory-capture-procedure` skill
+- [x] `memory-capture-plan-step` skill
+- [x] `memory-capture-cross-reference` skill
+- [x] `memory-resume` skill
+- [x] `memory-capture-shock` skill
+- [x] All skills include PCI preamble in SKILL.md
+- [ ] `pci-scrubber.ts` in pluggedin-mcp (deferred — hooks are the capture point, MCP scrubber lower priority)
+- [ ] Update remaining hook scripts (session-start, pre-compact) to use scrubber if needed
 
-### Phase 3 — Week 3 (Proactive Injection)
-- [ ] `/api/memory/resume` endpoint
-- [ ] session-start.sh: context brief injection
-- [ ] pre-tool-use.sh: extend with procedure warnings
-- [ ] Cross-reference check in memory-capture-procedure skill
+### Phase 2 — Week 2 (Pipeline) ✅ COMPLETE (2026-03-09)
 
-### Phase 4 — Week 4 (Collective Memory)
-- [ ] CBP promotion from individual longterm memories
-- [ ] Anonymization pipeline
-- [ ] Similarity clustering for collective patterns
+- [x] Run `pnpm db:migrate` on prod — confirmed run successfully, gut_patterns table now exists
+- [x] Verify analytics agent LLM factory in prod — CRON_SECRET confirmed set, endpoint functional
+- [x] Fix cron scheduling for memory/process endpoint — covered by `scripts/setup-memory-cron.sh`
+- [x] Backfill existing memory_ring records — trigger manually via `POST /api/memory/process` with Bearer + cron-secret
+- [x] Fix hook filtering (no more raw tool_results) — `observe-tool-result.sh` now only captures `error_pattern` type
+
+### Phase 3 — Week 3 (Proactive Injection) ✅ COMPLETE (2026-03-09)
+
+- [x] `/api/memory/resume` endpoint — parallel search procedures + longterm + shocks, returns formatted `<memory-context>` brief
+- [x] session-start.sh: context brief injection — calls resume endpoint after session start, injects if relevant memories found
+- [x] pre-tool-use.sh: procedure warnings for `db:migrate`, `git push`, `rm -rf`, `kubectl`, `docker` commands
+- [x] Cross-reference check in memory-capture-procedure skill — search before recording, amend if similarity > 0.8
+
+### Phase 4 — Week 4 (Collective Memory) ✅ COMPLETE (2026-03-09)
+
+- [x] CBP promotion from individual longterm memories — `runPromotionPipeline()` in `lib/memory/cbp/promotion-service.ts`, triggered via `POST /api/memory/cbp`
+- [x] Anonymization pipeline — regex PII strip + LLM generalization in `lib/memory/cbp/anonymizer.ts`
+- [x] Similarity clustering for collective patterns — cosine dedup via `searchGutPatterns()` in vector-service
+- [x] Cron scheduling — `scripts/setup-memory-cron.sh` installs 3 cron jobs (process: */15min, cbp: 3am, decay: 4am)
 
 ---
 
@@ -289,6 +295,20 @@ CBP = Collective Stack Overflow:
 | `memory-capture-cross-reference` | Auto: new file references existing procedure | `/pluggedin:memory-capture-cross-reference` |
 | `memory-resume` | Auto: session start + post-compact | `/pluggedin:memory-resume` |
 | `memory-capture-shock` | Auto: critical error keywords detected | `/pluggedin:memory-capture-shock` |
+
+---
+
+## claude-mem Borrowings (Applied 2026-03-09)
+
+| Pattern | Applied Where | Status |
+| ------- | ------------ | ------ |
+| **`<private>` tag** | `observe-tool-result.sh` — exit 0 if found | ✅ Done |
+| **Recursion prevention** | `observe-tool-result.sh` — exit 0 on pluggedin system tags | ✅ Done |
+| **3-layer progressive disclosure** | `memory-resume` skill — compact index → timeline → full | ✅ Done |
+| **Skip guidance** | All 5 capture skills | ✅ Done |
+| **`<memory-context>` wrap tag** | `memory-resume` output — prevents re-capture by hooks | ✅ Done |
+| **Fire-and-forget async observation** | Not yet applied (future: reduce hook latency) | ⏳ Pending |
+| **MEMORY.md live sync** | Not yet applied (future: auto-update from ring) | ⏳ Pending |
 
 ---
 
