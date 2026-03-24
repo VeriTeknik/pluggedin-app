@@ -52,11 +52,11 @@ BASE_URL="${NEXTAUTH_URL%/}"
 
 # Reject values that would break cron/shell quoting
 # (checked AFTER BASE_URL is set so set -u doesn't fire)
-if [[ "$CRON_SECRET" =~ ["\'%*] ]]; then
+if [[ "$CRON_SECRET" == *[\"\'%\*]* ]]; then
   echo "ERROR: CRON_SECRET contains unsafe characters (quotes, %, *). Regenerate with: openssl rand -hex 32"
   exit 1
 fi
-if [[ "$BASE_URL" =~ ["\'\`] ]]; then
+if [[ "$BASE_URL" == *[\"\'\`]* ]]; then
   echo "ERROR: NEXTAUTH_URL contains unsafe characters. Fix the value in $ENV_FILE"
   exit 1
 fi
