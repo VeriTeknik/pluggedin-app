@@ -30,7 +30,8 @@ export default function ContactPage() {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         subject: formData.get('subject') as string,
-        message: formData.get('message') as string
+        message: formData.get('message') as string,
+        website: formData.get('website') as string || '',
       };
 
       const result = await submitContactForm(data);
@@ -156,6 +157,10 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent>
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+              {/* Honeypot field - hidden from real users, bots will fill it */}
+              <div className="absolute opacity-0 -z-10" aria-hidden="true" tabIndex={-1}>
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">{t('legal.pages.contact.content.form.name')}</Label>
                 <Input 
