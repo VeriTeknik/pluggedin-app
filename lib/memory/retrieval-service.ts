@@ -59,6 +59,7 @@ export async function searchMemories(
           ringType: memoryRingTable.ring_type,
           contentEssence: memoryRingTable.content_essence,
           contentSummary: memoryRingTable.content_summary,
+          contentFull: memoryRingTable.content_full,
           currentDecayStage: memoryRingTable.current_decay_stage,
           currentTokenCount: memoryRingTable.current_token_count,
           tags: memoryRingTable.tags,
@@ -72,7 +73,7 @@ export async function searchMemories(
         results.push({
           uuid: m.uuid,
           ringType: m.ringType as RingType,
-          content: m.contentEssence || m.contentSummary || '',
+          content: m.contentEssence || m.contentSummary || m.contentFull || '',
           similarity: scoreMap.get(m.uuid) ?? 0,
           decayStage: m.currentDecayStage as MemorySearchResult['decayStage'],
           tokenCount: m.currentTokenCount,
