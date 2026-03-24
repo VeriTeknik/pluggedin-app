@@ -26,22 +26,23 @@ export type ContactFormData = {
  * Detect gibberish/random strings typical of bot submissions.
  * Only applied to the message body (longer text) to avoid false positives
  * on short names, acronyms, or technical subjects.
- * Requires at least 20 chars to avoid misclassifying short legitimate messages.
+ * Requires at least 20 letters and BOTH signals (abnormal case ratio AND low
+ * vowel ratio) to flag as spam, reducing false positives on technical content.
  */
 function looksLikeSpam(text: string): boolean {
-  const letters = text.replace(/[^a-zA-Z]/g, '');
+  // Unicode-aware letter extraction (handles diacritics like José, Müller)
+  const letters = text.replace(/[^\p{L}]/gu, '');
   if (letters.length < 20) return false;
 
-  // High ratio of uppercase letters in a mixed-case string
-  const uppercaseRatio = (letters.replace(/[^A-Z]/g, '').length) / letters.length;
-  if (uppercaseRatio > 0.4 && uppercaseRatio < 0.7) return true;
+  // Check both signals — require both to reduce false positives on
+  // technical content with acronyms (HTTP, API, DNS)
+  const uppercaseRatio = (letters.replace(/[^\p{Lu}]/gu, '').length) / letters.length;
+  const abnormalCase = uppercaseRatio > 0.4 && uppercaseRatio < 0.7;
 
-  // Very low vowel ratio indicates random character strings
-  const vowels = letters.replace(/[^aeiouAEIOU]/g, '').length;
-  const vowelRatio = vowels / letters.length;
-  if (vowelRatio < 0.15) return true;
+  const vowels = letters.replace(/[^aeiouAEIOUàáâãäåèéêëìíîïòóôõöùúûüæœ]/gi, '').length;
+  const lowVowelRatio = (vowels / letters.length) < 0.15;
 
-  return false;
+  return abnormalCase && lowVowelRatio;
 }
 
 export async function submitContactForm(data: ContactFormData) {
@@ -51,6 +52,9 @@ export async function submitContactForm(data: ContactFormData) {
       // Silently succeed to not reveal detection to bots
       return { success: true };
     }
+
+    // Validate input first — don't consume rate limit quota on invalid submissions
+    const validated = contactFormSchema.parse(data);
 
     // Rate limit: 3 submissions per hour per IP
     const headersList = await headers();
@@ -62,9 +66,6 @@ export async function submitContactForm(data: ContactFormData) {
     if (!rateCheck.success) {
       return { success: false, error: 'Too many submissions. Please try again later.' };
     }
-
-    // Validate input
-    const validated = contactFormSchema.parse(data);
 
     // Spam content check - only on message body to avoid false positives on short fields
     if (looksLikeSpam(validated.message)) {
