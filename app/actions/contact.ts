@@ -11,7 +11,7 @@ const contactFormSchema = z.object({
   email: z.string().email(),
   subject: z.string().min(1).max(200),
   message: z.string().min(10).max(5000),
-  website: z.string().max(0).optional(), // honeypot - must be empty
+  website: z.string().optional(), // honeypot - checked before schema validation
 });
 
 export type ContactFormData = {
@@ -24,23 +24,22 @@ export type ContactFormData = {
 
 /**
  * Detect gibberish/random strings typical of bot submissions.
- * Returns true if the text looks like spam.
+ * Only applied to the message body (longer text) to avoid false positives
+ * on short names, acronyms, or technical subjects.
+ * Requires at least 20 chars to avoid misclassifying short legitimate messages.
  */
 function looksLikeSpam(text: string): boolean {
-  // High ratio of uppercase letters in a mixed-case string
   const letters = text.replace(/[^a-zA-Z]/g, '');
-  if (letters.length > 5) {
-    const uppercaseRatio = (letters.replace(/[^A-Z]/g, '').length) / letters.length;
-    // Random strings tend to have ~50% uppercase; normal text is <20%
-    if (uppercaseRatio > 0.4 && uppercaseRatio < 0.7) return true;
-  }
+  if (letters.length < 20) return false;
+
+  // High ratio of uppercase letters in a mixed-case string
+  const uppercaseRatio = (letters.replace(/[^A-Z]/g, '').length) / letters.length;
+  if (uppercaseRatio > 0.4 && uppercaseRatio < 0.7) return true;
 
   // Very low vowel ratio indicates random character strings
-  if (letters.length > 5) {
-    const vowels = letters.replace(/[^aeiouAEIOU]/g, '').length;
-    const vowelRatio = vowels / letters.length;
-    if (vowelRatio < 0.15) return true;
-  }
+  const vowels = letters.replace(/[^aeiouAEIOU]/g, '').length;
+  const vowelRatio = vowels / letters.length;
+  if (vowelRatio < 0.15) return true;
 
   return false;
 }
@@ -56,8 +55,10 @@ export async function submitContactForm(data: ContactFormData) {
     // Rate limit: 3 submissions per hour per IP
     const headersList = await headers();
     const forwarded = headersList.get('x-forwarded-for');
-    const ip = forwarded?.split(',')[0] || headersList.get('x-real-ip') || 'unknown';
-    const rateCheck = await rateLimiter.check(`contact:${ip}`, 3, 3600);
+    const ip = forwarded?.split(',')[0]?.trim() || headersList.get('x-real-ip')?.trim() || null;
+    const userAgent = headersList.get('user-agent') || 'unknown-ua';
+    const rateKey = ip ? `contact:ip:${ip}` : `contact:ua:${userAgent}`;
+    const rateCheck = await rateLimiter.check(rateKey, 3, 3600);
     if (!rateCheck.success) {
       return { success: false, error: 'Too many submissions. Please try again later.' };
     }
@@ -65,8 +66,8 @@ export async function submitContactForm(data: ContactFormData) {
     // Validate input
     const validated = contactFormSchema.parse(data);
 
-    // Spam content check
-    if (looksLikeSpam(validated.name) || looksLikeSpam(validated.subject) || looksLikeSpam(validated.message)) {
+    // Spam content check - only on message body to avoid false positives on short fields
+    if (looksLikeSpam(validated.message)) {
       // Silently succeed to not reveal detection
       return { success: true };
     }
