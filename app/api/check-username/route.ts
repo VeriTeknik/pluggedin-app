@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { checkUsernameAvailability } from '@/app/actions/social';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 /**
  * @swagger
@@ -61,6 +62,15 @@ import { checkUsernameAvailability } from '@/app/actions/social';
  *                   example: An error occurred while checking username availability
  */
 export async function GET(request: NextRequest) {
+  // Rate limit to prevent username enumeration (60 requests per minute)
+  const rateLimitResult = await EnhancedRateLimiters.api(request);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { available: false, message: 'Too many requests. Please try again later.' },
+      { status: 429 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const username = searchParams.get('username');
 

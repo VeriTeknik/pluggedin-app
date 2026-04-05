@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { passwordResetTokens, users } from '@/db/schema';
+import { createErrorResponse } from '@/lib/api-errors';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 const resetPasswordSchema = z.object({
   token: z.string(),
@@ -85,6 +87,16 @@ const resetPasswordSchema = z.object({
  *                   example: Something went wrong
  */
 export async function POST(req: NextRequest) {
+  // Apply strict rate limiting to prevent token brute-force (3 requests per hour, Redis-backed)
+  const rateLimitResult = await EnhancedRateLimiters.passwordReset(req);
+  if (!rateLimitResult.allowed) {
+    return createErrorResponse(
+      'Too many password reset attempts. Please try again later.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+
   try {
     const body = await req.json();
     const data = resetPasswordSchema.parse(body);
@@ -121,8 +133,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash the new password
-    const hashedPassword = await hash(data.password, 10);
+    // Hash the new password (cost factor 14 matches registration)
+    const hashedPassword = await hash(data.password, 14);
 
     // Update the user's password
     await db

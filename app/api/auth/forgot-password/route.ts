@@ -7,7 +7,7 @@ import { passwordResetTokens } from '@/db/schema';
 import { notifyAdminsOfSecurityEvent } from '@/lib/admin-notifications';
 import { createErrorResponse } from '@/lib/api-errors';
 import { generatePasswordResetEmail, sendEmail } from '@/lib/email';
-import { RateLimiters } from '@/lib/rate-limiter';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -82,8 +82,8 @@ const forgotPasswordSchema = z.object({
  *                   example: Something went wrong
  */
 export async function POST(req: NextRequest) {
-  // Apply rate limiting - stricter for password reset
-  const rateLimitResult = await RateLimiters.sensitive(req);
+  // Apply strict rate limiting for password reset (3 requests per hour, Redis-backed)
+  const rateLimitResult = await EnhancedRateLimiters.passwordReset(req);
   if (!rateLimitResult.allowed) {
     return createErrorResponse(
       'Too many password reset attempts. Please try again later.',

@@ -12,7 +12,7 @@ import { isPasswordComplex } from '@/lib/auth-security';
 import { createDefaultProject } from '@/lib/default-project-creation';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
-import { RateLimiters } from '@/lib/rate-limiter';
+import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { sendWelcomeEmail } from '@/lib/welcome-emails';
 
 /**
@@ -28,7 +28,7 @@ import { sendWelcomeEmail } from '@/lib/welcome-emails';
 const BCRYPT_COST_FACTOR = 14;
 
 const registerSchema = z.object({
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(100).regex(/^[a-zA-ZÀ-ÿğüşöçİĞÜŞÖÇ\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes'),
   email: z.string().email(),
   password: z.string().min(8),
 });
@@ -121,11 +121,11 @@ const registerSchema = z.object({
  *                   example: Something went wrong
  */
 export async function POST(req: NextRequest) {
-  // Apply rate limiting
-  const rateLimitResult = await RateLimiters.auth(req);
+  // Apply strict rate limiting (5 requests per 15 minutes, Redis-backed)
+  const rateLimitResult = await EnhancedRateLimiters.auth(req);
   if (!rateLimitResult.allowed) {
     return createErrorResponse(
-      'Too many requests. Please try again later.',
+      'Too many registration attempts. Please try again later.',
       429,
       'RATE_LIMIT_EXCEEDED'
     );
