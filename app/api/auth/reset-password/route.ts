@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { passwordResetTokens, users } from '@/db/schema';
 import { createErrorResponse } from '@/lib/api-errors';
+import { BCRYPT_COST_FACTOR } from '@/lib/auth-constants';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 
 const resetPasswordSchema = z.object({
@@ -133,8 +134,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash the new password (cost factor 14 matches registration)
-    const hashedPassword = await hash(data.password, 14);
+    // Hash the new password using shared cost factor
+    const hashedPassword = await hash(data.password, BCRYPT_COST_FACTOR);
 
     // Update the user's password
     await db

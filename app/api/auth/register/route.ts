@@ -9,29 +9,12 @@ import { users, verificationTokens } from '@/db/schema';
 import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
 import { isPasswordComplex } from '@/lib/auth-security';
+import { BCRYPT_COST_FACTOR, registerSchema } from '@/lib/auth-constants';
 import { createDefaultProject } from '@/lib/default-project-creation';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { sendWelcomeEmail } from '@/lib/welcome-emails';
-
-/**
- * Bcrypt Cost Factor Configuration
- *
- * Cost factor 14 was chosen based on:
- * - Security: Provides ~16,384 iterations (2^14), significantly harder to brute-force than 12 (4,096 iterations)
- * - Performance: Tested to take ~500-800ms on production hardware (acceptable for auth operations)
- * - Industry standards: OWASP recommends minimum cost of 10, we exceed this for additional security
- * - Future-proofing: As hardware improves, this provides longer-term protection
- * - Consistency: Matches the cost factor used in password change operations
- */
-const BCRYPT_COST_FACTOR = 14;
-
-const registerSchema = z.object({
-  name: z.string().min(2).max(100).regex(/^[a-zA-ZÀ-ÿğüşöçİĞÜŞÖÇ\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes'),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
 
 /**
  * @swagger

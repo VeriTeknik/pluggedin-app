@@ -65,9 +65,13 @@ export async function GET(request: NextRequest) {
   // Rate limit to prevent username enumeration (60 requests per minute)
   const rateLimitResult = await EnhancedRateLimiters.api(request);
   if (!rateLimitResult.allowed) {
+    const headers: Record<string, string> = {};
+    if (rateLimitResult.retryAfter) {
+      headers['Retry-After'] = String(rateLimitResult.retryAfter);
+    }
     return NextResponse.json(
       { available: false, message: 'Too many requests. Please try again later.' },
-      { status: 429 }
+      { status: 429, headers }
     );
   }
 
