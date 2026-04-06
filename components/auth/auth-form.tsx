@@ -41,7 +41,7 @@ const createRegisterSchema = (t: TranslationFunction) => z.object({
   name: z.string()
     .min(1, { message: t('auth.validation.nameRequired') })
     .min(2, { message: t('auth.validation.nameLength') })
-    .regex(/^[a-zA-Z\s]*$/, { message: t('auth.validation.nameFormat') })
+    .regex(/^[\p{L}\p{M} '-]+$/u, { message: t('auth.validation.nameFormat') })
     .trim(),
   email: z.string()
     .min(1, { message: t('auth.validation.emailRequired') })
