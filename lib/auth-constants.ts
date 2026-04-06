@@ -39,7 +39,7 @@ export const removePasswordSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(100).regex(/^[\p{L}\p{M} '-]+$/u, 'Name can only contain letters, spaces, hyphens, and apostrophes'),
   email: z.string().email(),
   password: passwordSchema,
 });
