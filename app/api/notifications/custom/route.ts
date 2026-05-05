@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
-import { notifyAdmins } from '@/lib/admin-notifications';
+import { RATE_LIMITS, rateLimit } from '@/lib/api-rate-limit';
 import { sendEmail as sendEmailHelper } from '@/lib/email';
 import type { NotificationMetadata } from '@/lib/types/notifications';
 
@@ -71,8 +71,12 @@ const customNotificationSchema = z.object({
  *       500:
  *         description: Internal Server Error
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const rateLimiter = rateLimit(RATE_LIMITS.customNotification);
+    const rateLimitResponse = await rateLimiter(request);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
@@ -104,21 +108,6 @@ export async function POST(request: Request) {
       expiresInDays: 30, // Custom notifications expire in 30 days
       metadata
     });
-    
-    // Notify admins for ALERT severity notifications
-    if (severity === 'ALERT') {
-      await notifyAdmins({
-        subject: `Custom Alert: ${title}`,
-        title: `Custom Alert from Profile: ${auth.activeProfile.name || auth.activeProfile.uuid}`,
-        message,
-        severity: 'ALERT',
-        metadata: {
-          profileUuid: auth.activeProfile.uuid,
-          apiKeyId: auth.apiKey?.uuid,
-          apiKeyName: auth.apiKey?.name,
-        },
-      });
-    }
 
     let emailSent = false;
     

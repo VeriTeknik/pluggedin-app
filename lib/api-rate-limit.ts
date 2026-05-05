@@ -135,5 +135,10 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000, // 1 minute
     max: 30,
     message: 'Too many clipboard delete requests. Please slow down.'
+  },
+  customNotification: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 30,
+    message: 'Too many custom notifications. Please slow down.'
   }
 };
