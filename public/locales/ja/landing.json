@@ -7,7 +7,9 @@
     "playground": "プレイグラウンド",
     "documentation": "ドキュメント",
     "blog": "ブログ",
-    "getStarted": "接続"
+    "getStarted": "接続",
+    "mcpProxy": "MCP プロキシ",
+    "mcpServers": "MCP サーバー"
   },
   "hero": {
     "badge": "世界初のAI-CMS",
@@ -742,7 +744,7 @@
     "tagline": "個人の記憶には限界がある。集合的記憶はスーパーパワーです。",
     "copy": "インストールコマンドをコピー",
     "copied": "コピーしました！",
-    "setupHint": "Claude Code、Cursor、Windsurf等に対応",
+    "setupHint": "ブラウザでサインインしてワークスペースを接続",
     "starOnGithub": "GitHubでスターを付ける",
     "howItWorks": "仕組み",
     "stats": "オープンソース。永久無料。コミュニティ主導。",
@@ -762,6 +764,14 @@
         "model": "モデルメモリ",
         "pluggedin": "Plugged.in"
       }
+    },
+    "proxySetupHint": "Cursor、Cline、ChatGPT、LM Studio などのためのユニバーサル MCP プロキシ",
+    "compat": "2 つのインストールパス · Claude Code 用ネイティブプラグイン · その他すべてのクライアント用ユニバーサル MCP プロキシ",
+    "tabs": {
+      "plugin": "Claude Code プラグイン",
+      "proxy": "MCP プロキシ（他のクライアント）",
+      "pluginCaption": "Claude Code · 30 秒 · ゼロコンフィグ",
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · 任意の MCP クライアント"
     }
   },
   "oneLiner": {
@@ -923,5 +933,37 @@
     },
     "tagline": "プライバシーは数学であり、約束ではありません。HMAC-SHA256 + k-anonymity (k>=3)。",
     "openSource": "完全オープンソース。すべて検証可能。"
+  },
+  "mcpProxy": {
+    "badge": "ユニバーサル MCP プロキシ",
+    "title": "1 つのエンドポイント。すべての MCP サーバー。すべての AI クライアント。",
+    "subtitle": "Claude Code ユーザーではない方へ。Plugged.in のユニバーサル MCP プロキシは、Cursor、Cline、ChatGPT、LM Studio、Continue、Windsurf など、あらゆる AI クライアントを、数千の MCP サーバー、ナレッジベース、永続メモリへの統一ゲートウェイに変えます。",
+    "installLabel": "MCP プロキシのインストール",
+    "copy": "コピー",
+    "copied": "コピーしました！",
+    "compat": "Cursor · Cline · ChatGPT Desktop · LM Studio · Continue · Windsurf · あらゆる MCP 対応クライアントで動作",
+    "features": {
+      "servers": {
+        "title": "2,700+ MCP サーバー",
+        "desc": "GitHub、Slack、Notion、Linear、Postgres、Stripe、AWS、Google Drive — そして数千以上。1 つのレジストリから発見、インストール、管理。"
+      },
+      "transports": {
+        "title": "すべてのトランスポート",
+        "desc": "STDIO、Server-Sent Events (SSE)、Streamable HTTP トランスポート — すべて OAuth 2.1 トークンローテーション付きの単一プロキシエンドポイントに統合。"
+      },
+      "clients": {
+        "title": "すべての AI クライアント",
+        "desc": "Plugged.in で一度設定するだけ。同じツールセット、ナレッジ、メモリを Cursor、Cline、ChatGPT、LM Studio、あらゆる MCP 準拠クライアントで使用。"
+      },
+      "orchestration": {
+        "title": "組み込みオーケストレーション",
+        "desc": "テスト用 AI playground、リアルタイムアクティビティ監視、カスタム指示、ドキュメント交換、通知 — 後付けではなく、含まれています。"
+      }
+    },
+    "cta": {
+      "browse": "レジストリを見る",
+      "setupGuide": "セットアップガイド",
+      "getApiKey": "無料 API キーを取得"
+    }
   }
 }

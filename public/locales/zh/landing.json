@@ -10,7 +10,9 @@
     "playground": "演练场",
     "documentation": "文档",
     "blog": "博客",
-    "getStarted": "连接"
+    "getStarted": "连接",
+    "mcpProxy": "MCP 代理",
+    "mcpServers": "MCP 服务器"
   },
   "hero": {
     "badge": "全球首个AI-CMS",
@@ -735,7 +737,7 @@
     "tagline": "个人记忆是有限的。集体记忆是超能力。",
     "copy": "复制安装命令",
     "copied": "已复制！",
-    "setupHint": "支持 Claude Code、Cursor、Windsurf 等",
+    "setupHint": "通过浏览器登录以连接您的工作区",
     "starOnGithub": "在 GitHub 上加星",
     "howItWorks": "工作原理",
     "stats": "开源。永久免费。社区驱动。",
@@ -755,6 +757,14 @@
         "model": "模型记忆",
         "pluggedin": "Plugged.in"
       }
+    },
+    "proxySetupHint": "适用于 Cursor、Cline、ChatGPT、LM Studio 等的通用 MCP 代理",
+    "compat": "两条安装路径 · 适用于 Claude Code 的原生插件 · 适用于其他所有客户端的通用 MCP 代理",
+    "tabs": {
+      "plugin": "Claude Code 插件",
+      "proxy": "MCP 代理（其他客户端）",
+      "pluginCaption": "Claude Code · 30 秒 · 零配置",
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · 任何 MCP 客户端"
     }
   },
   "oneLiner": {
@@ -916,5 +926,37 @@
     },
     "tagline": "隐私是数学，不是承诺。HMAC-SHA256 + k-anonymity (k>=3)。",
     "openSource": "完全开源。一切可验证。"
+  },
+  "mcpProxy": {
+    "badge": "通用 MCP 代理",
+    "title": "一个端点。所有 MCP 服务器。所有 AI 客户端。",
+    "subtitle": "不是 Claude Code 用户？Plugged.in 的通用 MCP 代理将任何 AI 客户端 — Cursor、Cline、ChatGPT、LM Studio、Continue、Windsurf — 转变为通往数千个 MCP 服务器、您的知识库和持久内存的统一网关。",
+    "installLabel": "MCP 代理安装",
+    "copy": "复制",
+    "copied": "已复制！",
+    "compat": "兼容 Cursor · Cline · ChatGPT Desktop · LM Studio · Continue · Windsurf · 任何兼容 MCP 的客户端",
+    "features": {
+      "servers": {
+        "title": "2,700+ MCP 服务器",
+        "desc": "GitHub、Slack、Notion、Linear、Postgres、Stripe、AWS、Google Drive — 还有数千个其他。从一个注册表发现、安装和管理。"
+      },
+      "transports": {
+        "title": "所有传输",
+        "desc": "STDIO、Server-Sent Events (SSE) 和 Streamable HTTP 传输 — 通过 OAuth 2.1 令牌轮换在单个代理端点后统一。"
+      },
+      "clients": {
+        "title": "所有 AI 客户端",
+        "desc": "在 Plugged.in 中配置一次。在 Cursor、Cline、ChatGPT、LM Studio 和任何兼容 MCP 的客户端中使用相同的工具集、知识和内存。"
+      },
+      "orchestration": {
+        "title": "内置编排",
+        "desc": "用于测试的 AI playground、实时活动监控、自定义说明、文档交换和通知 — 包含在内，而不是附加。"
+      }
+    },
+    "cta": {
+      "browse": "浏览注册表",
+      "setupGuide": "设置指南",
+      "getApiKey": "获取免费 API 密钥"
+    }
   }
 }
