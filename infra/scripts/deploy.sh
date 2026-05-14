@@ -55,6 +55,30 @@ log "decrypting secrets"
 sops --decrypt "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
 chmod 0400 "$SECRETS_DECRYPTED"
 
+# 3a. Project specific secrets out of the env file into single-line files
+#     under /run/sops/, because Traefik and a few other services consume
+#     them via *_FILE indirection rather than via the env_file as a whole.
+#     Each *_FILE consumer in docker-compose.yml needs one line here.
+extract_secret() {
+  # $1 = env key in secrets.env, $2 = output filename under $RUNTIME_DIR
+  local key="$1" dest="${RUNTIME_DIR}/$2"
+  # shellcheck disable=SC2002  # explicit cat keeps the awk pipeline simple
+  local value
+  value=$(grep -E "^${key}=" "$SECRETS_DECRYPTED" | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//')
+  if [ -z "$value" ]; then
+    log "WARN: ${key} missing from secrets.env (skipping ${dest})"
+    return
+  fi
+  printf '%s' "$value" > "$dest"
+  chmod 0400 "$dest"
+}
+
+extract_secret CF_API_TOKEN          cloudflare_token
+extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
+# traefik/dynamic/middlewares.yml references these files directly via
+# `usersFile:` and (for Traefik's static config) the CF_DNS_API_TOKEN_FILE
+# env var. No rewriting of committed files at deploy time.
+
 # 4. Pull image (skip with --no-pull)
 if [ "$PULL" -eq 1 ]; then
   log "pulling images"

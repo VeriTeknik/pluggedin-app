@@ -9,28 +9,34 @@
 # Single host. Two app instances (prod + rc1) share Postgres, Redis, and the
 # MCP package cache. Traefik is the only thing bound to host ports 80/443.
 
+# env vars common to both app instances. Kept as a separate anchor so the
+# `<<: *app-env` merge inside each service's environment: block can layer
+# instance-specific overrides on top. (YAML's `<<:` merge key only merges
+# at the same nesting depth, so we can't put `environment:` directly inside
+# x-app-base — a child's `environment:` would replace the base's wholesale.)
+x-app-environment: &app-env
+  NODE_ENV: production
+  # The bug class that triggered the docker migration: ZVEC_DATA_PATH was
+  # not propagating from workspace .env into the standalone build. In the
+  # container env_file is the single source of truth, but we still set
+  # ZVEC_DATA_PATH here so the value is visible in `docker compose config`
+  # and impossible to forget on a fresh deploy.
+  ZVEC_DATA_PATH: /app/data/vectors
+  ZVEC_ALLOW_EXTERNAL_PATH: "false"  # /app is inside the container, no external path needed
+  MCP_PACKAGE_STORE_DIR: /app/.cache/mcp-packages
+  MCP_PNPM_STORE_DIR: /app/.cache/mcp-packages/pnpm-store
+  MCP_UV_CACHE_DIR: /app/.cache/mcp-packages/uv-cache
+  MCP_ISOLATION_TYPE: bubblewrap
+  MCP_ISOLATION_FALLBACK: none
+  MCP_ENABLE_NETWORK_ISOLATION: "false"
+  REDIS_URL: redis://redis:6379
+  UPLOADS_DIR: /app/uploads
+
 x-app-base: &app-base
   image: ghcr.io/veriteknik/pluggedin-app:${IMAGE_TAG:-latest}
   restart: always
   env_file:
     - /run/sops/secrets.env
-  environment:
-    NODE_ENV: production
-    # The bug class that triggered the docker migration: ZVEC_DATA_PATH was not
-    # propagating from workspace .env into the standalone build. In the
-    # container env_file is the single source of truth, but we still set
-    # ZVEC_DATA_PATH here so the value is visible in `docker compose config`
-    # and impossible to forget on a fresh deploy.
-    ZVEC_DATA_PATH: /app/data/vectors
-    ZVEC_ALLOW_EXTERNAL_PATH: "false"  # /app is inside the container, no external path needed
-    MCP_PACKAGE_STORE_DIR: /app/.cache/mcp-packages
-    MCP_PNPM_STORE_DIR: /app/.cache/mcp-packages/pnpm-store
-    MCP_UV_CACHE_DIR: /app/.cache/mcp-packages/uv-cache
-    MCP_ISOLATION_TYPE: bubblewrap
-    MCP_ISOLATION_FALLBACK: none
-    MCP_ENABLE_NETWORK_ISOLATION: "false"
-    REDIS_URL: redis://redis:6379
-    UPLOADS_DIR: /app/uploads
   volumes:
     - /home/pluggedin/zvec-data:/app/data/vectors:rw
     - /home/pluggedin/uploads:/app/uploads:rw
@@ -43,8 +49,15 @@ x-app-base: &app-base
       condition: service_healthy
     redis:
       condition: service_healthy
-  # bubblewrap needs an unprivileged user namespace; CAP_SYS_ADMIN is the
-  # minimum capability that makes that work inside the container.
+  # bubblewrap drives MCP server sandboxing. To set up its own unprivileged
+  # user namespace from inside a container, bubblewrap needs CAP_SYS_ADMIN
+  # (for clone(CLONE_NEWUSER)) and the host AppArmor profile relaxed —
+  # Debian's default `docker-default` policy blocks userns-setup syscalls.
+  # The trade-off is documented in docs/ops/docker-traefik-sops-migration.md
+  # §4 ("MCP sandboxing inside container"); removing these will silently
+  # disable MCP sandboxing for every server, not just one, so do not strip
+  # them without checking that MCP_ISOLATION_TYPE fallback is acceptable.
+  # Refs: https://github.com/containers/bubblewrap#sandbox-security
   cap_add:
     - SYS_ADMIN
   security_opt:
@@ -78,10 +91,16 @@ services:
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
       - traefik-acme:/letsencrypt
       - /run/sops:/run/sops:ro
-      # Read-only docker socket so Traefik can do container-label discovery.
-      # The labels-only data flow means a compromised Traefik cannot start
-      # or modify containers; it can only read their labels and inspect
-      # network state.
+      # Docker socket, read-only, so Traefik can do label-based router
+      # discovery. Read-only blocks container start/stop/exec but does
+      # NOT block reading env vars (`docker inspect`) on other services
+      # — including the env_file vars on pluggedin-app. That's an
+      # acceptable trade for the dev-experience win of declarative
+      # labels, but worth a tighter setup later:
+      # TODO(docker-socket-proxy): front this with Tecnativa's
+      # docker-socket-proxy scoped to the bare-minimum endpoints
+      # (containers, networks, services). Tracking: should be its own
+      # follow-up PR once the basic stack is live.
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - pluggedin
@@ -95,6 +114,8 @@ services:
     <<: *app-base
     container_name: pluggedin-app
     hostname: pluggedin-app
+    environment:
+      <<: *app-env
     labels:
       traefik.enable: "true"
       traefik.http.routers.plugged-in.rule: "Host(`plugged.in`)"
@@ -110,21 +131,15 @@ services:
     container_name: pluggedin-rc1
     hostname: pluggedin-rc1
     environment:
-      # Inherit everything from the base, then override the bits that diverge
-      # between prod and rc1.
-      NODE_ENV: production
-      ZVEC_DATA_PATH: /app/data/vectors
-      ZVEC_ALLOW_EXTERNAL_PATH: "false"
-      MCP_PACKAGE_STORE_DIR: /app/.cache/mcp-packages
-      MCP_PNPM_STORE_DIR: /app/.cache/mcp-packages/pnpm-store
-      MCP_UV_CACHE_DIR: /app/.cache/mcp-packages/uv-cache
-      MCP_ISOLATION_TYPE: bubblewrap
-      MCP_ISOLATION_FALLBACK: none
-      MCP_ENABLE_NETWORK_ISOLATION: "false"
-      REDIS_URL: redis://redis:6379
-      UPLOADS_DIR: /app/uploads
-      # rc1 overrides — supplied via the rc1-scoped SOPS secrets file (see
-      # docs/ops/docker-traefik-sops-migration.md §4 open question 3).
+      # Inherit every common var from x-app-environment, then layer rc1's
+      # divergences on top. Anything added to x-app-environment in the
+      # future automatically propagates here — that was reviewer feedback
+      # on the first cut, which re-listed every var manually and would
+      # have silently drifted out of sync.
+      <<: *app-env
+      # rc1-specific overrides — supplied via the rc1-scoped SOPS secrets
+      # file (see docs/ops/docker-traefik-sops-migration.md §4 open
+      # question 3).
       DATABASE_URL_FILE: /run/sops/rc1_database_url
       NEXTAUTH_URL: https://rc1.plugged.in
     labels:
@@ -211,8 +226,16 @@ services:
     command: daemon --config=/etc/ofelia/config.ini
     volumes:
       - ./ofelia/config.ini:/etc/ofelia/config.ini:ro
-      # Ofelia talks to docker to exec one-shot commands inside other
-      # containers. Read-only is enough — it doesn't create or destroy them.
+      # Ofelia talks to docker to `exec` one-shot commands inside other
+      # containers. Read-only is sufficient for label-based discovery
+      # AND for `docker exec` (Docker treats exec under read-only sockets
+      # as a write op? actually it doesn't — exec works either way with
+      # the current daemon). So this is *more* privileged than the
+      # Traefik mount and inherits the same TODO:
+      # TODO(docker-socket-proxy): scope this through a proxy that only
+      # exposes /containers/exec and /containers/json. Lower priority than
+      # the Traefik proxy because Ofelia's image surface is smaller, but
+      # both should land before we expose the stack publicly.
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - pluggedin

@@ -1,14 +1,19 @@
 # Traefik dynamic configuration. Hot-reloaded on file change.
 #
 # - security-headers: HSTS, CSP-friendly defaults, X-Frame-Options, etc.
-# - rate-limit:       1 req/s sustained, 10 burst, per source IP. Stack-level
-#                     rate-limit; the app does its own finer-grained limiting
-#                     (lib/rate-limiter.ts) on top of this.
-# - dashboard-auth:   basic auth on the Traefik dashboard. The user/hash pair
-#                     is generated outside and pasted in via SOPS; the SOPS
-#                     decryption step rewrites this file at deploy time with
-#                     the real credentials. Default value below is a known
-#                     placeholder that fails on purpose.
+# - rate-limit:       100 req/s average, 200 burst, per source IP. A real
+#                     SPA + APIs page load fires 20–40 requests; the stack-
+#                     level limit needs headroom so the *app*'s finer-
+#                     grained limiter (lib/rate-limiter.ts) is the visible
+#                     one in normal use. Tighten this only if we observe
+#                     abuse — having two layers fight over the same budget
+#                     is worse than picking generous numbers here.
+# - dashboard-auth:   basic auth on the Traefik dashboard. Credentials live
+#                     in /run/sops/traefik-users (htpasswd format, one line
+#                     per user). deploy.sh extracts TRAEFIK_DASHBOARD_AUTH
+#                     from secrets.env onto that file at deploy time. If
+#                     the file is missing, Traefik fails-closed: the
+#                     middleware can't load, so the dashboard router 404s.
 
 http:
   middlewares:
@@ -27,8 +32,8 @@ http:
 
     rate-limit:
       rateLimit:
-        average: 1
-        burst: 10
+        average: 100
+        burst: 200
         period: 1s
         sourceCriterion:
           ipStrategy:
@@ -36,10 +41,8 @@ http:
 
     dashboard-auth:
       basicAuth:
-        # Placeholder. Replaced by infra/scripts/deploy.sh from
-        # infra/sops/runtime/dashboard_users (htpasswd format, one line).
-        users:
-          - "placeholder:$$apr1$$replace_at_deploy$$placeholder"
+        usersFile: /run/sops/traefik-users
+        removeHeader: true
 
   routers:
     traefik-dashboard:

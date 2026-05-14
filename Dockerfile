@@ -25,13 +25,24 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 COPY scripts ./scripts
-RUN pnpm install --frozen-lockfile
+# Two-pass install: --ignore-scripts first so every package (including the
+# platform-specific @zvec/bindings-linux-x64) is placed in node_modules
+# before any lifecycle script runs. `pnpm rebuild` then runs the install
+# scripts in dependency order, so @zvec/zvec's install.js can successfully
+# require.resolve('@zvec/bindings-linux-x64'). Without this split the
+# binding isn't always present when zvec's install script fires inside
+# buildkit, and `pnpm build` aborts with
+#   Error: zvec Error: Prebuilt binary not found for linux-x64
+RUN pnpm install --frozen-lockfile --ignore-scripts \
+ && pnpm rebuild
 
 COPY . .
 RUN pnpm build
 
-# Prune dev dependencies so the runtime stage only needs what's left.
-RUN pnpm prune --prod
+# Note: dev dependencies are *not* pruned. drizzle-kit and tsx are listed as
+# devDependencies but are needed at runtime by `pnpm db:migrate` and
+# `pnpm reindex:rag` respectively. Keeping them adds ~80 MB to the runtime
+# image, which is acceptable for a server image.
 
 # ─── stage 2: runtime ─────────────────────────────────────────────────
 FROM node:22-bookworm-slim AS runtime
