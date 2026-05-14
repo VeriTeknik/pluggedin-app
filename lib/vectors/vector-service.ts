@@ -60,6 +60,19 @@ const ZVEC_DATA_DIR = (() => {
       );
     }
   }
+  // Catch the production data-loss footgun: Next.js standalone deployments
+  // rebuild .next/standalone on every deploy, wiping anything inside it.
+  // If we resolved into that build output, the operator forgot to set
+  // ZVEC_DATA_PATH to a persistent location and the next deploy will eat
+  // every vector we write. Surface it loudly at startup.
+  if (resolved.includes(`${path.sep}.next${path.sep}`) || resolved.endsWith(`${path.sep}.next`)) {
+    console.warn(
+      `[zvec] WARNING: ZVEC_DATA_PATH "${resolved}" is inside .next/. ` +
+      `This directory is regenerated on every deploy and will WIPE all vector data. ` +
+      `Set ZVEC_DATA_PATH to a persistent location (e.g. /var/lib/pluggedin/zvec-data) ` +
+      `and ZVEC_ALLOW_EXTERNAL_PATH=true.`
+    );
+  }
   return resolved;
 })();
 

@@ -52,7 +52,14 @@ const isDryRun = args.includes('--dry') || args.includes('--dry-run');
 const docFilter = args.find((a) => a.startsWith('--doc='))?.split('=')[1];
 const projectFilter = args.find((a) => a.startsWith('--project='))?.split('=')[1];
 const batchArg = args.find((a) => a.startsWith('--batch='))?.split('=')[1];
-const BATCH_SIZE = batchArg ? Math.max(1, parseInt(batchArg, 10)) : 16;
+const BATCH_SIZE = (() => {
+  if (!batchArg) return 16;
+  const parsed = Number.parseInt(batchArg, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`invalid --batch value: "${batchArg}" (expected positive integer)`);
+  }
+  return parsed;
+})();
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
@@ -89,6 +96,23 @@ function ragCollectionSchema(dim: number) {
   });
 }
 
+/**
+ * Open errors we treat as "no usable collection on disk, safe to (re)create".
+ * Anything else — permission errors, version mismatches, unexpected internal
+ * errors — we rethrow rather than silently wipe the directory.
+ */
+function isRecreatableOpenError(msg: string): boolean {
+  return (
+    msg.includes('No such file or directory') ||
+    msg.includes('Invalid collection') ||
+    msg.includes('Invalid manifest') ||
+    msg.includes('Failed to open') ||
+    msg.includes('Invalid argument') ||
+    msg.includes('Invalid checksum') ||
+    msg.includes('Corruption')
+  );
+}
+
 function openOrCreateRagCollection(dataDir: string, dim: number) {
   ZVecInitialize({ logLevel: 2 });
   const collectionPath = path.join(dataDir, RAG_DOMAIN);
@@ -103,6 +127,13 @@ function openOrCreateRagCollection(dataDir: string, dim: number) {
           'Stop the pluggedin service or point ZVEC_DATA_PATH at a different directory.',
       );
     }
+    if (!isRecreatableOpenError(msg)) {
+      // Permission / config / unknown failure — refuse to touch the directory.
+      throw new Error(
+        `zvec open failed at ${collectionPath} with non-recreatable error: ${msg}. ` +
+          'Refusing to overwrite the collection. Investigate before re-running.',
+      );
+    }
     // Missing/invalid collection — back up if anything exists, then create fresh
     if (existsSync(collectionPath)) {
       const backup = `${collectionPath}.bak`;
@@ -110,7 +141,11 @@ function openOrCreateRagCollection(dataDir: string, dim: number) {
       try {
         renameSync(collectionPath, backup);
         console.warn(`[reindex-rag] backed up existing collection to ${backup}`);
-      } catch {
+      } catch (renameErr) {
+        console.warn(
+          `[reindex-rag] could not rename to ${backup} (${renameErr instanceof Error ? renameErr.message : renameErr}); ` +
+            `removing ${collectionPath} instead`,
+        );
         rmSync(collectionPath, { recursive: true });
       }
     }
@@ -185,7 +220,7 @@ async function main() {
 
   // Open collection only once we know we have work to do.
   const collection = openOrCreateRagCollection(dataDir, dim);
-  const initialCount = collection.stats.docCount ?? 0;
+  const initialCount = collection.stats?.docCount ?? 0;
   console.log(`[reindex-rag] initial rag vector count: ${fmt(initialCount)}`);
 
   let totalProcessed = 0;
@@ -254,7 +289,7 @@ async function main() {
     }
   }
 
-  const finalCount = collection.stats.docCount ?? 0;
+  const finalCount = collection.stats?.docCount ?? 0;
   try {
     collection.closeSync();
   } catch {
