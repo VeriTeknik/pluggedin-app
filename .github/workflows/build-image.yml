@@ -28,6 +28,20 @@ env:
 
 jobs:
   build:
+    # Gated to manual `workflow_dispatch` until a self-hosted runner with the
+    # right CPU (AVX2/AVX-512) is wired in.
+    #
+    # Why: the @zvec/zvec native binding ships SIMD code paths. The prod host
+    # has them; standard GitHub-hosted Linux runners are inconsistent — some
+    # job assignments hit SIGILL during `next build` when zvec gets loaded
+    # for page-data collection. Until we register a self-hosted runner
+    # (planned as a follow-up; see docs/ops/docker-traefik-sops-migration.md
+    # §10 q1), the image is built either manually via this workflow's
+    # `Run workflow` button or directly on the prod host via
+    # `infra/scripts/build.sh`. The cutover dance in §5 of the plan was
+    # already designed to run on the host, so this doesn't move the
+    # migration timeline.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

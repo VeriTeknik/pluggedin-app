@@ -148,7 +148,7 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 - [x] `infra/postgres/init.sql` (extensions, roles).
 - [x] `infra/ofelia/config.ini` (cron jobs, replacing the host crontab).
 - [x] `Dockerfile` (replace existing — produces a single image tagged for prod and rc1).
-- [x] `.github/workflows/build-image.yml` — build on `main`, push to GHCR, tag with the short SHA.
+- [x] `.github/workflows/build-image.yml` — image build gated to `workflow_dispatch` and tag pushes until a self-hosted runner with the right CPU profile lands. Standard GitHub-hosted runners SIGILL on the `@zvec/zvec` binding's SIMD code paths inconsistently; the `stack-validate` job (compose config + shellcheck + traefik + ofelia INI parse) still runs on every PR.
 - [x] `docs/ops/docker-traefik-sops-migration.md` — this file.
 
 **Rollback:** delete the branch.
@@ -243,6 +243,14 @@ The compose file already references `infra/sops/runtime/secrets.env`, which is t
 - Daily automated `infra/scripts/backup.sh` (PG dump + zvec rsync + uploads rsync), encrypted with the same age key, shipped offsite.
 - Quarterly **restore drill**: spin up a parallel compose stack from yesterday's backup on a different port; run `infra/scripts/verify.sh` against it; tear it down.
 - Quarterly **key rotation drill**: `infra/scripts/rotate-keys.sh`.
+- **Self-hosted GitHub Actions runner** on the prod host (or a sibling box
+  with matching CPU). Re-enables the image build in CI by removing the
+  `if: ...` guard on the `build` job. The blocker today is that the
+  `@zvec/zvec` binding's SIMD code paths SIGILL on GitHub-hosted runners
+  whose Xeons sometimes lack the required ISA — production CPU works
+  every time. Self-hosted closes the gap. Setup is ~30 min:
+  `actions-runner` install + a label like `[self-hosted, plugged-in-prod]`,
+  then `runs-on: [self-hosted, plugged-in-prod]` in the workflow.
 
 ---
 
