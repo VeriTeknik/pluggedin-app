@@ -34,14 +34,30 @@ The runner installs under `/home/pluggedin/actions-runner/`, runs as the
    `NO_SYSTEMD=1` to the script lets you skip that and run
    `./run.sh` under your own supervision.
 
-3. **Verify**:
+3. **Docker socket access** (one-time, only needed if the setup script's
+   automatic add was skipped or `pluggedin` is somehow not in the `docker`
+   group). `setup-buildx-action` talks to `/var/run/docker.sock`, which is
+   `root:docker` 660; the runner user must be in the `docker` group or
+   every build dies with `permission denied while trying to connect to
+   the docker API`.
+
+   ```bash
+   sudo usermod -aG docker pluggedin
+   sudo systemctl restart actions.runner.VeriTeknik-pluggedin-app.*.service
+   ```
+
+   The group change only takes effect after the runner process is
+   restarted — the runsvc.sh shell inherits the old supplementary groups
+   otherwise.
+
+4. **Verify**:
 
    ```bash
    systemctl status actions.runner.VeriTeknik-pluggedin-app.*.service
    # and on the GitHub UI: the runner appears as "online" under Settings → Actions → Runners.
    ```
 
-4. **Trigger a test build** of the current branch:
+5. **Trigger a test build** of the current branch:
 
    ```bash
    gh workflow run build-image.yml --ref main

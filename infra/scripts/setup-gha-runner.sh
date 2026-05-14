@@ -81,6 +81,21 @@ log "installing systemd service (needs sudo)"
 sudo ./svc.sh install pluggedin
 sudo ./svc.sh start
 
+# Docker access. setup-buildx-action talks to /var/run/docker.sock, which is
+# root-owned and 660 with group=docker. The runner user must be in that
+# group or every build fails with
+#   permission denied while trying to connect to the docker API
+# We add membership idempotently. The group change only takes effect after
+# the runner service restarts (existing session inherits the old supps), so
+# we cycle the service too.
+if ! id -nG "$(whoami)" | tr ' ' '\n' | grep -qx docker; then
+  log "adding $(whoami) to the docker group (needs sudo)"
+  sudo usermod -aG docker "$(whoami)"
+  log "restarting runner service to pick up new group membership"
+  sudo systemctl restart "actions.runner.$(basename "$REPO_URL" | sed 's/\./-/g').$(hostname -s).service" || \
+    sudo systemctl restart "actions.runner.VeriTeknik-pluggedin-app.$(hostname -s).service"
+fi
+
 log "done. Verify with:"
 log "  systemctl status actions.runner.VeriTeknik-pluggedin-app.${RUNNER_NAME}.service"
 log "  curl -s ${REPO_URL%/}/settings/actions/runners  # should list ${RUNNER_NAME}"
