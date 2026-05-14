@@ -192,6 +192,10 @@
       "esbuild",
       "sharp"
     ],
+    "supportedArchitectures": {
+      "os": ["current", "linux", "darwin"],
+      "cpu": ["current", "x64", "arm64"]
+    },
     "peerDependencyRules": {
       "allowedVersions": {
         "react": "19",

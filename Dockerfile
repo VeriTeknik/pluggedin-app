@@ -25,16 +25,21 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 COPY scripts ./scripts
-# Two-pass install: --ignore-scripts first so every package (including the
-# platform-specific @zvec/bindings-linux-x64) is placed in node_modules
-# before any lifecycle script runs. `pnpm rebuild` then runs the install
-# scripts in dependency order, so @zvec/zvec's install.js can successfully
-# require.resolve('@zvec/bindings-linux-x64'). Without this split the
-# binding isn't always present when zvec's install script fires inside
-# buildkit, and `pnpm build` aborts with
+# Install. The package.json carries
+#   pnpm.supportedArchitectures.{os,cpu} = ["current", "linux", "darwin"], …
+# so the linux-x64 binding for @zvec/zvec is installed inside buildkit even
+# when pnpm's default platform-filter would have skipped it. Without that
+# config, `pnpm install` inside buildkit was placing zero @zvec/bindings-*
+# packages, and `pnpm build` later died with
 #   Error: zvec Error: Prebuilt binary not found for linux-x64
-RUN pnpm install --frozen-lockfile --ignore-scripts \
- && pnpm rebuild
+# during Next.js's "Collecting page data" pass.
+RUN pnpm install --frozen-lockfile
+
+# Hard fail-fast if the binding still isn't there. Cheaper than discovering
+# it 90 seconds later inside `pnpm build`.
+RUN test -e node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node \
+  || (echo "FATAL: @zvec/bindings-linux-x64 missing after pnpm install — check supportedArchitectures in package.json" \
+        && ls -la node_modules/@zvec/ && exit 1)
 
 COPY . .
 RUN pnpm build
