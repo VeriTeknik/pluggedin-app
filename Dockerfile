@@ -48,9 +48,19 @@ RUN pnpm install --frozen-lockfile
 RUN test -e node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node \
   || (echo "FATAL: @zvec/bindings-linux-x64 missing after pnpm install — check supportedArchitectures in package.json" \
         && ls -la node_modules/@zvec/ && exit 1)
-RUN node -e "require('@zvec/bindings-linux-x64'); console.log('zvec binding loads ok')" \
-  || (echo "FATAL: @zvec/bindings-linux-x64 is on disk but dlopen failed. Check the base image GLIBC/GLIBCXX vs the binding's requirements (objdump -T zvec_node_binding.node | grep GLIBC_)" \
-        && exit 1)
+# Diagnostic: print the real dlopen error if it fails (the `||` previously
+# swallowed it). Also dumps the binding's GLIBC/GLIBCXX requirements vs
+# what the base image actually provides, so the failure log is enough to
+# diagnose without an additional CI cycle.
+RUN apt-get update && apt-get install -y --no-install-recommends binutils \
+ && rm -rf /var/lib/apt/lists/* \
+ && (node -e "try{require('@zvec/bindings-linux-x64');console.log('zvec binding loads ok')}catch(e){console.error('REAL DLOPEN ERROR:',e.message);process.exit(1)}" \
+     || (echo '--- binding needs ---' \
+         && objdump -T node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node 2>/dev/null | grep -oE '(GLIBC|GLIBCXX)_[0-9.]+' | sort -V -u \
+         && echo '--- image provides ---' \
+         && ldd --version | head -1 \
+         && strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 2>/dev/null | grep -oE 'GLIBCXX_[0-9.]+' | sort -V -u | tail -5 \
+         && exit 1))
 
 COPY . .
 RUN pnpm build
