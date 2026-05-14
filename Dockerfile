@@ -48,19 +48,30 @@ RUN pnpm install --frozen-lockfile
 RUN test -e node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node \
   || (echo "FATAL: @zvec/bindings-linux-x64 missing after pnpm install — check supportedArchitectures in package.json" \
         && ls -la node_modules/@zvec/ && exit 1)
-# Diagnostic: print the real dlopen error if it fails (the `||` previously
-# swallowed it). Also dumps the binding's GLIBC/GLIBCXX requirements vs
-# what the base image actually provides, so the failure log is enough to
-# diagnose without an additional CI cycle.
+# Diagnostic: separate steps so each part of the output is visible even
+# under buildkit's aggressive log trimming around `||` short-circuits.
+# Step A: dump what the binding needs vs what the image provides.
 RUN apt-get update && apt-get install -y --no-install-recommends binutils \
  && rm -rf /var/lib/apt/lists/* \
- && (node -e "try{require('@zvec/bindings-linux-x64');console.log('zvec binding loads ok')}catch(e){console.error('REAL DLOPEN ERROR:',e.message);process.exit(1)}" \
-     || (echo '--- binding needs ---' \
-         && objdump -T node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node 2>/dev/null | grep -oE '(GLIBC|GLIBCXX)_[0-9.]+' | sort -V -u \
-         && echo '--- image provides ---' \
-         && ldd --version | head -1 \
-         && strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 2>/dev/null | grep -oE 'GLIBCXX_[0-9.]+' | sort -V -u | tail -5 \
-         && exit 1))
+ && echo '=== binding ldd ===' \
+ && ldd node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node 2>&1 || true \
+ && echo '=== binding requires (max per family) ===' \
+ && objdump -T node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node 2>/dev/null | grep -oE '(GLIBC|GLIBCXX)_[0-9.]+' | sort -V -u | awk -F'_' '{a[$1]=$2}END{for(k in a)print k"_"a[k]}' \
+ && echo '=== image provides (max per family) ===' \
+ && ldd --version | head -1 \
+ && strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 2>/dev/null | grep -oE 'GLIBCXX_[0-9.]+' | sort -V -u | tail -1
+# Step B: actually require the binding. No `||`, so node's exit + stderr
+# go straight to the build log.
+RUN node -e "try{ \
+  const b = require('@zvec/bindings-linux-x64'); \
+  console.log('zvec binding loaded:', typeof b); \
+} catch (e) { \
+  console.error('zvec binding require failed:'); \
+  console.error('  name:', e.name); \
+  console.error('  code:', e.code); \
+  console.error('  message:', e.message); \
+  process.exit(1); \
+}"
 
 COPY . .
 RUN pnpm build
