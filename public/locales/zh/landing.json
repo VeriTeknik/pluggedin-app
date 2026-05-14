@@ -764,7 +764,8 @@
       "plugin": "Claude Code 插件",
       "proxy": "MCP 代理（其他客户端）",
       "pluginCaption": "Claude Code · 30 秒 · 零配置",
-      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · 任何 MCP 客户端"
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · 任何 MCP 客户端",
+      "tablistLabel": "安装方式"
     }
   },
   "oneLiner": {

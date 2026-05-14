@@ -3,14 +3,15 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, BookOpen, Cable, Layers, Server, Workflow } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
 import { Button } from '@/components/ui/button';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useMounted } from '@/hooks/use-mounted';
 
-const PROXY_COMMAND = 'npx -y @pluggedin/pluggedin-mcp-proxy@latest';
+import { PROXY_COMMAND } from './constants';
 
 const features = [
   {
@@ -47,23 +48,8 @@ export function McpProxySection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
   const { ref, inView } = useInView({ threshold: 0.1, triggerOnce: true });
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => {
-    return () => clearTimeout(timerRef.current);
-  }, []);
-
-  const handleCopy = useCallback(() => {
-    if (!navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(PROXY_COMMAND).then(() => {
-      setCopied(true);
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      /* clipboard unavailable */
-    });
-  }, []);
+  const { copied, copy } = useCopyToClipboard();
+  const handleCopy = useCallback(() => copy(PROXY_COMMAND), [copy]);
 
   if (!mounted || !ready) return null;
 
@@ -120,12 +106,14 @@ export function McpProxySection() {
                 </span>
                 <button
                   onClick={handleCopy}
-                  aria-live="polite"
                   className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
                 >
                   {copied ? t('mcpProxy.copied') : t('mcpProxy.copy')}
                 </button>
               </div>
+              <span aria-live="polite" className="sr-only">
+                {copied ? t('mcpProxy.copied') : ''}
+              </span>
               <pre className="px-6 py-5 text-left font-mono text-sm md:text-base leading-relaxed overflow-x-auto">
                 <code>
                   <span className="text-neon-purple">npx</span>

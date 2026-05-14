@@ -1,11 +1,11 @@
 'use client';
 
 import { Copy } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 
-const INSTALL_COMMANDS = `/plugin marketplace add VeriTeknik/pluggedin-plugin
-/plugin install pluggedin
-/pluggedin:setup`;
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+
+import { PLUGIN_COMMANDS } from './constants';
 
 interface InstallSnippetProps {
   copyLabel: string;
@@ -14,23 +14,8 @@ interface InstallSnippetProps {
 }
 
 export function InstallSnippet({ copyLabel, copiedLabel, setupHint }: InstallSnippetProps) {
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => {
-    return () => clearTimeout(timerRef.current);
-  }, []);
-
-  const handleCopy = useCallback(() => {
-    if (!navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(INSTALL_COMMANDS).then(() => {
-      setCopied(true);
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      /* clipboard unavailable */
-    });
-  }, []);
+  const { copied, copy } = useCopyToClipboard();
+  const handleCopy = useCallback(() => copy(PLUGIN_COMMANDS), [copy]);
 
   return (
     <div className="relative group">
@@ -44,13 +29,15 @@ export function InstallSnippet({ copyLabel, copiedLabel, setupHint }: InstallSni
           </div>
           <button
             onClick={handleCopy}
-            aria-live="polite"
             className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
           >
             <Copy className="w-3.5 h-3.5" />
             {copied ? copiedLabel : copyLabel}
           </button>
         </div>
+        <span aria-live="polite" className="sr-only">
+          {copied ? copiedLabel : ''}
+        </span>
         <pre className="px-6 py-5 text-left font-mono text-sm md:text-base leading-relaxed overflow-x-auto">
           <code>
             <span className="text-electric-cyan">/plugin</span>

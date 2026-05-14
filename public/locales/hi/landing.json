@@ -786,7 +786,8 @@
       "plugin": "Claude Code प्लगइन",
       "proxy": "MCP प्रॉक्सी (अन्य क्लाइंट)",
       "pluginCaption": "Claude Code · 30 सेकंड · शून्य कॉन्फ़िगरेशन",
-      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · कोई भी MCP क्लाइंट"
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · कोई भी MCP क्लाइंट",
+      "tablistLabel": "इंस्टॉलेशन विधि"
     }
   },
   "oneLiner": {

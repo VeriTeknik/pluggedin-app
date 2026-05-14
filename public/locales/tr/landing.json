@@ -797,7 +797,8 @@
       "plugin": "Claude Code Plugin",
       "proxy": "MCP Proxy (diğer istemciler)",
       "pluginCaption": "Claude Code · 30 saniye · sıfır konfigürasyon",
-      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · herhangi bir MCP istemcisi"
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · herhangi bir MCP istemcisi",
+      "tablistLabel": "Kurulum yöntemi"
     }
   },
   "oneLiner": {

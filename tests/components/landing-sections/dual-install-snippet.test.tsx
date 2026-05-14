@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DualInstallSnippet } from '@/components/landing-sections/dual-install-snippet';
 
@@ -14,6 +14,7 @@ const labels = {
   copiedLabel: 'Copied!',
   pluginSetupHint: 'Sign in via browser',
   proxySetupHint: 'Universal MCP proxy',
+  tablistLabel: 'Installation method',
 };
 
 describe('DualInstallSnippet', () => {
@@ -25,6 +26,7 @@ describe('DualInstallSnippet', () => {
 
   it('renders both tabs and the plugin command by default', () => {
     render(<DualInstallSnippet labels={labels} />);
+    expect(screen.getByRole('tablist', { name: labels.tablistLabel })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: labels.pluginTabLabel })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: labels.proxyTabLabel })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByText(/VeriTeknik\/pluggedin-plugin/)).toBeInTheDocument();
@@ -39,7 +41,7 @@ describe('DualInstallSnippet', () => {
     expect(screen.getByText(labels.proxyCaption)).toBeInTheDocument();
   });
 
-  it('copies the plugin commands when on plugin tab', async () => {
+  it('copies the plugin commands when on plugin tab', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     render(<DualInstallSnippet labels={labels} />);
@@ -69,5 +71,60 @@ describe('DualInstallSnippet', () => {
     Object.assign(navigator, { clipboard: undefined });
     render(<DualInstallSnippet labels={labels} />);
     expect(() => fireEvent.click(screen.getByRole('button', { name: /Copy/i }))).not.toThrow();
+  });
+
+  it('does not throw when clipboard.writeText rejects', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<DualInstallSnippet labels={labels} />);
+    fireEvent.click(screen.getByRole('button', { name: /Copy/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    // Label must stay on "Copy" — never flip to "Copied!" on rejection.
+    expect(screen.getByRole('button', { name: /Copy/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: labels.copiedLabel })).not.toBeInTheDocument();
+  });
+
+  it('flips the button label from "Copy" to "Copied!" after a successful copy', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<DualInstallSnippet labels={labels} />);
+
+    fireEvent.click(screen.getByRole('button', { name: labels.copyLabel }));
+    await screen.findByRole('button', { name: labels.copiedLabel });
+    // The sr-only live region carries the same status for screen readers.
+    expect(screen.getByText(labels.copiedLabel, { selector: 'span.sr-only' })).toBeInTheDocument();
+  });
+
+  describe('keyboard navigation', () => {
+    it('moves to the next tab on ArrowRight and back on ArrowLeft', () => {
+      render(<DualInstallSnippet labels={labels} />);
+      const pluginTab = screen.getByRole('tab', { name: labels.pluginTabLabel });
+      const proxyTab = screen.getByRole('tab', { name: labels.proxyTabLabel });
+
+      fireEvent.keyDown(pluginTab, { key: 'ArrowRight' });
+      expect(proxyTab).toHaveAttribute('aria-selected', 'true');
+      expect(pluginTab).toHaveAttribute('aria-selected', 'false');
+
+      fireEvent.keyDown(proxyTab, { key: 'ArrowLeft' });
+      expect(pluginTab).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('wraps with Home and End', () => {
+      render(<DualInstallSnippet labels={labels} defaultTab="proxy" />);
+      const pluginTab = screen.getByRole('tab', { name: labels.pluginTabLabel });
+      const proxyTab = screen.getByRole('tab', { name: labels.proxyTabLabel });
+
+      fireEvent.keyDown(proxyTab, { key: 'Home' });
+      expect(pluginTab).toHaveAttribute('aria-selected', 'true');
+
+      fireEvent.keyDown(pluginTab, { key: 'End' });
+      expect(proxyTab).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('uses roving tabindex so only the active tab is in the tab order', () => {
+      render(<DualInstallSnippet labels={labels} />);
+      expect(screen.getByRole('tab', { name: labels.pluginTabLabel })).toHaveAttribute('tabindex', '0');
+      expect(screen.getByRole('tab', { name: labels.proxyTabLabel })).toHaveAttribute('tabindex', '-1');
+    });
   });
 });

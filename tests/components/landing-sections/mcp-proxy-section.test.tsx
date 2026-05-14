@@ -96,4 +96,21 @@ describe('McpProxySection', () => {
     const { container } = render(<McpProxySection />);
     expect(container.querySelector('#mcp-proxy')).not.toBeNull();
   });
+
+  it('does not throw when clipboard is unavailable', () => {
+    Object.assign(navigator, { clipboard: undefined });
+    render(<McpProxySection />);
+    expect(() => fireEvent.click(screen.getByRole('button', { name: /Copy/i }))).not.toThrow();
+  });
+
+  it('does not throw when clipboard.writeText rejects', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<McpProxySection />);
+    fireEvent.click(screen.getByRole('button', { name: /Copy/i }));
+    // Allow the rejected promise to settle without surfacing as an unhandled rejection.
+    await Promise.resolve();
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: /Copy/i })).toBeInTheDocument();
+  });
 });

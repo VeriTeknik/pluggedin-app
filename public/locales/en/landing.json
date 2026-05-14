@@ -809,7 +809,8 @@
       "plugin": "Claude Code Plugin",
       "proxy": "MCP Proxy (other clients)",
       "pluginCaption": "Claude Code · 30 seconds · zero config",
-      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · any MCP client"
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · any MCP client",
+      "tablistLabel": "Installation method"
     },
     "starOnGithub": "Star on GitHub",
     "howItWorks": "How It Works",

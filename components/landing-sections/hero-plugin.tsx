@@ -112,6 +112,7 @@ export function HeroPluginSection() {
                 copiedLabel: t('heroPlugin.copied'),
                 pluginSetupHint: t('heroPlugin.setupHint'),
                 proxySetupHint: t('heroPlugin.proxySetupHint'),
+                tablistLabel: t('heroPlugin.tabs.tablistLabel'),
               }}
             />
           </motion.div>

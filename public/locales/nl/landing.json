@@ -814,7 +814,8 @@
       "plugin": "Claude Code Plugin",
       "proxy": "MCP Proxy (andere clients)",
       "pluginCaption": "Claude Code · 30 seconden · zonder configuratie",
-      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · elke MCP-client"
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · elke MCP-client",
+      "tablistLabel": "Installatiemethode"
     }
   },
   "oneLiner": {

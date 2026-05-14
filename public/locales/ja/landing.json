@@ -771,7 +771,8 @@
       "plugin": "Claude Code プラグイン",
       "proxy": "MCP プロキシ（他のクライアント）",
       "pluginCaption": "Claude Code · 30 秒 · ゼロコンフィグ",
-      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · 任意の MCP クライアント"
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · 任意の MCP クライアント",
+      "tablistLabel": "インストール方法"
     }
   },
   "oneLiner": {
