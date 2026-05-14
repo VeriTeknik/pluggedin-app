@@ -12,6 +12,8 @@
     "blog": "Blog",
     "getStarted": "Install",
     "howItWorks": "How It Works",
+    "mcpProxy": "MCP Proxy",
+    "mcpServers": "MCP Servers",
     "github": "GitHub"
   },
   "hero": {
@@ -800,7 +802,16 @@
     "tagline": "Individual memory is limited. Collective memory is a superpower.",
     "copy": "Copy install command",
     "copied": "Copied!",
-    "setupHint": "Works with Claude Code, Cursor, Windsurf & more",
+    "setupHint": "Sign in via browser to wire up your workspace",
+    "proxySetupHint": "Universal MCP proxy for Cursor, Cline, ChatGPT, LM Studio & more",
+    "compat": "Two install paths · Native plugin for Claude Code · Universal MCP proxy for every other client",
+    "tabs": {
+      "plugin": "Claude Code Plugin",
+      "proxy": "MCP Proxy (other clients)",
+      "pluginCaption": "Claude Code · 30 seconds · zero config",
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · any MCP client",
+      "tablistLabel": "Installation method"
+    },
     "starOnGithub": "Star on GitHub",
     "howItWorks": "How It Works",
     "stats": "Open source. Free forever. Community-powered.",
@@ -980,6 +991,38 @@
       "step2": "Pattern detected",
       "step3": "Matched with community",
       "step4": "Your AI tells you"
+    }
+  },
+  "mcpProxy": {
+    "badge": "Universal MCP Proxy",
+    "title": "One Endpoint. Every MCP Server. Every AI Client.",
+    "subtitle": "Not a Claude Code user? Plugged.in's universal MCP proxy turns any AI client — Cursor, Cline, ChatGPT, LM Studio, Continue, Windsurf — into a unified gateway to thousands of MCP servers, your knowledge base, and persistent memory.",
+    "installLabel": "MCP Proxy Install",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "compat": "Works with Cursor · Cline · ChatGPT Desktop · LM Studio · Continue · Windsurf · any MCP-compatible client",
+    "features": {
+      "servers": {
+        "title": "2,700+ MCP Servers",
+        "desc": "GitHub, Slack, Notion, Linear, Postgres, Stripe, AWS, Google Drive — and thousands more. Discover, install, and manage from one registry."
+      },
+      "transports": {
+        "title": "Every Transport",
+        "desc": "STDIO, Server-Sent Events (SSE), and Streamable HTTP transports — all unified behind a single proxy endpoint with OAuth 2.1 token rotation."
+      },
+      "clients": {
+        "title": "Every AI Client",
+        "desc": "Configure once in Plugged.in. Use the same toolset, knowledge, and memory in Cursor, Cline, ChatGPT, LM Studio, and any MCP-compliant client."
+      },
+      "orchestration": {
+        "title": "Built-in Orchestration",
+        "desc": "AI playground for testing, real-time activity monitoring, custom instructions, document exchange, and notifications — included, not bolted on."
+      }
+    },
+    "cta": {
+      "browse": "Browse the Registry",
+      "setupGuide": "Setup Guide",
+      "getApiKey": "Get Free API Key"
     }
   }
 }

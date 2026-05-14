@@ -14,9 +14,11 @@ import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useKeyPress } from '@/hooks/useKeyPress';
 
-// Navigation links — simplified for plugin-first landing
+// Navigation links — plugin-first, but expose MCP proxy + servers for SEO and broader audience
 const navLinks: Array<{ href: string; labelKey: string; external?: boolean }> = [
   { href: '#terminal-demo', labelKey: 'navigation.howItWorks' },
+  { href: '#mcp-proxy', labelKey: 'navigation.mcpProxy' },
+  { href: '#popular-servers', labelKey: 'navigation.mcpServers' },
   { href: 'https://docs.plugged.in', labelKey: 'navigation.documentation', external: true },
   { href: 'https://github.com/VeriTeknik/pluggedin-plugin', labelKey: 'navigation.github', external: true },
 ];

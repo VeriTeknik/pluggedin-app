@@ -7,7 +7,9 @@
     "playground": "प्लेग्राउंड",
     "documentation": "दस्तावेज़",
     "blog": "ब्लॉग",
-    "getStarted": "कनेक्ट करें"
+    "getStarted": "कनेक्ट करें",
+    "mcpProxy": "MCP प्रॉक्सी",
+    "mcpServers": "MCP सर्वर"
   },
   "hero": {
     "badge": "दुनिया का पहला AI-CMS",
@@ -757,7 +759,7 @@
     "tagline": "व्यक्तिगत स्मृति सीमित है। सामूहिक स्मृति एक महाशक्ति है।",
     "copy": "इंस्टॉल कमांड कॉपी करें",
     "copied": "कॉपी हो गया!",
-    "setupHint": "Claude Code, Cursor, Windsurf और अन्य के साथ काम करता है",
+    "setupHint": "अपना वर्कस्पेस सेट करने के लिए ब्राउज़र से साइन इन करें",
     "starOnGithub": "GitHub पर स्टार करें",
     "howItWorks": "कैसे काम करता है",
     "stats": "ओपन सोर्स। हमेशा मुफ्त। समुदाय-संचालित।",
@@ -777,6 +779,15 @@
         "model": "मॉडल मेमोरी",
         "pluggedin": "Plugged.in"
       }
+    },
+    "proxySetupHint": "Cursor, Cline, ChatGPT, LM Studio और अधिक के लिए यूनिवर्सल MCP प्रॉक्सी",
+    "compat": "दो इंस्टॉलेशन पथ · Claude Code के लिए नेटिव प्लगइन · हर दूसरे क्लाइंट के लिए यूनिवर्सल MCP प्रॉक्सी",
+    "tabs": {
+      "plugin": "Claude Code प्लगइन",
+      "proxy": "MCP प्रॉक्सी (अन्य क्लाइंट)",
+      "pluginCaption": "Claude Code · 30 सेकंड · शून्य कॉन्फ़िगरेशन",
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · कोई भी MCP क्लाइंट",
+      "tablistLabel": "इंस्टॉलेशन विधि"
     }
   },
   "oneLiner": {
@@ -938,5 +949,37 @@
     },
     "tagline": "गोपनीयता गणित है, वादे नहीं। HMAC-SHA256 + k-anonymity (k>=3)।",
     "openSource": "पूर्णतः ओपन सोर्स। सब कुछ सत्यापित करें।"
+  },
+  "mcpProxy": {
+    "badge": "यूनिवर्सल MCP प्रॉक्सी",
+    "title": "एक एंडपॉइंट। हर MCP सर्वर। हर AI क्लाइंट।",
+    "subtitle": "Claude Code उपयोगकर्ता नहीं? Plugged.in का यूनिवर्सल MCP प्रॉक्सी किसी भी AI क्लाइंट — Cursor, Cline, ChatGPT, LM Studio, Continue, Windsurf — को हजारों MCP सर्वरों, आपके ज्ञान आधार और निरंतर स्मृति के लिए एक एकीकृत गेटवे में बदल देता है।",
+    "installLabel": "MCP प्रॉक्सी इंस्टॉल",
+    "copy": "कॉपी करें",
+    "copied": "कॉपी किया!",
+    "compat": "Cursor · Cline · ChatGPT Desktop · LM Studio · Continue · Windsurf · किसी भी MCP-संगत क्लाइंट के साथ काम करता है",
+    "features": {
+      "servers": {
+        "title": "2,700+ MCP सर्वर",
+        "desc": "GitHub, Slack, Notion, Linear, Postgres, Stripe, AWS, Google Drive — और हजारों अन्य। एक रजिस्ट्री से खोजें, इंस्टॉल करें और प्रबंधित करें।"
+      },
+      "transports": {
+        "title": "हर ट्रांसपोर्ट",
+        "desc": "STDIO, Server-Sent Events (SSE) और Streamable HTTP ट्रांसपोर्ट — सभी OAuth 2.1 टोकन रोटेशन के साथ एकल प्रॉक्सी एंडपॉइंट के पीछे एकीकृत।"
+      },
+      "clients": {
+        "title": "हर AI क्लाइंट",
+        "desc": "Plugged.in में एक बार कॉन्फ़िगर करें। Cursor, Cline, ChatGPT, LM Studio और किसी भी MCP-संगत क्लाइंट में समान टूलसेट, ज्ञान और स्मृति का उपयोग करें।"
+      },
+      "orchestration": {
+        "title": "बिल्ट-इन ऑर्केस्ट्रेशन",
+        "desc": "परीक्षण के लिए AI playground, वास्तविक समय गतिविधि निगरानी, कस्टम निर्देश, दस्तावेज़ विनिमय और सूचनाएँ — शामिल, अलग से नहीं।"
+      }
+    },
+    "cta": {
+      "browse": "रजिस्ट्री ब्राउज़ करें",
+      "setupGuide": "सेटअप गाइड",
+      "getApiKey": "मुफ़्त API कुंजी प्राप्त करें"
+    }
   }
 }

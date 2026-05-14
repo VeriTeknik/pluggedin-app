@@ -45,13 +45,25 @@ const PrivacySection = dynamicImport(
   { loading: () => <SectionLoader />, ssr: true }
 );
 
-// Section 6: Platform Capabilities
+// Section 6: Universal MCP Proxy (for non-Claude-Code clients: Cursor, Cline, ChatGPT, LM Studio, etc.)
+const McpProxySection = dynamicImport(
+  () => import('@/components/landing-sections/mcp-proxy-section').then(mod => ({ default: mod.McpProxySection })),
+  { loading: () => <SectionLoader />, ssr: true }
+);
+
+// Section 7: Popular MCP Servers (live data from registry)
+const PopularServersSection = dynamicImport(
+  () => import('@/components/landing-sections/popular-servers').then(mod => ({ default: mod.PopularServersSection })),
+  { loading: () => <SectionLoader />, ssr: true }
+);
+
+// Section 8: Platform Capabilities
 const PlatformCapabilitiesSection = dynamicImport(
   () => import('@/components/landing-sections/platform-capabilities').then(mod => ({ default: mod.PlatformCapabilitiesSection })),
   { loading: () => <SectionLoader />, ssr: true }
 );
 
-// Section 7: CTA
+// Section 9: CTA
 const CtaPluginSection = dynamicImport(
   () => import('@/components/landing-sections/cta-plugin').then(mod => ({ default: mod.CtaPluginSection })),
   { loading: () => <SectionLoader height="300px" />, ssr: true }
@@ -96,14 +108,28 @@ export default function Home() {
             </ErrorBoundary>
           </Suspense>
 
-          {/* Section 6: Platform Capabilities — general features */}
+          {/* Section 6: Universal MCP Proxy — Cursor, Cline, ChatGPT, LM Studio, etc. */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="MCP Proxy">
+              <McpProxySection />
+            </ErrorBoundary>
+          </Suspense>
+
+          {/* Section 7: Popular MCP Servers — live registry data */}
+          <Suspense fallback={<SectionLoader />}>
+            <ErrorBoundary sectionName="Popular Servers">
+              <PopularServersSection />
+            </ErrorBoundary>
+          </Suspense>
+
+          {/* Section 8: Platform Capabilities — general features */}
           <Suspense fallback={<SectionLoader />}>
             <ErrorBoundary sectionName="Platform Capabilities">
               <PlatformCapabilitiesSection />
             </ErrorBoundary>
           </Suspense>
 
-          {/* Section 7: CTA — mirrors hero */}
+          {/* Section 9: CTA — mirrors hero */}
           <Suspense fallback={<SectionLoader height="300px" />}>
             <ErrorBoundary sectionName="CTA">
               <CtaPluginSection />

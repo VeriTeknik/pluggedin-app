@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Star } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
-import { InstallSnippet } from '@/components/landing-sections/install-snippet';
+import { DualInstallSnippet } from '@/components/landing-sections/dual-install-snippet';
 import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
 
@@ -95,19 +95,37 @@ export function HeroPluginSection() {
             {t('heroPlugin.tagline')}
           </motion.p>
 
-          {/* Install Code Block */}
+          {/* Dual Install Code Block: plugin + MCP proxy CLI */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.5 }}
-            className="relative max-w-2xl mx-auto mb-10"
+            className="relative max-w-2xl mx-auto mb-6"
           >
-            <InstallSnippet
-              copyLabel={t('heroPlugin.copy')}
-              copiedLabel={t('heroPlugin.copied')}
-              setupHint={t('heroPlugin.setupHint')}
+            <DualInstallSnippet
+              labels={{
+                pluginTabLabel: t('heroPlugin.tabs.plugin'),
+                proxyTabLabel: t('heroPlugin.tabs.proxy'),
+                pluginCaption: t('heroPlugin.tabs.pluginCaption'),
+                proxyCaption: t('heroPlugin.tabs.proxyCaption'),
+                copyLabel: t('heroPlugin.copy'),
+                copiedLabel: t('heroPlugin.copied'),
+                pluginSetupHint: t('heroPlugin.setupHint'),
+                proxySetupHint: t('heroPlugin.proxySetupHint'),
+                tablistLabel: t('heroPlugin.tabs.tablistLabel'),
+              }}
             />
           </motion.div>
+
+          {/* Compatibility line */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ delay: 0.55 }}
+            className="text-xs text-muted-foreground/70 mb-10"
+          >
+            {t('heroPlugin.compat')}
+          </motion.p>
 
           {/* Contrast Section */}
           <motion.div

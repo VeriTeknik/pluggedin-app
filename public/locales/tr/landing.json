@@ -12,7 +12,9 @@
     "blog": "Blog",
     "getStarted": "Kur",
     "howItWorks": "Nasıl Çalışır",
-    "github": "GitHub"
+    "github": "GitHub",
+    "mcpProxy": "MCP Proxy",
+    "mcpServers": "MCP Sunucuları"
   },
   "hero": {
     "badge": "Dünyanın İlk AI-CMS'i",
@@ -768,7 +770,7 @@
     "tagline": "Bireysel hafıza sınırlıdır. Kolektif hafıza süper güçtür.",
     "copy": "Kurulum komutunu kopyala",
     "copied": "Kopyalandı!",
-    "setupHint": "Claude Code, Cursor, Windsurf ve daha fazlasıyla çalışır",
+    "setupHint": "Tarayıcıdan giriş yapıp workspace'inizi bağlayın",
     "starOnGithub": "GitHub'da Yıldızla",
     "howItWorks": "Nasıl Çalışır",
     "stats": "Açık kaynak. Sonsuza kadar ücretsiz. Topluluk destekli.",
@@ -788,6 +790,15 @@
         "model": "Model Hafızası",
         "pluggedin": "Plugged.in"
       }
+    },
+    "proxySetupHint": "Cursor, Cline, ChatGPT, LM Studio ve daha fazlası için evrensel MCP proxy",
+    "compat": "İki kurulum yolu · Claude Code için yerel plugin · Diğer tüm istemciler için evrensel MCP proxy",
+    "tabs": {
+      "plugin": "Claude Code Plugin",
+      "proxy": "MCP Proxy (diğer istemciler)",
+      "pluginCaption": "Claude Code · 30 saniye · sıfır konfigürasyon",
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · herhangi bir MCP istemcisi",
+      "tablistLabel": "Kurulum yöntemi"
     }
   },
   "oneLiner": {
@@ -948,6 +959,38 @@
       "step2": "Pattern tespit edilir",
       "step3": "Toplulukla eşleştirilir",
       "step4": "Yapay zekân sana söyler"
+    }
+  },
+  "mcpProxy": {
+    "badge": "Evrensel MCP Proxy",
+    "title": "Tek Endpoint. Tüm MCP Sunucuları. Tüm AI İstemcileri.",
+    "subtitle": "Claude Code kullanmıyor musunuz? Plugged.in'in evrensel MCP proxy'si herhangi bir AI istemcisini — Cursor, Cline, ChatGPT, LM Studio, Continue, Windsurf — binlerce MCP sunucusuna, bilgi tabanınıza ve kalıcı belleğe açılan birleşik bir kapıya dönüştürür.",
+    "installLabel": "MCP Proxy Kurulumu",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı!",
+    "compat": "Cursor · Cline · ChatGPT Desktop · LM Studio · Continue · Windsurf · herhangi bir MCP-uyumlu istemci ile çalışır",
+    "features": {
+      "servers": {
+        "title": "2.700+ MCP Sunucusu",
+        "desc": "GitHub, Slack, Notion, Linear, Postgres, Stripe, AWS, Google Drive — ve binlercesi daha. Tek bir registry üzerinden keşfedin, kurun, yönetin."
+      },
+      "transports": {
+        "title": "Her Transport",
+        "desc": "STDIO, Server-Sent Events (SSE) ve Streamable HTTP transport'ları — hepsi OAuth 2.1 token rotasyonu ile tek bir proxy endpoint'i arkasında birleşir."
+      },
+      "clients": {
+        "title": "Her AI İstemcisi",
+        "desc": "Plugged.in'de bir kez yapılandırın. Aynı araç setini, bilgiyi ve belleği Cursor, Cline, ChatGPT, LM Studio ve herhangi bir MCP-uyumlu istemcide kullanın."
+      },
+      "orchestration": {
+        "title": "Yerleşik Orkestrasyon",
+        "desc": "Test için AI playground, gerçek zamanlı aktivite izleme, özel talimatlar, doküman değişimi ve bildirimler — sonradan eklenmiş değil, dahil."
+      }
+    },
+    "cta": {
+      "browse": "Registry'yi Keşfet",
+      "setupGuide": "Kurulum Kılavuzu",
+      "getApiKey": "Ücretsiz API Anahtarı Al"
     }
   }
 }

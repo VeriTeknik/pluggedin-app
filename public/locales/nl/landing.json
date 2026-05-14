@@ -7,7 +7,9 @@
     "playground": "Playground",
     "documentation": "Documentatie",
     "blog": "Blog",
-    "getStarted": "Verbind"
+    "getStarted": "Verbind",
+    "mcpProxy": "MCP Proxy",
+    "mcpServers": "MCP Servers"
   },
   "hero": {
     "badge": "'s Werelds Eerste AI-CMS",
@@ -785,7 +787,7 @@
     "tagline": "Individueel geheugen is beperkt. Collectief geheugen is een superkracht.",
     "copy": "Installeercommando kopiëren",
     "copied": "Gekopieerd!",
-    "setupHint": "Werkt met Claude Code, Cursor, Windsurf en meer",
+    "setupHint": "Log in via je browser om je workspace te koppelen",
     "starOnGithub": "Ster op GitHub",
     "howItWorks": "Hoe het werkt",
     "stats": "Open source. Voor altijd gratis. Community-aangedreven.",
@@ -805,6 +807,15 @@
         "model": "Modelgeheugen",
         "pluggedin": "Plugged.in"
       }
+    },
+    "proxySetupHint": "Universele MCP-proxy voor Cursor, Cline, ChatGPT, LM Studio en meer",
+    "compat": "Twee installatiepaden · Native plugin voor Claude Code · Universele MCP-proxy voor elke andere client",
+    "tabs": {
+      "plugin": "Claude Code Plugin",
+      "proxy": "MCP Proxy (andere clients)",
+      "pluginCaption": "Claude Code · 30 seconden · zonder configuratie",
+      "proxyCaption": "Cursor · Cline · ChatGPT · LM Studio · elke MCP-client",
+      "tablistLabel": "Installatiemethode"
     }
   },
   "oneLiner": {
@@ -966,5 +977,37 @@
     },
     "tagline": "Privacy is wiskunde, geen beloftes. HMAC-SHA256 + k-anonymity (k>=3).",
     "openSource": "Volledig open source. Verifieer alles."
+  },
+  "mcpProxy": {
+    "badge": "Universele MCP Proxy",
+    "title": "Eén endpoint. Elke MCP-server. Elke AI-client.",
+    "subtitle": "Geen Claude Code-gebruiker? De universele MCP-proxy van Plugged.in maakt van elke AI-client — Cursor, Cline, ChatGPT, LM Studio, Continue, Windsurf — een verenigde poort naar duizenden MCP-servers, je kennisbasis en persistent geheugen.",
+    "installLabel": "MCP Proxy Installatie",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd!",
+    "compat": "Werkt met Cursor · Cline · ChatGPT Desktop · LM Studio · Continue · Windsurf · elke MCP-compatibele client",
+    "features": {
+      "servers": {
+        "title": "2.700+ MCP-servers",
+        "desc": "GitHub, Slack, Notion, Linear, Postgres, Stripe, AWS, Google Drive — en duizenden andere. Ontdek, installeer en beheer vanuit één register."
+      },
+      "transports": {
+        "title": "Elke transport",
+        "desc": "STDIO, Server-Sent Events (SSE) en Streamable HTTP-transports — allemaal verenigd achter één proxy-endpoint met OAuth 2.1-tokenrotatie."
+      },
+      "clients": {
+        "title": "Elke AI-client",
+        "desc": "Configureer één keer in Plugged.in. Gebruik dezelfde toolset, kennis en geheugen in Cursor, Cline, ChatGPT, LM Studio en elke MCP-compatibele client."
+      },
+      "orchestration": {
+        "title": "Ingebouwde orkestratie",
+        "desc": "AI-playground voor testen, realtime activiteitsmonitoring, aangepaste instructies, documentuitwisseling en notificaties — inbegrepen, niet bijgevoegd."
+      }
+    },
+    "cta": {
+      "browse": "Bekijk het register",
+      "setupGuide": "Setupgids",
+      "getApiKey": "Gratis API-sleutel"
+    }
   }
 }
