@@ -28,21 +28,15 @@ env:
 
 jobs:
   build:
-    # Gated to manual `workflow_dispatch` until a self-hosted runner with the
-    # right CPU (AVX2/AVX-512) is wired in.
+    # Runs on the self-hosted runner set up by
+    # infra/scripts/setup-gha-runner.sh on the prod host. The host's CPU has
+    # the AVX2/AVX-512 instructions @zvec/zvec's native binding ships;
+    # GitHub-hosted runners did not, and the build hit SIGILL inconsistently
+    # depending on which Xeon Actions allocated.
     #
-    # Why: the @zvec/zvec native binding ships SIMD code paths. The prod host
-    # has them; standard GitHub-hosted Linux runners are inconsistent — some
-    # job assignments hit SIGILL during `next build` when zvec gets loaded
-    # for page-data collection. Until we register a self-hosted runner
-    # (planned as a follow-up; see docs/ops/docker-traefik-sops-migration.md
-    # §10 q1), the image is built either manually via this workflow's
-    # `Run workflow` button or directly on the prod host via
-    # `infra/scripts/build.sh`. The cutover dance in §5 of the plan was
-    # already designed to run on the host, so this doesn't move the
-    # migration timeline.
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
+    # If the self-hosted runner is offline the job stays queued — that's a
+    # signal to either bring the runner back or trigger a build elsewhere.
+    runs-on: [self-hosted, linux, x64, plugged-in-prod]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -50,7 +44,9 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
+        # Login on PRs too so the registry cache (cache-from) is reachable.
+        # PRs from forks can't push (read-only GITHUB_TOKEN), so cache-to is
+        # gated separately below.
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -79,8 +75,12 @@ jobs:
           load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # PRs read the warm cache; only main / tag pushes refresh it.
+          # Writing the cache from a PR requires registry write access,
+          # which GITHUB_TOKEN withholds on fork PRs — gating cache-to to
+          # non-PR events keeps internal PRs fast and fork PRs unblocked.
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache,mode=max
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}:cache,mode=max', env.REGISTRY, env.IMAGE_NAME) || '' }}
           build-args: |
             NEXT_TELEMETRY_DISABLED=1
 
