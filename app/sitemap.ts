@@ -4,26 +4,40 @@ import { MetadataRoute } from 'next';
 import { db } from '@/db';
 import { blogPostsTable, BlogPostStatus, users } from '@/db/schema';
 
+// At Next.js build time the database isn't reachable in every environment
+// — most importantly inside `pnpm build` running in our docker image, where
+// there's no postgres available. If DB lookups fail here the whole build
+// aborts. Falling back to "just the static routes" keeps the sitemap valid
+// (search engines re-crawl it on a schedule anyway).
+async function loadDynamicSitemapEntries() {
+  try {
+    const blogPosts = await db.query.blogPostsTable.findMany({
+      where: eq(blogPostsTable.status, BlogPostStatus.PUBLISHED),
+      columns: {
+        slug: true,
+        updated_at: true,
+        published_at: true,
+      },
+    });
+    const publicUsers = await db
+      .select({ username: users.username, updated_at: users.updated_at })
+      .from(users)
+      .where(and(isNotNull(users.username), eq(users.is_public, true)))
+      .limit(50_000);
+    return { blogPosts, publicUsers };
+  } catch (err) {
+    console.warn(
+      '[sitemap] DB lookup failed (returning only static routes):',
+      err instanceof Error ? err.message : err,
+    );
+    return { blogPosts: [], publicUsers: [] };
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://plugged.in';
   const currentDate = new Date();
-
-  // Fetch published blog posts
-  const blogPosts = await db.query.blogPostsTable.findMany({
-    where: eq(blogPostsTable.status, BlogPostStatus.PUBLISHED),
-    columns: {
-      slug: true,
-      updated_at: true,
-      published_at: true,
-    },
-  });
-
-  // Fetch public user profiles (users with usernames who opted in)
-  const publicUsers = await db
-    .select({ username: users.username, updated_at: users.updated_at })
-    .from(users)
-    .where(and(isNotNull(users.username), eq(users.is_public, true)))
-    .limit(50_000);
+  const { blogPosts, publicUsers } = await loadDynamicSitemapEntries();
 
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [
