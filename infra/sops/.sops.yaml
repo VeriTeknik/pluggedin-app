@@ -1,0 +1,23 @@
+# SOPS creation rules. When you run `sops <file>`, SOPS looks here to decide
+# how to encrypt new files.
+#
+# The age recipient (public key) below is the *deploy* key — it lives on the
+# production host at /etc/sops/age/keys.txt and Traefik's compose service
+# mounts it into containers that need to decrypt. The recipient is safe to
+# commit; only the private key is sensitive and never leaves the host.
+#
+# To rotate keys see docs/ops/sops-rotation.md and the rotate-keys.sh script.
+
+creation_rules:
+  # Everything under infra/sops/ is encrypted with the production deploy key
+  # plus the offsite-backup key. Adding a second recipient gives us a way
+  # back if we ever lose the primary.
+  - path_regex: infra/sops/.*\.(env|yaml|yml|json)$
+    encrypted_regex: "^(.*)$"
+    # Replace these with real public keys after running `age-keygen`.
+    # The placeholders below are valid age recipients (well-formed but not
+    # backed by any real private key), so `sops --check` won't fail on a
+    # parse error — only on a decryption attempt against an unauthorized key.
+    age: >-
+      age1placeholderdeploykeyreplaceatphase0reallyreplaceit0000000000000000,
+      age1placeholderbackupkeyreplaceatphase0reallyreplaceit0000000000000000

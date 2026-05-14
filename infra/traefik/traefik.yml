@@ -1,0 +1,81 @@
+# Traefik v3 static configuration.
+#
+# Static config = everything that needs a restart to change (entrypoints, ACME
+# resolvers, log levels). Dynamic config (middlewares, routers, services from
+# labels) lives under /etc/traefik/dynamic/.
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  # Dashboard exposed only through Traefik itself, not on a published port.
+  # Reach it via Host(`traefik.plugged.in`) gated by basic auth (see
+  # dynamic/middlewares.yml). Until that host is configured, the dashboard is
+  # effectively unreachable from outside.
+  dashboard: true
+  insecure: false
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  filters:
+    statusCodes:
+      - "400-499"
+      - "500-599"
+
+ping:
+  entryPoint: web
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: le
+        # Wildcard cert for *.plugged.in (DNS-01 only).
+        domains:
+          - main: plugged.in
+            sans:
+              - "*.plugged.in"
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    # Only containers that explicitly opt in via `traefik.enable=true` are
+    # exposed. Default-allow is a footgun.
+    exposedByDefault: false
+    network: pluggedin
+
+certificatesResolvers:
+  le:
+    acme:
+      email: ops@plugged.in
+      storage: /letsencrypt/acme.json
+      # Switch to acme.staging.letsencrypt.org while iterating on certs to
+      # avoid the production rate limit (5 per week per registered domain).
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      caServer: https://acme-v02.api.letsencrypt.org/directory
+      dnsChallenge:
+        provider: cloudflare
+        # CF_DNS_API_TOKEN_FILE comes from compose env; the token has
+        # Zone:DNS:Edit scope on plugged.in.
+        delayBeforeCheck: 30s
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"

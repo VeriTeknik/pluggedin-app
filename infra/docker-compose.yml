@@ -1,0 +1,233 @@
+# Plugged.in production stack.
+#
+# Run with the wrapper:
+#   infra/scripts/deploy.sh
+# which decrypts infra/sops/secrets.env.sops into /run/sops/secrets.env (tmpfs)
+# and exports IMAGE_TAG before invoking compose. Running compose by hand without
+# the wrapper will fail because env_file points at the decrypted file.
+#
+# Single host. Two app instances (prod + rc1) share Postgres, Redis, and the
+# MCP package cache. Traefik is the only thing bound to host ports 80/443.
+
+x-app-base: &app-base
+  image: ghcr.io/veriteknik/pluggedin-app:${IMAGE_TAG:-latest}
+  restart: always
+  env_file:
+    - /run/sops/secrets.env
+  environment:
+    NODE_ENV: production
+    # The bug class that triggered the docker migration: ZVEC_DATA_PATH was not
+    # propagating from workspace .env into the standalone build. In the
+    # container env_file is the single source of truth, but we still set
+    # ZVEC_DATA_PATH here so the value is visible in `docker compose config`
+    # and impossible to forget on a fresh deploy.
+    ZVEC_DATA_PATH: /app/data/vectors
+    ZVEC_ALLOW_EXTERNAL_PATH: "false"  # /app is inside the container, no external path needed
+    MCP_PACKAGE_STORE_DIR: /app/.cache/mcp-packages
+    MCP_PNPM_STORE_DIR: /app/.cache/mcp-packages/pnpm-store
+    MCP_UV_CACHE_DIR: /app/.cache/mcp-packages/uv-cache
+    MCP_ISOLATION_TYPE: bubblewrap
+    MCP_ISOLATION_FALLBACK: none
+    MCP_ENABLE_NETWORK_ISOLATION: "false"
+    REDIS_URL: redis://redis:6379
+    UPLOADS_DIR: /app/uploads
+  volumes:
+    - /home/pluggedin/zvec-data:/app/data/vectors:rw
+    - /home/pluggedin/uploads:/app/uploads:rw
+    - /var/mcp-packages:/app/.cache/mcp-packages:rw
+    - /var/log/pluggedin:/app/logs:rw
+  networks:
+    - pluggedin
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  # bubblewrap needs an unprivileged user namespace; CAP_SYS_ADMIN is the
+  # minimum capability that makes that work inside the container.
+  cap_add:
+    - SYS_ADMIN
+  security_opt:
+    - apparmor:unconfined
+  healthcheck:
+    test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+
+services:
+  traefik:
+    image: traefik:v3.2
+    restart: always
+    container_name: traefik
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      # Bound to 80/443 only at cutover (Phase 5). Until then change to
+      # 8080:80 and 8443:443 so nginx keeps the canonical ports.
+      - "80:80"
+      - "443:443"
+    environment:
+      # CloudFlare DNS-01 challenge token; populated from SOPS. If we don't
+      # end up using CloudFlare, switch the traefik.yml resolver to HTTP-01
+      # and remove this line.
+      CF_DNS_API_TOKEN_FILE: /run/sops/cloudflare_token
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-acme:/letsencrypt
+      - /run/sops:/run/sops:ro
+      # Read-only docker socket so Traefik can do container-label discovery.
+      # The labels-only data flow means a compromised Traefik cannot start
+      # or modify containers; it can only read their labels and inspect
+      # network state.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - pluggedin
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  pluggedin-app:
+    <<: *app-base
+    container_name: pluggedin-app
+    hostname: pluggedin-app
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.plugged-in.rule: "Host(`plugged.in`)"
+      traefik.http.routers.plugged-in.entrypoints: "websecure"
+      traefik.http.routers.plugged-in.tls.certresolver: "le"
+      traefik.http.routers.plugged-in.middlewares: "security-headers@file,rate-limit@file"
+      traefik.http.services.plugged-in.loadbalancer.server.port: "3000"
+      traefik.http.services.plugged-in.loadbalancer.healthcheck.path: "/api/health"
+      traefik.http.services.plugged-in.loadbalancer.healthcheck.interval: "30s"
+
+  pluggedin-rc1:
+    <<: *app-base
+    container_name: pluggedin-rc1
+    hostname: pluggedin-rc1
+    environment:
+      # Inherit everything from the base, then override the bits that diverge
+      # between prod and rc1.
+      NODE_ENV: production
+      ZVEC_DATA_PATH: /app/data/vectors
+      ZVEC_ALLOW_EXTERNAL_PATH: "false"
+      MCP_PACKAGE_STORE_DIR: /app/.cache/mcp-packages
+      MCP_PNPM_STORE_DIR: /app/.cache/mcp-packages/pnpm-store
+      MCP_UV_CACHE_DIR: /app/.cache/mcp-packages/uv-cache
+      MCP_ISOLATION_TYPE: bubblewrap
+      MCP_ISOLATION_FALLBACK: none
+      MCP_ENABLE_NETWORK_ISOLATION: "false"
+      REDIS_URL: redis://redis:6379
+      UPLOADS_DIR: /app/uploads
+      # rc1 overrides — supplied via the rc1-scoped SOPS secrets file (see
+      # docs/ops/docker-traefik-sops-migration.md §4 open question 3).
+      DATABASE_URL_FILE: /run/sops/rc1_database_url
+      NEXTAUTH_URL: https://rc1.plugged.in
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.rc1-plugged-in.rule: "Host(`rc1.plugged.in`)"
+      traefik.http.routers.rc1-plugged-in.entrypoints: "websecure"
+      traefik.http.routers.rc1-plugged-in.tls.certresolver: "le"
+      traefik.http.routers.rc1-plugged-in.middlewares: "security-headers@file,rate-limit@file"
+      traefik.http.services.rc1-plugged-in.loadbalancer.server.port: "3000"
+      traefik.http.services.rc1-plugged-in.loadbalancer.healthcheck.path: "/api/health"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    container_name: postgres
+    env_file:
+      - /run/sops/secrets.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-v220_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-pluggedin}
+      # POSTGRES_PASSWORD comes from secrets.env via env_file.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    networks:
+      - pluggedin
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pluggedin} -d ${POSTGRES_DB:-v220_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    command:
+      - postgres
+      - -c
+      - shared_buffers=4GB
+      - -c
+      - effective_cache_size=12GB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - max_connections=200
+      - -c
+      - wal_compression=on
+      - -c
+      - log_min_duration_statement=500ms
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    container_name: redis
+    volumes:
+      - redisdata:/data
+    networks:
+      - pluggedin
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 1gb
+      - --maxmemory-policy
+      - allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ofelia:
+    # Job scheduler that runs scheduled tasks against the app via docker exec
+    # or HTTP. Replaces the seven host-side crontab entries; the schedules and
+    # commands themselves live in infra/ofelia/config.ini.
+    image: mcuadros/ofelia:0.3.13
+    restart: always
+    container_name: ofelia
+    depends_on:
+      pluggedin-app:
+        condition: service_healthy
+    command: daemon --config=/etc/ofelia/config.ini
+    volumes:
+      - ./ofelia/config.ini:/etc/ofelia/config.ini:ro
+      # Ofelia talks to docker to exec one-shot commands inside other
+      # containers. Read-only is enough — it doesn't create or destroy them.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - pluggedin
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  traefik-acme:
+    driver: local
+
+networks:
+  pluggedin:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

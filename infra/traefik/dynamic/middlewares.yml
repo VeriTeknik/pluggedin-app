@@ -1,0 +1,54 @@
+# Traefik dynamic configuration. Hot-reloaded on file change.
+#
+# - security-headers: HSTS, CSP-friendly defaults, X-Frame-Options, etc.
+# - rate-limit:       1 req/s sustained, 10 burst, per source IP. Stack-level
+#                     rate-limit; the app does its own finer-grained limiting
+#                     (lib/rate-limiter.ts) on top of this.
+# - dashboard-auth:   basic auth on the Traefik dashboard. The user/hash pair
+#                     is generated outside and pasted in via SOPS; the SOPS
+#                     decryption step rewrites this file at deploy time with
+#                     the real credentials. Default value below is a known
+#                     placeholder that fails on purpose.
+
+http:
+  middlewares:
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"  # remove if SEO requires indexing
+
+    rate-limit:
+      rateLimit:
+        average: 1
+        burst: 10
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1  # behind ourselves, no other proxy in front
+
+    dashboard-auth:
+      basicAuth:
+        # Placeholder. Replaced by infra/scripts/deploy.sh from
+        # infra/sops/runtime/dashboard_users (htpasswd format, one line).
+        users:
+          - "placeholder:$$apr1$$replace_at_deploy$$placeholder"
+
+  routers:
+    traefik-dashboard:
+      rule: "Host(`traefik.plugged.in`)"
+      entryPoints:
+        - websecure
+      service: api@internal
+      middlewares:
+        - dashboard-auth
+        - security-headers
+      tls:
+        certResolver: le
