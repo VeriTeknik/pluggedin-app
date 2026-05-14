@@ -1,0 +1,146 @@
+name: Build image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'db/**'
+      - 'public/**'
+      - 'scripts/**'
+      - '.github/workflows/build-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: veriteknik/pluggedin-app
+
+jobs:
+  build:
+    # Gated to manual `workflow_dispatch` until a self-hosted runner with the
+    # right CPU (AVX2/AVX-512) is wired in.
+    #
+    # Why: the @zvec/zvec native binding ships SIMD code paths. The prod host
+    # has them; standard GitHub-hosted Linux runners are inconsistent — some
+    # job assignments hit SIGILL during `next build` when zvec gets loaded
+    # for page-data collection. Until we register a self-hosted runner
+    # (planned as a follow-up; see docs/ops/docker-traefik-sops-migration.md
+    # §10 q1), the image is built either manually via this workflow's
+    # `Run workflow` button or directly on the prod host via
+    # `infra/scripts/build.sh`. The cutover dance in §5 of the plan was
+    # already designed to run on the host, so this doesn't move the
+    # migration timeline.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build (push on main/tag, load on PR)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache,mode=max
+          build-args: |
+            NEXT_TELEMETRY_DISABLED=1
+
+      - name: Smoke-test the built image (PR only)
+        if: github.event_name == 'pull_request'
+        env:
+          # Pipe action outputs through env: to avoid GHA expression-injection
+          # in the run: shell. See the project's GHA workflow security guide.
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          tag=$(printf '%s\n' "$IMAGE_TAGS" | head -1)
+          docker run --rm --entrypoint /bin/sh "$tag" -c '
+            node --version
+            tsx --version
+            test -f /app/server.js
+            test -d /app/.next/static
+            test -d /app/drizzle
+            test -x /usr/bin/bwrap
+          '
+
+  stack-validate:
+    name: Validate compose + scripts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: docker compose config
+        run: |
+          set -euo pipefail
+          # The compose file references /run/sops/secrets.env which doesn't
+          # exist in CI; create a minimal stub so `compose config` can resolve
+          # env_file without erroring.
+          sudo mkdir -p /run/sops
+          {
+            echo "POSTGRES_DB=v220_prod"
+            echo "POSTGRES_USER=pluggedin"
+            echo "POSTGRES_PASSWORD=stub"
+          } | sudo tee /run/sops/secrets.env >/dev/null
+          docker compose -f infra/docker-compose.yml config -q
+
+      - uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: ./infra/scripts
+          severity: warning
+
+      - name: Validate Traefik static config
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD/infra/traefik:/etc/traefik:ro" \
+            traefik:v3.2 traefik --configfile=/etc/traefik/traefik.yml --help \
+            > /dev/null
+
+      - name: Lint Ofelia config (basic INI parse)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import configparser, sys
+          c = configparser.ConfigParser(strict=False)
+          c.read('infra/ofelia/config.ini')
+          assert any(s.startswith('job-') for s in c.sections()), 'no jobs in ofelia config'
+          PY
