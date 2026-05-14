@@ -1,15 +1,18 @@
 # Plugged.in production image.
 #
-# Multi-stage. Debian-slim base because the Alpine + native zvec/sharp/bcrypt
-# combination has historically been fragile across pnpm versions; the extra
-# image size (≈ 200 MB) is acceptable for a server image deployed once per
-# release.
+# Multi-stage. Debian *trixie*-slim (not bookworm) because the
+# @zvec/bindings-linux-x64 prebuilt .node requires GLIBC ≥ 2.38 and
+# GLIBCXX ≥ 3.4.32. Bookworm ships GLIBC 2.36 — dlopen of the binding
+# fails there, but zvec's own catch block masks the dlopen error and
+# rethrows the generic "Prebuilt binary not found for linux-x64",
+# which sent a previous build down the wrong rabbit hole. Trixie has
+# GLIBC 2.41.
 #
 # Build:  infra/scripts/build.sh
 # Tag:    ghcr.io/veriteknik/pluggedin-app:{latest,sha-XXXX}
 
 # ─── stage 1: deps + build ────────────────────────────────────────────
-FROM node:22-bookworm-slim AS builder
+FROM node:22-trixie-slim AS builder
 
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
@@ -35,11 +38,19 @@ COPY scripts ./scripts
 # during Next.js's "Collecting page data" pass.
 RUN pnpm install --frozen-lockfile
 
-# Hard fail-fast if the binding still isn't there. Cheaper than discovering
-# it 90 seconds later inside `pnpm build`.
+# Two-level fail-fast on the zvec binding. The file-exists check catches
+# "pnpm skipped the optional dep" (fixed once via supportedArchitectures).
+# The require() check catches "binding is present but dlopen fails on this
+# base image" (e.g., wrong GLIBC, ABI mismatch) — the original symptom of
+# both classes is the same zvec-side generic error, so we surface the real
+# dlopen failure here instead of letting `pnpm build` blame zvec 90 seconds
+# from now.
 RUN test -e node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node \
   || (echo "FATAL: @zvec/bindings-linux-x64 missing after pnpm install — check supportedArchitectures in package.json" \
         && ls -la node_modules/@zvec/ && exit 1)
+RUN node -e "require('@zvec/bindings-linux-x64'); console.log('zvec binding loads ok')" \
+  || (echo "FATAL: @zvec/bindings-linux-x64 is on disk but dlopen failed. Check the base image GLIBC/GLIBCXX vs the binding's requirements (objdump -T zvec_node_binding.node | grep GLIBC_)" \
+        && exit 1)
 
 COPY . .
 RUN pnpm build
@@ -50,7 +61,7 @@ RUN pnpm build
 # image, which is acceptable for a server image.
 
 # ─── stage 2: runtime ─────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runtime
+FROM node:22-trixie-slim AS runtime
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
