@@ -44,11 +44,13 @@ services:
     command:
       - --configFile=/etc/traefik/traefik.yml
     ports:
-      # Bound to 80/443 at cutover (Phase 5). Until then use 8080:80 and
-      # 8443:443 so the native nginx keeps the canonical ports during
-      # Phase 2 staging.
-      - "80:80"
-      - "443:443"
+      # Pre-cutover defaults so `docker compose up` on the prod host won't
+      # collide with the native nginx that still owns 80/443. Phase 2
+      # staging hits Traefik on these. At Phase 5 cutover, edit this
+      # block to `- "80:80"` / `- "443:443"`, restart Traefik, then stop
+      # nginx — order matters because LE HTTP-01 needs the public :80.
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
@@ -121,15 +123,19 @@ services:
       traefik.http.services.plugged-in-sse.loadbalancer.server.port: "3000"
       traefik.http.services.plugged-in-sse.loadbalancer.serverstransport: "sse-transport@file"
       #
-      # SSE sub-router. Priority must beat the catchall router (otherwise
-      # Traefik picks the longest rule which would still be this one, but
-      # being explicit avoids future surprises).
-      traefik.http.routers.plugged-in-sse.rule: "Host(`plugged.in`) && PathPrefix(`/api/discover/stream`)"
+      # SSE sub-router. Trailing slash on the prefix is deliberate — without
+      # it /api/discover/streamABC would also match, which is broader than
+      # nginx's `location ~ ^/api/discover/stream/` semantics. Priority
+      # 120 ensures we always win against the catchall.
+      traefik.http.routers.plugged-in-sse.rule: "Host(`plugged.in`) && PathPrefix(`/api/discover/stream/`)"
       traefik.http.routers.plugged-in-sse.entrypoints: "websecure"
       traefik.http.routers.plugged-in-sse.tls.certresolver: "le"
       traefik.http.routers.plugged-in-sse.priority: "120"
       traefik.http.routers.plugged-in-sse.service: "plugged-in-sse"
-      traefik.http.routers.plugged-in-sse.middlewares: "security-headers@file"
+      # rate-limit included: SSE connections live for up to an hour, so
+      # without a rate-limit a single source could exhaust connection
+      # slots cheaply.
+      traefik.http.routers.plugged-in-sse.middlewares: "security-headers@file,rate-limit@file"
       #
       # /_next/static/* — immutable 1-year cache.
       traefik.http.routers.plugged-in-static.rule: "Host(`plugged.in`) && PathPrefix(`/_next/static`)"
@@ -153,7 +159,9 @@ services:
       traefik.http.routers.plugged-in-widget.tls.certresolver: "le"
       traefik.http.routers.plugged-in-widget.priority: "110"
       traefik.http.routers.plugged-in-widget.service: "plugged-in"
-      traefik.http.routers.plugged-in-widget.middlewares: "security-headers@file,widget-cors@file"
+      # rate-limit on widget too: open CORS + publicly embeddable on any
+      # origin makes this a cheap abuse target without it.
+      traefik.http.routers.plugged-in-widget.middlewares: "security-headers@file,widget-cors@file,rate-limit@file"
       #
       # Catchall — everything else on the host. Lowest priority on
       # purpose so the specific routers above always win.

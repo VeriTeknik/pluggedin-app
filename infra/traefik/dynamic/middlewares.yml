@@ -26,7 +26,17 @@ http:
           X-XSS-Protection: "1; mode=block"
           Content-Security-Policy: "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'"
         contentTypeNosniff: true
+        # nginx had `Referrer-Policy "no-referrer-when-downgrade"`. We match
+        # it 1:1 here, but the OWASP-preferred value today is
+        # `strict-origin-when-cross-origin` — the current one sends full
+        # paths and query strings to HTTPS third parties. Worth a switch
+        # post-migration once we audit what links out to where.
         referrerPolicy: "no-referrer-when-downgrade"
+        # Permissions-Policy was NOT in nginx but the previous Traefik draft
+        # had it; keeping it is strictly additive — the live site has no
+        # camera/mic/geolocation use, and the header just denies those by
+        # default rather than leaving the browser to its own defaults.
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
         stsSeconds: 31536000
         stsIncludeSubdomains: true
         stsPreload: true

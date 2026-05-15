@@ -358,7 +358,7 @@ systemctl start nginx pluggedin
 
 ## 10. Open questions for you before Phase 2
 
-1. ~~CloudFlare API token~~ — **answered**: no CF, using HTTP-01.
+1. ~~Cloudflare API token~~ — **answered**: no Cloudflare, using HTTP-01.
 2. Does the external PG (`185.96.168.246`) have other clients besides plugged.in?
 3. ~~rc1 data sharing~~ — **answered**: rc1 no longer exists; single instance only.
 4. Acceptable cutover window (timezone + duration)? Plan is sized for 10 minutes but I'd schedule a 30-minute window with comms.
