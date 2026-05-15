@@ -73,11 +73,10 @@ extract_secret() {
   chmod 0400 "$dest"
 }
 
-extract_secret CF_API_TOKEN          cloudflare_token
 extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
-# traefik/dynamic/middlewares.yml references these files directly via
-# `usersFile:` and (for Traefik's static config) the CF_DNS_API_TOKEN_FILE
-# env var. No rewriting of committed files at deploy time.
+# traefik/dynamic/middlewares.yml references this file directly via
+# `usersFile:`. No rewriting of committed files at deploy time. Traefik's
+# TLS issuance uses HTTP-01, so no DNS-provider token needs extracting.
 
 # 4. Pull image (skip with --no-pull)
 if [ "$PULL" -eq 1 ]; then

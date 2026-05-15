@@ -9,10 +9,10 @@
 
 ## 1. Executive summary
 
-Move `plugged.in` and `rc1.plugged.in` off the bespoke "native nginx + systemd + workspace `.env` + external PostgreSQL" deployment onto a containerised stack:
+Move `plugged.in` off the bespoke "native nginx + systemd + workspace `.env` + external PostgreSQL" deployment onto a containerised stack:
 
 - **Docker Compose** as the unit of deployment (single-host today, portable later).
-- **Traefik v3** as the only TLS terminator and reverse proxy. Automatic Let's Encrypt issuance via DNS-01 on a CloudFlare account-token (planned) or HTTP-01 fallback.
+- **Traefik v3** as the only TLS terminator and reverse proxy. Automatic Let's Encrypt issuance via **HTTP-01** (same mechanism certbot used pre-migration). No DNS-provider account needed.
 - **SOPS + age** as the single source of truth for secrets. Encrypted file checked into the repo, decrypted at deploy time into a tmpfs.
 - **PostgreSQL 16 + pgvector** as a containerised database on this host, replacing the external `185.96.168.246` instance. Data migrated in a short maintenance window via `pg_dump --clean --if-exists` round-trip.
 - **Redis 7** containerised on the same compose stack.
@@ -35,11 +35,10 @@ The migration also incidentally fixes the class of bug we just hit (workspace `.
 | Component | Where | Notes |
 |---|---|---|
 | `pluggedin.service` (systemd) | `/etc/systemd/system/pluggedin.service` | Runs `pnpm start` → `node .next/standalone/server.js` on `:12005` |
-| `pluggedin-rc1.service` (assumed) | parallel unit | Runs on `:12006`, serves `rc1.plugged.in` |
-| `nginx.service` | `/etc/nginx/sites-enabled/{plugged.in,rc1.plugged.in}` | TLS termination + `proxy_pass http://localhost:1200{5,6}` |
+| `nginx.service` | `/etc/nginx/sites-enabled/plugged.in` | TLS termination + `proxy_pass http://localhost:12005` plus per-location rules (gzip, SSE timeouts, widget CORS, immutable static cache, security headers — translated 1:1 into `infra/traefik/dynamic/middlewares.yml` and labels on `pluggedin-app`) |
 | `redis-server.service` | local | `redis://localhost:6379` |
 | PostgreSQL | **External** `185.96.168.246:5432/v220_prod` | Shared with other VeriTeknik infra |
-| TLS certs | `/etc/letsencrypt/live/{plugged.in,rc1.plugged.in}/` | certbot |
+| TLS certs | `/etc/letsencrypt/live/plugged.in/` | certbot HTTP-01 → Traefik will take over with the same challenge type, same renewal cadence |
 | `.env` | `/home/pluggedin/pluggedin-app/.env` (workspace) and `/home/pluggedin/pluggedin-app/.next/standalone/.env` (build copy) | Two copies, drift caused the recent zvec incident |
 | zvec data | `/home/pluggedin/zvec-data/` (3.9 MiB after reindex) | bind-mount candidate |
 | MCP package cache | `/var/mcp-packages/` (**88 GiB**) | Stays on host disk; bind-mount, do not move into named volume |
@@ -63,27 +62,26 @@ The migration also incidentally fixes the class of bug we just hit (workspace `.
                    ▼
         ┌──────────────────────┐
         │  Traefik v3          │ :80 → :443 redirect
-        │  cloudflare-dns LE   │ :443 TLS terminator
+        │  LE HTTP-01          │ :443 TLS terminator
         └──────────┬───────────┘
                    │  internal docker network: pluggedin
                    │
-       ┌───────────┼────────────┐
-       ▼           ▼            ▼
-   pluggedin-app  rc1-app     ofelia-cron
-   :3000 (int)   :3000 (int)  (no port; runs scheduled tasks
-                              against the app via http or
-                              docker exec)
-       │           │
-       ▼           ▼
+       ┌───────────┴────────────┐
+       ▼                        ▼
+   pluggedin-app             ofelia-cron
+   :3000 (int)               (no port; runs scheduled tasks
+                              against the app via docker exec)
+       │
+       ▼
    postgres:16 (pgvector ext) — :5432 internal only
    redis:7                    — :6379 internal only
 
 Bind mounts (host → container):
-  /home/pluggedin/zvec-data   → /app/data/vectors  (rw, both apps)
-  /home/pluggedin/uploads     → /app/uploads       (rw, both apps)
-  /var/mcp-packages           → /app/.cache/mcp-packages (rw, both apps)
-  /var/log/pluggedin          → /app/logs          (rw, both apps)
-  ./infra/sops/runtime/<file> → /run/secrets/<file>  (ro, decrypted at deploy)
+  /home/pluggedin/zvec-data   → /app/data/vectors  (rw)
+  /home/pluggedin/uploads     → /app/uploads       (rw)
+  /var/mcp-packages           → /app/.cache/mcp-packages (rw)
+  /var/log/pluggedin          → /app/logs          (rw)
+  /run/sops                   → /run/sops          (ro, decrypted at deploy)
 
 Named volumes (managed by Docker):
   pgdata          → /var/lib/postgresql/data
@@ -95,10 +93,6 @@ Named volumes (managed by Docker):
 
 88 GiB. Recreating that cache from scratch costs the whole site ~hours of latency while every MCP package re-resolves. Bind mount is one `chown -R` from being writable by the container.
 
-### Why two app services in one stack instead of two stacks?
-
-They share the same `pgdata`, the same MCP cache, the same SOPS keys, and the same Traefik. Splitting them into two compose files multiplies the bookkeeping with no isolation benefit (they're already isolated by container).
-
 ---
 
 ## 4. Decisions (with my recommendation)
@@ -106,7 +100,7 @@ They share the same `pgdata`, the same MCP cache, the same SOPS keys, and the sa
 | Decision | Options | Recommendation | Why |
 |---|---|---|---|
 | **SOPS key backend** | age, GPG, AWS KMS, GCP KMS | **age** with a single host key + one offsite backup key | Zero external dependency, single binary, machine-readable, fits ops scale here. |
-| **Traefik TLS issuer** | LE HTTP-01, LE DNS-01 via CF | **DNS-01 via CloudFlare** (assuming CF is the registrar/DNS provider; HTTP-01 fallback if not) | DNS-01 issues wildcard for `*.plugged.in`, no public port-80 race during cert renew. |
+| **Traefik TLS issuer** | LE HTTP-01, LE DNS-01 | **HTTP-01** | Same mechanism certbot used on this host pre-migration; no DNS-provider API token to manage. We only need certs for `plugged.in` and `traefik.plugged.in`, no wildcards required. Pre-listing both domains on the websecure entrypoint pre-warms issuance at startup so the first request after cutover doesn't pay the ACME round-trip. |
 | **PG migration cutover** | dump/restore, logical replication, pg_dumpall | **`pg_dump -Fc` round-trip in a maintenance window** | Database is small (estimated < 5 GiB based on chunk count and table set); single-shot is faster to plan, validate, and rollback than logical replication. Estimated downtime: 5–10 min. |
 | **PG inside Docker** | yes, no | **Yes**, on this host | One less external dependency, no more cross-network round-trip latency, encrypted at rest if needed via LUKS or pg-tde later. |
 | **Container registry** | GHCR, Docker Hub, self-hosted | **GHCR** (`ghcr.io/veriteknik/pluggedin-app`) | Free for public repos; integrates with GH Actions; tied to the existing repo identity. |
@@ -115,11 +109,9 @@ They share the same `pgdata`, the same MCP cache, the same SOPS keys, and the sa
 | **Logging** | json-file driver, Loki, file bind-mount | **json-file + bind-mount `/var/log/pluggedin`** (Loki later) | Preserves `tail -f /var/log/pluggedin/pluggedin_app.log` muscle memory while we migrate. |
 | **`docker-compose.yml` at repo root** | keep, delete | **Delete** in Phase 9 | Confusing alongside the new `infra/docker-compose.yml`; `Dockerfile.production` becomes `Dockerfile`. |
 
-### Things I cannot decide without you
+### Open questions
 
-1. **CloudFlare API token (or NS provider) for DNS-01.** Need a scoped token with `Zone:DNS:Edit` on `plugged.in`. If we don't have CF, fall back to HTTP-01 and skip wildcards.
-2. **External PG owner.** Are other apps still pointing at `185.96.168.246/v220_prod` after we copy out? If yes, we can't shut down the external instance even after cutover.
-3. **`rc1.plugged.in` data sharing.** Does rc1 share `v220_prod` with prod, or is it a separate database? The plan assumes **separate**; one DB per app, both in the same containerised PG.
+1. **External PG owner.** Are other apps still pointing at `185.96.168.246/v220_prod` after we copy out? If yes, we can't shut down the external instance even after cutover.
 
 ---
 
@@ -129,7 +121,7 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 
 ### Phase 0 — Prep (no production impact, ~1 day calendar)
 
-- [ ] Drop DNS TTL on `plugged.in` and `rc1.plugged.in` A records to 60s (currently likely 3600+). Wait one previous-TTL window before any cutover.
+- [ ] Drop DNS TTL on `plugged.in` A record to 60s (currently likely 3600+). Wait one previous-TTL window before any cutover.
 - [ ] Generate age key on this host: `age-keygen -o /etc/sops/age/keys.txt`, `chmod 400`, back up the **private key** to offline storage (1Password, USB, whatever ops already uses).
 - [ ] Take a verified backup of the external Postgres:
       `pg_dump -Fc -h 185.96.168.246 -U postgres -d v220_prod -f /tmp/v220_prod-prepatch.dump`
@@ -147,7 +139,7 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 - [x] `infra/scripts/` (`deploy.sh`, `backup.sh`, `restore.sh`, `cutover-from-native.sh`, `rotate-keys.sh`, `verify.sh`).
 - [x] `infra/postgres/init.sql` (extensions, roles).
 - [x] `infra/ofelia/config.ini` (cron jobs, replacing the host crontab).
-- [x] `Dockerfile` (replace existing — produces a single image tagged for prod and rc1).
+- [x] `Dockerfile` (replace existing — single image for the prod app).
 - [x] `.github/workflows/build-image.yml` — image build gated to `workflow_dispatch` and tag pushes until a self-hosted runner with the right CPU profile lands. Standard GitHub-hosted runners SIGILL on the `@zvec/zvec` binding's SIMD code paths inconsistently; the `stack-validate` job (compose config + shellcheck + traefik + ofelia INI parse) still runs on every PR.
 - [x] `docs/ops/docker-traefik-sops-migration.md` — this file.
 
@@ -158,7 +150,7 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 The current nginx owns `:80` and `:443`. We bring Traefik up on `:8080` (dashboard) and `:8443` (TLS) bound to a test hostname like `staging.plugged.in` (point a temporary A record at the host), validate certificate issuance, then proceed.
 
 - [ ] `docker compose -f infra/docker-compose.yml up -d traefik`
-- [ ] Issue a cert for `staging.plugged.in` via DNS-01.
+- [ ] Issue a cert for `staging.plugged.in` via HTTP-01 (requires Traefik to own a public port-80 path under that hostname during the test window — we use `8080:80` on Traefik first and gate certbot's existing `:80` ownership by stopping nginx for the 60s validation window only).
 - [ ] `curl --resolve staging.plugged.in:8443:127.0.0.1 https://staging.plugged.in:8443/whoami` returns 200 from Traefik's `whoami` test backend.
 
 **Rollback:** `docker compose down traefik`.
@@ -177,14 +169,14 @@ The live app is untouched in this phase; we have a populated containerised PG si
 ### Phase 4 — Containerise the app, port `:12005` parked under Traefik (½ day)
 
 - [ ] Build the image: `infra/scripts/build.sh` (also runs in CI on every push to `main`).
-- [ ] `docker compose up -d pluggedin-app pluggedin-rc1` (both bind on internal port `3000`, Traefik exposes them).
+- [ ] `docker compose up -d pluggedin-app` (binds internal port `3000`, Traefik exposes it via the labelled router set).
 - [ ] Internal smoke test on the docker network: `docker compose exec traefik curl -fsS http://pluggedin-app:3000/api/health`.
 - [ ] Run `infra/scripts/verify.sh --app` which hits `/api/health`, `/api/rag/query` (with a known query), and the auth flow.
 - [ ] **Critically: the container has the right zvec path because compose sets `ZVEC_DATA_PATH=/app/data/vectors` and bind-mounts `/home/pluggedin/zvec-data` there.** The drift class of bug from this week becomes structurally impossible.
 
 The live nginx still routes `plugged.in` to the native `:12005`. The containerised app is reachable only through Traefik on `:8443`.
 
-**Rollback:** `docker compose down pluggedin-app pluggedin-rc1`.
+**Rollback:** `docker compose down pluggedin-app`.
 
 ### Phase 5 — Cutover (≤ 10 min downtime, scheduled)
 
@@ -194,7 +186,7 @@ This is the only step that affects users. Pick a low-traffic window.
 [T-15] Drop DNS TTL to 60s (already done in Phase 0).
 [T-5]  Run pre-cutover dump for safety:
        infra/scripts/cutover-from-native.sh --dump-only
-[T-0]  systemctl stop pluggedin pluggedin-rc1 nginx
+[T-0]  systemctl stop pluggedin nginx
        Take a delta-dump (changes since the Phase-0 dump) and apply it:
        infra/scripts/cutover-from-native.sh --delta-apply
        Move :80/:443 ownership: bring Traefik down, change its host-port
@@ -208,7 +200,7 @@ This is the only step that affects users. Pick a low-traffic window.
 
 **Rollback (must be feasible in under 2 minutes):**
 1. `docker compose stop traefik`.
-2. `systemctl start nginx pluggedin pluggedin-rc1`.
+2. `systemctl start nginx pluggedin`.
 3. App is back on the native stack. The containerised PG keeps the new writes since cutover — we'll need a small delta apply back to the external PG if we go through with rollback. The cutover script writes the delta into `/var/backups/pluggedin/cutover-delta-<ts>.sql` precisely for this case.
 
 ### Phase 6 — SOPS wired in (1 day, no production impact after Phase 5)
@@ -232,11 +224,11 @@ The compose file already references `infra/sops/runtime/secrets.env`, which is t
 
 ### Phase 8 — Decommission (1 day, after one week of stable run)
 
-- [ ] `systemctl disable --now pluggedin pluggedin-rc1 nginx` (don't delete the unit files yet — they're the documented rollback path).
+- [ ] `systemctl disable --now pluggedin nginx` (don't delete the unit files yet — they're the documented rollback path).
 - [ ] Coordinate with the external PG owner to confirm we're the last consumer of `v220_prod`, then either shut down that database or leave it as a cold replica.
 - [ ] Delete `docker-compose.yml`, `docker-compose.dev.yml`, `docker-compose.production.yml`, `Dockerfile.production`, `docker-build.sh` from the repo root. The `infra/` stack is the only stack.
 
-**Rollback:** `systemctl enable --now pluggedin pluggedin-rc1 nginx`. Revert the file deletions from git.
+**Rollback:** `systemctl enable --now pluggedin nginx`. Revert the file deletions from git.
 
 ### Phase 9 — Operationalisation (continuous)
 
@@ -311,13 +303,12 @@ The canary query — "GSLB" → "VeriTeknik Comprehensive Verticals & Capabiliti
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | pg_dump/restore data corruption | low | high | Phase 3 restores into a sandbox first; Phase 5 takes a *delta* dump to bridge any drift between Phase-0 dump and cutover; row counts verified by `verify.sh`. |
-| LE rate limit during testing | medium | medium | DNS-01 with the staging directory (`acme.staging.letsencrypt.org`) for everything except the final cutover. |
+| LE rate limit during testing | medium | medium | Toggle `caServer:` in `traefik.yml` to `acme.staging.letsencrypt.org` for everything except the final cutover. The staging CA's limits are 30,000 certs per week — effectively unbounded for our needs. |
 | Cutover window overruns | low | medium | The cutover is a small, scripted, well-rehearsed sequence; we keep the native stack ready to start with one `systemctl start`. |
 | /var/mcp-packages bind-mount permissions | medium | high (long site latency if cache rebuilds) | Phase 4 verify step includes `docker compose exec pluggedin-app ls /app/.cache/mcp-packages | wc -l` against a known-good count from the host. |
 | firejail / bubblewrap not available inside container | medium | medium | We ship bubblewrap in the image (already present in `Dockerfile.production` base). For the irreducible case where neither works, `MCP_ISOLATION_TYPE=none` is a feature flag, not a code change. |
 | Age private key loss | low | catastrophic (every SOPS secret unreadable) | Key is backed up offline at Phase 0; ops password manager carries a copy; rotation drill quarterly. |
 | External PG decommissioned before all consumers move off | low | low | Phase 8 includes a final consumer scan; the external PG stays read-only for at least two weeks post-cutover. |
-| rc1 and prod share state through `.cache/mcp-packages` causing one to corrupt the other | low | medium | The cache is content-addressable (npm/pip/uv stores). Designed to be shared. Spot-checked in Phase 4. |
 
 ---
 
@@ -357,7 +348,7 @@ tail -f /var/log/pluggedin/pluggedin_app.log
 
 ```bash
 docker compose -f /opt/pluggedin-stack/infra/docker-compose.yml stop traefik
-systemctl start nginx pluggedin pluggedin-rc1
+systemctl start nginx pluggedin
 # DNS is unchanged because Traefik and nginx both terminated on the same
 # host IP. Anything written to the containerised PG since cutover is in
 # /var/backups/pluggedin/cutover-delta-*.sql for re-apply if needed.
@@ -367,8 +358,8 @@ systemctl start nginx pluggedin pluggedin-rc1
 
 ## 10. Open questions for you before Phase 2
 
-1. CloudFlare API token for DNS-01? If no, do we have any DNS provider with API access?
+1. ~~Cloudflare API token~~ — **answered**: no Cloudflare, using HTTP-01.
 2. Does the external PG (`185.96.168.246`) have other clients besides plugged.in?
-3. Does `rc1.plugged.in` share `v220_prod` with prod, or is it a different database name?
+3. ~~rc1 data sharing~~ — **answered**: rc1 no longer exists; single instance only.
 4. Acceptable cutover window (timezone + duration)? Plan is sized for 10 minutes but I'd schedule a 30-minute window with comms.
-5. Is GHCR acceptable as the image registry, or do you want self-hosted?
+5. ~~Container registry~~ — **answered**: GHCR, already pushing on every main merge via the self-hosted runner (PR #157, PR #158).

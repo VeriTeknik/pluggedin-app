@@ -1,8 +1,8 @@
 # `infra/` — production stack
 
-Everything in this directory together defines how `plugged.in` and
-`rc1.plugged.in` run in production. There is no other source of truth; if
-you change deployment, change it here.
+Everything in this directory together defines how `plugged.in` runs in
+production. There is no other source of truth; if you change deployment,
+change it here.
 
 > Background, decisions, and the full migration plan from the native
 > nginx+systemd stack live in
@@ -13,8 +13,8 @@ you change deployment, change it here.
 
 ```
 infra/
-├── docker-compose.yml     # the stack (traefik, app, rc1, postgres, redis, ofelia)
-├── Dockerfile             # at repo root, not here — single image for both prod and rc1
+├── docker-compose.yml     # the stack (traefik, app, postgres, redis, ofelia)
+├── Dockerfile             # at repo root, not here — single image for the prod app
 ├── postgres/init.sql      # extensions + privilege tightening, runs once on first start
 ├── traefik/
 │   ├── traefik.yml        # static config (entrypoints, ACME, providers)
@@ -118,7 +118,7 @@ procedure. tl;dr `./infra/scripts/rotate-keys.sh`.
 
 ```bash
 docker compose -f infra/docker-compose.yml stop traefik
-sudo systemctl start nginx pluggedin pluggedin-rc1
+sudo systemctl start nginx pluggedin
 ```
 
 DNS doesn't change; Traefik and nginx both terminated on the same host IP.

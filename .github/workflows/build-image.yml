@@ -15,6 +15,13 @@ on:
       - 'db/**'
       - 'public/**'
       - 'scripts/**'
+      # infra/** is here so the `Validate compose + scripts` job runs on
+      # PRs that touch only the compose stack, Traefik/Ofelia config, or
+      # the operational scripts. The `build` job in this workflow has its
+      # own `if:` guard which keeps it from firing on fork PRs; on internal
+      # infra-only PRs it'll still rebuild the image, which is acceptable
+      # — the image is small and the host runner has the cache warm.
+      - 'infra/**'
       - '.github/workflows/build-image.yml'
   workflow_dispatch:
 
