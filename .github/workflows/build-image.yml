@@ -18,9 +18,12 @@ on:
       - '.github/workflows/build-image.yml'
   workflow_dispatch:
 
+# Default to read-only token. The build job re-grants packages:write
+# explicitly. Other jobs (stack-validate) inherit the read-only default,
+# so a compromised checkout in those jobs can't push branches, comment
+# on PRs, or write to packages.
 permissions:
   contents: read
-  packages: write
 
 env:
   REGISTRY: ghcr.io
@@ -33,6 +36,27 @@ jobs:
     # the AVX2/AVX-512 instructions @zvec/zvec's native binding ships;
     # GitHub-hosted runners did not, and the build hit SIGILL inconsistently
     # depending on which Xeon Actions allocated.
+    #
+    # SECURITY: this is a self-hosted runner on a public repo's prod box —
+    # the host carries the SOPS-decrypted secrets, prod DB credentials,
+    # and the docker socket. A malicious workflow run from a fork PR
+    # could exfiltrate any of that. Three guards layer here:
+    #   1. The `if:` below skips fork PRs entirely. github.event.pull_request
+    #      .head.repo.full_name only matches when the PR's head branch is in
+    #      this repo, not a fork.
+    #   2. GitHub's repo-level "Require approval for all outside
+    #      collaborators" setting (Settings → Actions → General → Fork pull
+    #      request workflows). Must stay enabled — operators verify it as
+    #      part of the runner runbook.
+    #   3. The workflow's default `permissions:` is read-only above; we
+    #      re-grant packages:write here for this job alone.
+    # If any one of those fails, the others still hold.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      packages: write
     #
     # If the self-hosted runner is offline the job stays queued — that's a
     # signal to either bring the runner back or trigger a build elsewhere.
