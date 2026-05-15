@@ -1,18 +1,25 @@
 # Traefik v3 static configuration.
 #
-# Static config = everything that needs a restart to change (entrypoints, ACME
-# resolvers, log levels). Dynamic config (middlewares, routers, services from
-# labels) lives under /etc/traefik/dynamic/.
+# Static config = entrypoints, ACME resolvers, log levels, providers. Anything
+# that needs a restart to change lives here. Dynamic config (middlewares,
+# routers, services from labels) is hot-reloaded out of /etc/traefik/dynamic/.
+#
+# ACME / TLS:
+#   HTTP-01 challenge, the same mechanism certbot used on this host before
+#   the migration. Traefik must own port 80 at startup so Let's Encrypt's
+#   HTTP-01 validator can reach /.well-known/acme-challenge/. We pre-list
+#   the served hostname on the websecure entrypoint so cert issuance
+#   happens at startup, not lazily on first request — keeps cutover
+#   latency low.
 
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
 
 api:
-  # Dashboard exposed only through Traefik itself, not on a published port.
-  # Reach it via Host(`traefik.plugged.in`) gated by basic auth (see
-  # dynamic/middlewares.yml). Until that host is configured, the dashboard is
-  # effectively unreachable from outside.
+  # Dashboard exposed only behind Traefik on traefik.plugged.in with basic
+  # auth (see dynamic/middlewares.yml). insecure: false means no listener
+  # on a public port.
   dashboard: true
   insecure: false
 
@@ -45,11 +52,13 @@ entryPoints:
     http:
       tls:
         certResolver: le
-        # Wildcard cert for *.plugged.in (DNS-01 only).
+        # Pre-issue at startup; without `domains:`, Traefik lazy-issues on
+        # the first request and that first request pays the LE validation
+        # latency (5–10s). Listed explicitly because HTTP-01 cannot issue
+        # wildcards.
         domains:
           - main: plugged.in
-            sans:
-              - "*.plugged.in"
+          - main: traefik.plugged.in   # dashboard, basic-auth gated
 
 providers:
   file:
@@ -57,8 +66,8 @@ providers:
     watch: true
   docker:
     endpoint: "unix:///var/run/docker.sock"
-    # Only containers that explicitly opt in via `traefik.enable=true` are
-    # exposed. Default-allow is a footgun.
+    # Default-allow on the docker provider is a footgun; every container
+    # that wants exposure must opt in via `traefik.enable=true`.
     exposedByDefault: false
     network: pluggedin
 
@@ -68,14 +77,8 @@ certificatesResolvers:
       email: ops@plugged.in
       storage: /letsencrypt/acme.json
       # Switch to acme.staging.letsencrypt.org while iterating on certs to
-      # avoid the production rate limit (5 per week per registered domain).
+      # avoid the 5-per-week production rate limit.
       # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       caServer: https://acme-v02.api.letsencrypt.org/directory
-      dnsChallenge:
-        provider: cloudflare
-        # CF_DNS_API_TOKEN_FILE comes from compose env; the token has
-        # Zone:DNS:Edit scope on plugged.in.
-        delayBeforeCheck: 30s
-        resolvers:
-          - "1.1.1.1:53"
-          - "1.0.0.1:53"
+      httpChallenge:
+        entryPoint: web

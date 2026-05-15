@@ -97,7 +97,7 @@ fi
 
 if [ "$SWITCH" -eq 1 ]; then
   echo "[cutover] stopping native services to quiesce writes"
-  sudo systemctl stop pluggedin pluggedin-rc1 nginx || true
+  sudo systemctl stop pluggedin nginx || true
 
   echo "[cutover] final dump (DB is now quiet — this captures every write up to T-0)"
   pg_dump -Fc --no-owner --no-acl "$EXT_PG_URL" > "${BACKUP_DIR}/cutover-final.dump"
@@ -123,5 +123,5 @@ if [ "$SWITCH" -eq 1 ]; then
   echo
   echo "Rollback if needed:"
   echo "  docker compose -f ${INFRA_DIR}/docker-compose.yml stop traefik"
-  echo "  sudo systemctl start nginx pluggedin pluggedin-rc1"
+  echo "  sudo systemctl start nginx pluggedin"
 fi

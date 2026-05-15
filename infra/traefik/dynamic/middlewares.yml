@@ -1,35 +1,84 @@
 # Traefik dynamic configuration. Hot-reloaded on file change.
 #
-# - security-headers: HSTS, CSP-friendly defaults, X-Frame-Options, etc.
-# - rate-limit:       100 req/s average, 200 burst, per source IP. A real
-#                     SPA + APIs page load fires 20–40 requests; the stack-
-#                     level limit needs headroom so the *app*'s finer-
-#                     grained limiter (lib/rate-limiter.ts) is the visible
-#                     one in normal use. Tighten this only if we observe
-#                     abuse — having two layers fight over the same budget
-#                     is worse than picking generous numbers here.
-# - dashboard-auth:   basic auth on the Traefik dashboard. Credentials live
-#                     in /run/sops/traefik-users (htpasswd format, one line
-#                     per user). deploy.sh extracts TRAEFIK_DASHBOARD_AUTH
-#                     from secrets.env onto that file at deploy time. If
-#                     the file is missing, Traefik fails-closed: the
-#                     middleware can't load, so the dashboard router 404s.
+# Translates the production nginx sites-enabled/plugged.in behaviour into
+# Traefik primitives. Each block below has a "nginx →" comment pointing at
+# the directive it replaces.
 
 http:
+  # ─── Middlewares ──────────────────────────────────────────────────
   middlewares:
+
+    # nginx → block of `add_header` directives at the server level:
+    #   X-Frame-Options "SAMEORIGIN"
+    #   X-XSS-Protection "1; mode=block"
+    #   X-Content-Type-Options "nosniff"
+    #   Referrer-Policy "no-referrer-when-downgrade"
+    #   Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'"
+    # Plus HSTS that certbot's options-ssl-nginx.conf already adds.
     security-headers:
       headers:
+        # X-Frame-Options: SAMEORIGIN. Traefik's `frameDeny: true` would
+        # emit DENY, which is stricter than the live site and would break
+        # any same-origin embedding the app currently relies on. Use the
+        # raw header to match nginx exactly.
+        customResponseHeaders:
+          X-Frame-Options: "SAMEORIGIN"
+          X-XSS-Protection: "1; mode=block"
+          Content-Security-Policy: "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'"
+        contentTypeNosniff: true
+        referrerPolicy: "no-referrer-when-downgrade"
         stsSeconds: 31536000
         stsIncludeSubdomains: true
         stsPreload: true
-        frameDeny: true
-        contentTypeNosniff: true
-        browserXssFilter: true
-        referrerPolicy: "strict-origin-when-cross-origin"
-        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
-        customResponseHeaders:
-          X-Robots-Tag: "noindex, nofollow"  # remove if SEO requires indexing
 
+    # nginx → `location /_next/static/ { expires 365d; add_header
+    # Cache-Control "public, max-age=31536000, immutable"; }`.
+    # Next standalone already serves these from /app/.next/static; we just
+    # layer the cache header on the response.
+    cache-immutable:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=31536000, immutable"
+
+    # nginx → `location /blog-images/ { expires 30d; add_header
+    # Cache-Control "public, max-age=2592000"; }`.
+    cache-30d:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=2592000"
+
+    # nginx → `location /widget.js { add_header 'Access-Control-Allow-Origin'
+    # '*' always; ... }` plus the OPTIONS preflight handler. Traefik's CORS
+    # middleware emits the preflight response itself, no second route.
+    widget-cors:
+      headers:
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+        accessControlAllowHeaders:
+          - DNT
+          - User-Agent
+          - X-Requested-With
+          - If-Modified-Since
+          - Cache-Control
+          - Content-Type
+          - Range
+          - Authorization
+        accessControlExposeHeaders:
+          - Content-Length
+          - Content-Range
+        accessControlMaxAge: 1728000
+        addVaryHeader: true
+        # Match nginx `Cache-Control "public, max-age=86400"` on the JS
+        # itself. Cache headers on a 204 preflight are inert.
+        customResponseHeaders:
+          Cache-Control: "public, max-age=86400"
+
+    # Stack-wide protection. The app's lib/rate-limiter.ts is the visible
+    # layer; this only catches abuse. A real SPA + APIs page load fires
+    # 20–40 requests, so the bucket needs serious headroom.
     rate-limit:
       rateLimit:
         average: 100
@@ -37,13 +86,44 @@ http:
         period: 1s
         sourceCriterion:
           ipStrategy:
-            depth: 1  # behind ourselves, no other proxy in front
+            depth: 1
 
+    # Basic auth for the Traefik dashboard. Credentials live at
+    # /run/sops/traefik-users (htpasswd format), extracted from SOPS by
+    # infra/scripts/deploy.sh. If that file is missing the middleware
+    # cannot load and the dashboard router 404s — fail-closed.
     dashboard-auth:
       basicAuth:
         usersFile: /run/sops/traefik-users
         removeHeader: true
 
+  # ─── Servers transports ───────────────────────────────────────────
+  # nginx had per-location timeouts. Traefik attaches these to a service
+  # via `loadbalancer.serverstransport`. Two transports for two profiles:
+  serversTransports:
+
+    # nginx → `proxy_connect_timeout 300s; proxy_send_timeout 300s;
+    # proxy_read_timeout 300s;` on the main / and /api/ locations. OAuth
+    # redirect flows occasionally lean on the full 5-minute window.
+    app-transport:
+      forwardingTimeouts:
+        dialTimeout: "30s"
+        responseHeaderTimeout: "300s"
+        idleConnTimeout: "300s"
+
+    # nginx → `proxy_read_timeout 3600s; proxy_connect_timeout 3600s;
+    # proxy_send_timeout 3600s; keepalive_timeout 3600s; proxy_buffering
+    # off; chunked_transfer_encoding on;` on /api/discover/stream/.
+    # Traefik v3 doesn't buffer responses by default, so the SSE bytes
+    # already flow byte-for-byte; the timeouts are what we have to
+    # extend explicitly.
+    sse-transport:
+      forwardingTimeouts:
+        dialTimeout: "30s"
+        responseHeaderTimeout: "3600s"
+        idleConnTimeout: "3600s"
+
+  # ─── Routers ──────────────────────────────────────────────────────
   routers:
     traefik-dashboard:
       rule: "Host(`traefik.plugged.in`)"

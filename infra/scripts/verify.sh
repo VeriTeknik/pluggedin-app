@@ -57,12 +57,6 @@ echo "$APP_HEALTH" | grep -q '"status":"ok"' \
   && pass "/api/health → ok" \
   || fail "/api/health → $APP_HEALTH"
 
-hdr "pluggedin-rc1 /api/health"
-RC1_HEALTH=$("${COMPOSE[@]}" exec -T pluggedin-rc1 wget -qO- http://127.0.0.1:3000/api/health 2>/dev/null || true)
-echo "$RC1_HEALTH" | grep -q '"status":"ok"' \
-  && pass "/api/health → ok" \
-  || fail "/api/health → $RC1_HEALTH"
-
 if [ "$MODE" = "quick" ]; then
   hdr "skipping canary (--quick)"
   exit 0

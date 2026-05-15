@@ -68,10 +68,10 @@ if [ "$PG_ONLY" -eq 1 ]; then
 fi
 
 echo "[restore] zvec-data → /home/pluggedin/zvec-data"
-"${COMPOSE[@]}" stop pluggedin-app pluggedin-rc1 ofelia
+"${COMPOSE[@]}" stop pluggedin-app ofelia
 rm -rf /home/pluggedin/zvec-data/*
 tar --extract --file "${WORK}/zvec-data.tar" --directory /home/pluggedin
-"${COMPOSE[@]}" start pluggedin-app pluggedin-rc1 ofelia
+"${COMPOSE[@]}" start pluggedin-app ofelia
 
 echo "[restore] uploads → /home/pluggedin/uploads"
 tar --extract --file "${WORK}/uploads.tar" --directory /home/pluggedin --keep-newer-files
