@@ -215,7 +215,7 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
       mockRegistryClient = {
         getServer: vi.fn(),
       };
-      vi.mocked(PluggedinRegistryClient).mockImplementation(() => mockRegistryClient);
+      vi.mocked(PluggedinRegistryClient).mockImplementation(function () { return mockRegistryClient; });
     });
 
     it('should successfully fetch a server from registry', async () => {
@@ -263,7 +263,7 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
       mockRegistryClient = {
         getServer: vi.fn(),
       };
-      vi.mocked(PluggedinRegistryClient).mockImplementation(() => mockRegistryClient);
+      vi.mocked(PluggedinRegistryClient).mockImplementation(function () { return mockRegistryClient; });
     });
 
     it('should successfully import a STDIO server', async () => {
@@ -699,7 +699,7 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
         // Mock publishClaimedServerToRegistry internals
         mockedDb.query.registryServersTable.findFirst.mockResolvedValue(null);
         const mockRegistryClient = { publishServer: vi.fn().mockResolvedValue({ id: 'registry-123' }) };
-        vi.mocked(PluggedinRegistryClient).mockImplementation(() => mockRegistryClient);
+        vi.mocked(PluggedinRegistryClient).mockImplementation(function () { return mockRegistryClient; });
         mockedDb.returning.mockResolvedValue([createMockRegistryServer()]);
 
         const wizardData = {

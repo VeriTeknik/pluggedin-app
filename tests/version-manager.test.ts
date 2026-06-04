@@ -18,7 +18,15 @@ vi.mock('@/db', () => ({
   }
 }));
 
-vi.mock('fs/promises');
+// vitest 4 changed automock behavior for node builtins; provide an explicit
+// factory so fs.* are real spies (keeps other exports via importOriginal).
+vi.mock('fs/promises', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('fs/promises')>()),
+  access: vi.fn(),
+  mkdir: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn(),
+}));
 vi.mock('@/lib/rag-service', () => ({
   ragService: {
     processDocument: vi.fn(),

@@ -2,13 +2,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // Mock @langchain/openai
 vi.mock('@langchain/openai', () => ({
-  OpenAIEmbeddings: vi.fn().mockImplementation(() => ({
+  OpenAIEmbeddings: vi.fn().mockImplementation(function () { return ({
     embedQuery: vi.fn().mockResolvedValue(Array.from({ length: 1536 }, () => 0.1)),
     embedDocuments: vi.fn().mockResolvedValue([
       Array.from({ length: 1536 }, () => 0.1),
       Array.from({ length: 1536 }, () => 0.2),
     ]),
-  })),
+  }); }),
 }));
 
 import {
