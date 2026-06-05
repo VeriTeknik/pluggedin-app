@@ -1,18 +1,20 @@
 # Multi-stage production Dockerfile with sandboxing support
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache python3 make g++ curl
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy package files. pnpm-workspace.yaml is required: pnpm 11 reads overrides,
+# supportedArchitectures and onlyBuiltDependencies from it (no longer from the
+# package.json `pnpm` field), else --frozen-lockfile fails on config mismatch.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy scripts directory for postinstall
 COPY scripts ./scripts
@@ -33,13 +35,13 @@ ENV NEXT_BUILD_STANDALONE=true
 RUN pnpm build
 
 # Migration stage
-FROM node:20-alpine AS migrator
+FROM node:22-alpine AS migrator
 
 # Install PostgreSQL client for database operations
 RUN apk add --no-cache postgresql-client
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 
 WORKDIR /app
 
@@ -54,7 +56,7 @@ ENV NODE_ENV=production
 CMD ["pnpm", "db:migrate"]
 
 # Production runtime stage
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 # Install runtime dependencies including sandboxing tools
 RUN apk add --no-cache \

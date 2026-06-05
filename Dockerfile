@@ -22,14 +22,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ git ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable && corepack prepare pnpm@10.12.4 --activate
+RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+# pnpm-workspace.yaml is REQUIRED here: pnpm 11 reads overrides, supportedArchitectures
+# and onlyBuiltDependencies from it (the package.json `pnpm` field is no longer read).
+# Without it, `pnpm install --frozen-lockfile` fails with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY scripts ./scripts
-# Install. The package.json carries
-#   pnpm.supportedArchitectures.{os,cpu} = ["current", "linux", "darwin"], …
+# Install. pnpm-workspace.yaml carries
+#   supportedArchitectures.{os,cpu} = ["current", "linux", "darwin"], …
 # so the linux-x64 binding for @zvec/zvec is installed inside buildkit even
 # when pnpm's default platform-filter would have skipped it. Without that
 # config, `pnpm install` inside buildkit was placing zero @zvec/bindings-*
