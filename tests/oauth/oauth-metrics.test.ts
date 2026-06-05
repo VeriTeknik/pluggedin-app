@@ -28,9 +28,11 @@ const mockGauge = {
 };
 
 vi.mock('prom-client', () => ({
-  Counter: vi.fn().mockImplementation(() => mockCounter),
-  Histogram: vi.fn().mockImplementation(() => mockHistogram),
-  Gauge: vi.fn().mockImplementation(() => mockGauge),
+  // vitest 4: constructor mocks invoked with `new` must use `function`, not an
+  // arrow (arrows can't be constructed) — the module does `new Counter(...)`.
+  Counter: vi.fn().mockImplementation(function () { return mockCounter; }),
+  Histogram: vi.fn().mockImplementation(function () { return mockHistogram; }),
+  Gauge: vi.fn().mockImplementation(function () { return mockGauge; }),
 }));
 
 vi.mock('@/lib/metrics', () => ({
