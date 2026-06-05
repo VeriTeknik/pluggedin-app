@@ -69,34 +69,46 @@ Security: AES-256-GCM encryption, Redis rate limiting
 
 ### Docker (Recommended - 2 minutes)
 
-#### **Supported Architectures**
+#### **Self-hosting builds the image locally**
 
-Plugged.in Docker images are multi-architecture (`amd64` and `arm64`) and will automatically select the correct platform for your system.
+The default `docker-compose.yml` **builds the app image from source** (`./Dockerfile`) for your platform. There is intentionally **no prebuilt self-host image**: the embedded **zvec** vector engine needs build-time flags/bindings that a generic registry image can't carry, so the image is compiled locally with the right `supportedArchitectures` configuration.
 
-**Important Notes:**
-- ✅ **Docker Compose automatically pulls the correct architecture** - no manual configuration needed
-- ✅ **Works seamlessly on mixed architectures** - run the same `docker-compose.yml` on any platform
-- ✅ **No performance penalty** - native builds for both AMD64 and ARM64
-
-To verify which platforms are available, run:
-```bash
-docker manifest inspect veriteknik/pluggedin:latest --verbose | jq '.manifests[].platform'
-```
+> The first `docker compose up --build` takes roughly **10–15 minutes** (installing dependencies + `next build`). Subsequent starts are instant — the image is cached. Requirements: Docker with BuildKit (Docker Desktop, or `docker buildx`) and **at least ~8 GB of memory allotted to the Docker engine** — `next build` is memory-hungry and will abort with "JavaScript heap out of memory" on smaller limits (raise it in Docker Desktop → Settings → Resources).
 
 ```bash
 # Clone and setup
 git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
 cp .env.example .env
+# Edit .env and set at minimum NEXTAUTH_SECRET (generate one with:
+#   openssl rand -base64 32
+# ). The bundled PostgreSQL/Redis URLs already work out of the box.
 
-# Start with Docker (includes PostgreSQL 18 + pgvector)
+# Build the app image and start the full stack (PostgreSQL 18 + pgvector,
+# Redis, one-shot migration, then the app):
 docker compose up --build -d
+
+# Follow startup (migration runs first, then the app becomes healthy):
+docker compose logs -f pluggedin-app
 
 # Visit http://localhost:12005
 ```
 
+Useful commands:
+```bash
+docker compose ps                       # service status
+docker compose run --rm pluggedin-migrate   # re-run database migrations
+docker compose down                     # stop (keeps data)
+docker compose down -v                  # stop + wipe all volumes
+```
+
+> **Production / hosted deployments use a different file** — this `docker-compose.yml` is the self-host default, not the production stack:
+> - `docker-compose.production.yml` — pulls the prebuilt `veriteknik/pluggedin` image (the hosted/cloud build)
+> - `infra/docker-compose.yml` — the Traefik + SOPS production stack used by plugged.in
+
 **What's included:**
 - ✅ PostgreSQL 18 with pgvector extension for vector search
+- ✅ Redis 7 for rate limiting / caching
 - ✅ Embedded zvec vector engine for RAG (no external Milvus/Qdrant needed)
 - ✅ Next.js 15 web application with optimized production build
 - ✅ Persistent volumes for database, uploads, vectors, and logs
@@ -105,16 +117,19 @@ docker compose up --build -d
 **Docker Architecture:**
 ```yaml
 Services:
-  - pluggedin-app: Main web application (port 12005)
+  - pluggedin-migrate:  One-shot DB migration; reuses the app image, then exits
+  - pluggedin-app:      Main web application (host port 12005 → container 3000),
+                        starts only after migration completes successfully
   - pluggedin-postgres: PostgreSQL 18 + pgvector database (port 5432)
-  - drizzle-migrate: One-time migration runner (auto-stops)
+  - pluggedin-redis:    Redis 7 (port 6379)
 
 Volumes:
   - pluggedin-postgres: Database data (persistent)
-  - zvec-data: Vector collections (persistent)
-  - app-uploads: User uploaded files (persistent)
-  - app-logs: Application logs (persistent)
-  - mcp-cache: MCP package cache (persistent)
+  - pluggedin-redis:    Redis append-only data (persistent)
+  - zvec-data:          Vector collections (persistent)
+  - app-uploads:        User uploaded files (persistent)
+  - app-logs:           Application logs (persistent)
+  - mcp-cache:          MCP package cache (persistent)
 ```
 
 **Upgrading from older versions:**

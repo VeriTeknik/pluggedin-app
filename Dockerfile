@@ -60,7 +60,11 @@ RUN test -e node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node \
 # (see lib/vectors/vector-service.ts callers).
 
 COPY . .
-RUN pnpm build
+# Raise V8's heap limit for the build. `next build` on this app exceeds V8's
+# default old-space cap and aborts with "JavaScript heap out of memory"
+# (exit 134) on memory-constrained Docker engines (e.g. an 8 GB Docker Desktop).
+# Scoped to this RUN so it doesn't affect the runtime process.
+RUN NODE_OPTIONS=--max-old-space-size=6144 pnpm build
 
 # Note: dev dependencies are *not* pruned. drizzle-kit and tsx are listed as
 # devDependencies but are needed at runtime by `pnpm db:migrate` and
@@ -70,9 +74,14 @@ RUN pnpm build
 # ─── stage 2: runtime ─────────────────────────────────────────────────
 FROM node:22-trixie-slim AS runtime
 
+# HOSTNAME=0.0.0.0: Next.js standalone binds to process.env.HOSTNAME. Docker
+# sets HOSTNAME to the container id, so without this the server binds to the
+# eth0 IP only and the loopback HEALTHCHECK (127.0.0.1:3000) is refused →
+# the container is reported "unhealthy" even though the app serves fine.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
 # bubblewrap: MCP sandboxing.
 # tini:       PID-1 signal handling — without it stdio MCP zombies pile up.
