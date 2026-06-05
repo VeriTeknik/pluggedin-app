@@ -1,9 +1,46 @@
+# Default self-host setup for end users.
+#
+# The app image is BUILT LOCALLY from ./Dockerfile — there is no prebuilt
+# registry image for self-hosting, because the embedded zvec vector engine
+# needs build-time flags/bindings that a generic prebuilt image cannot carry.
+#
+#   cp .env.example .env          # then set NEXTAUTH_SECRET (see README)
+#   docker compose up --build -d  # first run builds the image (~10-15 min)
+#   open http://localhost:12005
+#
+# Production / hosted deployments use a DIFFERENT file — this is NOT the prod
+# stack:
+#   - docker-compose.production.yml  → pulls the prebuilt veriteknik/pluggedin image
+#   - infra/docker-compose.yml       → Traefik + SOPS production stack
+#
+# See README "Quick Start → Docker" for details.
+
 services:
+  # One-shot database migration. Reuses the app image built below (no second
+  # build) and exits when migrations are applied; the app waits for it.
+  pluggedin-migrate:
+    container_name: pluggedin-migrate
+    image: pluggedin-app:local
+    # Run drizzle-kit directly from node_modules — the runtime image ships it
+    # (drizzle-kit is kept in the image) and this avoids depending on a package
+    # manager being present in the production runtime.
+    command: ["node_modules/.bin/drizzle-kit", "migrate"]
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - DATABASE_SSL=false
+    depends_on:
+      pluggedin-postgres:
+        condition: service_healthy
+    restart: "no"
+
   pluggedin-app:
     container_name: pluggedin-app
     build:
       context: .
       dockerfile: Dockerfile
+    image: pluggedin-app:local
     env_file:
       - .env
     restart: always
@@ -33,6 +70,8 @@ services:
         condition: service_healthy
       pluggedin-redis:
         condition: service_healthy
+      pluggedin-migrate:
+        condition: service_completed_successfully
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
@@ -43,6 +82,11 @@ services:
       POSTGRES_DB: pluggedin
       POSTGRES_USER: pluggedin
       POSTGRES_PASSWORD: pluggedin_secure_password
+      # postgres:18 moved the default PGDATA out of /var/lib/postgresql/data;
+      # pin it back to the mounted path so data persists in the volume and the
+      # server actually initialises there (otherwise it boots in a throwaway
+      # location and the healthcheck never passes).
+      PGDATA: /var/lib/postgresql/data
     ports:
       - '5432:5432'
     volumes:
@@ -51,7 +95,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U pluggedin -d pluggedin"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   pluggedin-redis:
     container_name: pluggedin-redis
@@ -67,34 +112,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-
-  drizzle-migrate:
-    container_name: pluggedin-migrate
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrator
-    command: >
-      sh -c "
-        echo 'Waiting for database to be ready...';
-        until pg_isready -h pluggedin-postgres -p 5432 -U pluggedin; do
-          echo 'Database is unavailable - sleeping';
-          sleep 2;
-        done;
-        echo 'Database is up - running migrations';
-        pnpm drizzle-kit migrate
-      "
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
-      - DATABASE_SSL=false
-      - PGUSER=pluggedin
-      - PGHOST=pluggedin-postgres
-      - PGDATABASE=pluggedin
-    depends_on:
-      pluggedin-postgres:
-        condition: service_healthy
 
 volumes:
   pluggedin-postgres:
