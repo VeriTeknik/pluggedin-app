@@ -248,7 +248,12 @@ export async function toggleMcpServerStatus(
   uuid: string,
   newStatus: McpServerStatus
 ): Promise<void> {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
+    const userId = session.user.id;
+
+    // Apply rate limiting for modification operations
+    await applyRateLimit(userId, 'toggle-server-status', ServerActionRateLimits.serverModification);
+
     await db
       .update(mcpServersTable)
       .set({ status: newStatus })
