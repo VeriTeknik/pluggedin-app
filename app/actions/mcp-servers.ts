@@ -248,15 +248,17 @@ export async function toggleMcpServerStatus(
   uuid: string,
   newStatus: McpServerStatus
 ): Promise<void> {
-  await db
-    .update(mcpServersTable)
-    .set({ status: newStatus })
-    .where(
-      and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      )
-    );
+  return withProfileAuth(profileUuid, async () => {
+    await db
+      .update(mcpServersTable)
+      .set({ status: newStatus })
+      .where(
+        and(
+          eq(mcpServersTable.uuid, uuid),
+          eq(mcpServersTable.profile_uuid, profileUuid)
+        )
+      );
+  });
 }
 
 export async function updateMcpServer(
