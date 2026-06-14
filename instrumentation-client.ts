@@ -13,12 +13,12 @@ Sentry.init({
   integrations: process.env.NODE_ENV === 'production' ? [Sentry.replayIntegration()] : [],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 1 : 0,
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
 
   // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
+  // Disabled for normal sessions to reduce Sentry replay quota usage;
+  // replays are only captured when an error occurs (see replaysOnErrorSampleRate).
+  replaysSessionSampleRate: 0,
 
   // Define how likely Replay events are sampled when an error occurs.
   replaysOnErrorSampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0,
