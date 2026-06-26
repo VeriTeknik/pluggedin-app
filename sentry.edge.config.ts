@@ -5,13 +5,18 @@
 
 import * as Sentry from '@sentry/nextjs';
 
+import { tracesSampler } from '@/lib/sentry-sampling';
+
+const isProduction = process.env.NODE_ENV === 'production';
+
 Sentry.init({
-  dsn: process.env.NODE_ENV === 'production' 
+  dsn: isProduction
     ? 'https://71d8c70c11135db3ec287d3bf15f426b@o4509004867698688.ingest.de.sentry.io/4509541917786192'
     : '', // Disable Sentry in development
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
+  // Drop high-frequency / low-value transactions entirely and keep the rest at a
+  // low base rate to control span ingestion volume. See lib/sentry-sampling.ts.
+  ...(isProduction ? { tracesSampler } : { tracesSampleRate: 0 }),
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
