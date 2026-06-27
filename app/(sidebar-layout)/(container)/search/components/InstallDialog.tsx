@@ -133,7 +133,7 @@ export function InstallDialog({
   const onSubmit = async (values: any) => {
     if (!profileUuid) {
       toast({
-        title: t('common:error'),
+        title: t('common:common.error'),
         description: t('install.profileUnavailable', 'We could not access your active workspace. Please select a workspace and try again.'),
         variant: 'destructive',
       });
@@ -210,7 +210,7 @@ export function InstallDialog({
       
       if (result.success) {
         toast({
-          title: t('common:success'), // Added 'common:' prefix back
+          title: t('common:common.success'),
           description: t('install.successDescription'),
         });
 
@@ -246,7 +246,7 @@ export function InstallDialog({
         onOpenChange(false);
       } else {
         toast({
-          title: t('common:error'), // Added 'common:' prefix back
+          title: t('common:common.error'),
           description: result.error || t('install.errorDescription'),
           variant: 'destructive',
         });
@@ -254,8 +254,8 @@ export function InstallDialog({
     } catch (error) {
       console.error('Error installing server:', error);
       toast({
-        title: t('common:error'), // Added 'common:' prefix back
-        description: t('common:errors.unexpected'), // Used correct key from common.json
+        title: t('common:common.error'),
+        description: t('common:common.errors.unexpected'),
         variant: 'destructive',
       });
     } finally {
