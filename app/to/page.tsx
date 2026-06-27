@@ -41,7 +41,7 @@ export default async function ToDirectoryPage() {
           <div className="mb-10">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">Featured Community MCP Servers</h2>
-              <Link href="/discover" className="text-blue-600 hover:underline text-sm font-medium">See more</Link>
+              <Link href="/search" className="text-blue-600 hover:underline text-sm font-medium">See more</Link>
             </div>
             <CardGrid
               items={communityServers}

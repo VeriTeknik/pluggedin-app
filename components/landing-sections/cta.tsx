@@ -180,7 +180,7 @@ export function LandingCta() {
             size="lg"
             className="border-electric-cyan/20 hover:bg-electric-cyan/10"
           >
-            <Link href="/discover">
+            <Link href="/search">
               Explore Verified Tools
               <Layers className="ml-2 h-4 w-4" />
             </Link>

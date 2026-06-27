@@ -58,7 +58,7 @@ export function CollectionContent({
     } else if (window.history.length > 1) {
       router.back();
     } else {
-      router.push('/discover');
+      router.push('/search');
     }
   };
 
@@ -73,7 +73,7 @@ export function CollectionContent({
           title: t('collections.deleteSuccess'),
           description: t('collections.deleteSuccessDesc'),
         });
-        router.push('/discover');
+        router.push('/search');
       } else {
         throw new Error(result.error || t('collections.deleteError'));
       }

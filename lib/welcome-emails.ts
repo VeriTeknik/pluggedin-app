@@ -468,7 +468,7 @@ function generateDay7ActiveHtml(name: string, metrics: UserMetrics, unsubscribeU
           
           <li>🌐 <strong>MCP Marketplace</strong><br>
           50+ integrations, all secure.<br>
-          <a href="${appUrl}/discover">Browse integrations</a></li>
+          <a href="${appUrl}/search">Browse integrations</a></li>
         </ol>
         
         <p>Join our community:<br>

@@ -56,10 +56,6 @@
   "analytics": {
     "title": "分析"
   },
-  "aiSocial": {
-    "title": "AIソーシャル",
-    "description": "AIソーシャル ソーシャルメディアプラットフォームを発見し、接続します"
-  },
   "projects": {
     "loading": "Loading Projects...",
     "loadingHubs": "Loading Hubs...",

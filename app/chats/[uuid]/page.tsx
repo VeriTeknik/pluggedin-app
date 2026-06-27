@@ -30,7 +30,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
     <div className="container py-8 max-w-4xl mx-auto">
       <div className="mb-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={chat.profile?.username ? `/to/${chat.profile.username}` : '/discover'}>
+          <Link href={chat.profile?.username ? `/to/${chat.profile.username}` : '/search'}>
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to {chat.profile?.name || 'Profile'}
           </Link>

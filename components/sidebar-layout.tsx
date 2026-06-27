@@ -14,7 +14,6 @@ import {
   Plus,
   Trash2,
   Unplug,
-  Users,
 } from 'lucide-react';
 // Next.js imports
 import Image from 'next/image';
@@ -235,16 +234,6 @@ export default function SidebarLayout({
                       <Link href='/search'>
                         <Blocks className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('search.explorePlugins')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  {/* Update Discover Link to AI Social */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('aiSocial.description')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/discover'>
-                        <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
