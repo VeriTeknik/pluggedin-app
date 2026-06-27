@@ -24,13 +24,12 @@ import enAuth from '../public/locales/en/auth.json';
 import enBlog from '../public/locales/en/blog.json';
 import enCollections from '../public/locales/en/collections.json';
 import enCommon from '../public/locales/en/common.json';
-import enDiscover from '../public/locales/en/discover.json';
 import enDiscoverDialog from '../public/locales/en/discover_dialog.json';
 import enInstall from '../public/locales/en/install.json';
 import enIntelligentServer from '../public/locales/en/intelligent_server.json';
-import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
+import enLibrary from '../public/locales/en/library.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
 import enMemory from '../public/locales/en/memory.json';
 import enNotifications from '../public/locales/en/notifications.json';
@@ -51,7 +50,6 @@ export const namespaces = [
   'blog',
   'collections',
   'common',
-  'discover',
   'discover_dialog',
   'install',
   'intelligent_server',
@@ -82,7 +80,6 @@ type Messages = {
   blog: typeof enBlog;
   collections: typeof enCollections;
   common: typeof enCommon;
-  discover: typeof enDiscover;
   discover_dialog: typeof enDiscoverDialog;
   install: typeof enInstall;
   intelligent_server: typeof enIntelligentServer;

@@ -262,7 +262,7 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
                   variant="outline" 
                   size="sm" 
                   className="flex items-center gap-2"
-                  onClick={() => window.open(`/discover`, '_blank')}
+                  onClick={() => window.open(`/search`, '_blank')}
                 >
                   <Eye className="h-4 w-4" />
                   View in Community Servers

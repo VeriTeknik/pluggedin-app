@@ -1,4 +1,15 @@
 {
+  "install": {
+    "title": "Server installeren",
+    "description": "Configureer en installeer deze MCP-server.",
+    "name": "Servernaam",
+    "command": "Commando",
+    "args": "Argumenten (spatie-gescheiden)",
+    "env": "Omgevingsvariabelen",
+    "url": "Server URL",
+    "successDescription": "Server succesvol geïnstalleerd",
+    "errorDescription": "Server installatie mislukt"
+  },
   "common": {
     "or": "OF",
     "error": "Fout",
@@ -55,10 +66,6 @@
   },
   "analytics": {
     "title": "Analytics"
-  },
-  "aiSocial": {
-    "title": "AI Social",
-    "description": "Ontdek en verbind met AI-gestuurde sociale media platforms"
   },
   "projects": {
     "loading": "Loading Projects...",

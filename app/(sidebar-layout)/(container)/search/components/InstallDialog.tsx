@@ -54,7 +54,10 @@ export function InstallDialog({
   serverData,
 }: InstallDialogProps) {
   // Load 'discover' as the default namespace and 'common' for shared translations
-  const { t } = useTranslation(['discover', 'common']);
+  // 'install.*' keys live in the common namespace; 'common:*' prefixed keys
+  // resolve there too. (Previously these came from the now-removed 'discover'
+  // namespace.)
+  const { t } = useTranslation('common');
   const profileData = useProfiles();
   const currentProfile = profileData.currentProfile;
   const activeProfile = profileData.activeProfile;
@@ -130,7 +133,7 @@ export function InstallDialog({
   const onSubmit = async (values: any) => {
     if (!profileUuid) {
       toast({
-        title: t('common:error'),
+        title: t('common:common.error'),
         description: t('install.profileUnavailable', 'We could not access your active workspace. Please select a workspace and try again.'),
         variant: 'destructive',
       });
@@ -207,8 +210,8 @@ export function InstallDialog({
       
       if (result.success) {
         toast({
-          title: t('common:success'), // Added 'common:' prefix back
-          description: t('install.successDescription'), // Belongs to discover namespace
+          title: t('common:common.success'),
+          description: t('install.successDescription'),
         });
 
         // Track the installation after successful creation
@@ -243,16 +246,16 @@ export function InstallDialog({
         onOpenChange(false);
       } else {
         toast({
-          title: t('common:error'), // Added 'common:' prefix back
-          description: result.error || t('install.errorDescription'), // Belongs to discover namespace
+          title: t('common:common.error'),
+          description: result.error || t('install.errorDescription'),
           variant: 'destructive',
         });
       }
     } catch (error) {
       console.error('Error installing server:', error);
       toast({
-        title: t('common:error'), // Added 'common:' prefix back
-        description: t('common:errors.unexpected'), // Used correct key from common.json
+        title: t('common:common.error'),
+        description: t('common:common.errors.unexpected'),
         variant: 'destructive',
       });
     } finally {

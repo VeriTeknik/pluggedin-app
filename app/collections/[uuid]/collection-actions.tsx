@@ -33,7 +33,7 @@ export function CollectionActions({ collection }: CollectionActionsProps) {
     try {
       const result = await unshareCollection(collection.profile_uuid, collection.uuid);
       if (result.success) {
-        router.push('/discover');
+        router.push('/search');
       } else {
         throw new Error(result.error || 'Failed to delete collection');
       }

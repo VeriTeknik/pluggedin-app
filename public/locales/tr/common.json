@@ -1,4 +1,15 @@
 {
+  "install": {
+    "title": "Sunucu Yükle",
+    "description": "Bu MCP sunucusunu yapılandır ve yükle.",
+    "name": "Sunucu Adı",
+    "command": "Komut",
+    "args": "Argümanlar (boşlukla ayrılmış)",
+    "env": "Ortam Değişkenleri",
+    "url": "Sunucu URL'si",
+    "successDescription": "Sunucu başarıyla yüklendi",
+    "errorDescription": "Sunucu yüklenemedi"
+  },
   "common": {
     "or": "VEYA",
     "error": "Hata",
@@ -55,10 +66,6 @@
   },
   "analytics": {
     "title": "Analitik"
-  },
-  "aiSocial": {
-    "title": "YZ Sosyal",
-    "description": "Yapay zeka destekli sosyal medya platformlarını keşfet ve bağlantı kurun"
   },
   "projects": {
     "loading": "Projeler Yükleniyor...",

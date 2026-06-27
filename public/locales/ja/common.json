@@ -1,4 +1,15 @@
 {
+  "install": {
+    "title": "サーバーをインストール",
+    "description": "このMCPサーバーを設定してインストールします。",
+    "name": "サーバー名",
+    "command": "コマンド",
+    "args": "引数（スペース区切り）",
+    "env": "環境変数",
+    "url": "サーバーURL",
+    "successDescription": "サーバーが正常にインストールされました",
+    "errorDescription": "サーバーのインストールに失敗しました"
+  },
   "common": {
     "or": "または",
     "error": "エラー",
@@ -55,10 +66,6 @@
   },
   "analytics": {
     "title": "分析"
-  },
-  "aiSocial": {
-    "title": "AIソーシャル",
-    "description": "AIソーシャル ソーシャルメディアプラットフォームを発見し、接続します"
   },
   "projects": {
     "loading": "Loading Projects...",
