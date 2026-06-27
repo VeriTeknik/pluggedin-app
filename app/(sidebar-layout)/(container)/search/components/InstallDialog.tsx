@@ -54,7 +54,10 @@ export function InstallDialog({
   serverData,
 }: InstallDialogProps) {
   // Load 'discover' as the default namespace and 'common' for shared translations
-  const { t } = useTranslation(['discover', 'common']);
+  // 'install.*' keys live in the common namespace; 'common:*' prefixed keys
+  // resolve there too. (Previously these came from the now-removed 'discover'
+  // namespace.)
+  const { t } = useTranslation('common');
   const profileData = useProfiles();
   const currentProfile = profileData.currentProfile;
   const activeProfile = profileData.activeProfile;
@@ -208,7 +211,7 @@ export function InstallDialog({
       if (result.success) {
         toast({
           title: t('common:success'), // Added 'common:' prefix back
-          description: t('install.successDescription'), // Belongs to discover namespace
+          description: t('install.successDescription'),
         });
 
         // Track the installation after successful creation
@@ -244,7 +247,7 @@ export function InstallDialog({
       } else {
         toast({
           title: t('common:error'), // Added 'common:' prefix back
-          description: result.error || t('install.errorDescription'), // Belongs to discover namespace
+          description: result.error || t('install.errorDescription'),
           variant: 'destructive',
         });
       }
