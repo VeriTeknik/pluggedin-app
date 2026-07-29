@@ -46,9 +46,14 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-pluggedin}
       POSTGRES_USER: ${DB_USER:-pluggedin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     ports:
-      - '5432:5432'
+      # Loopback-only: nginx and the app reach Postgres over the compose
+      # network, so this mapping exists purely for host-side admin/backup tools.
+      # Docker publishes to 0.0.0.0 by default and its iptables rules are
+      # evaluated before ufw/firewalld, so a bare '5432:5432' would put the
+      # production database on the public internet whatever the firewall says.
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./backup:/backup
