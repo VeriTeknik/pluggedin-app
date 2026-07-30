@@ -150,6 +150,77 @@ Executed 2026-07-31. Production was untouched throughout; the native stack
 
 **Rollback:** none needed; this phase is read-only on prod.
 
+#### Secret rotation (2026-07-31)
+
+The encrypted blob is committed to a **public** repo. That is the intended
+SOPS design and age/X25519 is sound, but the ciphertext is public and
+permanent, so everything the app generates itself was rotated before the
+first push — the values in git have never protected anything.
+
+**Rotated in `secrets.env.sops`:**
+
+| Secret | Consequence of the rotation |
+|---|---|
+| `NEXTAUTH_SECRET` + `AUTH_SECRET` | Every existing session is invalidated — all users are logged out at cutover. Kept byte-identical to each other: NextAuth v4 reads the first, v5 the second, and a split value silently rejects tokens signed by the other. |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | **Requires the data migration below.** Despite the name this is not a Next.js internal — `lib/encryption.ts` derives the AES-256-GCM key for MCP server configs and OAuth tokens from it. |
+| `CRON_SECRET` | Ofelia expands `$CRON_SECRET` inside `pluggedin-app`, so the containerised jobs pick it up automatically. The **host crontab hardcodes the old value** and will start getting 401s the moment the app runs with the new one — see the ordering note in Phase 5. |
+| `UNSUBSCRIBE_TOKEN_SECRET` | Unsubscribe links in already-sent emails stop validating. Regenerated at 48 bytes (64 chars), which also clears the "≥64 chars recommended for production" warning in `lib/env-validation.ts` that the old 44-char value tripped. |
+| `ADMIN_MIGRATION_SECRET` | None; only gates the admin migration endpoint. |
+| `REGISTRY_INTERNAL_API_KEY` | Shared with the registry service at `registry.plugged.in`. **Both sides must be updated together** or the registry integration fails closed. |
+| `POSTGRES_PASSWORD` | New credential for the containerised PG; never used anywhere before. |
+
+**Dropped:** `API_KEY_ENCRYPTION_SECRET` — referenced nowhere in the repo
+(grep across ts/tsx/js/mjs/json, excluding `node_modules` and `.next`).
+Carrying a dead secret into a public blob is pure downside.
+
+**Not rotatable from here** — these are third-party credentials that can
+only be reissued from the provider's console. They are still live in the
+committed blob, so treat this as the outstanding half of the rotation:
+
+- Model providers: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`,
+  `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
+- OAuth apps (rotating the secret requires updating the provider console;
+  brief sign-in outage): `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_SECRET`
+- GitHub tokens: `GITHUB_TOKEN`, `GITHUB_PAT`, `GITHUB_PACKAGES_TOKEN`
+- Other services: `SMITHERY_API_KEY`, `PAP_COLLECTOR_API_KEY`,
+  `EMAIL_SERVER_PASSWORD`, `K8S_SERVICE_ACCOUNT_TOKEN`
+
+**Do not push this branch until those are reissued**, or the old values go
+public in a form that only the age key protects.
+
+##### The data re-encryption migration
+
+`infra/scripts/reencrypt-data-key.mjs` moves every value encrypted under the
+old key onto the new one. It covers 10 (table, column) pairs across
+`mcp_servers`, `mcp_server_oauth_config`, `mcp_server_oauth_tokens` and
+`mcp_server_remote_headers` — **5,305 live values**.
+
+```bash
+OLD_KEY=... NEW_KEY=... DATABASE_URL=... node infra/scripts/reencrypt-data-key.mjs --dry-run
+OLD_KEY=... NEW_KEY=... DATABASE_URL=... node infra/scripts/reencrypt-data-key.mjs --apply
+            NEW_KEY=... DATABASE_URL=... node infra/scripts/reencrypt-data-key.mjs --verify
+```
+
+Rehearsed end to end against a throwaway container holding a full restore of
+the Phase-0 prod dump:
+
+- `--dry-run`: 5,305/5,305 decryptable, 0 failures.
+- `--apply`: 5,305 re-encrypted, 0 failures, **1m45s** on 12 cores.
+- `--verify`: 5,305/5,305 readable under the new key.
+- **Fidelity**: SHA-256 of every plaintext captured before and after —
+  all 5,305 identical, so the rotation preserved the data byte-for-byte.
+- **Negative control**: `--verify` with the *old* key fails on all 5,305,
+  confirming the data really moved rather than the run being a no-op.
+
+`scrypt(N=16384)` runs per value with a per-value random salt, so no derived
+key can be cached; the script fans out across cores to keep this inside the
+cutover budget. It writes one transaction per column, so an interrupted run
+leaves that column wholly on the old key and `--apply` can simply be re-run.
+
+The old key is preserved in `/home/pluggedin/backups/rotation-<ts>/HANDOFF.env`
+(0600, outside the repo). **Without it the 5,305 values are unrecoverable.**
+Destroy that file only after `--verify` passes against the production stack.
+
 #### Defects the Phase-0 dry run caught in the Phase-1 scaffolding
 
 All four were latent — they would each have failed the first real deploy.
@@ -217,8 +288,18 @@ This is the only step that affects users. Pick a low-traffic window.
 [T-5]  Run pre-cutover dump for safety:
        infra/scripts/cutover-from-native.sh --dump-only
 [T-0]  systemctl stop pluggedin nginx
+       crontab -l > /home/pluggedin/crontab.pre-ofelia.backup; crontab -r
+         ^ MUST happen here, not in Phase 7. The host crontab hardcodes the
+           pre-rotation CRON_SECRET; leaving it live past cutover means
+           7 jobs hammering the new app with 401s.
        Take a delta-dump (changes since the Phase-0 dump) and apply it:
        infra/scripts/cutover-from-native.sh --delta-apply
+       Re-encrypt the rotated data key against the freshly restored DB —
+       before the app starts, or it will read rows it cannot decrypt:
+         OLD_KEY=$(grep '^OLD_NEXT...' <rotation-dir>/HANDOFF.env | cut -d= -f2-) \
+         NEW_KEY=... DATABASE_URL=... \
+         node infra/scripts/reencrypt-data-key.mjs --apply
+         node infra/scripts/reencrypt-data-key.mjs --verify   # must be 0 failures
        Move :80/:443 ownership: bring Traefik down, change its host-port
        binding from 8443→443 and 8080→80, bring it back up.
        Verify cert validity, verify /api/health, verify AI search on a
@@ -245,8 +326,10 @@ The compose file already references `infra/sops/runtime/secrets.env`, which is t
 
 ### Phase 7 — Move crontab into Ofelia (1 hour)
 
-- [ ] The seven host cron entries become entries in `infra/ofelia/config.ini`.
-- [ ] `crontab -l > /home/pluggedin/crontab.pre-ofelia.backup; crontab -r`.
+- [x] The seven host cron entries become entries in `infra/ofelia/config.ini`.
+- [ ] `crontab -r` — **moved into the Phase-5 cutover** because `CRON_SECRET`
+      was rotated; see the ordering note there. The backup still goes to
+      `/home/pluggedin/crontab.pre-ofelia.backup` first.
 - [ ] `docker compose up -d ofelia`.
 - [ ] Verify each job fires at least once on its schedule (timestamps in `docker compose logs ofelia`).
 

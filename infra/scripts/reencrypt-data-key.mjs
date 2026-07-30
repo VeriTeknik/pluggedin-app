@@ -1,0 +1,199 @@
+#!/usr/bin/env node
+/**
+ * Re-encrypt every column protected by NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ * from an old key to a new one.
+ *
+ * That variable is not a Next.js internal despite the name — lib/encryption.ts
+ * derives the AES-256-GCM key for MCP server configs and OAuth tokens from it.
+ * Rotating it without this migration makes every affected row permanently
+ * undecryptable.
+ *
+ * Usage:
+ *   OLD_KEY=... NEW_KEY=... DATABASE_URL=... node reencrypt-data-key.mjs --dry-run
+ *   OLD_KEY=... NEW_KEY=... DATABASE_URL=... node reencrypt-data-key.mjs --apply
+ *   NEW_KEY=...             DATABASE_URL=... node reencrypt-data-key.mjs --verify
+ *
+ * --dry-run  decrypt-only under OLD_KEY; proves every row is readable and
+ *            reports what --apply would touch. Writes nothing.
+ * --apply    re-encrypts inside a single transaction per table. Any failure
+ *            rolls that table back whole.
+ * --verify   confirms every row decrypts under NEW_KEY. Run after --apply,
+ *            and before destroying the old key.
+ *
+ * The wire format is fixed by lib/encryption.ts and reproduced here rather
+ * than imported, because that module reads the key from the environment at
+ * call time and this migration needs two keys live at once.
+ */
+import crypto from 'node:crypto';
+import { promisify } from 'node:util';
+import pg from 'pg';
+
+const scrypt = promisify(crypto.scrypt);
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const TAG_LENGTH = 16;
+const SALT_LENGTH = 16;
+const SCRYPT = { N: 16384, r: 8, p: 1 };
+
+// Every (table, column) pair whose value passes through encryptField().
+// Verified against db/schema.ts and the call sites in lib/encryption.ts,
+// lib/oauth/*.ts and app/actions/registry-servers.ts.
+const TARGETS = [
+  ['mcp_servers', 'uuid', 'command_encrypted'],
+  ['mcp_servers', 'uuid', 'args_encrypted'],
+  ['mcp_servers', 'uuid', 'env_encrypted'],
+  ['mcp_servers', 'uuid', 'url_encrypted'],
+  ['mcp_servers', 'uuid', 'transport_encrypted'],
+  ['mcp_servers', 'uuid', 'streamable_http_options_encrypted'],
+  ['mcp_server_oauth_config', 'uuid', 'client_secret_encrypted'],
+  ['mcp_server_oauth_tokens', 'uuid', 'access_token_encrypted'],
+  ['mcp_server_oauth_tokens', 'uuid', 'refresh_token_encrypted'],
+  ['mcp_server_remote_headers', 'uuid', 'header_value_encrypted'],
+];
+
+// scrypt at N=16384 costs ~16 MiB and tens of ms per call, and every value
+// carries its own random salt so no derived key can be reused. Serial
+// execution would put a few thousand rows well past the cutover budget;
+// the work is CPU-bound in libuv's threadpool, so fan out to the cores.
+const CONCURRENCY = Math.max(4, Math.min(16, (await import('node:os')).cpus().length));
+
+async function deriveKey(baseKey, salt) {
+  return scrypt(baseKey, salt, 32, SCRYPT);
+}
+
+async function decryptField(encrypted, baseKey) {
+  const combined = Buffer.from(encrypted, 'base64');
+  const salt = combined.subarray(0, SALT_LENGTH);
+  const iv = combined.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const tag = combined.subarray(SALT_LENGTH + IV_LENGTH, SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
+  const data = combined.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
+
+  const key = await deriveKey(baseKey, salt);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(tag);
+  // GCM authentication means a wrong key throws here rather than returning
+  // plausible garbage, so this doubles as the key-correctness check.
+  return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+}
+
+async function encryptField(plaintext, baseKey) {
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const key = await deriveKey(baseKey, salt);
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  return Buffer.concat([salt, iv, cipher.getAuthTag(), encrypted]).toString('base64');
+}
+
+async function mapPool(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) return;
+        results[i] = await fn(items[i], i);
+      }
+    })
+  );
+  return results;
+}
+
+function requireKey(name) {
+  const v = process.env[name];
+  if (!v) throw new Error(`${name} is not set`);
+  if (Buffer.from(v, 'base64').length < 32) {
+    throw new Error(`${name} must decode to at least 32 bytes`);
+  }
+  return v;
+}
+
+async function main() {
+  const mode = process.argv.find((a) => ['--dry-run', '--apply', '--verify'].includes(a));
+  if (!mode) {
+    console.error('specify one of --dry-run | --apply | --verify');
+    process.exit(2);
+  }
+
+  const newKey = requireKey('NEW_KEY');
+  const oldKey = mode === '--verify' ? null : requireKey('OLD_KEY');
+  if (oldKey && oldKey === newKey) throw new Error('OLD_KEY and NEW_KEY are identical');
+
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  let totalRows = 0;
+  let totalFailed = 0;
+
+  try {
+    for (const [table, pk, column] of TARGETS) {
+      const { rows } = await client.query(
+        `SELECT ${pk} AS id, ${column} AS val FROM ${table} WHERE ${column} IS NOT NULL`
+      );
+      if (rows.length === 0) {
+        console.log(`${table}.${column}: 0 rows, skipped`);
+        continue;
+      }
+
+      const readKey = mode === '--verify' ? newKey : oldKey;
+      const failures = [];
+
+      const converted = await mapPool(rows, CONCURRENCY, async (row) => {
+        try {
+          const plaintext = await decryptField(row.val, readKey);
+          if (mode === '--apply') {
+            return { id: row.id, val: await encryptField(plaintext, newKey) };
+          }
+          return null;
+        } catch (err) {
+          failures.push({ id: row.id, message: err.message });
+          return null;
+        }
+      });
+
+      if (failures.length) {
+        totalFailed += failures.length;
+        console.error(
+          `${table}.${column}: ${failures.length}/${rows.length} FAILED to decrypt ` +
+            `(first id ${failures[0].id}: ${failures[0].message})`
+        );
+        if (mode === '--apply') {
+          throw new Error(`refusing to write ${table}.${column} with undecryptable rows`);
+        }
+        continue;
+      }
+
+      if (mode === '--apply') {
+        // One transaction per column: a mid-column crash leaves that column
+        // entirely on the old key rather than half-migrated, which keeps the
+        // rerun story simple (just run --apply again).
+        await client.query('BEGIN');
+        try {
+          for (const { id, val } of converted) {
+            await client.query(`UPDATE ${table} SET ${column} = $1 WHERE ${pk} = $2`, [val, id]);
+          }
+          await client.query('COMMIT');
+        } catch (err) {
+          await client.query('ROLLBACK');
+          throw err;
+        }
+      }
+
+      totalRows += rows.length;
+      const verb = { '--dry-run': 'decryptable', '--apply': 're-encrypted', '--verify': 'verified' }[mode];
+      console.log(`${table}.${column}: ${rows.length} rows ${verb}`);
+    }
+  } finally {
+    await client.end();
+  }
+
+  console.log(`\n${mode} complete: ${totalRows} rows, ${totalFailed} failures`);
+  if (totalFailed > 0) process.exit(1);
+}
+
+main().catch((err) => {
+  console.error(`FATAL: ${err.message}`);
+  process.exit(1);
+});
