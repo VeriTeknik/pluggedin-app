@@ -173,9 +173,9 @@ first push — the values in git have never protected anything.
 (grep across ts/tsx/js/mjs/json, excluding `node_modules` and `.next`).
 Carrying a dead secret into a public blob is pure downside.
 
-**Not rotatable from here** — these are third-party credentials that can
-only be reissued from the provider's console. They are still live in the
-committed blob, so treat this as the outstanding half of the rotation:
+**Deferred to a later rotation** (ops decision, 2026-07-31) — these are
+third-party credentials that can only be reissued from the provider's
+console. They keep their current live values in the committed blob:
 
 - Model providers: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`,
   `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
@@ -185,8 +185,23 @@ committed blob, so treat this as the outstanding half of the rotation:
 - Other services: `SMITHERY_API_KEY`, `PAP_COLLECTOR_API_KEY`,
   `EMAIL_SERVER_PASSWORD`, `K8S_SERVICE_ACCOUNT_TOKEN`
 
-**Do not push this branch until those are reissued**, or the old values go
-public in a form that only the age key protects.
+One property of deferring is worth stating plainly, because it is the part
+that a later rotation does *not* undo: git history is append-only, so once
+this branch is pushed the current ciphertext is public **permanently**.
+Reissuing these keys later protects everything from that point forward, but
+the blob containing today's values stays published, and the age private key
+is the only thing standing between it and the plaintext. That makes the key
+custody items below load-bearing rather than housekeeping:
+
+- `/etc/sops/age/keys.txt` is the single copy that must exist on this host.
+- The offsite backup key must live *offsite*; both keys on one box gives
+  the second recipient no independent value.
+- If the age key is ever suspected compromised, the third-party rotation
+  stops being deferrable and becomes incident response.
+
+Until the deferred rotation happens, `infra/scripts/rotate-keys.sh` is the
+lever for the age key itself — but note it re-wraps the existing ciphertext,
+so it changes who can decrypt, not what was published.
 
 ##### The data re-encryption migration
 
