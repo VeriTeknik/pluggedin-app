@@ -3,6 +3,13 @@
 # allowlist, supported architectures, and peer-dependency rules.
 
 overrides:
+  # GHSA-mh99-v99m-4gvg: DoS via unbounded expansion. The advisory has a SINGLE
+  # range, '<= 5.0.7', with 5.0.8 as the only patched version — there is no 1.x
+  # or 2.x backport, so every earlier line is affected and one selector covers
+  # all of them. 5.0.8 publishes both ESM and CJS (exports.require), and
+  # minimatch only calls expand(), so this is a drop-in for the minimatch 3/9/10
+  # consumers in the tree (glob/rimraf/eslint tooling).
+  'brace-expansion@<5.0.8': '>=5.0.8 <6.0.0'
   # Target must be >=0.28.1, not >=0.25.0: pnpm matches override selectors
   # against the DECLARED range, so this entry catches @esbuild-kit/core-utils'
   # '~0.18.20' and is the only override that ever fires for it. Pointing it at
@@ -11,11 +18,6 @@ overrides:
   # GHSA-g7r4-m6w7-qqqr. Became reachable once vite moved to 7.3.6, which pulls
   # esbuild 0.27.7 into the tree; the pre-bump tree only had 0.25.12/0.27.1.
   'esbuild@>=0.27.3 <0.28.1': '>=0.28.1'
-  'brace-expansion@>=1.0.0 <=1.1.11': '>=1.1.12'
-  'brace-expansion@>=2.0.0 <2.0.3': '>=2.0.3 <3.0.0'
-  # GHSA-3jxr-9vmj-r5cp (high). Range is >=3.0.0 <5.0.7, so the 2.1.0 copy in
-  # the tree is NOT affected and is deliberately left alone.
-  'brace-expansion@>=4.0.0 <5.0.7': '>=5.0.7 <6.0.0'
   'prismjs@<1.30.0': '>=1.30.0'
   'axios@=1.10.0': '>=1.11.0'
   # GHSA-52cp-r559-cp3m (high) + GHSA-h67p-54hq-rp68
@@ -63,8 +65,11 @@ overrides:
   # GHSA-c2j3-45gr-mqc4
   'dompurify@<3.4.12': '>=3.4.12 <4.0.0'
   '@opentelemetry/core@<2.8.0': '>=2.8.0 <3.0.0'
-  'postcss@<8.5.10': '>=8.5.10'
+  # Round 2: <=8.5.17 vulnerable.
+  'postcss@<8.5.18': '>=8.5.18'
   'ws@>=8.0.0 <8.20.1': '>=8.20.1 <9.0.0'
+  # Round 2: the 7.x copy in the tree is covered by >=7.0.0 <7.5.11.
+  'ws@>=7.0.0 <7.5.11': '>=7.5.11 <8.0.0'
   'smol-toml@<1.6.1': '>=1.6.1'
   # GHSA-xmf8-cvqr-rfgj (high), GHSA-7rqj-j65f-68wh (critical), GHSA-x445-f3h2-j279
   # reached via @auth/drizzle-adapter (next-auth itself is bumped directly).
