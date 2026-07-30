@@ -1,3 +1,9 @@
+# Local development database only. Never point a deployed app at this file.
+#
+# The password below is a known constant, so the port MUST stay bound to
+# loopback: Docker publishes to 0.0.0.0 by default and its iptables rules are
+# evaluated before ufw/firewalld, which would put a database with a
+# repository-visible password on the public internet.
 services:
   pluggedin-postgres-dev:
     container_name: pluggedin-postgres-dev
@@ -6,9 +12,11 @@ services:
     environment:
       POSTGRES_DB: pluggedin_dev
       POSTGRES_USER: pluggedin
-      POSTGRES_PASSWORD: pluggedin_dev_password
+      # Overridable, but intentionally defaulted so `docker compose up` just
+      # works for local development.
+      POSTGRES_PASSWORD: ${POSTGRES_DEV_PASSWORD:-pluggedin_dev_password}
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - pluggedin-postgres-dev:/var/lib/postgresql/data
 

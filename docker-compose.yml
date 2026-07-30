@@ -4,9 +4,20 @@
 # registry image for self-hosting, because the embedded zvec vector engine
 # needs build-time flags/bindings that a generic prebuilt image cannot carry.
 #
-#   cp .env.example .env          # then set NEXTAUTH_SECRET (see README)
+#   cp .env.example .env          # then set NEXTAUTH_SECRET, POSTGRES_PASSWORD
 #   docker compose up --build -d  # first run builds the image (~10-15 min)
 #   open http://localhost:12005
+#
+# POSTGRES_PASSWORD and REDIS_PASSWORD have no defaults on purpose: compose
+# fails with a named error if they are unset, rather than silently starting a
+# database that every reader of this repository has the password to.
+#
+# Postgres and Redis are published on 127.0.0.1 only. Docker's published ports
+# default to 0.0.0.0 AND its iptables rules are evaluated before ufw/firewalld,
+# so a bare '5432:5432' on a host with a public IP exposes the database to the
+# internet regardless of the firewall. The app reaches both over the compose
+# network by service name and does not need either port published at all; they
+# stay bound to loopback so host tools (psql, GUI clients) still work.
 #
 # Production / hosted deployments use a DIFFERENT file — this is NOT the prod
 # stack:
@@ -28,7 +39,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - "DATABASE_URL=postgresql://pluggedin:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (see .env.example)}@pluggedin-postgres:5432/pluggedin"
       - DATABASE_SSL=false
     depends_on:
       pluggedin-postgres:
@@ -53,9 +64,11 @@ services:
       - zvec-data:/app/data/vectors
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - "DATABASE_URL=postgresql://pluggedin:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (see .env.example)}@pluggedin-postgres:5432/pluggedin"
       - DATABASE_SSL=false
-      - REDIS_URL=redis://pluggedin-redis:6379
+      # ioredis parses the password out of the URL userinfo; the empty username
+      # before the colon is required by the redis:// scheme.
+      - "REDIS_URL=redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env (see .env.example)}@pluggedin-redis:6379"
       - NEXTAUTH_URL=http://localhost:12005
       - MCP_ISOLATION_TYPE=none
       - MCP_ISOLATION_FALLBACK=firejail
@@ -81,14 +94,15 @@ services:
     environment:
       POSTGRES_DB: pluggedin
       POSTGRES_USER: pluggedin
-      POSTGRES_PASSWORD: pluggedin_secure_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (see .env.example)}
       # postgres:18 moved the default PGDATA out of /var/lib/postgresql/data;
       # pin it back to the mounted path so data persists in the volume and the
       # server actually initialises there (otherwise it boots in a throwaway
       # location and the healthcheck never passes).
       PGDATA: /var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      # Loopback-only. See the header note on Docker bypassing host firewalls.
+      - '127.0.0.1:5432:5432'
     volumes:
       - pluggedin-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -103,12 +117,21 @@ services:
     image: redis:7-alpine
     restart: always
     ports:
-      - '6379:6379'
+      # Loopback-only. See the header note on Docker bypassing host firewalls.
+      - '127.0.0.1:6379:6379'
     volumes:
       - pluggedin-redis:/data
-    command: redis-server --appendonly yes --appendfsync everysec
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env (see .env.example)}
+    # $$ escapes compose interpolation so the shell inside the container expands
+    # REDIS_PASSWORD from its own environment. The password therefore stays out
+    # of `docker inspect .Config.Cmd` and out of the container's process argv
+    # (verified: /proc/1/cmdline reads just `redis-server *:6379`). It is still
+    # rendered in the `environment:` blocks of `docker compose config` output,
+    # which is unavoidable — treat that output as secret-bearing.
+    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --requirepass \"$$REDIS_PASSWORD\""]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
