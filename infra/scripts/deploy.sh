@@ -50,9 +50,13 @@ mkdir -p "$RUNTIME_DIR"
 chmod 0700 "$RUNTIME_DIR"
 trap 'shred -uf "$SECRETS_DECRYPTED" 2>/dev/null || rm -f "$SECRETS_DECRYPTED"' EXIT
 
-# 3. Decrypt
+# 3. Decrypt.
+#    --input-type/--output-type are mandatory here: sops infers format from
+#    the file extension, and `.sops` is not a format it knows, so it falls
+#    back to JSON and dies on the first `#` comment in the dotenv payload.
 log "decrypting secrets"
-sops --decrypt "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
+sops --decrypt --input-type dotenv --output-type dotenv \
+  "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
 chmod 0400 "$SECRETS_DECRYPTED"
 
 # 3a. Project specific secrets out of the env file into single-line files

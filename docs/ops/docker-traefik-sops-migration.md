@@ -121,15 +121,45 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 
 ### Phase 0 — Prep (no production impact, ~1 day calendar)
 
-- [ ] Drop DNS TTL on `plugged.in` A record to 60s (currently likely 3600+). Wait one previous-TTL window before any cutover.
-- [ ] Generate age key on this host: `age-keygen -o /etc/sops/age/keys.txt`, `chmod 400`, back up the **private key** to offline storage (1Password, USB, whatever ops already uses).
-- [ ] Take a verified backup of the external Postgres:
-      `pg_dump -Fc -h 185.96.168.246 -U postgres -d v220_prod -f /tmp/v220_prod-prepatch.dump`
-      Restore into a throwaway container to confirm it's not corrupt before we trust it.
+Executed 2026-07-31. Production was untouched throughout; the native stack
+(nginx + `pluggedin.service` + external PG) stayed live and serving.
+
+- [x] Install tooling. Docker Engine 29.5.0 and Compose v5.1.3 were already
+      present. `sops` 3.9.4 and `age` 1.2.1 installed to `~/.local/bin`
+      (no root needed). **Still to do with sudo:** copy both binaries to
+      `/usr/local/bin` so `deploy.sh` finds them under a root shell.
+- [x] Generate age keys. Deploy + offsite-backup keypairs generated into
+      `~/.config/sops/age/` (`0400`). Public recipients committed to
+      `infra/sops/.sops.yaml`.
+      **Still to do with sudo:** `install -m400 -o root -g root
+      ~/.config/sops/age/keys.txt /etc/sops/age/keys.txt`, then move
+      `backup-key.txt` to offline storage and shred the on-host copy.
+- [x] Populate the real `infra/sops/secrets.env.sops` — 91 keys, generated
+      from the live workspace `.env` and verified to round-trip
+      byte-identically through the app's own dotenv parser. Both the deploy
+      and backup keys decrypt it.
+- [x] Verified backup of the external Postgres: `pg_dump -Fc` →
+      `/home/pluggedin/backups/v220_prod-phase0-<ts>.dump` (17 MiB, 755
+      objects). Restored into a throwaway `pgvector/pgvector:pg16`
+      container with `infra/postgres/init.sql` applied: 0 errors, 84 tables,
+      **124,437 rows, row counts identical to source on every table**.
+      The database is 112 MiB — an order of magnitude under the <5 GiB the
+      cutover was sized against, so the Phase-5 window should be minutes.
 - [ ] Snapshot `/home/pluggedin/zvec-data`, `/home/pluggedin/uploads`, `/var/mcp-packages` (`/var/mcp-packages` will not be copied, but verify it's still readable). Tarball goes alongside the PG dump.
-- [ ] Install Docker Engine ≥ 24, Docker Compose plugin (already present per survey), `sops` ≥ 3.8, `age` ≥ 1.1.
+- [ ] Drop DNS TTL on `plugged.in` A record to 60s (currently likely 3600+). Wait one previous-TTL window before any cutover.
 
 **Rollback:** none needed; this phase is read-only on prod.
+
+#### Defects the Phase-0 dry run caught in the Phase-1 scaffolding
+
+All four were latent — they would each have failed the first real deploy.
+
+| Where | Defect | Fix |
+|---|---|---|
+| `infra/sops/.sops.yaml` | `path_regex` anchored on `\.(env\|yaml)$`, which never matches `secrets.env.sops`. Creating the file fell through to "no matching creation rule". | Anchored on `\.(env\|yaml\|yml\|json)\.sops$`. |
+| `infra/scripts/deploy.sh` | `sops --decrypt` with no `--input-type`: sops can't infer a format from the `.sops` extension, defaults to JSON, and dies on the first `#` in the dotenv payload. | Pass `--input-type dotenv --output-type dotenv`. |
+| `infra/docker-compose.yml` | `init.sql` creates `pg_stat_statements`, but the postgres `command:` never set `shared_preload_libraries`. `CREATE EXTENSION` succeeds; every read of the view then errors. | Added `-c shared_preload_libraries=pg_stat_statements`. |
+| workspace `.env` | 35 vars carry unquoted trailing `# comments`, and `PLUGGEDIN_MCP_DIST_PATH` is defined twice with conflicting values (and referenced nowhere in app source). Compose's `env_file` parser is stricter than dotenv here. | Secrets generator strips comments and quoting; the dead var is dropped. |
 
 ### Phase 1 — Repo-side scaffolding (this PR)
 

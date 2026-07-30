@@ -195,6 +195,13 @@ services:
       retries: 10
     command:
       - postgres
+      # pg_stat_statements is a shared-memory module, not a plain extension.
+      # postgres/init.sql runs `CREATE EXTENSION pg_stat_statements`, which
+      # succeeds without this flag but leaves the view raising "must be
+      # loaded via shared_preload_libraries" on every read. Changing this
+      # requires a postgres restart, not a reload.
+      - -c
+      - shared_preload_libraries=pg_stat_statements
       - -c
       - shared_buffers=4GB
       - -c
