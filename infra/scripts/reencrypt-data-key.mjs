@@ -13,10 +13,12 @@
  *   OLD_KEY=... NEW_KEY=... DATABASE_URL=... node reencrypt-data-key.mjs --apply
  *   NEW_KEY=...             DATABASE_URL=... node reencrypt-data-key.mjs --verify
  *
- * --dry-run  decrypt-only under OLD_KEY; proves every row is readable and
- *            reports what --apply would touch. Writes nothing.
- * --apply    re-encrypts inside a single transaction per table. Any failure
- *            rolls that table back whole.
+ * --dry-run  decrypt-only; proves every row is readable and reports what
+ *            --apply would touch. Writes nothing.
+ * --apply    re-encrypts, committing per column. Safe to re-run: rows that
+ *            already decrypt under NEW_KEY are recognised as migrated and
+ *            left alone, so a run that died part-way through can simply be
+ *            repeated rather than needing a restore.
  * --verify   confirms every row decrypts under NEW_KEY. Run after --apply,
  *            and before destroying the old key.
  *
@@ -137,27 +139,59 @@ async function main() {
         continue;
       }
 
-      const readKey = mode === '--verify' ? newKey : oldKey;
       const failures = [];
+      let skipped = 0;
 
+      // Each row is classified independently, which is what makes a re-run
+      // safe. Work is committed per column, so a failure part-way through a
+      // table leaves earlier columns already on the new key. Reading those
+      // back with OLD_KEY throws a GCM auth error, so a naive re-run would
+      // wedge permanently with half the database migrated — the state that
+      // is worst to be in and hardest to reason about at 3am.
+      //
+      // GCM authentication is what makes the fallback trustworthy: a wrong
+      // key throws rather than returning plausible garbage, so "decrypts
+      // under NEW_KEY" is proof the row is already migrated, not a guess.
       const converted = await mapPool(rows, CONCURRENCY, async (row) => {
-        try {
-          const plaintext = await decryptField(row.val, readKey);
-          if (mode === '--apply') {
-            return { id: row.id, val: await encryptField(plaintext, newKey) };
+        if (mode === '--verify') {
+          try {
+            await decryptField(row.val, newKey);
+          } catch (err) {
+            failures.push({ id: row.id, message: err.message });
           }
           return null;
-        } catch (err) {
-          failures.push({ id: row.id, message: err.message });
-          return null;
         }
+
+        let plaintext;
+        try {
+          plaintext = await decryptField(row.val, oldKey);
+        } catch {
+          try {
+            await decryptField(row.val, newKey);
+            skipped += 1;          // already migrated by an earlier run
+            return null;
+          } catch (err) {
+            failures.push({ id: row.id, message: err.message });
+            return null;
+          }
+        }
+
+        if (mode === '--apply') {
+          return { id: row.id, val: await encryptField(plaintext, newKey) };
+        }
+        return null;
       });
+
+      // Counted before the failure branch below: a column that fails still
+      // *has* rows, and omitting them made the summary under-report the size
+      // of the problem exactly when the number mattered most.
+      totalRows += rows.length;
 
       if (failures.length) {
         totalFailed += failures.length;
         console.error(
           `${table}.${column}: ${failures.length}/${rows.length} FAILED to decrypt ` +
-            `(first id ${failures[0].id}: ${failures[0].message})`
+            `under either key (first id ${failures[0].id}: ${failures[0].message})`
         );
         if (mode === '--apply') {
           throw new Error(`refusing to write ${table}.${column} with undecryptable rows`);
@@ -165,13 +199,12 @@ async function main() {
         continue;
       }
 
-      if (mode === '--apply') {
-        // One transaction per column: a mid-column crash leaves that column
-        // entirely on the old key rather than half-migrated, which keeps the
-        // rerun story simple (just run --apply again).
+      const pending = converted.filter(Boolean);
+
+      if (mode === '--apply' && pending.length) {
         await client.query('BEGIN');
         try {
-          for (const { id, val } of converted) {
+          for (const { id, val } of pending) {
             await client.query(`UPDATE ${table} SET ${column} = $1 WHERE ${pk} = $2`, [val, id]);
           }
           await client.query('COMMIT');
@@ -181,9 +214,10 @@ async function main() {
         }
       }
 
-      totalRows += rows.length;
       const verb = { '--dry-run': 'decryptable', '--apply': 're-encrypted', '--verify': 'verified' }[mode];
-      console.log(`${table}.${column}: ${rows.length} rows ${verb}`);
+      const note = skipped ? ` (${skipped} already on the new key, left alone)` : '';
+      const n = mode === '--apply' ? pending.length : rows.length - skipped;
+      console.log(`${table}.${column}: ${n} rows ${verb}${note}`);
     }
   } finally {
     await client.end();
