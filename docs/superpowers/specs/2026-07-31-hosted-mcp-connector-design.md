@@ -11,7 +11,28 @@
 
 Let a user add Plugged.in to Claude by pasting a URL into **Add custom connector**, authorising once, and getting their Hub's library, memory, clipboard and tasks as MCP tools — with no local process, no API key, and no terminal.
 
-The success criterion is **acceptance into the Anthropic Connectors Directory**. That is a distribution channel, and its review rules are hard constraints on this design rather than aspirations.
+**This works without a directory listing.** Any user can add a custom connector by URL today; the directory adds discoverability, not function. So the shipping criterion is the sentence above, and directory acceptance is a later milestone.
+
+**Directory rules are still treated as hard design constraints.** Listing requires a Team or Enterprise organisation, which we do not have yet and are evaluating separately. Building to the review criteria now costs almost nothing; retrofitting them later means re-architecting the tool surface and the auth model. The rules are followed; only the submission is deferred.
+
+### Build-time versus submission-time
+
+| Requirement | When | Why |
+|---|---|---|
+| OAuth 2.1 AS with CIMD, PKCE, rotation | **Build** | The auth model cannot be retrofitted |
+| `title` + annotations on every tool | **Build** | Cheap now, 26 edits later either way |
+| Separate read/write tools, no catch-all | **Build** | Shapes the tool surface |
+| First-party APIs only | **Build** | Determines the whole architecture |
+| Narrow descriptions, no prompt-injection patterns | **Build** | Also just better tool design |
+| Actionable errors, no generic failures | **Build** | Also just better engineering |
+| Privacy policy | **Build** | Custom-connector users deserve it regardless of listing |
+| Team/Enterprise organisation | Submission | Commercial decision, tracked separately |
+| Listing copy, slug, icon, categories | Submission | Portal-only, no engineering |
+| Test account, fully populated | Submission | Needs a stable deployment first |
+| Public documentation URL | Submission | Blog post or help-centre article |
+| Seven policy acknowledgments | Submission | Includes the conversation-data item the pre-clearance email covers |
+
+The practical effect on sequencing: **nothing in the build is blocked by the missing organisation.** The connector ships, users add it by URL, and the listing follows when the commercial side is settled.
 
 ---
 
@@ -511,20 +532,36 @@ Failure here means the product does not do the thing it is for, however green th
 
 ---
 
-## Directory submission checklist
+## Directory submission — deferred milestone
+
+Not on the critical path (see [Build-time versus submission-time](#build-time-versus-submission-time)), but recorded so the build stays compatible.
+
+**Where to submit.** The portal lives inside Claude.ai admin settings at
+`https://claude.ai/admin-settings/directory/submissions/new`, with status and reviewer feedback at
+`https://claude.ai/admin-settings/directory/submissions`. It accepts **remote MCP servers only** — local servers go to the separate desktop-extension form. Escalations: `mcp-review@anthropic.com`.
+
+**Access.** A Team or Enterprise organisation is required; admin settings do not exist on individual plans. By default only Owners and Primary owners may submit. On Enterprise an Owner can delegate through a custom role carrying the *Directory management* permission; Team plans have no custom roles, so it stays with Owners.
+
+**The URL trap.** The portal's Connection step asks for the MCP server URL. Whatever is entered there must be byte-identical to the `resource` field in our protected-resource metadata — trailing slash, path and all — or OAuth discovery breaks silently. This is why that equality is a contract test rather than an assumption.
+
+**Readiness**
 
 | Requirement | Status after this work |
 |---|---|
-| Team or Enterprise org with Directory management access | **Prerequisite — outside engineering** |
 | `https://` server URL, streamable HTTP | ✅ |
 | OAuth 2.0 for authenticated services | ✅ CIMD primary, DCR fallback |
-| `title` + applicable hint on every tool | ✅ 26 titles to add |
-| Separate read and write tools | ✅ already true |
-| Privacy policy, HTTPS, complete | **Required — memory section is the critical part** |
-| Public documentation by publish date | **Required — blog post or help-centre article** |
-| Test account, fully populated | **Required** |
+| `title` + applicable hint on every tool | ✅ 26 titles added during the build |
+| Separate read and write tools, no catch-all | ✅ already true |
+| First-party APIs only | ✅ by design |
 | Every tool exercised by us first | ✅ covered by end-to-end tests |
-| Allowed link URIs | Only if `ui/open-link` is used — currently not |
+| Privacy policy, HTTPS, complete | ✅ built — memory section is the critical part |
+| Team/Enterprise org with Directory management | ⏸ commercial decision, tracked separately |
+| Listing copy, slug (permanent), icon, categories | ⏸ portal-only |
+| Test account, fully populated | ⏸ needs a stable deployment |
+| Public documentation by publish date | ⏸ blog post or help-centre article |
+| Seven policy acknowledgments | ⏸ one covers conversation-data collection — see the pre-clearance email |
+| Allowed link URIs | n/a — we do not use `ui/open-link` |
+| Carousel screenshots | n/a — not an MCP App |
 
 ---
 
