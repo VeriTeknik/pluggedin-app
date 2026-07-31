@@ -3669,3 +3669,137 @@ export type DreamConsolidation = typeof dreamConsolidationsTable.$inferSelect;
 export type NewDreamConsolidation = typeof dreamConsolidationsTable.$inferInsert;
 export type IndividuationSnapshot = typeof individuationSnapshotsTable.$inferSelect;
 export type NewIndividuationSnapshot = typeof individuationSnapshotsTable.$inferInsert;
+
+// ===== OAuth 2.1 Authorization Server (hosted MCP connector) =====
+//
+// Credentials are stored as SHA-256 hashes. The columns are named *_hash so a
+// future contributor cannot casually write a plaintext token into them.
+// Access is granted to a SET of Hubs (project_uuids) chosen at consent time;
+// runtime Hub switching is confined to that set.
+
+export const oauthClientsTable = pgTable(
+  'oauth_clients',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    // For CIMD this is the https URL of the client's metadata document.
+    client_id: text('client_id').notNull(),
+    // Credentials are bound to the authorization server that issued them
+    // (SEP-2352), so the natural key is (issuer, client_id).
+    issuer: text('issuer').notNull(),
+    registration_type: text('registration_type').notNull(), // 'cimd' | 'dcr'
+    client_name: text('client_name'),
+    redirect_uris: text('redirect_uris').array().notNull(),
+    application_type: text('application_type').notNull().default('web'),
+    token_endpoint_auth_method: text('token_endpoint_auth_method')
+      .notNull()
+      .default('none'),
+    // CIMD documents are cached; this is when the document was last fetched.
+    metadata_fetched_at: timestamp('metadata_fetched_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // DCR registrations expire so the table cannot grow without bound.
+    expires_at: timestamp('expires_at', { withTimezone: true }),
+  },
+  (table) => ({
+    oauthClientsIssuerClientIdIdx: index('oauth_clients_issuer_client_id_idx').on(
+      table.issuer,
+      table.client_id
+    ),
+    oauthClientsExpiresAtIdx: index('oauth_clients_expires_at_idx').on(table.expires_at),
+  })
+);
+
+export const oauthAuthorizationCodesTable = pgTable(
+  'oauth_authorization_codes',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    code_hash: text('code_hash').notNull().unique(),
+    client_uuid: uuid('client_uuid')
+      .notNull()
+      .references(() => oauthClientsTable.uuid, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    granted_project_uuids: uuid('granted_project_uuids').array().notNull(),
+    scopes: text('scopes').array().notNull(),
+    redirect_uri: text('redirect_uri').notNull(),
+    code_challenge: text('code_challenge').notNull(),
+    code_challenge_method: text('code_challenge_method').notNull().default('S256'),
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+    // Single use: set on redemption. A second presentation is an error.
+    consumed_at: timestamp('consumed_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    oauthCodesExpiresAtIdx: index('oauth_codes_expires_at_idx').on(table.expires_at),
+  })
+);
+
+export const oauthAccessTokensTable = pgTable(
+  'oauth_access_tokens',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    token_hash: text('token_hash').notNull().unique(),
+    client_uuid: uuid('client_uuid')
+      .notNull()
+      .references(() => oauthClientsTable.uuid, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    granted_project_uuids: uuid('granted_project_uuids').array().notNull(),
+    scopes: text('scopes').array().notNull(),
+    // Convenience default Hub, updated by pluggedin_open_hub. Server state
+    // keyed to a credential -- not a protocol session.
+    default_project_uuid: uuid('default_project_uuid').references(
+      () => projectsTable.uuid,
+      { onDelete: 'set null' }
+    ),
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revoked_at: timestamp('revoked_at', { withTimezone: true }),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    oauthAccessTokensExpiresAtIdx: index('oauth_access_tokens_expires_at_idx').on(
+      table.expires_at
+    ),
+    oauthAccessTokensUserIdx: index('oauth_access_tokens_user_idx').on(table.user_id),
+  })
+);
+
+export const oauthRefreshTokensTable = pgTable(
+  'oauth_refresh_tokens',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    token_hash: text('token_hash').notNull().unique(),
+    // All tokens descended from one authorization share a family_id. Presenting
+    // an already-rotated token means a copy exists somewhere, so the whole
+    // family is revoked -- rotation without this only makes theft detectable.
+    family_id: uuid('family_id').notNull(),
+    parent_id: uuid('parent_id'),
+    client_uuid: uuid('client_uuid')
+      .notNull()
+      .references(() => oauthClientsTable.uuid, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    granted_project_uuids: uuid('granted_project_uuids').array().notNull(),
+    scopes: text('scopes').array().notNull(),
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+    rotated_at: timestamp('rotated_at', { withTimezone: true }),
+    revoked_at: timestamp('revoked_at', { withTimezone: true }),
+    revocation_reason: text('revocation_reason'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    oauthRefreshFamilyIdx: index('oauth_refresh_family_idx').on(table.family_id),
+    oauthRefreshExpiresAtIdx: index('oauth_refresh_expires_at_idx').on(table.expires_at),
+  })
+);

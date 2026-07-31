@@ -687,6 +687,13 @@
       "when": 1772489028607,
       "tag": "0097_same_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1785472174219,
+      "tag": "0098_curly_colonel_america",
+      "breakpoints": true
     }
   ]
 }
