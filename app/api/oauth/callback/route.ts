@@ -6,7 +6,7 @@ import { mcpServerOAuthTokensTable, mcpServersTable, oauthPkceStatesTable } from
 import { getAuthSession } from '@/lib/auth';
 import { encryptField } from '@/lib/encryption';
 import { mcpOAuthCallbacks } from '@/lib/mcp/metrics';
-import { verifyIntegrityHash } from '@/lib/oauth/integrity';
+import { validatePkceState } from '@/lib/oauth/integrity';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
 import { createRateLimiter } from '@/lib/rate-limiter';
@@ -138,35 +138,20 @@ export async function GET(request: NextRequest) {
       return safeRedirect('/mcp-servers', { oauth_error: 'missing_state' });
     }
 
-    // ✅ Get server UUID and code_verifier from PKCE state storage
-    // P0 Security: Validate state belongs to authenticated user (prevents OAuth flow hijacking)
-    const pkceState = await db.query.oauthPkceStatesTable.findFirst({
-      where: and(
-        eq(oauthPkceStatesTable.state, state),
-        eq(oauthPkceStatesTable.user_id, session.user.id) // CRITICAL: Prevent authorization code injection
-      ),
-    });
+    // P0 Security: the state must belong to the authenticated user, its
+    // integrity hash must verify, and it must not have expired.
+    //
+    // These three checks used to sit inline here. They now live in
+    // validatePkceState() so they can be unit tested — a security control that
+    // only exists inside a route handler cannot be, and these are the controls
+    // that stop one user redeeming another's authorization code. The behaviour
+    // is unchanged except that a user mismatch is now recorded as a security
+    // event rather than being indistinguishable from a missing state.
+    const pkceState = await validatePkceState(state, session.user.id);
 
-    if (!pkceState || !pkceState.user_id) {
-      console.error('[OAuth Callback] PKCE state not found or does not belong to user:', state);
+    if (!pkceState) {
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
       return safeRedirect('/mcp-servers', { oauth_error: 'invalid_state' });
-    }
-
-    // OAuth 2.1: Verify PKCE state integrity hash to prevent tampering
-    if (!verifyIntegrityHash(pkceState as any)) {
-      console.error('[OAuth Callback] PKCE state integrity check failed - possible tampering detected');
-      await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
-      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
-      return safeRedirect('/mcp-servers', { oauth_error: 'integrity_violation' });
-    }
-
-    // Check if state has expired (OAuth 2.1: 5 minute expiration)
-    if (pkceState.expires_at < new Date()) {
-      console.error('[OAuth Callback] PKCE state expired');
-      await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
-      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'expired' });
-      return safeRedirect('/mcp-servers', { oauth_error: 'state_expired' });
     }
 
     const serverUuid = pkceState.server_uuid;

@@ -99,3 +99,76 @@ export function generateCodeChallenge(verifier: string): string {
     .update(verifier)
     .digest('base64url');
 }
+
+/**
+ * Validates a stored PKCE state against the user presenting it.
+ *
+ * Extracted from app/api/oauth/callback/route.ts, where this sequence lived
+ * inline. The controls themselves are not new — binding state to user_id and
+ * verifying the integrity hash have been in the callback — but inline in a
+ * route handler they could not be unit tested, and tests/oauth/oauth-security
+ * .test.ts has been asserting against this extracted shape all along without
+ * ever running (the file failed to collect, so its 17 tests were invisible).
+ *
+ * Returns the state row when every check passes, null otherwise. A null result
+ * is always accompanied by a recorded security metric and, where the state is
+ * unusable, its deletion — a rejected state must not survive to be retried.
+ */
+export async function validatePkceState(
+  state: string,
+  userId: string
+): Promise<{
+  state: string;
+  server_uuid: string;
+  user_id: string;
+  code_verifier: string;
+  redirect_uri: string;
+  integrity_hash: string;
+  expires_at: Date;
+} | null> {
+  const { db } = await import('@/db');
+  const { oauthPkceStatesTable } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { recordCodeInjectionAttempt, recordIntegrityViolation } = await import(
+    '@/lib/observability/oauth-metrics'
+  );
+
+  const stored = await db.query.oauthPkceStatesTable.findFirst({
+    where: eq(oauthPkceStatesTable.state, state),
+  });
+
+  if (!stored || !stored.user_id) {
+    return null;
+  }
+
+  // Authorization code injection: the state exists, but it belongs to somebody
+  // else. Looking it up by state alone and comparing here — rather than
+  // filtering by user_id in the query — is deliberate: it is what lets the
+  // mismatch be detected and recorded instead of silently looking like a
+  // missing state.
+  if (stored.user_id !== userId) {
+    // log.security is the security-event channel; it takes (action, userId,
+    // metadata) rather than a message, so the shape differs from log.error.
+    log.security('pkce_state_user_mismatch', userId, {
+      state,
+      expectedUser: stored.user_id,
+    });
+    recordCodeInjectionAttempt();
+    return null;
+  }
+
+  if (!verifyIntegrityHash(stored as Parameters<typeof verifyIntegrityHash>[0])) {
+    log.security('pkce_state_integrity_violation', userId, { state });
+    recordIntegrityViolation('hash_mismatch');
+    await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
+    return null;
+  }
+
+  if (stored.expires_at < new Date()) {
+    log.security('pkce_state_expired', userId, { state });
+    await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
+    return null;
+  }
+
+  return stored as Awaited<ReturnType<typeof validatePkceState>>;
+}
