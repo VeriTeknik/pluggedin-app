@@ -46,6 +46,14 @@ export async function POST(req: NextRequest) {
   const client = clients[0];
   if (!client) return oauthError('invalid_client', 'Unknown client', 401);
 
+  // A lapsed DCR registration must not be able to redeem anything. resolveClient
+  // enforces this on the authorize side; this route queries the table directly,
+  // so it has to enforce it too — a check that lives in only one of two paths
+  // is not a check.
+  if (client.expires_at !== null && client.expires_at.getTime() <= Date.now()) {
+    return oauthError('invalid_client', 'Client registration has expired', 401);
+  }
+
   if (grantType === 'authorization_code') {
     const result = await redeemAuthorizationCode({
       code: String(form.get('code') ?? ''),

@@ -141,7 +141,7 @@ export async function safeFetch(
   let requestInit = options;
   let currentUrl = url;
 
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+  for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
     // Fetch the URL the validator returned rather than the string that went
     // into it. The two are equivalent, but using the validated value makes the
     // sanitiser-to-sink path explicit — to a reader and to static analysis,

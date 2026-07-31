@@ -107,6 +107,15 @@ describe('safeFetch redirect handling', () => {
     await expect(safeFetch('https://public.example/loop')).rejects.toThrow(/too many redirects/i);
   });
 
+  it('follows at most 20 hops, matching the fetch specification', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(redirectTo('https://public.example/loop'));
+    await expect(safeFetch('https://public.example/start')).rejects.toThrow(/too many redirects/i);
+    // 20, not 21 — the loop bound was inclusive.
+    expect(fetchSpy).toHaveBeenCalledTimes(20);
+  });
+
   it('returns a redirect response unchanged when it carries no Location', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 302 }));
     const response = await safeFetch('https://public.example/start');

@@ -25,17 +25,17 @@ export default async function AuthorizePage({
     )
   );
 
-  const parsed = parseAuthorizeParams(params);
-  if (!parsed.ok) {
-    const redirectUri = params.get('redirect_uri');
-    // Only bounce back to a redirect_uri we can parse; otherwise render the
-    // error rather than sending the user to an attacker-supplied URL.
-    if (redirectUri) {
-      redirect(
-        buildErrorRedirect(redirectUri, parsed.error, parsed.description, params.get('state'))
-      );
-    }
-    return <p className="p-6">{parsed.description}</p>;
+  // Order matters here, and RFC 6749 s4.1.2.1 dictates it: when the client
+  // identifier or the redirect URI is missing, invalid or unregistered, the
+  // server "MUST NOT automatically redirect the user-agent to the invalid
+  // redirect URI" — it has to tell the user instead. So the redirect URI earns
+  // the right to receive errors only after it has been matched against a
+  // resolved client. Everything before that point renders; everything after it
+  // may redirect.
+  const clientId = params.get('client_id');
+  const redirectUri = params.get('redirect_uri');
+  if (!clientId || !redirectUri) {
+    return <p className="p-6">Missing client_id or redirect_uri.</p>;
   }
 
   const session = await getServerSession(authOptions);
@@ -43,25 +43,25 @@ export default async function AuthorizePage({
     redirect(`/login?callbackUrl=${encodeURIComponent(`/oauth/authorize?${params.toString()}`)}`);
   }
 
-  const client = await resolveClient(parsed.request.clientId, connectorBaseUrl());
+  const client = await resolveClient(clientId, connectorBaseUrl());
   if (!client) {
-    redirect(
-      buildErrorRedirect(
-        parsed.request.redirectUri,
-        'invalid_client',
-        'Unknown client',
-        parsed.request.state
-      )
-    );
+    return <p className="p-6">Unknown client.</p>;
   }
 
   const uriAllowed = client.redirect_uris.some((registered) =>
-    redirectUriMatches(parsed.request.redirectUri, registered)
+    redirectUriMatches(redirectUri, registered)
   );
   if (!uriAllowed) {
-    // Never redirect to an unregistered URI, not even to report the error —
-    // doing so would turn the check into an open redirect.
     return <p className="p-6">The redirect URI is not registered for this client.</p>;
+  }
+
+  // From here the redirect URI is known to belong to this client, so protocol
+  // errors go back to it as the spec expects rather than dead-ending in HTML.
+  const parsed = parseAuthorizeParams(params);
+  if (!parsed.ok) {
+    redirect(
+      buildErrorRedirect(redirectUri, parsed.error, parsed.description, params.get('state'))
+    );
   }
 
   const projects = await getProjects();
