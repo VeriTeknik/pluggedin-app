@@ -1,13 +1,14 @@
 'use server';
 
+import { eq } from 'drizzle-orm';
+
 import { getServerSession } from 'next-auth/next';
 
 import { getProjects } from '@/app/actions/projects';
 import { db } from '@/db';
-import { oauthAuthorizationCodesTable } from '@/db/schema';
+import { oauthAuthorizationCodesTable, oauthClientsTable } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
 import { buildErrorRedirect } from '@/lib/oauth/authorize';
-import { resolveClient } from '@/lib/oauth/clients';
 import { verifyConsentTicket } from '@/lib/oauth/consent-ticket';
 import { connectorBaseUrl } from '@/lib/oauth/metadata';
 import { redirectUriMatches } from '@/lib/oauth/redirect-uri';
@@ -58,7 +59,16 @@ export async function approveConsent(input: ApproveInput) {
     // registered URIs may have changed since the page rendered, and issuing a
     // code to a URI the client no longer claims is exactly the failure this
     // check exists to prevent. Defence in depth, and cheap.
-    const client = await resolveClient(request.clientUuid, connectorBaseUrl());
+    //
+    // Looked up by primary key rather than through resolveClient(): the ticket
+    // carries the internal uuid, resolveClient takes the public client_id, and
+    // it would also re-fetch the CIMD document — none of which this check needs.
+    const clients = await db
+      .select()
+      .from(oauthClientsTable)
+      .where(eq(oauthClientsTable.uuid, request.clientUuid))
+      .limit(1);
+    const client = clients[0];
     if (!client) {
       return { success: false as const, error: 'Unknown client' };
     }
