@@ -108,9 +108,24 @@ export function validateUrlForSSRF(url: string, allowPrivate = false): URL {
   return parsedUrl;
 }
 
+/** Redirect hops followed before giving up. Matches the fetch spec's default. */
+const MAX_REDIRECTS = 20;
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
 /**
- * Safe fetch with SSRF protection
- * Validates URL before making request
+ * Safe fetch with SSRF protection.
+ *
+ * Validates the URL **on every hop**, not just the first. fetch follows
+ * redirects by default, so validating only the initial URL left the guard
+ * trivially bypassable: a public host answering `302 Location:
+ * http://169.254.169.254/` would be followed straight into cloud metadata. The
+ * redirect is therefore handled here (`redirect: 'manual'`) and each Location
+ * is re-validated before it is followed.
+ *
+ * Relative Locations are resolved against the current URL first, since a bare
+ * `/internal` would otherwise fail to parse and be treated as unreachable
+ * rather than as the same-host redirect it is.
  *
  * @param url - URL to fetch
  * @param options - Fetch options
@@ -121,9 +136,22 @@ export async function safeFetch(
   options?: RequestInit,
   allowPrivate = false
 ): Promise<Response> {
-  // Validate URL for SSRF
-  validateUrlForSSRF(url, allowPrivate);
+  let currentUrl = url;
 
-  // Make the fetch request
-  return fetch(url, options);
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    validateUrlForSSRF(currentUrl, allowPrivate);
+
+    const response = await fetch(currentUrl, { ...options, redirect: 'manual' });
+
+    if (!REDIRECT_STATUSES.has(response.status)) return response;
+
+    const location = response.headers.get('location');
+    // A redirect status with no Location is the server's problem, not a hop —
+    // hand it back rather than inventing a destination.
+    if (!location) return response;
+
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+
+  throw new Error('Too many redirects');
 }

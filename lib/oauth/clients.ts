@@ -15,6 +15,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { oauthClientsTable } from '@/db/schema';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 
 export const CIMD_CACHE_TTL_MS = 86_400_000; // 1 day
 export const DCR_CLIENT_TTL_MS = 2_592_000_000; // 30 days
@@ -73,12 +74,21 @@ export function validateCimdDocument(clientIdUrl: string, doc: unknown): CimdVal
  * Resolves a client_id to a stored client, fetching and caching the CIMD
  * document when needed.
  *
- * fetchImpl is injectable so tests never touch the network.
+ * SSRF: client_id is attacker-controlled — anyone can start an authorization
+ * request with any client_id — and resolving it makes the server fetch that
+ * URL. So the fetch goes through safeFetch, which rejects private, loopback,
+ * link-local and reserved destinations and re-validates every redirect hop.
+ * Reusing the shared guard rather than writing another host check keeps this
+ * on the same code path as the rest of the app; a fourth independent copy is
+ * how the previous SSRF advisory happened.
+ *
+ * fetchImpl is injectable so tests never touch the network. It defaults to
+ * safeFetch, so a caller has to opt *out* of protection rather than in.
  */
 export async function resolveClient(
   clientId: string,
   issuer: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = safeFetch as unknown as typeof fetch
 ): Promise<ResolvedClient | undefined> {
   const existing = await db
     .select()
