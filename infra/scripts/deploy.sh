@@ -54,16 +54,17 @@ command -v docker >/dev/null || die "docker not installed"
 #    isn't root for the deploy.
 mkdir -p "$RUNTIME_DIR"
 chmod 0700 "$RUNTIME_DIR"
-trap 'shred -uf "$SECRETS_DECRYPTED" 2>/dev/null || rm -f "$SECRETS_DECRYPTED"' EXIT
+trap 'shred -uf "$SECRETS_DECRYPTED" "${RUNTIME_DIR}/.secrets.raw" 2>/dev/null || rm -f "$SECRETS_DECRYPTED" "${RUNTIME_DIR}/.secrets.raw"' EXIT
 
 # 3. Decrypt.
 #    --input-type/--output-type are mandatory here: sops infers format from
 #    the file extension, and `.sops` is not a format it knows, so it falls
 #    back to JSON and dies on the first `#` comment in the dotenv payload.
 log "decrypting secrets"
+SECRETS_RAW="${RUNTIME_DIR}/.secrets.raw"
 sops --decrypt --input-type dotenv --output-type dotenv \
-  "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
-chmod 0400 "$SECRETS_DECRYPTED"
+  "$SECRETS_ENCRYPTED" > "$SECRETS_RAW"
+chmod 0400 "$SECRETS_RAW"
 
 # 3a. Project specific secrets out of the env file into single-line files
 #     under /run/sops/, because Traefik and a few other services consume
@@ -74,7 +75,7 @@ extract_secret() {
   local key="$1" dest="${RUNTIME_DIR}/$2"
   # shellcheck disable=SC2002  # explicit cat keeps the awk pipeline simple
   local value
-  value=$(grep -E "^${key}=" "$SECRETS_DECRYPTED" | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//')
+  value=$(grep -E "^${key}=" "$SECRETS_RAW" | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//')
   if [ -z "$value" ]; then
     log "WARN: ${key} missing from secrets.env (skipping ${dest})"
     return
@@ -87,6 +88,21 @@ extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
 # traefik/dynamic/middlewares.yml references this file directly via
 # `usersFile:`. No rewriting of committed files at deploy time. Traefik's
 # TLS issuance uses HTTP-01, so no DNS-provider token needs extracting.
+
+# 3b. Escape `$` for Compose.
+#     Compose runs variable interpolation over env_file contents, so a value
+#     containing `$` is silently truncated at the `$`: a bcrypt hash
+#     `ops:$2b$10$abc...` reaches the container as `ops:$2b$10`. It warns
+#     ("variable is not set") but exits 0, and the corrupted value only
+#     surfaces as an auth failure at runtime. Doubling `$` makes Compose
+#     emit a literal one.
+#
+#     This runs AFTER extract_secret, which must see the raw value — the
+#     htpasswd file Traefik reads is consumed directly, not through Compose.
+log "escaping \$ for compose interpolation"
+sed 's/\$/$$/g' "$SECRETS_RAW" > "$SECRETS_DECRYPTED"
+chmod 0400 "$SECRETS_DECRYPTED"
+shred -uf "$SECRETS_RAW" 2>/dev/null || rm -f "$SECRETS_RAW"
 
 # 4. Pull image (skip with --no-pull)
 if [ "$PULL" -eq 1 ]; then

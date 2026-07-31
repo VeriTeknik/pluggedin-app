@@ -41,6 +41,8 @@ INFRA_DIR="${REPO_ROOT}/infra"
 COMPOSE=(docker compose -f "${INFRA_DIR}/docker-compose.yml")
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/pluggedin}"
 EXT_PG_URL="${EXT_PG_URL:-postgresql://postgres@185.96.168.246:5432/v220_prod}"
+# Written by deploy.sh; holds the rotated keys the running stack uses.
+SECRETS_FILE="${SOPS_RUNTIME_DIR:-/run/sops}/secrets.env"
 
 DUMP=0
 SWITCH=0
@@ -78,6 +80,57 @@ require_env PGPASSWORD "configure it in your shell or in ~/.pgpass before runnin
 mkdir -p "$BACKUP_DIR"
 LATEST_FULL="${BACKUP_DIR}/cutover-full.dump"
 
+# Every dump we restore here comes from the *external* PG, whose rows are
+# still encrypted under the pre-rotation data key. The running stack uses the
+# rotated key, so a restore that skips this step leaves the app unable to
+# decrypt any MCP server config or OAuth token — 5,305 values at last count.
+# The failure is silent at restore time and only shows up as decrypt errors
+# once traffic arrives, which is far too late in a cutover window.
+#
+# OLD_KEY is read from the rotation handoff file written at Phase 0.
+# Without it we cannot re-encrypt, so we refuse rather than proceed.
+reencrypt_after_restore() {
+  local mode="$1"   # --apply or --verify
+
+  local new_key
+  new_key=$(grep -E '^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' "$SECRETS_FILE" | cut -d= -f2-)
+  [ -n "$new_key" ] || { echo "cutover: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY missing from $SECRETS_FILE" >&2; exit 1; }
+
+  local db_url
+  db_url=$(grep -E '^DATABASE_URL=' "$SECRETS_FILE" | cut -d= -f2-)
+  [ -n "$db_url" ] || { echo "cutover: DATABASE_URL missing from $SECRETS_FILE" >&2; exit 1; }
+
+  # Run inside the app image: it carries node and the app's node_modules
+  # (including pg). The script itself is mounted from the checkout so it
+  # tracks the repo rather than the image build.
+  "${COMPOSE[@]}" run --rm --no-deps \
+    -v "${INFRA_DIR}/scripts:/migration:ro" \
+    -e OLD_KEY="${OLD_KEY:-}" -e NEW_KEY="$new_key" -e DATABASE_URL="$db_url" \
+    pluggedin-app node /migration/reencrypt-data-key.mjs "$mode"
+}
+
+rotate_data_key() {
+  if [ -z "${OLD_KEY:-}" ]; then
+    cat >&2 <<'MSG'
+cutover: OLD_KEY is not set.
+
+The dump just restored is encrypted with the pre-rotation data key, but this
+stack runs with the rotated one. Export the previous key before continuing:
+
+  export OLD_KEY=$(grep '^OLD_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' \
+      /home/pluggedin/backups/rotation-*/HANDOFF.env | head -1 | cut -d= -f2-)
+
+Refusing to continue — starting the app now would leave every MCP server
+config and OAuth token undecryptable.
+MSG
+    exit 1
+  fi
+  echo "[cutover] re-encrypting restored data onto the rotated key"
+  reencrypt_after_restore --apply
+  echo "[cutover] verifying every row reads under the new key"
+  reencrypt_after_restore --verify
+}
+
 if [ "$DUMP" -eq 1 ]; then
   echo "[cutover] full dump from external PG"
   pg_dump -Fc --no-owner --no-acl "$EXT_PG_URL" > "$LATEST_FULL"
@@ -92,12 +145,29 @@ if [ "$DUMP" -eq 1 ]; then
   echo "[cutover] running drizzle migrations against the container"
   "${COMPOSE[@]}" run --rm pluggedin-app pnpm db:migrate
 
+  rotate_data_key
+
   echo "[cutover] dump-only phase ok"
 fi
 
 if [ "$SWITCH" -eq 1 ]; then
   echo "[cutover] stopping native services to quiesce writes"
   sudo systemctl stop pluggedin nginx || true
+
+  # The host crontab hardcodes the pre-rotation CRON_SECRET, so once the new
+  # stack is live those seven jobs would authenticate against a secret that
+  # no longer exists — a steady drip of 401s and, worse, seven scheduled
+  # tasks silently not running. Ofelia takes over these schedules from
+  # infra/ofelia/config.ini. Backup first; restoring it is part of rollback.
+  CRONTAB_BACKUP="/home/pluggedin/crontab.pre-ofelia.backup"
+  if crontab -l >"$CRONTAB_BACKUP" 2>/dev/null; then
+    echo "[cutover] host crontab backed up → $CRONTAB_BACKUP"
+    crontab -r 2>/dev/null || true
+    echo "[cutover] host crontab removed (Ofelia now owns these schedules)"
+  else
+    echo "[cutover] no host crontab to remove"
+    rm -f "$CRONTAB_BACKUP"
+  fi
 
   echo "[cutover] final dump (DB is now quiet — this captures every write up to T-0)"
   pg_dump -Fc --no-owner --no-acl "$EXT_PG_URL" > "${BACKUP_DIR}/cutover-final.dump"
@@ -111,6 +181,13 @@ if [ "$SWITCH" -eq 1 ]; then
   echo "[cutover] running drizzle migrations once more (idempotent)"
   "${COMPOSE[@]}" run --rm pluggedin-app pnpm db:migrate
 
+  rotate_data_key
+
+  # Traefik's host ports default to 80/443 in docker-compose.yml. The
+  # pre-cutover phases run with TRAEFIK_HTTP_PORT/TRAEFIK_HTTPS_PORT set to
+  # 8080/8443; unset them here so `up -d` recreates Traefik on the real
+  # ports now that nginx has released them.
+  unset TRAEFIK_HTTP_PORT TRAEFIK_HTTPS_PORT
   echo "[cutover] bringing the full stack up on :80/:443"
   "${COMPOSE[@]}" up -d
 
@@ -124,4 +201,9 @@ if [ "$SWITCH" -eq 1 ]; then
   echo "Rollback if needed:"
   echo "  docker compose -f ${INFRA_DIR}/docker-compose.yml stop traefik"
   echo "  sudo systemctl start nginx pluggedin"
+  echo "  crontab ${CRONTAB_BACKUP}   # restore the seven host cron jobs"
+  echo
+  echo "Note: rollback returns traffic to the external PG, so writes made"
+  echo "against the containerised DB after cutover are left behind in"
+  echo "${BACKUP_DIR}/. They are encrypted with the rotated key."
 fi

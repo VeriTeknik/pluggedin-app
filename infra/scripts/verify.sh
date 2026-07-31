@@ -5,7 +5,7 @@
 #  - Traefik: /ping returns OK
 #  - Postgres: pg_isready and SELECT 1
 #  - Redis:    PING returns PONG
-#  - App:      /api/health returns 200 with status: "ok"
+#  - App:      /api/health returns 200 with status "healthy" and database true
 #  - RAG:      the "GSLB" canary query returns the VeriTeknik doc
 #              (this is exactly the failure mode that motivated the docker
 #              migration — see docs/ops/docker-traefik-sops-migration.md)
@@ -18,7 +18,10 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMPOSE_FILE="${REPO_ROOT}/infra/docker-compose.yml"
+# Honour the same override deploy.sh takes, so a pre-cutover stack running
+# from a generated compose file verifies itself rather than silently probing
+# the production one. docker compose picks up COMPOSE_PROJECT_NAME natively.
+COMPOSE_FILE="${COMPOSE_FILE:-${REPO_ROOT}/infra/docker-compose.yml}"
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 
 MODE=full
@@ -52,10 +55,21 @@ if [ "$MODE" != "app" ]; then
 fi
 
 hdr "pluggedin-app /api/health"
+# app/api/health/route.ts types this as 'healthy' | 'unhealthy'. This check
+# looked for "ok", which the endpoint has never emitted — so verify.sh could
+# only ever fail, taking deploy.sh and cutover-from-native.sh down with it
+# (both gate on it) even when the app was perfectly fine.
 APP_HEALTH=$("${COMPOSE[@]}" exec -T pluggedin-app wget -qO- http://127.0.0.1:3000/api/health 2>/dev/null || true)
-echo "$APP_HEALTH" | grep -q '"status":"ok"' \
-  && pass "/api/health → ok" \
-  || fail "/api/health → $APP_HEALTH"
+if echo "$APP_HEALTH" | grep -q '"status":"healthy"'; then
+  pass "/api/health → healthy"
+  # database:false still returns 200 overall in some paths; surface it rather
+  # than letting a degraded stack pass as green.
+  echo "$APP_HEALTH" | grep -q '"database":true' \
+    && pass "database reachable" \
+    || fail "health reports database unreachable: $APP_HEALTH"
+else
+  fail "/api/health → ${APP_HEALTH:-<no response>}"
+fi
 
 if [ "$MODE" = "quick" ]; then
   hdr "skipping canary (--quick)"

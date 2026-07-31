@@ -236,9 +236,9 @@ The old key is preserved in `/home/pluggedin/backups/rotation-<ts>/HANDOFF.env`
 (0600, outside the repo). **Without it the 5,305 values are unrecoverable.**
 Destroy that file only after `--verify` passes against the production stack.
 
-#### Defects the Phase-0 dry run caught in the Phase-1 scaffolding
+#### Defects the dry run caught in the Phase-1 scaffolding
 
-All four were latent — they would each have failed the first real deploy.
+All of these were latent. Each would have failed, or silently degraded, the first real deploy.
 
 | Where | Defect | Fix |
 |---|---|---|
@@ -246,6 +246,11 @@ All four were latent — they would each have failed the first real deploy.
 | `infra/scripts/deploy.sh` | `sops --decrypt` with no `--input-type`: sops can't infer a format from the `.sops` extension, defaults to JSON, and dies on the first `#` in the dotenv payload. | Pass `--input-type dotenv --output-type dotenv`. |
 | `infra/docker-compose.yml` | `init.sql` creates `pg_stat_statements`, but the postgres `command:` never set `shared_preload_libraries`. `CREATE EXTENSION` succeeds; every read of the view then errors. | Added `-c shared_preload_libraries=pg_stat_statements`. |
 | workspace `.env` | 35 vars carry unquoted trailing `# comments`, and `PLUGGEDIN_MCP_DIST_PATH` is defined twice with conflicting values (and referenced nowhere in app source). Compose's `env_file` parser is stricter than dotenv here. | Secrets generator strips comments and quoting; the dead var is dropped. |
+| `infra/scripts/verify.sh` | Asserted `"status":"ok"` from `/api/health`, but the endpoint is typed `'healthy' \| 'unhealthy'` and has never emitted `ok`. The smoke test could therefore only ever fail — and both `deploy.sh` and `cutover-from-native.sh` gate on it, so no deploy could have completed. | Assert `"status":"healthy"`, plus an explicit `database:true` check so a degraded stack can't pass as green. |
+| `infra/scripts/deploy.sh` | Compose runs variable interpolation over `env_file` contents, so any secret containing `$` is silently truncated at the first `$` — a bcrypt hash `ops:$2b$10$abc…` reaches the container as `ops:$2b$10`. Compose warns but exits 0, so it surfaces only as a runtime auth failure. | Extract `*_FILE` secrets from the raw plaintext first, then write the compose-facing copy with `$` doubled. |
+| `Dockerfile` / `infra/README.md` | Image ran as uid 1001 while every bind-mounted host dir is uid 1000, so the README told operators to `chown -R 1001` — 88 GiB of `/var/mcp-packages`, and it would have broken rollback, since the native systemd service runs as `pluggedin` (uid 1000) and could no longer write its own data. | Build the image's `app` user as 1000:1000 (releasing the base image's `node` account, which already held that id). No chown, rollback stays intact. |
+| `infra/traefik/dynamic/middlewares.yml` | nginx compresses (`gzip on`, `gzip_min_length 10240`, explicit `gzip_types`); Traefik had no `compress` middleware at all, so every response would have gone out uncompressed. | Added a `compress` middleware mirroring nginx's settings, attached to every router except SSE (compressing an event stream defeats incremental delivery). Verified: 71,178 → 22,371 bytes. |
+| `infra/scripts/cutover-from-native.sh` | Restored the external PG dump — whose rows are encrypted with the *pre-rotation* key — and then started the app on the rotated key, leaving 5,305 values undecryptable. It also never dropped the host crontab (which hardcodes the old `CRON_SECRET`), and `up -d` could not have bound :80/:443 because the compose ports were hardcoded to 8080/8443. | Added a `rotate_data_key` step after every restore that refuses to proceed without `OLD_KEY`; added crontab backup+removal; parameterised the Traefik ports with production defaults. |
 
 ### Phase 1 — Repo-side scaffolding (this PR)
 
@@ -325,15 +330,53 @@ The live app is untouched in this phase; we have a populated containerised PG si
 
 ### Phase 4 — Containerise the app, port `:12005` parked under Traefik (½ day)
 
-- [ ] Build the image: `infra/scripts/build.sh` (also runs in CI on every push to `main`).
-- [ ] `docker compose up -d pluggedin-app` (binds internal port `3000`, Traefik exposes it via the labelled router set).
-- [ ] Internal smoke test on the docker network: `docker compose exec traefik curl -fsS http://pluggedin-app:3000/api/health`.
-- [ ] Run `infra/scripts/verify.sh --app` which hits `/api/health`, `/api/rag/query` (with a known query), and the auth flow.
-- [ ] **Critically: the container has the right zvec path because compose sets `ZVEC_DATA_PATH=/app/data/vectors` and bind-mounts `/home/pluggedin/zvec-data` there.** The drift class of bug from this week becomes structurally impossible.
+Executed 2026-07-31. The live nginx kept routing `plugged.in` to the native
+`:12005` throughout; the containerised app was reachable only via Traefik on
+`:8443`.
 
-The live nginx still routes `plugged.in` to the native `:12005`. The containerised app is reachable only through Traefik on `:8443`.
+- [x] Image built from the deploying commit (6.36 GB).
+- [x] `docker compose up -d pluggedin-app` → healthy in 9s.
+- [x] `verify.sh --quick` all green: traefik ping, pg_isready, `SELECT 1`,
+      redis PING, `/api/health → healthy`, database reachable.
+- [x] End-to-end through Traefik: `GET /` and `/api/health` both 200.
+- [x] All seven security headers match the nginx originals exactly
+      (CSP, HSTS, X-Frame-Options, X-XSS-Protection, X-Content-Type-Options,
+      Referrer-Policy, Permissions-Policy).
+- [x] gzip verified: 71,178 → 22,371 bytes on `/`.
+- [x] Redis reachable from the app (`PING → PONG`), and the app logs
+      "Using Redis backend for distributed rate limiting". The
+      "Cannot load ioredis" warning alongside it is **pre-existing** — the
+      live native app emits the identical pair, because the Edge-runtime
+      context falls back to the memory store while the Node runtime
+      connects normally. Not a migration regression.
+- [x] zvec path correct via `ZVEC_DATA_PATH=/app/data/vectors`; the drift
+      class of bug that motivated this migration is structurally impossible.
 
 **Rollback:** `docker compose down pluggedin-app`.
+
+#### Hazard: a parallel app container is not side-effect free
+
+The plan treated Phase 4 as harmless because the containerised app takes no
+user traffic. It is not, for two reasons, and both need managing on any
+future parallel run:
+
+1. **Shared writable bind mounts.** As committed, the app container mounts
+   the *same* `/home/pluggedin/zvec-data` the live app is using. zvec is an
+   embedded, file-backed store with no cross-process locking, so two writers
+   risk corrupting production vectors. This run instead gave the container a
+   copy of zvec-data and mounted `uploads` and `/var/mcp-packages` read-only.
+   Do the same for any future parallel run; the committed compose file is
+   correct for the post-cutover world, where only one app exists.
+
+2. **The app runs its own OAuth refresh scheduler on startup**, against real
+   upstream providers, using production credentials. Most providers rotate
+   refresh tokens on use — so a *successful* refresh in the parallel
+   container would invalidate the token the live app still holds and break
+   production OAuth. This run got away with it: all 6 tokens were already
+   expired (January/February), so 0 were refreshed and no token was consumed.
+   That was luck, not design. The container was stopped as soon as
+   verification finished, and any future parallel run should keep its
+   lifetime to minutes.
 
 ### Phase 5 — Cutover (≤ 10 min downtime, scheduled)
 

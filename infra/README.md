@@ -53,10 +53,17 @@ sudo chmod 0400 /etc/sops/age/keys.txt
 # Add the public key (`age1...`) to infra/sops/.sops.yaml
 # BACK UP THE PRIVATE KEY OFFLINE.
 
-# UID/GID alignment for bind-mounted host dirs.
-# The container's `app` user is uid 1001 / gid 1001.
-sudo chown -R 1001:1001 /home/pluggedin/zvec-data /home/pluggedin/uploads /var/log/pluggedin
-# /var/mcp-packages is 88 GiB — only chown if it isn't already.
+# UID/GID alignment for bind-mounted host dirs: nothing to do.
+# The image builds its `app` user as uid 1000 / gid 1000 to match the host
+# `pluggedin` account that already owns zvec-data, uploads, /var/mcp-packages
+# and /var/log/pluggedin.
+#
+# Do NOT chown these to 1001. An earlier revision of this file said to, which
+# would have meant re-owning 88 GiB of /var/mcp-packages *and* breaking
+# rollback — the native systemd service runs as `pluggedin` (uid 1000) and
+# could no longer write to its own data directories.
+stat -c '%u:%g %n' /home/pluggedin/zvec-data /home/pluggedin/uploads \
+  /var/mcp-packages /var/log/pluggedin   # expect 1000:1000 on all four
 ```
 
 ## Day-2 ops

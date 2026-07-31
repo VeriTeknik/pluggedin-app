@@ -91,12 +91,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       bubblewrap tini ca-certificates wget postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Non-root runtime user. Bind-mounted host dirs (zvec-data, uploads,
-# mcp-packages, logs) must be owned by uid 1001 / gid 1001 on the host —
-# documented in infra/README.md.
-ARG APP_UID=1001
-ARG APP_GID=1001
-RUN groupadd -g ${APP_GID} app && useradd -m -u ${APP_UID} -g app app
+# Non-root runtime user, matched to the host `pluggedin` account (1000:1000)
+# that already owns the bind-mounted directories: zvec-data, uploads,
+# /var/mcp-packages and /var/log/pluggedin.
+#
+# This defaulted to 1001, which would have required `chown -R 1001:1001` over
+# those paths at cutover. Two problems with that: /var/mcp-packages is 88 GiB,
+# and — worse — the native systemd service runs as `pluggedin` (uid 1000), so
+# re-owning the directories would have broken the documented rollback path.
+# Matching the host uid costs nothing and keeps rollback a one-liner.
+#
+# The node base image already ships a `node` account at 1000:1000, so that
+# has to be released before `app` can claim the id — plain groupadd exits 4.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN set -eux; \
+    if id -u node >/dev/null 2>&1; then userdel -r node 2>/dev/null || userdel node; fi; \
+    if getent group node >/dev/null 2>&1; then groupdel node; fi; \
+    groupadd -g ${APP_GID} app; \
+    useradd -m -u ${APP_UID} -g app app
 
 WORKDIR /app
 

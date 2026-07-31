@@ -53,13 +53,17 @@ services:
     command:
       - --configFile=/etc/traefik/traefik.yml
     ports:
-      # Pre-cutover defaults so `docker compose up` on the prod host won't
-      # collide with the native nginx that still owns 80/443. Phase 2
-      # staging hits Traefik on these. At Phase 5 cutover, edit this
-      # block to `- "80:80"` / `- "443:443"`, restart Traefik, then stop
-      # nginx — order matters because LE HTTP-01 needs the public :80.
-      - "8080:80"
-      - "8443:443"
+      # Defaults are the production ports, so an ordinary `deploy.sh` on the
+      # prod host is always correct. Only the pre-cutover phases, where the
+      # native nginx still owns 80/443, override these:
+      #   TRAEFIK_HTTP_PORT=8080 TRAEFIK_HTTPS_PORT=8443 docker compose up -d
+      # Defaulting the other way round meant every post-cutover deploy would
+      # silently drop the site back to :8080 unless the operator remembered
+      # to edit this block back.
+      # Ordering at cutover: nginx must release :80 before Traefik claims it,
+      # because LE HTTP-01 validates over the public :80.
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
@@ -152,7 +156,7 @@ services:
       traefik.http.routers.plugged-in-static.tls.certresolver: "le"
       traefik.http.routers.plugged-in-static.priority: "110"
       traefik.http.routers.plugged-in-static.service: "plugged-in"
-      traefik.http.routers.plugged-in-static.middlewares: "security-headers@file,cache-immutable@file"
+      traefik.http.routers.plugged-in-static.middlewares: "security-headers@file,cache-immutable@file,compress@file"
       #
       # /blog-images/* — 30-day cache.
       traefik.http.routers.plugged-in-blog-imgs.rule: "Host(`plugged.in`) && PathPrefix(`/blog-images`)"
@@ -160,7 +164,7 @@ services:
       traefik.http.routers.plugged-in-blog-imgs.tls.certresolver: "le"
       traefik.http.routers.plugged-in-blog-imgs.priority: "110"
       traefik.http.routers.plugged-in-blog-imgs.service: "plugged-in"
-      traefik.http.routers.plugged-in-blog-imgs.middlewares: "security-headers@file,cache-30d@file"
+      traefik.http.routers.plugged-in-blog-imgs.middlewares: "security-headers@file,cache-30d@file,compress@file"
       #
       # /widget.js — CORS open for embedding from any origin.
       traefik.http.routers.plugged-in-widget.rule: "Host(`plugged.in`) && Path(`/widget.js`)"
@@ -170,7 +174,7 @@ services:
       traefik.http.routers.plugged-in-widget.service: "plugged-in"
       # rate-limit on widget too: open CORS + publicly embeddable on any
       # origin makes this a cheap abuse target without it.
-      traefik.http.routers.plugged-in-widget.middlewares: "security-headers@file,widget-cors@file,rate-limit@file"
+      traefik.http.routers.plugged-in-widget.middlewares: "security-headers@file,widget-cors@file,rate-limit@file,compress@file"
       #
       # Catchall — everything else on the host. Lowest priority on
       # purpose so the specific routers above always win.
@@ -179,7 +183,7 @@ services:
       traefik.http.routers.plugged-in.tls.certresolver: "le"
       traefik.http.routers.plugged-in.priority: "100"
       traefik.http.routers.plugged-in.service: "plugged-in"
-      traefik.http.routers.plugged-in.middlewares: "security-headers@file,rate-limit@file"
+      traefik.http.routers.plugged-in.middlewares: "security-headers@file,rate-limit@file,compress@file"
 
   postgres:
     image: pgvector/pgvector:pg16
