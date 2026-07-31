@@ -20,6 +20,17 @@
 - **Never create server-specific implementations.** Generic and extensible only.
 - **Test baseline:** measured on this branch's base — **42 failed files / 57 passed (99), 204 failed / 1147 passed / 6 skipped (1357)** — and `pnpm lint` reports pre-existing errors. Judge a task by whether it *moves* those counts, not by whether the suite is green. (An earlier reading of 1079 passed predates the SSRF advisory work, which added ~68 tests.)
 - **Commands:** `pnpm test` (vitest run), `pnpm lint`, `pnpm build`, `pnpm db:generate`, `pnpm db:migrate`.
+- **Local database.** `pnpm db:migrate` reads `DATABASE_URL` through `dotenv/config`, which does **not** override an already-exported variable — so a scoped override works without editing `.env`:
+
+  ```bash
+  docker run -d --name pluggedin-dev-pg \
+    -e POSTGRES_DB=pluggedin_dev -e POSTGRES_USER=pluggedin -e POSTGRES_PASSWORD=devpassword \
+    -p 127.0.0.1:5433:5432 pgvector/pgvector:pg18
+  until docker exec pluggedin-dev-pg pg_isready -U pluggedin -d pluggedin_dev; do sleep 2; done
+  DATABASE_URL="postgresql://pluggedin:devpassword@127.0.0.1:5433/pluggedin_dev" pnpm db:migrate
+  ```
+
+  Port 5433 rather than 5432 on purpose: a VS Code Helper port-forward can be left listening on 127.0.0.1:5432 after its remote end dies. TCP connects, Postgres never speaks, and `db:migrate` hangs with no output — which looks like a broken migration rather than a dead tunnel. Check with `lsof -nP -iTCP:5432 -sTCP:LISTEN` before assuming the database is at fault.
 
 ### External requirements — quoted, not paraphrased
 
