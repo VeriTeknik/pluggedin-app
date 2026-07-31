@@ -56,7 +56,10 @@ export function classifyRefreshFailure(record: {
  * continued access *after* the compromise was detected, which would defeat most
  * of the point of detecting it.
  */
-export async function revokeFamily(familyId: string, reason: string): Promise<number> {
+export async function revokeFamily(
+  familyId: string,
+  reason: string
+): Promise<number> {
   const now = new Date();
 
   const revokedRefresh = await db
@@ -85,28 +88,36 @@ async function issueTokenPair(input: {
   const accessToken = mintCredential();
   const refreshToken = mintCredential();
 
-  await db.insert(oauthAccessTokensTable).values({
-    token_hash: hashCredential(accessToken),
-    family_id: input.familyId,
-    client_uuid: input.clientUuid,
-    user_id: input.userId,
-    granted_project_uuids: input.grantedProjectUuids,
-    scopes: input.scopes,
-    // A single granted Hub needs no selection step, so it becomes the default.
-    default_project_uuid:
-      input.grantedProjectUuids.length === 1 ? input.grantedProjectUuids[0] : null,
-    expires_at: new Date(Date.now() + TTL.accessTokenMs),
-  });
+  // Both rows in one transaction. Separately, a failure on the second insert
+  // would leave the authorization code consumed and the caller holding an
+  // access token with no way to refresh it — a state they cannot recover from
+  // without starting the whole flow again.
+  await db.transaction(async (tx) => {
+    await tx.insert(oauthAccessTokensTable).values({
+      token_hash: hashCredential(accessToken),
+      family_id: input.familyId,
+      client_uuid: input.clientUuid,
+      user_id: input.userId,
+      granted_project_uuids: input.grantedProjectUuids,
+      scopes: input.scopes,
+      // A single granted Hub needs no selection step, so it becomes the default.
+      default_project_uuid:
+        input.grantedProjectUuids.length === 1
+          ? input.grantedProjectUuids[0]
+          : null,
+      expires_at: new Date(Date.now() + TTL.accessTokenMs),
+    });
 
-  await db.insert(oauthRefreshTokensTable).values({
-    token_hash: hashCredential(refreshToken),
-    family_id: input.familyId,
-    parent_id: input.parentId,
-    client_uuid: input.clientUuid,
-    user_id: input.userId,
-    granted_project_uuids: input.grantedProjectUuids,
-    scopes: input.scopes,
-    expires_at: new Date(Date.now() + TTL.refreshTokenMs),
+    await tx.insert(oauthRefreshTokensTable).values({
+      token_hash: hashCredential(refreshToken),
+      family_id: input.familyId,
+      parent_id: input.parentId,
+      client_uuid: input.clientUuid,
+      user_id: input.userId,
+      granted_project_uuids: input.grantedProjectUuids,
+      scopes: input.scopes,
+      expires_at: new Date(Date.now() + TTL.refreshTokenMs),
+    });
   });
 
   return {
@@ -127,27 +138,59 @@ export async function redeemAuthorizationCode(input: {
   const rows = await db
     .select()
     .from(oauthAuthorizationCodesTable)
-    .where(eq(oauthAuthorizationCodesTable.code_hash, hashCredential(input.code)))
+    .where(
+      eq(oauthAuthorizationCodesTable.code_hash, hashCredential(input.code))
+    )
     .limit(1);
 
   const record = rows[0];
   if (!record) {
-    return { ok: false, error: 'invalid_grant', description: 'Unknown authorization code' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Unknown authorization code',
+    };
   }
   if (record.consumed_at) {
-    return { ok: false, error: 'invalid_grant', description: 'Authorization code already used' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Authorization code already used',
+    };
   }
   if (record.expires_at.getTime() <= Date.now()) {
-    return { ok: false, error: 'invalid_grant', description: 'Authorization code expired' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Authorization code expired',
+    };
   }
   if (record.client_uuid !== input.clientUuid) {
-    return { ok: false, error: 'invalid_grant', description: 'Code was issued to another client' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Code was issued to another client',
+    };
   }
   if (record.redirect_uri !== input.redirectUri) {
-    return { ok: false, error: 'invalid_grant', description: 'redirect_uri does not match' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'redirect_uri does not match',
+    };
   }
-  if (!verifyPkce(input.codeVerifier, record.code_challenge, record.code_challenge_method)) {
-    return { ok: false, error: 'invalid_grant', description: 'PKCE verification failed' };
+  if (
+    !verifyPkce(
+      input.codeVerifier,
+      record.code_challenge,
+      record.code_challenge_method
+    )
+  ) {
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'PKCE verification failed',
+    };
   }
 
   // Claim the code atomically. The checks above are advisory: between the SELECT
@@ -167,7 +210,11 @@ export async function redeemAuthorizationCode(input: {
     .returning();
 
   if (claimed.length === 0) {
-    return { ok: false, error: 'invalid_grant', description: 'Authorization code already used' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Authorization code already used',
+    };
   }
 
   const tokens = await issueTokenPair({
@@ -189,15 +236,25 @@ export async function rotateRefreshToken(input: {
   const rows = await db
     .select()
     .from(oauthRefreshTokensTable)
-    .where(eq(oauthRefreshTokensTable.token_hash, hashCredential(input.refreshToken)))
+    .where(
+      eq(oauthRefreshTokensTable.token_hash, hashCredential(input.refreshToken))
+    )
     .limit(1);
 
   const record = rows[0];
   if (!record) {
-    return { ok: false, error: 'invalid_grant', description: 'Unknown refresh token' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Unknown refresh token',
+    };
   }
   if (record.client_uuid !== input.clientUuid) {
-    return { ok: false, error: 'invalid_grant', description: 'Token was issued to another client' };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Token was issued to another client',
+    };
   }
 
   const classification = classifyRefreshFailure(record);
@@ -206,11 +263,16 @@ export async function rotateRefreshToken(input: {
     return {
       ok: false,
       error: 'invalid_grant',
-      description: 'Refresh token reuse detected; all tokens for this authorization were revoked',
+      description:
+        'Refresh token reuse detected; all tokens for this authorization were revoked',
     };
   }
   if (classification !== 'ok') {
-    return { ok: false, error: 'invalid_grant', description: `Refresh token ${classification}` };
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: `Refresh token ${classification}`,
+    };
   }
 
   // Same atomicity requirement as code redemption: two concurrent refreshes
@@ -233,7 +295,8 @@ export async function rotateRefreshToken(input: {
     return {
       ok: false,
       error: 'invalid_grant',
-      description: 'Refresh token reuse detected; all tokens for this authorization were revoked',
+      description:
+        'Refresh token reuse detected; all tokens for this authorization were revoked',
     };
   }
 

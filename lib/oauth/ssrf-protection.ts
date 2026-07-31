@@ -136,6 +136,9 @@ export async function safeFetch(
   options?: RequestInit,
   allowPrivate = false
 ): Promise<Response> {
+  // Reassigned when a 301/302/303 downgrades the method — see below.
+  // eslint-disable-next-line prefer-const
+  let requestInit = options;
   let currentUrl = url;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -146,7 +149,7 @@ export async function safeFetch(
     // guards this call.
     const validated = validateUrlForSSRF(currentUrl, allowPrivate);
 
-    const response = await fetch(validated, { ...options, redirect: 'manual' });
+    const response = await fetch(validated, { ...requestInit, redirect: 'manual' });
 
     if (!REDIRECT_STATUSES.has(response.status)) return response;
 
@@ -154,6 +157,14 @@ export async function safeFetch(
     // A redirect status with no Location is the server's problem, not a hop —
     // hand it back rather than inventing a destination.
     if (!location) return response;
+
+    // RFC 9110: 301, 302 and 303 turn the follow-up request into a GET and drop
+    // the body; only 307 and 308 preserve the method. Replaying a POST body to
+    // a redirect target is both a spec violation and a way to deliver a payload
+    // somewhere the caller never addressed.
+    if (response.status === 301 || response.status === 302 || response.status === 303) {
+      requestInit = { ...requestInit, method: 'GET', body: undefined };
+    }
 
     currentUrl = new URL(location, currentUrl).toString();
   }

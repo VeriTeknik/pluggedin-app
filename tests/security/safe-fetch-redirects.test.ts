@@ -20,6 +20,44 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('redirect method downgrade (RFC 9110)', () => {
+  function redirectStatus(status: number): Response {
+    return new Response(null, { status, headers: { location: 'https://other.example/final' } });
+  }
+
+  for (const status of [301, 302, 303]) {
+    it(`turns a POST into a GET and drops the body on ${status}`, async () => {
+      // Replaying a POST body to a redirect target is a spec violation and a way
+      // to deliver a payload somewhere the caller never addressed.
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(redirectStatus(status))
+        .mockResolvedValueOnce(ok());
+
+      await safeFetch('https://public.example/start', { method: 'POST', body: 'secret=1' });
+
+      const second = fetchSpy.mock.calls[1][1] as RequestInit;
+      expect(second.method).toBe('GET');
+      expect(second.body).toBeUndefined();
+    });
+  }
+
+  for (const status of [307, 308]) {
+    it(`preserves the method and body on ${status}`, async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(redirectStatus(status))
+        .mockResolvedValueOnce(ok());
+
+      await safeFetch('https://public.example/start', { method: 'POST', body: 'secret=1' });
+
+      const second = fetchSpy.mock.calls[1][1] as RequestInit;
+      expect(second.method).toBe('POST');
+      expect(second.body).toBe('secret=1');
+    });
+  }
+});
+
 describe('safeFetch redirect handling', () => {
   it('refuses a redirect that lands on cloud metadata', async () => {
     const fetchSpy = vi
