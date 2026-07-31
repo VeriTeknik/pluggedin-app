@@ -51,7 +51,8 @@ describe('safeFetch redirect handling', () => {
 
     const response = await safeFetch('https://public.example/start');
     expect(response.status).toBe(200);
-    expect(fetchSpy.mock.calls[1][0]).toBe('https://public.example/next');
+    // fetch now receives the validated URL object rather than a string.
+    expect(String(fetchSpy.mock.calls[1][0])).toBe('https://public.example/next');
   });
 
   it('still follows a redirect between public hosts', async () => {

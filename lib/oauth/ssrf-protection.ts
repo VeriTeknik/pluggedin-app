@@ -139,9 +139,14 @@ export async function safeFetch(
   let currentUrl = url;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    validateUrlForSSRF(currentUrl, allowPrivate);
+    // Fetch the URL the validator returned rather than the string that went
+    // into it. The two are equivalent, but using the validated value makes the
+    // sanitiser-to-sink path explicit — to a reader and to static analysis,
+    // which otherwise cannot tell that a validator throwing on the line above
+    // guards this call.
+    const validated = validateUrlForSSRF(currentUrl, allowPrivate);
 
-    const response = await fetch(currentUrl, { ...options, redirect: 'manual' });
+    const response = await fetch(validated, { ...options, redirect: 'manual' });
 
     if (!REDIRECT_STATUSES.has(response.status)) return response;
 
