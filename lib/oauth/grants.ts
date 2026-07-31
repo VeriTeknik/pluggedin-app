@@ -8,7 +8,7 @@
  * revoked.
  */
 
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
@@ -48,13 +48,30 @@ export function classifyRefreshFailure(record: {
   return 'ok';
 }
 
+/**
+ * Revokes every credential descended from one authorization.
+ *
+ * Both tables, not just the refresh chain. Revoking refresh tokens alone leaves
+ * the access tokens issued from them valid until they expire — up to an hour of
+ * continued access *after* the compromise was detected, which would defeat most
+ * of the point of detecting it.
+ */
 export async function revokeFamily(familyId: string, reason: string): Promise<number> {
-  const revoked = await db
+  const now = new Date();
+
+  const revokedRefresh = await db
     .update(oauthRefreshTokensTable)
-    .set({ revoked_at: new Date(), revocation_reason: reason })
+    .set({ revoked_at: now, revocation_reason: reason })
     .where(eq(oauthRefreshTokensTable.family_id, familyId))
     .returning();
-  return revoked.length;
+
+  const revokedAccess = await db
+    .update(oauthAccessTokensTable)
+    .set({ revoked_at: now })
+    .where(eq(oauthAccessTokensTable.family_id, familyId))
+    .returning();
+
+  return revokedRefresh.length + revokedAccess.length;
 }
 
 async function issueTokenPair(input: {
@@ -70,6 +87,7 @@ async function issueTokenPair(input: {
 
   await db.insert(oauthAccessTokensTable).values({
     token_hash: hashCredential(accessToken),
+    family_id: input.familyId,
     client_uuid: input.clientUuid,
     user_id: input.userId,
     granted_project_uuids: input.grantedProjectUuids,
@@ -132,12 +150,25 @@ export async function redeemAuthorizationCode(input: {
     return { ok: false, error: 'invalid_grant', description: 'PKCE verification failed' };
   }
 
-  // Mark consumed before issuing, so a concurrent second redemption of the same
-  // code cannot also succeed.
-  await db
+  // Claim the code atomically. The checks above are advisory: between the SELECT
+  // and this write, a concurrent request could pass exactly the same checks and
+  // both would issue tokens. Making consumption a single conditional UPDATE and
+  // reading how many rows it touched is what actually makes redemption
+  // single-use — whoever's UPDATE lands first gets the row, the other gets none.
+  const claimed = await db
     .update(oauthAuthorizationCodesTable)
     .set({ consumed_at: new Date() })
-    .where(eq(oauthAuthorizationCodesTable.uuid, record.uuid));
+    .where(
+      and(
+        eq(oauthAuthorizationCodesTable.uuid, record.uuid),
+        isNull(oauthAuthorizationCodesTable.consumed_at)
+      )
+    )
+    .returning();
+
+  if (claimed.length === 0) {
+    return { ok: false, error: 'invalid_grant', description: 'Authorization code already used' };
+  }
 
   const tokens = await issueTokenPair({
     clientUuid: record.client_uuid,
@@ -182,10 +213,29 @@ export async function rotateRefreshToken(input: {
     return { ok: false, error: 'invalid_grant', description: `Refresh token ${classification}` };
   }
 
-  await db
+  // Same atomicity requirement as code redemption: two concurrent refreshes
+  // could both read an unrotated token and both issue a pair. Claiming the
+  // rotation conditionally means the loser is treated as what it is — a second
+  // use of an already-rotated token, i.e. exactly the reuse signal.
+  const rotated = await db
     .update(oauthRefreshTokensTable)
     .set({ rotated_at: new Date() })
-    .where(eq(oauthRefreshTokensTable.uuid, record.uuid));
+    .where(
+      and(
+        eq(oauthRefreshTokensTable.uuid, record.uuid),
+        isNull(oauthRefreshTokensTable.rotated_at)
+      )
+    )
+    .returning();
+
+  if (rotated.length === 0) {
+    await revokeFamily(record.family_id, 'refresh_token_reuse_detected');
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Refresh token reuse detected; all tokens for this authorization were revoked',
+    };
+  }
 
   const tokens = await issueTokenPair({
     clientUuid: record.client_uuid,

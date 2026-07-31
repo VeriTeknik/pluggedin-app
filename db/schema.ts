@@ -3749,6 +3749,12 @@ export const oauthAccessTokensTable = pgTable(
     user_id: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    // Access tokens carry the family too, so revoking a family can kill them
+    // alongside the refresh tokens. Without this, reuse detection revokes the
+    // refresh chain while the attacker's access token stays valid until it
+    // expires -- up to an hour of continued access after the compromise was
+    // detected, which defeats most of the point.
+    family_id: uuid('family_id').notNull(),
     granted_project_uuids: uuid('granted_project_uuids').array().notNull(),
     scopes: text('scopes').array().notNull(),
     // Convenience default Hub, updated by pluggedin_open_hub. Server state
@@ -3769,6 +3775,7 @@ export const oauthAccessTokensTable = pgTable(
       table.expires_at
     ),
     oauthAccessTokensUserIdx: index('oauth_access_tokens_user_idx').on(table.user_id),
+    oauthAccessTokensFamilyIdx: index('oauth_access_tokens_family_idx').on(table.family_id),
   })
 );
 
