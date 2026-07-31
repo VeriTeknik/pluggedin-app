@@ -1275,4 +1275,892 @@ into Claude byte for byte."
 
 ---
 
-Phase A continues in the next section of this plan (Tasks A7–A10: client registration, authorization endpoint and consent screen, token endpoint with rotation and reuse detection, bearer authentication). Phases B–D follow.
+## Task A7: Client registration — CIMD resolution and DCR fallback
+
+**Files:**
+- Create: `lib/oauth/clients.ts`
+- Create: `app/api/oauth/register/route.ts`
+- Test: `tests/oauth/clients.test.ts`
+
+**Interfaces:**
+- Consumes: `oauthClientsTable` from `@/db/schema`; `redirectUriMatches` from `@/lib/oauth/redirect-uri`.
+- Produces:
+  - `interface ResolvedClient { uuid: string; client_id: string; redirect_uris: string[]; registration_type: 'cimd' | 'dcr' }`
+  - `function isCimdClientId(clientId: string): boolean`
+  - `function validateCimdDocument(clientIdUrl: string, doc: unknown): { valid: true; redirect_uris: string[]; client_name?: string; application_type: string } | { valid: false; reason: string }`
+  - `async function resolveClient(clientId: string, issuer: string, fetchImpl?: typeof fetch): Promise<ResolvedClient | undefined>`
+  - `const CIMD_CACHE_TTL_MS = 86_400_000`
+  - `const DCR_CLIENT_TTL_MS = 2_592_000_000`
+
+- [ ] **Step 1: Write the failing test**
+
+`validateCimdDocument` is pure, so the security rules get tested without any network or database.
+
+```ts
+// tests/oauth/clients.test.ts
+import { describe, expect, it } from 'vitest';
+import {
+  CIMD_CACHE_TTL_MS,
+  DCR_CLIENT_TTL_MS,
+  isCimdClientId,
+  validateCimdDocument,
+} from '@/lib/oauth/clients';
+
+const URL_ID = 'https://claude.ai/oauth/claude-code-client-metadata';
+
+describe('recognising a CIMD client id', () => {
+  it('treats an https URL as CIMD', () => {
+    expect(isCimdClientId(URL_ID)).toBe(true);
+  });
+
+  it('treats an opaque string as DCR', () => {
+    expect(isCimdClientId('a1b2c3d4')).toBe(false);
+  });
+
+  it('refuses http — a CIMD must be fetched over TLS', () => {
+    expect(isCimdClientId('http://claude.ai/oauth/metadata')).toBe(false);
+  });
+});
+
+describe('validating a CIMD document', () => {
+  const good = {
+    client_id: URL_ID,
+    client_name: 'Claude Code',
+    redirect_uris: ['http://localhost/callback', 'http://127.0.0.1/callback'],
+    application_type: 'native',
+    token_endpoint_auth_method: 'none',
+  };
+
+  it('accepts a well-formed document', () => {
+    const result = validateCimdDocument(URL_ID, good);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.redirect_uris).toEqual(good.redirect_uris);
+      expect(result.application_type).toBe('native');
+    }
+  });
+
+  it('rejects a document whose client_id does not match the URL it was fetched from', () => {
+    // Otherwise any host could publish a document claiming someone else's id.
+    const result = validateCimdDocument(URL_ID, { ...good, client_id: 'https://evil.example/doc' });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.reason).toMatch(/client_id/i);
+  });
+
+  it('rejects a document with no redirect URIs', () => {
+    const result = validateCimdDocument(URL_ID, { ...good, redirect_uris: [] });
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects non-object input without throwing', () => {
+    expect(validateCimdDocument(URL_ID, null).valid).toBe(false);
+    expect(validateCimdDocument(URL_ID, 'a string').valid).toBe(false);
+    expect(validateCimdDocument(URL_ID, []).valid).toBe(false);
+  });
+
+  it('defaults application_type to web when absent', () => {
+    const { application_type: _omitted, ...withoutType } = good;
+    const result = validateCimdDocument(URL_ID, withoutType);
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.application_type).toBe('web');
+  });
+});
+
+describe('lifetimes', () => {
+  it('caches CIMD documents for a day and expires DCR clients after 30 days', () => {
+    // DCR registrations expire because Claude registers a new client on every
+    // fresh connection when it cannot use CIMD; without a TTL the table grows
+    // without bound.
+    expect(CIMD_CACHE_TTL_MS).toBe(86_400_000);
+    expect(DCR_CLIENT_TTL_MS).toBe(2_592_000_000);
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `pnpm test tests/oauth/clients.test.ts`
+Expected: FAIL — cannot resolve `@/lib/oauth/clients`.
+
+- [ ] **Step 3: Write `lib/oauth/clients.ts`**
+
+```ts
+// lib/oauth/clients.ts
+/**
+ * OAuth client registration.
+ *
+ * CIMD is the primary path: client_id is an https URL that resolves to the
+ * client's own metadata document, so there is nothing to register and nothing
+ * to expire. Anthropic explicitly recommends it over DCR for directory traffic,
+ * because DCR registers a new client on every fresh connection.
+ *
+ * DCR is retained as a fallback — other MCP clients support only DCR, and
+ * 2026-07-28 keeps it for backwards compatibility while deprecating it.
+ * Registrations expire so the table cannot grow without bound.
+ */
+
+import { and, eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { oauthClientsTable } from '@/db/schema';
+
+export const CIMD_CACHE_TTL_MS = 86_400_000; // 1 day
+export const DCR_CLIENT_TTL_MS = 2_592_000_000; // 30 days
+
+export interface ResolvedClient {
+  uuid: string;
+  client_id: string;
+  redirect_uris: string[];
+  registration_type: 'cimd' | 'dcr';
+}
+
+type CimdValidation =
+  | { valid: true; redirect_uris: string[]; client_name?: string; application_type: string }
+  | { valid: false; reason: string };
+
+export function isCimdClientId(clientId: string): boolean {
+  return clientId.startsWith('https://');
+}
+
+export function validateCimdDocument(clientIdUrl: string, doc: unknown): CimdValidation {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+    return { valid: false, reason: 'Client ID Metadata Document must be a JSON object' };
+  }
+  const record = doc as Record<string, unknown>;
+
+  // The document must claim the URL it was served from. Without this check any
+  // host could publish a document asserting somebody else's client_id.
+  if (record.client_id !== clientIdUrl) {
+    return {
+      valid: false,
+      reason: `client_id "${String(record.client_id)}" does not match the document URL "${clientIdUrl}"`,
+    };
+  }
+
+  const redirectUris = record.redirect_uris;
+  if (!Array.isArray(redirectUris) || redirectUris.length === 0) {
+    return { valid: false, reason: 'redirect_uris must be a non-empty array' };
+  }
+  if (!redirectUris.every((u) => typeof u === 'string')) {
+    return { valid: false, reason: 'redirect_uris must contain only strings' };
+  }
+
+  const applicationType =
+    typeof record.application_type === 'string' ? record.application_type : 'web';
+  const clientName = typeof record.client_name === 'string' ? record.client_name : undefined;
+
+  return {
+    valid: true,
+    redirect_uris: redirectUris as string[],
+    client_name: clientName,
+    application_type: applicationType,
+  };
+}
+
+/**
+ * Resolves a client_id to a stored client, fetching and caching the CIMD
+ * document when needed.
+ *
+ * fetchImpl is injectable so tests never touch the network.
+ */
+export async function resolveClient(
+  clientId: string,
+  issuer: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<ResolvedClient | undefined> {
+  const existing = await db
+    .select()
+    .from(oauthClientsTable)
+    .where(and(eq(oauthClientsTable.client_id, clientId), eq(oauthClientsTable.issuer, issuer)))
+    .limit(1);
+
+  const cached = existing[0];
+  const fresh =
+    cached?.metadata_fetched_at &&
+    Date.now() - cached.metadata_fetched_at.getTime() < CIMD_CACHE_TTL_MS;
+
+  if (cached && (cached.registration_type === 'dcr' || fresh)) {
+    return {
+      uuid: cached.uuid,
+      client_id: cached.client_id,
+      redirect_uris: cached.redirect_uris,
+      registration_type: cached.registration_type as 'cimd' | 'dcr',
+    };
+  }
+
+  if (!isCimdClientId(clientId)) return undefined;
+
+  // Anthropic allows 10 s for the whole discovery step, so the fetch is bounded
+  // well inside that rather than inheriting the default timeout.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5_000);
+  let document: unknown;
+  try {
+    const response = await fetchImpl(clientId, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) return undefined;
+    document = await response.json();
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const validation = validateCimdDocument(clientId, document);
+  if (!validation.valid) return undefined;
+
+  const values = {
+    client_id: clientId,
+    issuer,
+    registration_type: 'cimd' as const,
+    client_name: validation.client_name ?? null,
+    redirect_uris: validation.redirect_uris,
+    application_type: validation.application_type,
+    token_endpoint_auth_method: 'none',
+    metadata_fetched_at: new Date(),
+  };
+
+  if (cached) {
+    await db.update(oauthClientsTable).set(values).where(eq(oauthClientsTable.uuid, cached.uuid));
+    return { uuid: cached.uuid, ...values, registration_type: 'cimd' };
+  }
+
+  const inserted = await db.insert(oauthClientsTable).values(values).returning();
+  return {
+    uuid: inserted[0].uuid,
+    client_id: clientId,
+    redirect_uris: validation.redirect_uris,
+    registration_type: 'cimd',
+  };
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `pnpm test tests/oauth/clients.test.ts`
+Expected: PASS, 9 tests.
+
+- [ ] **Step 5: Add the DCR endpoint**
+
+Note the body parser: DCR is **JSON** (RFC 7591 §3.1), while the token endpoint is form-encoded. Getting these the wrong way round produces a 415.
+
+```ts
+// app/api/oauth/register/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+import { db } from '@/db';
+import { oauthClientsTable } from '@/db/schema';
+import { DCR_CLIENT_TTL_MS } from '@/lib/oauth/clients';
+import { connectorBaseUrl } from '@/lib/oauth/metadata';
+import { RateLimiters } from '@/lib/rate-limiter';
+
+// RFC 7591 s3.1: registration requests are application/json. The token endpoint
+// is form-urlencoded — do not share a parser between them.
+export async function POST(req: NextRequest) {
+  const limited = await RateLimiters.api(req);
+  if (limited) return limited;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: 'invalid_client_metadata', error_description: 'Body must be JSON' },
+      { status: 400 }
+    );
+  }
+
+  const record = (body ?? {}) as Record<string, unknown>;
+  const redirectUris = record.redirect_uris;
+  if (!Array.isArray(redirectUris) || redirectUris.length === 0) {
+    return NextResponse.json(
+      { error: 'invalid_redirect_uri', error_description: 'redirect_uris is required' },
+      { status: 400 }
+    );
+  }
+
+  const clientId = crypto.randomUUID();
+  const applicationType =
+    typeof record.application_type === 'string' ? record.application_type : 'web';
+
+  await db.insert(oauthClientsTable).values({
+    client_id: clientId,
+    issuer: connectorBaseUrl(),
+    registration_type: 'dcr',
+    client_name: typeof record.client_name === 'string' ? record.client_name : null,
+    redirect_uris: redirectUris as string[],
+    application_type: applicationType,
+    token_endpoint_auth_method: 'none',
+    expires_at: new Date(Date.now() + DCR_CLIENT_TTL_MS),
+  });
+
+  return NextResponse.json(
+    {
+      client_id: clientId,
+      client_id_issued_at: Math.floor(Date.now() / 1000),
+      redirect_uris: redirectUris,
+      application_type: applicationType,
+      token_endpoint_auth_method: 'none',
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+    },
+    { status: 201 }
+  );
+}
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+pnpm test tests/oauth/ && pnpm lint
+git add lib/oauth/clients.ts app/api/oauth/register tests/oauth/clients.test.ts
+git commit -m "feat(oauth): resolve CIMD clients and keep DCR as a bounded fallback
+
+CIMD is primary because Anthropic recommends it over DCR for directory traffic:
+DCR registers a new client on every fresh connection. The document must claim
+the URL it was served from, otherwise any host could publish a document
+asserting someone else's client_id.
+
+DCR is retained for clients that support nothing else, with a 30-day TTL so the
+table cannot grow without bound. Its endpoint parses JSON per RFC 7591 s3.1 —
+the token endpoint parses form-urlencoded, and swapping them produces a 415."
+```
+
+---
+
+## Task A8: Authorization endpoint and consent screen
+
+**Files:**
+- Create: `lib/oauth/authorize.ts`
+- Create: `app/oauth/authorize/page.tsx`
+- Create: `app/oauth/authorize/consent-form.tsx`
+- Create: `app/oauth/authorize/actions.ts`
+- Test: `tests/oauth/authorize.test.ts`
+
+**Interfaces:**
+- Consumes: `resolveClient`, `redirectUriMatches`, `isLoopbackRedirect`, `parseScopeParam`, `mintCredential`, `hashCredential`, `TTL`, `oauthAuthorizationCodesTable`.
+- Produces:
+  - `interface AuthorizeRequest { clientId: string; redirectUri: string; scopes: Scope[]; state: string | null; codeChallenge: string; codeChallengeMethod: string; resource: string | null }`
+  - `function parseAuthorizeParams(params: URLSearchParams): { ok: true; request: AuthorizeRequest } | { ok: false; error: string; description: string }`
+  - `function buildErrorRedirect(redirectUri: string, error: string, description: string, state: string | null): string`
+  - `async function issueAuthorizationCode(input: {...}): Promise<string>` (server action helper)
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+// tests/oauth/authorize.test.ts
+import { describe, expect, it } from 'vitest';
+import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/authorize';
+
+function params(overrides: Record<string, string> = {}): URLSearchParams {
+  return new URLSearchParams({
+    response_type: 'code',
+    client_id: 'https://claude.ai/oauth/claude-code-client-metadata',
+    redirect_uri: 'https://claude.ai/api/mcp/auth_callback',
+    code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+    code_challenge_method: 'S256',
+    scope: 'library:read memory:read offline_access',
+    state: 'xyz',
+    ...overrides,
+  });
+}
+
+describe('parsing an authorization request', () => {
+  it('accepts a complete request', () => {
+    const result = parseAuthorizeParams(params());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.request.scopes).toEqual(['library:read', 'memory:read', 'offline_access']);
+      expect(result.request.state).toBe('xyz');
+    }
+  });
+
+  it('rejects a response_type other than code', () => {
+    const result = parseAuthorizeParams(params({ response_type: 'token' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe('unsupported_response_type');
+  });
+
+  it('requires PKCE — a missing challenge is fatal', () => {
+    const p = params();
+    p.delete('code_challenge');
+    const result = parseAuthorizeParams(p);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe('invalid_request');
+  });
+
+  it('rejects the plain challenge method', () => {
+    const result = parseAuthorizeParams(params({ code_challenge_method: 'plain' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe('invalid_request');
+  });
+
+  it('requires client_id and redirect_uri', () => {
+    for (const key of ['client_id', 'redirect_uri']) {
+      const p = params();
+      p.delete(key);
+      expect(parseAuthorizeParams(p).ok).toBe(false);
+    }
+  });
+
+  it('drops unknown scopes rather than failing the request', () => {
+    const result = parseAuthorizeParams(params({ scope: 'library:read nonsense:scope' }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.request.scopes).toEqual(['library:read']);
+  });
+});
+
+describe('error redirects', () => {
+  it('returns the error and state on the redirect URI', () => {
+    const url = new URL(
+      buildErrorRedirect('https://claude.ai/api/mcp/auth_callback', 'access_denied', 'User declined', 'xyz')
+    );
+    expect(url.searchParams.get('error')).toBe('access_denied');
+    expect(url.searchParams.get('error_description')).toBe('User declined');
+    expect(url.searchParams.get('state')).toBe('xyz');
+  });
+
+  it('omits state when there was none', () => {
+    const url = new URL(
+      buildErrorRedirect('https://claude.ai/api/mcp/auth_callback', 'invalid_request', 'bad', null)
+    );
+    expect(url.searchParams.has('state')).toBe(false);
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `pnpm test tests/oauth/authorize.test.ts`
+Expected: FAIL — cannot resolve `@/lib/oauth/authorize`.
+
+- [ ] **Step 3: Write `lib/oauth/authorize.ts`**
+
+```ts
+// lib/oauth/authorize.ts
+/**
+ * Authorization-request parsing.
+ *
+ * PKCE is mandatory rather than optional: Claude sends a code_challenge with
+ * S256 on every authorization request regardless of registration mechanism, and
+ * OAuth 2.1 requires it. A request without one is malformed, not merely legacy.
+ */
+
+import { type Scope, parseScopeParam } from './scopes';
+
+export interface AuthorizeRequest {
+  clientId: string;
+  redirectUri: string;
+  scopes: Scope[];
+  state: string | null;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+  resource: string | null;
+}
+
+type ParseResult =
+  | { ok: true; request: AuthorizeRequest }
+  | { ok: false; error: string; description: string };
+
+export function parseAuthorizeParams(params: URLSearchParams): ParseResult {
+  if (params.get('response_type') !== 'code') {
+    return {
+      ok: false,
+      error: 'unsupported_response_type',
+      description: 'Only the authorization code flow is supported',
+    };
+  }
+
+  const clientId = params.get('client_id');
+  const redirectUri = params.get('redirect_uri');
+  if (!clientId || !redirectUri) {
+    return {
+      ok: false,
+      error: 'invalid_request',
+      description: 'client_id and redirect_uri are required',
+    };
+  }
+
+  const codeChallenge = params.get('code_challenge');
+  const codeChallengeMethod = params.get('code_challenge_method') ?? 'S256';
+  if (!codeChallenge) {
+    return { ok: false, error: 'invalid_request', description: 'code_challenge is required' };
+  }
+  if (codeChallengeMethod !== 'S256') {
+    return {
+      ok: false,
+      error: 'invalid_request',
+      description: 'code_challenge_method must be S256',
+    };
+  }
+
+  return {
+    ok: true,
+    request: {
+      clientId,
+      redirectUri,
+      scopes: parseScopeParam(params.get('scope')),
+      state: params.get('state'),
+      codeChallenge,
+      codeChallengeMethod,
+      resource: params.get('resource'),
+    },
+  };
+}
+
+export function buildErrorRedirect(
+  redirectUri: string,
+  error: string,
+  description: string,
+  state: string | null
+): string {
+  const url = new URL(redirectUri);
+  url.searchParams.set('error', error);
+  url.searchParams.set('error_description', description);
+  if (state !== null) url.searchParams.set('state', state);
+  return url.toString();
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `pnpm test tests/oauth/authorize.test.ts`
+Expected: PASS, 8 tests.
+
+- [ ] **Step 5: Write the consent server action**
+
+```ts
+// app/oauth/authorize/actions.ts
+'use server';
+
+import { getServerSession } from 'next-auth/next';
+
+import { db } from '@/db';
+import { oauthAuthorizationCodesTable } from '@/db/schema';
+import { authOptions } from '@/lib/auth';
+import { buildErrorRedirect } from '@/lib/oauth/authorize';
+import type { Scope } from '@/lib/oauth/scopes';
+import { TTL, hashCredential, mintCredential } from '@/lib/oauth/tokens';
+
+interface ApproveInput {
+  clientUuid: string;
+  redirectUri: string;
+  scopes: Scope[];
+  grantedProjectUuids: string[];
+  state: string | null;
+  codeChallenge: string;
+}
+
+export async function approveConsent(input: ApproveInput) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false as const, error: 'Not signed in' };
+    }
+    if (input.grantedProjectUuids.length === 0) {
+      return { success: false as const, error: 'Select at least one Hub' };
+    }
+
+    const code = mintCredential();
+    await db.insert(oauthAuthorizationCodesTable).values({
+      code_hash: hashCredential(code),
+      client_uuid: input.clientUuid,
+      user_id: session.user.id,
+      granted_project_uuids: input.grantedProjectUuids,
+      scopes: input.scopes,
+      redirect_uri: input.redirectUri,
+      code_challenge: input.codeChallenge,
+      code_challenge_method: 'S256',
+      expires_at: new Date(Date.now() + TTL.authorizationCodeMs),
+    });
+
+    const url = new URL(input.redirectUri);
+    url.searchParams.set('code', code);
+    if (input.state !== null) url.searchParams.set('state', input.state);
+    // RFC 9207: identify the issuer so the client can detect a mix-up attack.
+    url.searchParams.set('iss', process.env.NEXTAUTH_URL!.replace(/\/+$/, ''));
+    return { success: true as const, data: { redirectTo: url.toString() } };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+export async function denyConsent(redirectUri: string, state: string | null) {
+  return {
+    success: true as const,
+    data: {
+      redirectTo: buildErrorRedirect(
+        redirectUri,
+        'access_denied',
+        'The user declined the request',
+        state
+      ),
+    },
+  };
+}
+```
+
+- [ ] **Step 6: Write the consent page**
+
+All strings go through `useTranslation` per the project rule. Add the keys to `public/locales/en/oauth.json` and the other five locales.
+
+```tsx
+// app/oauth/authorize/page.tsx
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
+
+import { getProjects } from '@/app/actions/projects';
+import { authOptions } from '@/lib/auth';
+import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/authorize';
+import { resolveClient } from '@/lib/oauth/clients';
+import { connectorBaseUrl } from '@/lib/oauth/metadata';
+import { isLoopbackRedirect, redirectUriMatches } from '@/lib/oauth/redirect-uri';
+
+import { ConsentForm } from './consent-form';
+
+export default async function AuthorizePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const raw = await searchParams;
+  const params = new URLSearchParams(
+    Object.entries(raw).flatMap(([k, v]) =>
+      v === undefined ? [] : [[k, Array.isArray(v) ? v[0] : v] as [string, string]]
+    )
+  );
+
+  const parsed = parseAuthorizeParams(params);
+  if (!parsed.ok) {
+    const redirectUri = params.get('redirect_uri');
+    // Only bounce back to a redirect_uri we can parse; otherwise render the
+    // error rather than sending the user to an attacker-supplied URL.
+    if (redirectUri) {
+      redirect(buildErrorRedirect(redirectUri, parsed.error, parsed.description, params.get('state')));
+    }
+    return <p>{parsed.description}</p>;
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/oauth/authorize?${params.toString()}`)}`);
+  }
+
+  const client = await resolveClient(parsed.request.clientId, connectorBaseUrl());
+  if (!client) {
+    redirect(
+      buildErrorRedirect(
+        parsed.request.redirectUri,
+        'invalid_client',
+        'Unknown client',
+        parsed.request.state
+      )
+    );
+  }
+
+  const uriAllowed = client.redirect_uris.some((registered) =>
+    redirectUriMatches(parsed.request.redirectUri, registered)
+  );
+  if (!uriAllowed) {
+    // Never redirect to an unregistered URI, not even to report the error.
+    return <p>The redirect URI is not registered for this client.</p>;
+  }
+
+  const projects = await getProjects();
+  const loopbackOnly = client.redirect_uris.every(isLoopbackRedirect);
+
+  return (
+    <ConsentForm
+      clientUuid={client.uuid}
+      clientName={client.client_id}
+      redirectUri={parsed.request.redirectUri}
+      redirectHost={new URL(parsed.request.redirectUri).host}
+      loopbackOnly={loopbackOnly}
+      scopes={parsed.request.scopes}
+      state={parsed.request.state}
+      codeChallenge={parsed.request.codeChallenge}
+      projects={projects.map((p) => ({ uuid: p.uuid, name: p.name }))}
+    />
+  );
+}
+```
+
+```tsx
+// app/oauth/authorize/consent-form.tsx
+'use client';
+
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import type { Scope } from '@/lib/oauth/scopes';
+
+import { approveConsent, denyConsent } from './actions';
+
+interface Props {
+  clientUuid: string;
+  clientName: string;
+  redirectUri: string;
+  redirectHost: string;
+  loopbackOnly: boolean;
+  scopes: Scope[];
+  state: string | null;
+  codeChallenge: string;
+  projects: { uuid: string; name: string }[];
+}
+
+export function ConsentForm(props: Props) {
+  const { t } = useTranslation('oauth');
+  const [selected, setSelected] = useState<string[]>(
+    props.projects.length === 1 ? [props.projects[0].uuid] : []
+  );
+  const [busy, setBusy] = useState(false);
+
+  async function onApprove() {
+    setBusy(true);
+    const result = await approveConsent({
+      clientUuid: props.clientUuid,
+      redirectUri: props.redirectUri,
+      scopes: props.scopes,
+      grantedProjectUuids: selected,
+      state: props.state,
+      codeChallenge: props.codeChallenge,
+    });
+    if (result.success) window.location.href = result.data.redirectTo;
+    else setBusy(false);
+  }
+
+  async function onDeny() {
+    const result = await denyConsent(props.redirectUri, props.state);
+    if (result.success) window.location.href = result.data.redirectTo;
+  }
+
+  return (
+    <div className="mx-auto max-w-md space-y-6 p-6">
+      <h1 className="text-xl font-semibold">{t('consent.title', { client: props.clientName })}</h1>
+
+      {/* The spec requires showing the redirect host, and warning when the only
+          registered URIs are loopback — a CIMD cannot prevent a local process
+          from binding a port and impersonating the client. */}
+      <p className="text-sm text-muted-foreground">
+        {t('consent.redirectTo', { host: props.redirectHost })}
+      </p>
+      {props.loopbackOnly && (
+        <p className="text-sm text-amber-600">{t('consent.loopbackWarning')}</p>
+      )}
+
+      <section>
+        <h2 className="mb-2 font-medium">{t('consent.hubsTitle')}</h2>
+        {props.projects.map((project) => (
+          <label key={project.uuid} className="flex items-center gap-2 py-1">
+            <Checkbox
+              checked={selected.includes(project.uuid)}
+              onCheckedChange={(checked) =>
+                setSelected((prev) =>
+                  checked ? [...prev, project.uuid] : prev.filter((u) => u !== project.uuid)
+                )
+              }
+            />
+            <span>{project.name}</span>
+          </label>
+        ))}
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-medium">{t('consent.scopesTitle')}</h2>
+        <ul className="space-y-1 text-sm">
+          {props.scopes.map((scope) => (
+            <li key={scope}>{t(`consent.scope.${scope}`)}</li>
+          ))}
+        </ul>
+      </section>
+
+      <div className="flex gap-3">
+        <Button onClick={onApprove} disabled={busy || selected.length === 0}>
+          {t('consent.approve')}
+        </Button>
+        <Button variant="outline" onClick={onDeny} disabled={busy}>
+          {t('consent.deny')}
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 7: Add the translation keys**
+
+Create `public/locales/en/oauth.json`, then translate into `tr`, `zh`, `hi`, `ja`, `nl`. The `memory:write` string is the one that matters most — it is the user's only notice that conversations produce stored observations.
+
+```json
+{
+  "consent": {
+    "title": "Connect {{client}} to Plugged.in",
+    "redirectTo": "You will be returned to {{host}}",
+    "loopbackWarning": "This client runs on your own computer. Only continue if you started it yourself.",
+    "hubsTitle": "Which Hubs may this connection reach?",
+    "scopesTitle": "What it will be able to do",
+    "approve": "Connect",
+    "deny": "Cancel",
+    "scope": {
+      "library:read": "Read your documents and search your knowledge base",
+      "library:write": "Create and update documents",
+      "memory:read": "Read your memory",
+      "memory:write": "Record observations derived from your conversations into your memory",
+      "clipboard:read": "Read your clipboard",
+      "clipboard:write": "Write to your clipboard",
+      "tasks:read": "Read your tasks",
+      "tasks:write": "Create and complete tasks",
+      "hubs:read": "See which Hubs you have",
+      "offline_access": "Stay connected without asking you again"
+    }
+  }
+}
+```
+
+- [ ] **Step 8: Verify the flow renders**
+
+```bash
+pnpm build && pnpm start
+```
+
+Open, signed in:
+
+```
+http://localhost:12005/oauth/authorize?response_type=code&client_id=https%3A%2F%2Fclaude.ai%2Foauth%2Fclaude-code-client-metadata&redirect_uri=http%3A%2F%2F127.0.0.1%3A3118%2Fcallback&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&scope=library%3Aread%20offline_access&state=test
+```
+
+Expected: the consent screen lists your Hubs, shows `127.0.0.1:3118` as the return host, and displays the loopback warning. Approving redirects to `http://127.0.0.1:3118/callback?code=…&state=test&iss=…` (the connection will fail — nothing is listening — which is fine; the query string is what you are checking).
+
+- [ ] **Step 9: Commit**
+
+```bash
+pnpm test tests/oauth/ && pnpm lint
+git add lib/oauth/authorize.ts app/oauth/authorize public/locales/*/oauth.json tests/oauth/authorize.test.ts
+git commit -m "feat(oauth): add authorization endpoint and consent screen
+
+PKCE is treated as mandatory rather than optional — Claude sends S256 on every
+authorization request and OAuth 2.1 requires it, so a request without a
+challenge is malformed rather than legacy.
+
+The consent screen shows which Hubs the connection may reach (least privilege;
+runtime switching is confined to this set) and warns when the only registered
+redirect URIs are loopback, since a CIMD cannot stop a local process binding a
+port and impersonating the client.
+
+An unregistered redirect_uri renders an error rather than redirecting — bouncing
+to an attacker-supplied URI to report the error would defeat the check.
+
+Authorization responses carry iss per RFC 9207 so clients can detect an
+authorization-server mix-up."
+```
+
+---
+
+Phase A concludes with Tasks A9 (token endpoint: code exchange, refresh rotation, family revocation) and A10 (bearer authentication for the MCP route). Phases B–D follow.
