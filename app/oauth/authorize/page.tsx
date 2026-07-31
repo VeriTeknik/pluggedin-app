@@ -5,6 +5,7 @@ import { getProjects } from '@/app/actions/projects';
 import { authOptions } from '@/lib/auth';
 import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/authorize';
 import { resolveClient } from '@/lib/oauth/clients';
+import { issueConsentTicket } from '@/lib/oauth/consent-ticket';
 import { connectorBaseUrl } from '@/lib/oauth/metadata';
 import { isLoopbackRedirect, redirectUriMatches } from '@/lib/oauth/redirect-uri';
 
@@ -66,16 +67,25 @@ export default async function AuthorizePage({
   const projects = await getProjects();
   const loopbackOnly = client.redirect_uris.every(isLoopbackRedirect);
 
+  // The validated request is signed into a ticket rather than handed to the
+  // browser as editable fields. A server action is an HTTP endpoint, so if the
+  // action accepted redirectUri / codeChallenge / clientUuid as parameters,
+  // every check above would be decorative.
+  const ticket = issueConsentTicket({
+    clientUuid: client.uuid,
+    redirectUri: parsed.request.redirectUri,
+    scopes: parsed.request.scopes,
+    codeChallenge: parsed.request.codeChallenge,
+    state: parsed.request.state,
+  });
+
   return (
     <ConsentForm
-      clientUuid={client.uuid}
+      ticket={ticket}
       clientName={client.client_id}
-      redirectUri={parsed.request.redirectUri}
       redirectHost={new URL(parsed.request.redirectUri).host}
       loopbackOnly={loopbackOnly}
       scopes={parsed.request.scopes}
-      state={parsed.request.state}
-      codeChallenge={parsed.request.codeChallenge}
       projects={projects.map((p) => ({ uuid: p.uuid, name: p.name }))}
     />
   );

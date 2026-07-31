@@ -10,14 +10,16 @@ import type { Scope } from '@/lib/oauth/scopes';
 import { approveConsent, denyConsent } from './actions';
 
 interface Props {
-  clientUuid: string;
+  /**
+   * Signed carrier for the already-validated authorize request. The form never
+   * sees clientUuid, redirectUri or codeChallenge as editable values, because
+   * the server action must not accept them from the caller.
+   */
+  ticket: string;
   clientName: string;
-  redirectUri: string;
   redirectHost: string;
   loopbackOnly: boolean;
   scopes: Scope[];
-  state: string | null;
-  codeChallenge: string;
   projects: { uuid: string; name: string }[];
 }
 
@@ -35,12 +37,8 @@ export function ConsentForm(props: Props) {
     setBusy(true);
     setError(null);
     const result = await approveConsent({
-      clientUuid: props.clientUuid,
-      redirectUri: props.redirectUri,
-      scopes: props.scopes,
+      ticket: props.ticket,
       grantedProjectUuids: selected,
-      state: props.state,
-      codeChallenge: props.codeChallenge,
     });
     if (result.success) {
       window.location.href = result.data.redirectTo;
@@ -51,8 +49,9 @@ export function ConsentForm(props: Props) {
   }
 
   async function onDeny() {
-    const result = await denyConsent(props.redirectUri, props.state);
+    const result = await denyConsent(props.ticket);
     if (result.success) window.location.href = result.data.redirectTo;
+    else setError(result.error);
   }
 
   return (
