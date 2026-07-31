@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { getProjects } from '@/app/actions/projects';
 import { authOptions } from '@/lib/auth';
 import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/authorize';
+import { describeClient } from '@/lib/oauth/client-display';
 import { resolveClient } from '@/lib/oauth/clients';
 import { issueConsentTicket } from '@/lib/oauth/consent-ticket';
 import { connectorBaseUrl } from '@/lib/oauth/metadata';
@@ -82,7 +83,7 @@ export default async function AuthorizePage({
   return (
     <ConsentForm
       ticket={ticket}
-      clientName={client.client_id}
+      client={describeClient(client)}
       redirectHost={new URL(parsed.request.redirectUri).host}
       loopbackOnly={loopbackOnly}
       scopes={parsed.request.scopes}

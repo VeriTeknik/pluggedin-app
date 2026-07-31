@@ -1,6 +1,8 @@
 {
   "consent": {
     "title": "{{client}} uygulamasını Plugged.in'e bağla",
+    "verifiedOrigin": "{{origin}} adresine ait olduğu doğrulandı",
+    "unverifiedName": "Bu uygulama adını kendisi seçti ve hiçbir şey bunu doğrulamıyor. Yalnızca tanıyorsanız devam edin.",
     "redirectTo": "{{host}} adresine geri döneceksiniz",
     "loopbackWarning": "Bu istemci kendi bilgisayarınızda çalışıyor. Yalnızca siz başlattıysanız devam edin.",
     "hubsTitle": "Bu bağlantı hangi Hub'lara erişebilsin?",

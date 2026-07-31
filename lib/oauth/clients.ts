@@ -23,6 +23,12 @@ export const DCR_CLIENT_TTL_MS = 2_592_000_000; // 30 days
 export interface ResolvedClient {
   uuid: string;
   client_id: string;
+  /**
+   * The client's own claim about what it is called. Self-asserted and never
+   * verified — see lib/oauth/client-display.ts for why it is carried here
+   * anyway and what has to accompany it on screen.
+   */
+  client_name: string | null;
   redirect_uris: string[];
   registration_type: 'cimd' | 'dcr';
 }
@@ -115,6 +121,7 @@ export async function resolveClient(
     return {
       uuid: cached.uuid,
       client_id: cached.client_id,
+      client_name: cached.client_name,
       redirect_uris: cached.redirect_uris,
       registration_type: cached.registration_type as 'cimd' | 'dcr',
     };
@@ -164,6 +171,7 @@ export async function resolveClient(
     return {
       uuid: cached.uuid,
       client_id: clientId,
+      client_name: values.client_name,
       redirect_uris: validation.redirect_uris,
       registration_type: 'cimd',
     };
@@ -173,6 +181,7 @@ export async function resolveClient(
   return {
     uuid: inserted[0].uuid,
     client_id: clientId,
+    client_name: values.client_name,
     redirect_uris: validation.redirect_uris,
     registration_type: 'cimd',
   };

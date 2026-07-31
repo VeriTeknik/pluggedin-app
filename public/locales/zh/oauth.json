@@ -1,6 +1,8 @@
 {
   "consent": {
     "title": "将 {{client}} 连接到 Plugged.in",
+    "verifiedOrigin": "已验证属于 {{origin}}",
+    "unverifiedName": "此应用的名称由其自行设定，无任何验证。请仅在您认识它时继续。",
     "redirectTo": "您将返回 {{host}}",
     "loopbackWarning": "此客户端在您自己的计算机上运行。请仅在您自己启动它时继续。",
     "hubsTitle": "此连接可以访问哪些 Hub？",

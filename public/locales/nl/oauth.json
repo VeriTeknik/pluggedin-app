@@ -1,6 +1,8 @@
 {
   "consent": {
     "title": "{{client}} verbinden met Plugged.in",
+    "verifiedOrigin": "Geverifieerd als behorend bij {{origin}}",
+    "unverifiedName": "Deze app heeft zijn eigen naam gekozen en niets verifieert die. Ga alleen verder als u de app herkent.",
     "redirectTo": "U keert terug naar {{host}}",
     "loopbackWarning": "Deze client draait op uw eigen computer. Ga alleen verder als u deze zelf hebt gestart.",
     "hubsTitle": "Welke Hubs mag deze verbinding bereiken?",

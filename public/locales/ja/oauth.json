@@ -1,6 +1,8 @@
 {
   "consent": {
     "title": "{{client}} を Plugged.in に接続",
+    "verifiedOrigin": "{{origin}} に属することを確認済み",
+    "unverifiedName": "このアプリは自ら名前を名乗っており、それを検証するものはありません。心当たりがある場合のみ続行してください。",
     "redirectTo": "{{host}} に戻ります",
     "loopbackWarning": "このクライアントはご自身のコンピューター上で動作しています。ご自身で起動した場合のみ続行してください。",
     "hubsTitle": "この接続はどの Hub にアクセスできますか？",

@@ -1,6 +1,8 @@
 {
   "consent": {
     "title": "Connect {{client}} to Plugged.in",
+    "verifiedOrigin": "Verified as belonging to {{origin}}",
+    "unverifiedName": "This app chose its own name and nothing verifies it. Only continue if you recognise it.",
     "redirectTo": "You will be returned to {{host}}",
     "loopbackWarning": "This client runs on your own computer. Only continue if you started it yourself.",
     "hubsTitle": "Which Hubs may this connection reach?",

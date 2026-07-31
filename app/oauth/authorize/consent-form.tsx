@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { ClientDisplay } from '@/lib/oauth/client-display';
 import type { Scope } from '@/lib/oauth/scopes';
 
 import { approveConsent, denyConsent } from './actions';
@@ -16,7 +17,7 @@ interface Props {
    * the server action must not accept them from the caller.
    */
   ticket: string;
-  clientName: string;
+  client: ClientDisplay;
   redirectHost: string;
   loopbackOnly: boolean;
   scopes: Scope[];
@@ -56,7 +57,21 @@ export function ConsentForm(props: Props) {
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t('consent.title', { client: props.clientName })}</h1>
+      <h1 className="text-xl font-semibold">{t('consent.title', { client: props.client.name })}</h1>
+
+      {/* A client names itself, so the name alone would be a phishing prompt:
+          anyone can publish a document calling themselves Claude. It is shown
+          because users cannot judge a raw URL, but never on its own — the origin
+          that served the document is stated beneath it, and a DCR name, which
+          has no origin behind it at all, is labelled unverified. */}
+      {props.client.nameIsSelfAsserted &&
+        (props.client.origin ? (
+          <p className="text-sm text-muted-foreground">
+            {t('consent.verifiedOrigin', { origin: props.client.origin })}
+          </p>
+        ) : (
+          <p className="text-sm text-amber-600">{t('consent.unverifiedName')}</p>
+        ))}
 
       {/* The spec requires showing the redirect host, and warning when the only
           registered URIs are loopback — a CIMD cannot prevent a local process
