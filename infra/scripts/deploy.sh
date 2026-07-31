@@ -15,10 +15,16 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA_DIR="${REPO_ROOT}/infra"
-RUNTIME_DIR="/run/sops"
+# /run/sops is the production location: /run is tmpfs, so the decrypted
+# secrets never touch disk. Creating it needs root, which is correct for a
+# real deploy. Phases 2-4 run the stack alongside the native system as an
+# unprivileged operator, so allow an override — it must still be a tmpfs
+# path, and docker-compose.yml's bind mount has to be pointed at it too
+# (see COMPOSE_FILE override below).
+RUNTIME_DIR="${SOPS_RUNTIME_DIR:-/run/sops}"
 SECRETS_ENCRYPTED="${INFRA_DIR}/sops/secrets.env.sops"
 SECRETS_DECRYPTED="${RUNTIME_DIR}/secrets.env"
-COMPOSE_FILE="${INFRA_DIR}/docker-compose.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-${INFRA_DIR}/docker-compose.yml}"
 
 PULL=1
 for arg in "$@"; do

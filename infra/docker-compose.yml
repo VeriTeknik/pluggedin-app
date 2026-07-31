@@ -38,7 +38,16 @@ x-app-environment: &app-env
 
 services:
   traefik:
-    image: traefik:v3.2
+    # v3.7 is a hard floor, not a preference. Traefik pins its Docker client
+    # to API 1.24 up to and including v3.5; Docker Engine 29 dropped
+    # everything below 1.40. On the older images the docker provider fails
+    # every poll with "client version 1.24 is too old", so NO label-based
+    # router is ever discovered — and because Traefik reports that as a
+    # provider error while its own healthcheck stays green, the failure mode
+    # is a site-wide 404 behind a healthy container. Verified here: v3.3,
+    # v3.4 and v3.5 all reproduce it; v3.7.9 does not.
+    # DOCKER_API_VERSION does not help — the pin overrides the environment.
+    image: traefik:v3.7
     restart: always
     container_name: traefik
     command:

@@ -263,13 +263,54 @@ All four were latent — they would each have failed the first real deploy.
 
 ### Phase 2 — Stand up Traefik on a non-conflicting port (1 hour)
 
-The current nginx owns `:80` and `:443`. We bring Traefik up on `:8080` (dashboard) and `:8443` (TLS) bound to a test hostname like `staging.plugged.in` (point a temporary A record at the host), validate certificate issuance, then proceed.
+Executed 2026-07-31 as compose project `pluggedin-pre`. The native nginx kept
+`:80`/`:443` throughout; Traefik took `:8080`/`:8443`.
 
-- [ ] `docker compose -f infra/docker-compose.yml up -d traefik`
-- [ ] Issue a cert for `staging.plugged.in` via HTTP-01 (requires Traefik to own a public port-80 path under that hostname during the test window — we use `8080:80` on Traefik first and gate certbot's existing `:80` ownership by stopping nginx for the 60s validation window only).
-- [ ] `curl --resolve staging.plugged.in:8443:127.0.0.1 https://staging.plugged.in:8443/whoami` returns 200 from Traefik's `whoami` test backend.
+- [x] `docker compose up -d traefik` — healthy, both ports bound.
+- [x] `/ping` returns 200 on the web entrypoint.
+- [x] HTTP→HTTPS redirect returns `301 → https://plugged.in/`, matching the
+      nginx behaviour it replaces.
+- [x] All six file-provider middlewares register:
+      `security-headers`, `rate-limit`, `cache-immutable`, `cache-30d`,
+      `widget-cors`, `dashboard-auth`.
+- [x] Dashboard basic auth verified end to end: wrong credentials → 401,
+      correct → 200 on `/api/overview`.
+- [ ] ACME issuance — **blocked on DNS**, see below.
 
 **Rollback:** `docker compose down traefik`.
+
+#### Blocker: Traefik ≤ v3.5 cannot talk to Docker Engine 29
+
+The single most dangerous defect found so far. Traefik pins its Docker client
+to **API 1.24**; Docker Engine 29 dropped everything below **1.40**. The
+docker provider then fails every poll with `client version 1.24 is too old`
+and **no label-based router is ever discovered** — which is every route this
+stack has, since all of them live in `labels:` on `pluggedin-app`.
+
+The failure mode is the nasty kind: Traefik reports this as a provider error,
+its own healthcheck stays green, and the container sits there `(healthy)`
+serving a site-wide 404. A cutover that trusted the healthcheck would have
+looked fine and served nothing.
+
+`DOCKER_API_VERSION` does not help — the pin overrides the environment.
+Reproduced on v3.3, v3.4 and v3.5; fixed in **v3.7.9**. The compose file is
+pinned to `traefik:v3.7` and that is a floor, not a preference.
+
+#### Remaining Phase-2 work needs DNS
+
+ACME HTTP-01 issuance cannot be completed from here:
+
+- `traefik.plugged.in` does not resolve (`NXDOMAIN`), so the dashboard
+  certificate fails. An A record pointing at this host is required.
+- HTTP-01 validation needs inbound `:80`, which nginx still owns. The
+  validation window is the ~60s during cutover when nginx stops and Traefik
+  takes the port.
+
+Everything else about the ACME path is wired and correct — Traefik registered
+with the CA successfully, so only the DNS records and port ownership are
+outstanding. While iterating, the resolver is pointed at
+`acme-staging-v02.api.letsencrypt.org` to protect the 5-per-week production
+rate limit.
 
 ### Phase 3 — Containerise Postgres + Redis next to the live app (½ day, no downtime)
 
