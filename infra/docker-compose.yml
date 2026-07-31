@@ -117,6 +117,26 @@ services:
       - SYS_ADMIN
     security_opt:
       - apparmor:unconfined
+      # ⚠ MCP SANDBOXING IS CURRENTLY OFF. Verified on the live stack after
+      # cutover: bwrap fails with "pivot_root: Operation not permitted", so
+      # with MCP_ISOLATION_FALLBACK=none every STDIO MCP server runs
+      # unsandboxed. The native stack sandboxed them with firejail, so this
+      # is a regression in posture, not a pre-existing state.
+      #
+      # CAP_SYS_ADMIN + apparmor:unconfined is NOT sufficient. Measured:
+      #   apparmor only ................ pivot_root: Operation not permitted
+      #   + seccomp:unconfined ......... Can't mount proc on /newroot/proc
+      #   + systempaths:unconfined ..... works (SANDBOX_OK, pid=2 inside)
+      #
+      # Uncommenting the two lines below restores per-server sandboxing, at
+      # the cost of the container's own seccomp filter and masked /proc.
+      # That is a real trade-off and deliberately left as an explicit
+      # decision: MCP servers execute arbitrary third-party code, which
+      # argues for sandboxing them; a weaker container boundary argues the
+      # other way. Whichever is chosen, choose it — do not leave it
+      # accidental.
+      # - seccomp:unconfined
+      # - systempaths:unconfined
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
       interval: 10s

@@ -378,7 +378,84 @@ future parallel run:
    verification finished, and any future parallel run should keep its
    lifetime to minutes.
 
-### Phase 5 — Cutover (≤ 10 min downtime, scheduled)
+### Phase 5 — Cutover — DONE 2026-07-31
+
+Executed 21:47:21Z. **Downtime ~3 minutes.** The stack is live: Traefik owns
+:80/:443 with a fresh Let's Encrypt certificate, the app runs from the
+containerised Postgres, and Ofelia has taken over all seven cron jobs.
+
+Verified from outside the host after cutover:
+
+- `https://plugged.in/` → 200 in 0.45s, certificate issued 2026-07-31 by
+  Let's Encrypt (replacing the certbot cert from Jul 21).
+- `http://` → 301 to https, matching the nginx behaviour it replaced.
+- All seven security headers byte-identical to the nginx originals.
+- gzip active: 71,201 → 22,309 bytes on `/`.
+- `/api/health` → `healthy`, database reachable.
+- 5,305 encrypted values re-encrypted onto the rotated key, **0 failures**,
+  verified.
+- zvec mounted correctly at `/app/data/vectors` with the real 18 MB of data
+  — the drift that motivated this whole migration is now structurally
+  impossible.
+- Ofelia registered all 7 jobs.
+
+**It took two attempts.** The first aborted mid-window and was rolled back in
+~44 seconds with no data loss — the external PG was quiesced and took no
+writes, so restarting the native services resumed exactly where they left
+off. See the incident notes below.
+
+#### Two attempts, and why the first failed
+
+Attempt 1 died after the dump had been restored, at `pnpm db:migrate`:
+
+    [FATAL tini (7)] exec pnpm failed: No such file or directory
+
+`/usr/local/bin/pnpm` and `tsx` were dangling symlinks and had been since the
+Dockerfile was written — it copied `/root/.local/share/pnpm`, which only ever
+contains pnpm's `store/`, because corepack keeps the shim elsewhere. `ln -s`
+does not validate targets, so the build passed and the Dockerfile comment
+documented a command that had never worked.
+
+The deeper cause was a gap in verification, not in the Dockerfile: Phase 4
+validated the **runtime** path (`node server.js`, health, routing, headers)
+but never the **migration** path the cutover depends on. A green Phase 4 was
+not evidence the cutover would work.
+
+Before retrying, the full post-restore sequence was rehearsed against the
+real restored data with nginx still serving. That rehearsal immediately
+caught a *second* blocker that would have aborted attempt 2 the same way:
+the migration script was mounted at `/migration`, and Node resolves bare
+imports by walking up from the importing file, so it never reached
+`/app/node_modules` and died with `ERR_MODULE_NOT_FOUND: Cannot find package
+'pg'`. Mounting under `/app/migration` fixes it.
+
+Lesson worth keeping: rehearse every step that runs *inside* the window,
+against real data, outside the window.
+
+#### Known regression: MCP sandboxing is currently OFF
+
+Measured on the live stack after cutover. `bwrap` fails with
+`pivot_root: Operation not permitted`, and `MCP_ISOLATION_FALLBACK=none`
+means STDIO MCP servers therefore run **unsandboxed**. The native stack
+sandboxed them with firejail, so this is a regression in posture.
+
+`CAP_SYS_ADMIN` + `apparmor:unconfined` — what the plan assumed would be
+enough — is not:
+
+| Configuration | Result |
+|---|---|
+| `apparmor:unconfined` only | `pivot_root: Operation not permitted` |
+| `+ seccomp:unconfined` | `Can't mount proc on /newroot/proc` |
+| `+ systempaths:unconfined` | works — `SANDBOX_OK`, `pid=2` inside |
+
+The fix is two commented lines in `infra/docker-compose.yml`. It is left as
+an explicit decision because it is a genuine trade-off: enabling it restores
+per-server sandboxing of arbitrary third-party code, at the cost of the
+container's own seccomp filter and masked `/proc`.
+
+---
+
+### Phase 5 (original plan) — Cutover (≤ 10 min downtime, scheduled)
 
 This is the only step that affects users. Pick a low-traffic window.
 
