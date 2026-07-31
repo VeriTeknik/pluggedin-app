@@ -2163,4 +2163,641 @@ authorization-server mix-up."
 
 ---
 
-Phase A concludes with Tasks A9 (token endpoint: code exchange, refresh rotation, family revocation) and A10 (bearer authentication for the MCP route). Phases B–D follow.
+## Task A9: Token endpoint — exchange, rotation, reuse detection
+
+The security core of Phase A. Two things here fail in ways that are hard to notice: the body parser (a 415 that looks like an outage) and reuse detection (absent, a stolen refresh token works forever).
+
+**Files:**
+- Create: `lib/oauth/grants.ts`
+- Create: `app/api/oauth/token/route.ts`
+- Create: `app/api/oauth/revoke/route.ts`
+- Test: `tests/oauth/grants.test.ts`
+
+**Interfaces:**
+- Consumes: `verifyPkce`, `redirectUriMatches`, `mintCredential`, `hashCredential`, `TTL`, the four OAuth tables.
+- Produces:
+  - `interface IssuedTokens { access_token: string; refresh_token: string; expires_in: number; token_type: 'Bearer'; scope: string }`
+  - `async function redeemAuthorizationCode(input: { code: string; clientUuid: string; redirectUri: string; codeVerifier: string }): Promise<{ ok: true; tokens: IssuedTokens } | { ok: false; error: string; description: string }>`
+  - `async function rotateRefreshToken(input: { refreshToken: string; clientUuid: string }): Promise<{ ok: true; tokens: IssuedTokens } | { ok: false; error: string; description: string }>`
+  - `async function revokeFamily(familyId: string, reason: string): Promise<number>`
+  - `function classifyRefreshFailure(record: { rotated_at: Date | null; revoked_at: Date | null; expires_at: Date }): 'reuse' | 'revoked' | 'expired' | 'ok'`
+
+- [ ] **Step 1: Write the failing test**
+
+`classifyRefreshFailure` is pure and carries the whole reuse-detection decision, so it is tested exhaustively without a database.
+
+```ts
+// tests/oauth/grants.test.ts
+import { describe, expect, it } from 'vitest';
+import { classifyRefreshFailure } from '@/lib/oauth/grants';
+
+const future = new Date(Date.now() + 60_000);
+const past = new Date(Date.now() - 60_000);
+
+describe('refresh token classification', () => {
+  it('accepts a live, unrotated, unrevoked token', () => {
+    expect(
+      classifyRefreshFailure({ rotated_at: null, revoked_at: null, expires_at: future })
+    ).toBe('ok');
+  });
+
+  it('flags an already-rotated token as REUSE, not merely invalid', () => {
+    // This is the whole point. A rotated token being presented again means a
+    // copy exists somewhere, and we cannot tell whether the presenter is the
+    // attacker or the legitimate client — so the family must die.
+    expect(
+      classifyRefreshFailure({ rotated_at: past, revoked_at: null, expires_at: future })
+    ).toBe('reuse');
+  });
+
+  it('detects reuse even when the token has also expired', () => {
+    // Ordering matters: expiry must not mask a reuse signal, or an attacker
+    // gets a free window by simply waiting.
+    expect(
+      classifyRefreshFailure({ rotated_at: past, revoked_at: null, expires_at: past })
+    ).toBe('reuse');
+  });
+
+  it('reports an explicitly revoked token as revoked', () => {
+    expect(
+      classifyRefreshFailure({ rotated_at: null, revoked_at: past, expires_at: future })
+    ).toBe('revoked');
+  });
+
+  it('reports a plain expiry as expired', () => {
+    expect(
+      classifyRefreshFailure({ rotated_at: null, revoked_at: null, expires_at: past })
+    ).toBe('expired');
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `pnpm test tests/oauth/grants.test.ts`
+Expected: FAIL — cannot resolve `@/lib/oauth/grants`.
+
+- [ ] **Step 3: Write `lib/oauth/grants.ts`**
+
+```ts
+// lib/oauth/grants.ts
+/**
+ * Grant handling: authorization-code redemption and refresh-token rotation.
+ *
+ * Rotation on its own is close to cosmetic — it makes theft *detectable*, not
+ * impossible. What gives it teeth is reuse detection: presenting a token that
+ * has already been rotated proves a copy exists somewhere, and since we cannot
+ * tell the attacker from the legitimate client, the entire token family is
+ * revoked.
+ */
+
+import { and, eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import {
+  oauthAccessTokensTable,
+  oauthAuthorizationCodesTable,
+  oauthRefreshTokensTable,
+} from '@/db/schema';
+
+import { verifyPkce } from './pkce';
+import { TTL, hashCredential, mintCredential } from './tokens';
+
+export interface IssuedTokens {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: 'Bearer';
+  scope: string;
+}
+
+type GrantResult =
+  | { ok: true; tokens: IssuedTokens }
+  | { ok: false; error: string; description: string };
+
+/**
+ * Reuse is checked BEFORE expiry on purpose: if expiry masked the reuse signal,
+ * an attacker holding a stolen token could simply wait for it to lapse and
+ * escape family revocation.
+ */
+export function classifyRefreshFailure(record: {
+  rotated_at: Date | null;
+  revoked_at: Date | null;
+  expires_at: Date;
+}): 'reuse' | 'revoked' | 'expired' | 'ok' {
+  if (record.rotated_at) return 'reuse';
+  if (record.revoked_at) return 'revoked';
+  if (record.expires_at.getTime() <= Date.now()) return 'expired';
+  return 'ok';
+}
+
+export async function revokeFamily(familyId: string, reason: string): Promise<number> {
+  const revoked = await db
+    .update(oauthRefreshTokensTable)
+    .set({ revoked_at: new Date(), revocation_reason: reason })
+    .where(eq(oauthRefreshTokensTable.family_id, familyId))
+    .returning();
+  return revoked.length;
+}
+
+async function issueTokenPair(input: {
+  clientUuid: string;
+  userId: string;
+  grantedProjectUuids: string[];
+  scopes: string[];
+  familyId: string;
+  parentId: string | null;
+}): Promise<IssuedTokens> {
+  const accessToken = mintCredential();
+  const refreshToken = mintCredential();
+
+  await db.insert(oauthAccessTokensTable).values({
+    token_hash: hashCredential(accessToken),
+    client_uuid: input.clientUuid,
+    user_id: input.userId,
+    granted_project_uuids: input.grantedProjectUuids,
+    scopes: input.scopes,
+    default_project_uuid:
+      input.grantedProjectUuids.length === 1 ? input.grantedProjectUuids[0] : null,
+    expires_at: new Date(Date.now() + TTL.accessTokenMs),
+  });
+
+  await db.insert(oauthRefreshTokensTable).values({
+    token_hash: hashCredential(refreshToken),
+    family_id: input.familyId,
+    parent_id: input.parentId,
+    client_uuid: input.clientUuid,
+    user_id: input.userId,
+    granted_project_uuids: input.grantedProjectUuids,
+    scopes: input.scopes,
+    expires_at: new Date(Date.now() + TTL.refreshTokenMs),
+  });
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_in: Math.floor(TTL.accessTokenMs / 1000),
+    token_type: 'Bearer',
+    scope: input.scopes.join(' '),
+  };
+}
+
+export async function redeemAuthorizationCode(input: {
+  code: string;
+  clientUuid: string;
+  redirectUri: string;
+  codeVerifier: string;
+}): Promise<GrantResult> {
+  const rows = await db
+    .select()
+    .from(oauthAuthorizationCodesTable)
+    .where(eq(oauthAuthorizationCodesTable.code_hash, hashCredential(input.code)))
+    .limit(1);
+
+  const record = rows[0];
+  if (!record) {
+    return { ok: false, error: 'invalid_grant', description: 'Unknown authorization code' };
+  }
+  if (record.consumed_at) {
+    return { ok: false, error: 'invalid_grant', description: 'Authorization code already used' };
+  }
+  if (record.expires_at.getTime() <= Date.now()) {
+    return { ok: false, error: 'invalid_grant', description: 'Authorization code expired' };
+  }
+  if (record.client_uuid !== input.clientUuid) {
+    return { ok: false, error: 'invalid_grant', description: 'Code was issued to another client' };
+  }
+  if (record.redirect_uri !== input.redirectUri) {
+    return { ok: false, error: 'invalid_grant', description: 'redirect_uri does not match' };
+  }
+  if (!verifyPkce(input.codeVerifier, record.code_challenge, record.code_challenge_method)) {
+    return { ok: false, error: 'invalid_grant', description: 'PKCE verification failed' };
+  }
+
+  // Mark consumed before issuing, so a concurrent second redemption of the same
+  // code cannot also succeed.
+  await db
+    .update(oauthAuthorizationCodesTable)
+    .set({ consumed_at: new Date() })
+    .where(eq(oauthAuthorizationCodesTable.uuid, record.uuid));
+
+  const tokens = await issueTokenPair({
+    clientUuid: record.client_uuid,
+    userId: record.user_id,
+    grantedProjectUuids: record.granted_project_uuids,
+    scopes: record.scopes,
+    familyId: crypto.randomUUID(),
+    parentId: null,
+  });
+
+  return { ok: true, tokens };
+}
+
+export async function rotateRefreshToken(input: {
+  refreshToken: string;
+  clientUuid: string;
+}): Promise<GrantResult> {
+  const rows = await db
+    .select()
+    .from(oauthRefreshTokensTable)
+    .where(eq(oauthRefreshTokensTable.token_hash, hashCredential(input.refreshToken)))
+    .limit(1);
+
+  const record = rows[0];
+  if (!record) {
+    return { ok: false, error: 'invalid_grant', description: 'Unknown refresh token' };
+  }
+  if (record.client_uuid !== input.clientUuid) {
+    return { ok: false, error: 'invalid_grant', description: 'Token was issued to another client' };
+  }
+
+  const classification = classifyRefreshFailure(record);
+  if (classification === 'reuse') {
+    await revokeFamily(record.family_id, 'refresh_token_reuse_detected');
+    return {
+      ok: false,
+      error: 'invalid_grant',
+      description: 'Refresh token reuse detected; all tokens for this authorization were revoked',
+    };
+  }
+  if (classification !== 'ok') {
+    return { ok: false, error: 'invalid_grant', description: `Refresh token ${classification}` };
+  }
+
+  await db
+    .update(oauthRefreshTokensTable)
+    .set({ rotated_at: new Date() })
+    .where(eq(oauthRefreshTokensTable.uuid, record.uuid));
+
+  const tokens = await issueTokenPair({
+    clientUuid: record.client_uuid,
+    userId: record.user_id,
+    grantedProjectUuids: record.granted_project_uuids,
+    scopes: record.scopes,
+    familyId: record.family_id,
+    parentId: record.uuid,
+  });
+
+  return { ok: true, tokens };
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `pnpm test tests/oauth/grants.test.ts`
+Expected: PASS, 5 tests.
+
+- [ ] **Step 5: Write the token endpoint**
+
+```ts
+// app/api/oauth/token/route.ts
+import { and, eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { db } from '@/db';
+import { oauthClientsTable } from '@/db/schema';
+import { redeemAuthorizationCode, rotateRefreshToken } from '@/lib/oauth/grants';
+import { connectorBaseUrl } from '@/lib/oauth/metadata';
+
+// RFC 6749 s4.1.3: this endpoint takes application/x-www-form-urlencoded.
+// Next.js route handlers default to JSON parsing, which returns 415 here and
+// looks like an outage rather than a content-type bug. req.formData() is the
+// correct reader; DCR at /api/oauth/register uses req.json() instead.
+//
+// Anthropic allows 10 s for a token request and 30 s for a refresh. Do not put
+// slow work in front of the response.
+function oauthError(error: string, description: string, status = 400) {
+  return NextResponse.json(
+    { error, error_description: description },
+    { status, headers: { 'Cache-Control': 'no-store', Pragma: 'no-cache' } }
+  );
+}
+
+export async function POST(req: NextRequest) {
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return oauthError('invalid_request', 'Body must be application/x-www-form-urlencoded');
+  }
+
+  const grantType = String(form.get('grant_type') ?? '');
+  const clientId = String(form.get('client_id') ?? '');
+  if (!clientId) return oauthError('invalid_client', 'client_id is required');
+
+  const clients = await db
+    .select()
+    .from(oauthClientsTable)
+    .where(
+      and(eq(oauthClientsTable.client_id, clientId), eq(oauthClientsTable.issuer, connectorBaseUrl()))
+    )
+    .limit(1);
+  const client = clients[0];
+  if (!client) return oauthError('invalid_client', 'Unknown client', 401);
+
+  if (grantType === 'authorization_code') {
+    const result = await redeemAuthorizationCode({
+      code: String(form.get('code') ?? ''),
+      clientUuid: client.uuid,
+      redirectUri: String(form.get('redirect_uri') ?? ''),
+      codeVerifier: String(form.get('code_verifier') ?? ''),
+    });
+    if (!result.ok) return oauthError(result.error, result.description);
+    return NextResponse.json(result.tokens, {
+      headers: { 'Cache-Control': 'no-store', Pragma: 'no-cache' },
+    });
+  }
+
+  if (grantType === 'refresh_token') {
+    const result = await rotateRefreshToken({
+      refreshToken: String(form.get('refresh_token') ?? ''),
+      clientUuid: client.uuid,
+    });
+    // Must be invalid_grant, not a custom code — Claude's refresh handling keys
+    // off RFC 6749 codes and breaks on anything else.
+    if (!result.ok) return oauthError(result.error, result.description);
+    return NextResponse.json(result.tokens, {
+      headers: { 'Cache-Control': 'no-store', Pragma: 'no-cache' },
+    });
+  }
+
+  return oauthError('unsupported_grant_type', `Unsupported grant_type "${grantType}"`);
+}
+```
+
+- [ ] **Step 6: Write the revocation endpoint**
+
+```ts
+// app/api/oauth/revoke/route.ts
+import { eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { db } from '@/db';
+import { oauthAccessTokensTable, oauthRefreshTokensTable } from '@/db/schema';
+import { revokeFamily } from '@/lib/oauth/grants';
+import { hashCredential } from '@/lib/oauth/tokens';
+
+// RFC 7009. Always returns 200, even for an unknown token: telling a caller
+// whether a token existed is an oracle.
+export async function POST(req: NextRequest) {
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return NextResponse.json({}, { status: 200 });
+  }
+
+  const token = String(form.get('token') ?? '');
+  if (!token) return NextResponse.json({}, { status: 200 });
+  const hash = hashCredential(token);
+
+  const refresh = await db
+    .select()
+    .from(oauthRefreshTokensTable)
+    .where(eq(oauthRefreshTokensTable.token_hash, hash))
+    .limit(1);
+
+  if (refresh[0]) {
+    // Revoking one refresh token revokes the whole family: the user asked for
+    // this connection to end, not for one link in the chain to break.
+    await revokeFamily(refresh[0].family_id, 'user_revoked');
+  } else {
+    await db
+      .update(oauthAccessTokensTable)
+      .set({ revoked_at: new Date() })
+      .where(eq(oauthAccessTokensTable.token_hash, hash));
+  }
+
+  return NextResponse.json({}, { status: 200 });
+}
+```
+
+- [ ] **Step 7: Verify the body parser accepts form encoding**
+
+This is the check that catches the 415. With the server running:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:12005/api/oauth/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=authorization_code&client_id=unknown&code=x&redirect_uri=y&code_verifier=z'
+```
+
+Expected: **401** (unknown client). A **415** means the handler is still parsing JSON — fix before continuing, because every Claude connection would fail here.
+
+- [ ] **Step 8: Commit**
+
+```bash
+pnpm test tests/oauth/ && pnpm lint
+git add lib/oauth/grants.ts app/api/oauth/token app/api/oauth/revoke tests/oauth/grants.test.ts
+git commit -m "feat(oauth): add token endpoint with refresh rotation and reuse detection
+
+Rotation alone only makes theft detectable. Reuse detection is what gives it
+teeth: presenting an already-rotated token proves a copy exists somewhere, and
+since the attacker cannot be told apart from the legitimate client, the whole
+token family is revoked.
+
+classifyRefreshFailure checks reuse BEFORE expiry deliberately — if expiry
+masked the reuse signal, an attacker holding a stolen token could wait for it to
+lapse and escape family revocation.
+
+The endpoint reads req.formData(), not req.json(): RFC 6749 s4.1.3 mandates
+form-urlencoded here while RFC 7591 mandates JSON for registration, and the
+Next.js default produces a 415 that looks like an outage. Failures return
+invalid_grant rather than custom codes, which Claude's refresh handling requires.
+
+Revocation always returns 200 — reporting whether a token existed is an oracle —
+and revoking one refresh token kills its family, because the user asked for the
+connection to end."
+```
+
+---
+
+## Task A10: Bearer authentication for the MCP route
+
+**Files:**
+- Create: `lib/oauth/authenticate.ts`
+- Test: `tests/oauth/authenticate.test.ts`
+
+**Interfaces:**
+- Consumes: `oauthAccessTokensTable`, `hashCredential`, `hasScope`.
+- Produces:
+  - `interface ConnectorIdentity { userId: string; grantedProjectUuids: string[]; defaultProjectUuid: string | null; scopes: Scope[]; tokenUuid: string }`
+  - `function buildUnauthorizedResponse(resourceMetadataUrl: string, scopes?: Scope[]): Response`
+  - `async function authenticateConnectorRequest(req: Request): Promise<{ ok: true; identity: ConnectorIdentity } | { ok: false; response: Response }>`
+
+- [ ] **Step 1: Write the failing test**
+
+The 401 shape gets the most coverage because getting it wrong means Claude never discovers the authorization server at all.
+
+```ts
+// tests/oauth/authenticate.test.ts
+import { describe, expect, it } from 'vitest';
+import { buildUnauthorizedResponse } from '@/lib/oauth/authenticate';
+
+const METADATA_URL = 'https://plugged.in/.well-known/oauth-protected-resource';
+
+describe('the 401 challenge', () => {
+  it('uses status 401 — Claude ignores WWW-Authenticate on a 200', () => {
+    expect(buildUnauthorizedResponse(METADATA_URL).status).toBe(401);
+  });
+
+  it('points at the protected resource metadata', () => {
+    const header = buildUnauthorizedResponse(METADATA_URL).headers.get('WWW-Authenticate');
+    expect(header).toContain('Bearer');
+    expect(header).toContain(`resource_metadata="${METADATA_URL}"`);
+  });
+
+  it('includes requested scopes so Claude asks for the right ones', () => {
+    const header = buildUnauthorizedResponse(METADATA_URL, [
+      'library:read',
+      'offline_access',
+    ])!.headers.get('WWW-Authenticate');
+    expect(header).toContain('scope="library:read offline_access"');
+  });
+
+  it('omits the scope parameter when none are given', () => {
+    const header = buildUnauthorizedResponse(METADATA_URL).headers.get('WWW-Authenticate');
+    expect(header).not.toContain('scope=');
+  });
+
+  it('is not cached', () => {
+    expect(buildUnauthorizedResponse(METADATA_URL).headers.get('Cache-Control')).toBe('no-store');
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `pnpm test tests/oauth/authenticate.test.ts`
+Expected: FAIL — cannot resolve `@/lib/oauth/authenticate`.
+
+- [ ] **Step 3: Write the implementation**
+
+```ts
+// lib/oauth/authenticate.ts
+/**
+ * Bearer authentication for the MCP endpoint.
+ *
+ * The 401 is the entire discovery handshake. Anthropic's documentation is
+ * explicit: "Claude does not honor a WWW-Authenticate header on a 200
+ * response." Returning a tool-level error instead of a 401 is the most common
+ * way this integration silently fails — Claude never learns where the
+ * authorization server is and the connection simply cannot be established.
+ */
+
+import { eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { oauthAccessTokensTable } from '@/db/schema';
+
+import type { Scope } from './scopes';
+import { hashCredential } from './tokens';
+
+export interface ConnectorIdentity {
+  userId: string;
+  grantedProjectUuids: string[];
+  defaultProjectUuid: string | null;
+  scopes: Scope[];
+  tokenUuid: string;
+}
+
+export function buildUnauthorizedResponse(
+  resourceMetadataUrl: string,
+  scopes?: Scope[]
+): Response {
+  const parts = [`Bearer resource_metadata="${resourceMetadataUrl}"`];
+  if (scopes && scopes.length > 0) parts.push(`scope="${scopes.join(' ')}"`);
+
+  return new Response(
+    JSON.stringify({ error: 'unauthorized', error_description: 'Authentication required' }),
+    {
+      status: 401,
+      headers: {
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': parts.join(', '),
+        'Cache-Control': 'no-store',
+      },
+    }
+  );
+}
+
+export async function authenticateConnectorRequest(
+  req: Request
+): Promise<{ ok: true; identity: ConnectorIdentity } | { ok: false; response: Response }> {
+  const base = process.env.NEXTAUTH_URL!.replace(/\/+$/, '');
+  const metadataUrl = `${base}/.well-known/oauth-protected-resource`;
+
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) {
+    return { ok: false, response: buildUnauthorizedResponse(metadataUrl) };
+  }
+
+  const token = header.slice(7).trim();
+  const rows = await db
+    .select()
+    .from(oauthAccessTokensTable)
+    .where(eq(oauthAccessTokensTable.token_hash, hashCredential(token)))
+    .limit(1);
+
+  const record = rows[0];
+  if (!record || record.revoked_at || record.expires_at.getTime() <= Date.now()) {
+    return { ok: false, response: buildUnauthorizedResponse(metadataUrl) };
+  }
+
+  // Fire-and-forget: last_used_at is telemetry, and awaiting it would put a
+  // write on the critical path of every tool call.
+  void db
+    .update(oauthAccessTokensTable)
+    .set({ last_used_at: new Date() })
+    .where(eq(oauthAccessTokensTable.uuid, record.uuid));
+
+  return {
+    ok: true,
+    identity: {
+      userId: record.user_id,
+      grantedProjectUuids: record.granted_project_uuids,
+      defaultProjectUuid: record.default_project_uuid,
+      scopes: record.scopes as Scope[],
+      tokenUuid: record.uuid,
+    },
+  };
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `pnpm test tests/oauth/authenticate.test.ts`
+Expected: PASS, 5 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+pnpm test tests/oauth/ && pnpm lint
+git add lib/oauth/authenticate.ts tests/oauth/authenticate.test.ts
+git commit -m "feat(oauth): add bearer authentication and the 401 discovery challenge
+
+The 401 is the whole discovery handshake. Anthropic is explicit that Claude does
+not honor WWW-Authenticate on a 200, so returning a tool-level error instead of
+a 401 means Claude never learns where the authorization server is — the most
+common silent failure in this integration. The response shape is tested for that
+reason.
+
+last_used_at is written fire-and-forget: it is telemetry, and awaiting it would
+put a database write on the critical path of every tool call."
+```
+
+- [ ] **Step 6: Phase A checkpoint**
+
+Run the full suite and compare against the baseline recorded at the start:
+
+```bash
+pnpm test 2>&1 | grep -E "Test Files|Tests "
+pnpm lint
+pnpm build
+```
+
+Expected: the pre-existing 42 failed files / 204 failed tests are unchanged, plus roughly 51 new passing tests across `tests/oauth/`. `pnpm build` succeeds. If the failure counts moved, find out why before starting Phase B.
+
+---
+
+Phases B–D (shared protocol package, the stateless MCP route, the curated tool surface with `record_finding`, and the privacy/compliance work) are written as a separate section of this plan. Phase A is complete and independently shippable: the authorization server works, is testable end to end with curl, and is not gated on the pending `mcp-review@anthropic.com` answer.
