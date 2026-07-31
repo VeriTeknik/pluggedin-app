@@ -18,7 +18,7 @@
 - **All user-facing text goes through `useTranslation`** (`react-i18next`, locales in `public/locales/{en,tr,zh,hi,ja,nl}`). The consent screen is user-facing.
 - **Server actions return `{ success: true, data }` or `{ success: false, error }`.**
 - **Never create server-specific implementations.** Generic and extensible only.
-- **Test baseline:** `main` currently fails **42 test files / 204 tests**, and `pnpm lint` reports pre-existing errors. Judge a task by whether it *moves* those counts, not by whether the suite is green. Record the count before you start.
+- **Test baseline:** measured on this branch's base — **42 failed files / 57 passed (99), 204 failed / 1147 passed / 6 skipped (1357)** — and `pnpm lint` reports pre-existing errors. Judge a task by whether it *moves* those counts, not by whether the suite is green. (An earlier reading of 1079 passed predates the SSRF advisory work, which added ~68 tests.)
 - **Commands:** `pnpm test` (vitest run), `pnpm lint`, `pnpm build`, `pnpm db:generate`, `pnpm db:migrate`.
 
 ### External requirements — quoted, not paraphrased
