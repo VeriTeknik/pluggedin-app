@@ -1,6 +1,15 @@
 import crypto from 'crypto';
 
+import { eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { oauthPkceStatesTable } from '@/db/schema';
 import { log } from '@/lib/observability/logger';
+import {
+  recordCodeInjectionAttempt,
+  recordIntegrityViolation,
+  recordPkceValidation,
+} from '@/lib/observability/oauth-metrics';
 
 /**
  * OAuth 2.1 Best Practice: State Nonce Binding with HMAC
@@ -37,17 +46,20 @@ export function generateIntegrityHash(params: {
     .digest('hex');
 }
 
-/**
- * Verify integrity hash for PKCE state
- * Returns true if hash is valid, false otherwise
- */
-export function verifyIntegrityHash(pkceState: {
+/** Exactly the fields the integrity hash commits to, plus the hash itself. */
+export interface HashedPkceFields {
   state: string;
   server_uuid: string;
   user_id: string;
   code_verifier: string;
   integrity_hash: string;
-}): boolean {
+}
+
+/**
+ * Verify integrity hash for PKCE state
+ * Returns true if hash is valid, false otherwise
+ */
+export function verifyIntegrityHash(pkceState: HashedPkceFields): boolean {
   try {
     const expected = generateIntegrityHash({
       state: pkceState.state,
@@ -120,13 +132,8 @@ export function generateCodeChallenge(verifier: string): string {
  */
 export type PkceValidationFailure = 'not_found' | 'user_mismatch' | 'integrity' | 'expired';
 
-export interface PkceStateRow {
-  state: string;
-  server_uuid: string;
-  user_id: string;
-  code_verifier: string;
+export interface PkceStateRow extends HashedPkceFields {
   redirect_uri: string;
-  integrity_hash: string;
   expires_at: Date;
 }
 
@@ -136,12 +143,6 @@ export async function validatePkceState(
 ): Promise<
   { ok: true; state: PkceStateRow } | { ok: false; reason: PkceValidationFailure }
 > {
-  const { db } = await import('@/db');
-  const { oauthPkceStatesTable } = await import('@/db/schema');
-  const { eq } = await import('drizzle-orm');
-  const { recordCodeInjectionAttempt, recordIntegrityViolation, recordPkceValidation } =
-    await import('@/lib/observability/oauth-metrics');
-
   const stored = await db.query.oauthPkceStatesTable.findFirst({
     where: eq(oauthPkceStatesTable.state, state),
   });
@@ -151,24 +152,29 @@ export async function validatePkceState(
     return { ok: false, reason: 'not_found' };
   }
 
+  // The column is nullable but the guard above has just proven this row's
+  // user_id is set. Rebuilding the value carries that proof into the type,
+  // where a cast would only have hidden the nullability from the compiler.
+  const row: PkceStateRow = { ...stored, user_id: stored.user_id };
+
   // Authorization code injection: the state exists, but it belongs to somebody
   // else. Looking it up by state alone and comparing here — rather than
   // filtering by user_id in the query — is deliberate: it is what lets the
   // mismatch be detected and recorded instead of silently looking like a
   // missing state.
-  if (stored.user_id !== userId) {
+  if (row.user_id !== userId) {
     // log.security is the security-event channel; it takes (action, userId,
     // metadata) rather than a message, so the shape differs from log.error.
     log.security('pkce_state_user_mismatch', userId, {
       state,
-      expectedUser: stored.user_id,
+      expectedUser: row.user_id,
     });
     recordCodeInjectionAttempt();
     recordPkceValidation(false, 'user_mismatch');
     return { ok: false, reason: 'user_mismatch' };
   }
 
-  if (!verifyIntegrityHash(stored as Parameters<typeof verifyIntegrityHash>[0])) {
+  if (!verifyIntegrityHash(row)) {
     log.security('pkce_state_integrity_violation', userId, { state });
     recordIntegrityViolation('hash_mismatch');
     recordPkceValidation(false, 'integrity');
@@ -176,7 +182,7 @@ export async function validatePkceState(
     return { ok: false, reason: 'integrity' };
   }
 
-  if (stored.expires_at < new Date()) {
+  if (row.expires_at < new Date()) {
     log.security('pkce_state_expired', userId, { state });
     recordPkceValidation(false, 'expired');
     await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
@@ -184,5 +190,5 @@ export async function validatePkceState(
   }
 
   recordPkceValidation(true);
-  return { ok: true, state: stored as PkceStateRow };
+  return { ok: true, state: row };
 }
