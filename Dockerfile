@@ -119,9 +119,13 @@ COPY --from=builder --chown=app:app /app/public ./public
 
 # Drizzle migrations and the reindex-rag script live outside of the
 # standalone bundle but inside the image so we can:
-#   docker compose run --rm pluggedin-app pnpm db:migrate
-#   docker compose run --rm pluggedin-app pnpm reindex:rag
+#   docker compose run --rm pluggedin-app node_modules/.bin/drizzle-kit migrate
+#   docker compose run --rm pluggedin-app node_modules/.bin/tsx scripts/reindex-rag.ts
 # without rebuilding the image.
+#
+# Invoke the binaries directly rather than through `pnpm <script>`: a runtime
+# image has no reason to carry a package manager, and going through one added
+# a dependency that silently did not exist (see the symlink note below).
 COPY --from=builder --chown=app:app /app/drizzle ./drizzle
 COPY --from=builder --chown=app:app /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder --chown=app:app /app/db ./db
@@ -130,9 +134,28 @@ COPY --from=builder --chown=app:app /app/scripts ./scripts
 COPY --from=builder --chown=app:app /app/package.json ./package.json
 COPY --from=builder --chown=app:app /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
-COPY --from=builder /root/.local/share/pnpm /usr/local/share/pnpm
-RUN ln -s /usr/local/share/pnpm/pnpm /usr/local/bin/pnpm \
- && ln -s /usr/local/share/pnpm/tsx  /usr/local/bin/tsx
+# `pnpm` and `tsx` on PATH, pointing at binaries that actually exist.
+#
+# This previously copied /root/.local/share/pnpm and symlinked pnpm+tsx out
+# of it. That directory only ever contained pnpm's content-addressable
+# `store/` — corepack keeps the pnpm shim elsewhere — so both symlinks
+# dangled. `ln -s` does not validate its target, so the build passed and the
+# breakage only surfaced when something tried to exec them:
+#
+#   [FATAL tini (7)] exec pnpm failed: No such file or directory
+#
+# which is precisely what `pnpm db:migrate` hit mid-cutover. tsx and
+# drizzle-kit are real executables under /app/node_modules/.bin (both kept
+# out of the devDependency prune above for exactly this reason), so link
+# there instead. The `test -x` guard makes a future regression fail the
+# build rather than ship a dangling link.
+RUN set -eux; \
+    test -x /app/node_modules/.bin/tsx; \
+    test -x /app/node_modules/.bin/drizzle-kit; \
+    ln -sf /app/node_modules/.bin/tsx         /usr/local/bin/tsx; \
+    ln -sf /app/node_modules/.bin/drizzle-kit /usr/local/bin/drizzle-kit; \
+    tsx --version; \
+    drizzle-kit --version
 
 # Directories the app writes into. Bind-mounts will override these at
 # runtime; chown'ing here means the container still works on a fresh

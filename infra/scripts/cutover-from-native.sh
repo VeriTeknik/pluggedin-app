@@ -92,12 +92,22 @@ LATEST_FULL="${BACKUP_DIR}/cutover-full.dump"
 reencrypt_after_restore() {
   local mode="$1"   # --apply or --verify
 
+  # deploy.sh writes this file with `$` doubled, because Compose interpolates
+  # env_file contents. We pass these values straight to `docker run -e`,
+  # which does not interpolate, so the escaping has to be undone first.
+  # Today's key and password are base64/url-safe and contain no `$`, so this
+  # is a no-op — but a rotation could produce one at any time, and the
+  # failure would be a silently wrong decryption key.
+  read_secret() {
+    grep -E "^$1=" "$SECRETS_FILE" | head -1 | cut -d= -f2- | sed 's/\$\$/$/g'
+  }
+
   local new_key
-  new_key=$(grep -E '^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' "$SECRETS_FILE" | cut -d= -f2-)
+  new_key=$(read_secret NEXT_SERVER_ACTIONS_ENCRYPTION_KEY)
   [ -n "$new_key" ] || { echo "cutover: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY missing from $SECRETS_FILE" >&2; exit 1; }
 
   local db_url
-  db_url=$(grep -E '^DATABASE_URL=' "$SECRETS_FILE" | cut -d= -f2-)
+  db_url=$(read_secret DATABASE_URL)
   [ -n "$db_url" ] || { echo "cutover: DATABASE_URL missing from $SECRETS_FILE" >&2; exit 1; }
 
   # Run inside the app image: it carries node and the app's node_modules
@@ -143,7 +153,11 @@ if [ "$DUMP" -eq 1 ]; then
     < "$LATEST_FULL"
 
   echo "[cutover] running drizzle migrations against the container"
-  "${COMPOSE[@]}" run --rm pluggedin-app pnpm db:migrate
+  # Invoke drizzle-kit directly. `pnpm db:migrate` shipped a dangling
+  # symlink for years and died mid-cutover with
+  # "[FATAL tini (7)] exec pnpm failed"; a runtime image should not
+  # need a package manager to run a migration.
+  "${COMPOSE[@]}" run --rm pluggedin-app node_modules/.bin/drizzle-kit migrate
 
   rotate_data_key
 
@@ -179,7 +193,11 @@ if [ "$SWITCH" -eq 1 ]; then
     < "${BACKUP_DIR}/cutover-final.dump"
 
   echo "[cutover] running drizzle migrations once more (idempotent)"
-  "${COMPOSE[@]}" run --rm pluggedin-app pnpm db:migrate
+  # Invoke drizzle-kit directly. `pnpm db:migrate` shipped a dangling
+  # symlink for years and died mid-cutover with
+  # "[FATAL tini (7)] exec pnpm failed"; a runtime image should not
+  # need a package manager to run a migration.
+  "${COMPOSE[@]}" run --rm pluggedin-app node_modules/.bin/drizzle-kit migrate
 
   rotate_data_key
 
