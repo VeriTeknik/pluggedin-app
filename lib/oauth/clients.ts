@@ -97,11 +97,21 @@ export async function resolveClient(
     .limit(1);
 
   const cached = existing[0];
-  const fresh =
+
+  // A DCR registration carries an expiry precisely so the table cannot grow
+  // without bound; returning an expired one would make that TTL decorative.
+  // CIMD rows have no expiry — the document is re-fetched instead when the
+  // cache goes stale.
+  const dcrExpired =
+    cached?.registration_type === 'dcr' &&
+    cached.expires_at !== null &&
+    cached.expires_at.getTime() <= Date.now();
+
+  const cimdFresh =
     cached?.metadata_fetched_at &&
     Date.now() - cached.metadata_fetched_at.getTime() < CIMD_CACHE_TTL_MS;
 
-  if (cached && (cached.registration_type === 'dcr' || fresh)) {
+  if (cached && !dcrExpired && (cached.registration_type === 'dcr' || cimdFresh)) {
     return {
       uuid: cached.uuid,
       client_id: cached.client_id,
@@ -109,6 +119,11 @@ export async function resolveClient(
       registration_type: cached.registration_type as 'cimd' | 'dcr',
     };
   }
+
+  // An expired DCR client cannot be refreshed — there is no document to
+  // re-fetch, only a registration that has lapsed. The caller must register
+  // again.
+  if (dcrExpired) return undefined;
 
   if (!isCimdClientId(clientId)) return undefined;
 
