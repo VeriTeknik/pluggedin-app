@@ -1,0 +1,23 @@
+{
+  "consent": {
+    "title": "将 {{client}} 连接到 Plugged.in",
+    "redirectTo": "您将返回 {{host}}",
+    "loopbackWarning": "此客户端在您自己的计算机上运行。请仅在您自己启动它时继续。",
+    "hubsTitle": "此连接可以访问哪些 Hub？",
+    "scopesTitle": "它将能够执行的操作",
+    "approve": "连接",
+    "deny": "取消",
+    "scope": {
+      "library:read": "读取您的文档并搜索您的知识库",
+      "library:write": "创建和更新文档",
+      "memory:read": "读取您的记忆",
+      "memory:write": "将从您的对话中提取的观察记录到您的记忆中",
+      "clipboard:read": "读取您的剪贴板",
+      "clipboard:write": "写入您的剪贴板",
+      "tasks:read": "读取您的任务",
+      "tasks:write": "创建和完成任务",
+      "hubs:read": "查看您拥有哪些 Hub",
+      "offline_access": "保持连接而不再询问您"
+    }
+  }
+}

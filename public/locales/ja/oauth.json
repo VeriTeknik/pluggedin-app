@@ -1,0 +1,23 @@
+{
+  "consent": {
+    "title": "{{client}} を Plugged.in に接続",
+    "redirectTo": "{{host}} に戻ります",
+    "loopbackWarning": "このクライアントはご自身のコンピューター上で動作しています。ご自身で起動した場合のみ続行してください。",
+    "hubsTitle": "この接続はどの Hub にアクセスできますか？",
+    "scopesTitle": "実行できるようになること",
+    "approve": "接続",
+    "deny": "キャンセル",
+    "scope": {
+      "library:read": "ドキュメントの読み取りとナレッジベースの検索",
+      "library:write": "ドキュメントの作成と更新",
+      "memory:read": "メモリの読み取り",
+      "memory:write": "会話から抽出した観察内容をメモリに記録",
+      "clipboard:read": "クリップボードの読み取り",
+      "clipboard:write": "クリップボードへの書き込み",
+      "tasks:read": "タスクの読み取り",
+      "tasks:write": "タスクの作成と完了",
+      "hubs:read": "所有している Hub の確認",
+      "offline_access": "再度確認せずに接続を維持"
+    }
+  }
+}

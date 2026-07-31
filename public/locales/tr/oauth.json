@@ -1,0 +1,23 @@
+{
+  "consent": {
+    "title": "{{client}} uygulamasını Plugged.in'e bağla",
+    "redirectTo": "{{host}} adresine geri döneceksiniz",
+    "loopbackWarning": "Bu istemci kendi bilgisayarınızda çalışıyor. Yalnızca siz başlattıysanız devam edin.",
+    "hubsTitle": "Bu bağlantı hangi Hub'lara erişebilsin?",
+    "scopesTitle": "Neler yapabilecek",
+    "approve": "Bağlan",
+    "deny": "Vazgeç",
+    "scope": {
+      "library:read": "Belgelerinizi okuma ve bilgi tabanınızda arama",
+      "library:write": "Belge oluşturma ve güncelleme",
+      "memory:read": "Hafızanızı okuma",
+      "memory:write": "Konuşmalarınızdan çıkarılan gözlemleri hafızanıza kaydetme",
+      "clipboard:read": "Panonuzu okuma",
+      "clipboard:write": "Panonuza yazma",
+      "tasks:read": "Görevlerinizi okuma",
+      "tasks:write": "Görev oluşturma ve tamamlama",
+      "hubs:read": "Hangi Hub'larınız olduğunu görme",
+      "offline_access": "Tekrar sormadan bağlı kalma"
+    }
+  }
+}
