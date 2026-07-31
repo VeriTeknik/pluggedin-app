@@ -41,6 +41,31 @@ http:
         stsIncludeSubdomains: true
         stsPreload: true
 
+    # nginx → `gzip on; gzip_vary on; gzip_min_length 10240;
+    #          gzip_proxied any; gzip_types <list>;`
+    #
+    # This had no Traefik equivalent at all, so every response would have
+    # gone out uncompressed after cutover — a silent bandwidth and TTFB
+    # regression on exactly the text assets that compress best.
+    #
+    # includedContentTypes mirrors nginx's gzip_types verbatim (an empty
+    # list would compress everything, including already-compressed images).
+    # gzip_vary has no switch: Traefik always sets `Vary: Accept-Encoding`.
+    # Deliberately NOT attached to the SSE router — compressing an event
+    # stream defeats incremental delivery.
+    compress:
+      compress:
+        minResponseBodyBytes: 10240
+        includedContentTypes:
+          - text/plain
+          - text/css
+          - text/xml
+          - text/javascript
+          - application/x-javascript
+          - application/xml
+          - application/javascript
+          - application/json
+
     # nginx → `location /_next/static/ { expires 365d; add_header
     # Cache-Control "public, max-age=31536000, immutable"; }`.
     # Next standalone already serves these from /app/.next/static; we just
@@ -94,9 +119,17 @@ http:
         average: 100
         burst: 200
         period: 1s
-        sourceCriterion:
-          ipStrategy:
-            depth: 1
+        # No sourceCriterion: Traefik then keys the limiter on the real
+        # connection RemoteAddr.
+        #
+        # This previously set `ipStrategy.depth: 1`, which selects the
+        # right-most IP from X-Forwarded-For. Traefik is the edge here —
+        # nothing sits in front of it — so incoming X-Forwarded-For is
+        # entirely attacker-supplied, and middlewares evaluate it before
+        # Traefik appends the real client IP on the way to the backend.
+        # A client sending a different X-Forwarded-For per request would
+        # therefore land in a fresh bucket every time and never be limited.
+        # depth is only correct behind a trusted proxy, which we do not have.
 
     # Basic auth for the Traefik dashboard. Credentials live at
     # /run/sops/traefik-users (htpasswd format), extracted from SOPS by
@@ -141,6 +174,13 @@ http:
         - websecure
       service: api@internal
       middlewares:
+        # dashboard-auth alone left the only credential on the box exposed to
+        # unlimited guessing: traefik.plugged.in resolves publicly and Traefik
+        # answers on :443, so /api/rawdata — which dumps the full routing
+        # configuration — sat behind a single bcrypt password with no attempt
+        # limiting at all. Every other router already carried rate-limit;
+        # this one was the exception, which is exactly backwards.
+        - rate-limit
         - dashboard-auth
         - security-headers
       tls:

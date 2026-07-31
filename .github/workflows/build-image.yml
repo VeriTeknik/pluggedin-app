@@ -223,8 +223,13 @@ jobs:
       - name: Validate Traefik static config
         run: |
           set -euo pipefail
+          # Must match the image infra/docker-compose.yml pins. Traefik
+          # pins its Docker client to API 1.24 through v3.5, which Docker
+          # Engine 29 rejects outright, so the stack runs v3.7 — validating
+          # against v3.2 here would be checking a version we deliberately
+          # cannot run.
           docker run --rm -v "$PWD/infra/traefik:/etc/traefik:ro" \
-            traefik:v3.2 traefik --configfile=/etc/traefik/traefik.yml --help \
+            traefik:v3.7 traefik --configfile=/etc/traefik/traefik.yml --help \
             > /dev/null
 
       - name: Lint Ofelia config (basic INI parse)

@@ -121,15 +121,136 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 
 ### Phase 0 — Prep (no production impact, ~1 day calendar)
 
-- [ ] Drop DNS TTL on `plugged.in` A record to 60s (currently likely 3600+). Wait one previous-TTL window before any cutover.
-- [ ] Generate age key on this host: `age-keygen -o /etc/sops/age/keys.txt`, `chmod 400`, back up the **private key** to offline storage (1Password, USB, whatever ops already uses).
-- [ ] Take a verified backup of the external Postgres:
-      `pg_dump -Fc -h 185.96.168.246 -U postgres -d v220_prod -f /tmp/v220_prod-prepatch.dump`
-      Restore into a throwaway container to confirm it's not corrupt before we trust it.
+Executed 2026-07-31. Production was untouched throughout; the native stack
+(nginx + `pluggedin.service` + external PG) stayed live and serving.
+
+- [x] Install tooling. Docker Engine 29.5.0 and Compose v5.1.3 were already
+      present. `sops` 3.9.4 and `age` 1.2.1 installed to `~/.local/bin`
+      (no root needed). **Still to do with sudo:** copy both binaries to
+      `/usr/local/bin` so `deploy.sh` finds them under a root shell.
+- [x] Generate age keys. Deploy + offsite-backup keypairs generated into
+      `~/.config/sops/age/` (`0400`). Public recipients committed to
+      `infra/sops/.sops.yaml`.
+      **Still to do with sudo:** `install -m400 -o root -g root
+      ~/.config/sops/age/keys.txt /etc/sops/age/keys.txt`, then move
+      `backup-key.txt` to offline storage and shred the on-host copy.
+- [x] Populate the real `infra/sops/secrets.env.sops` — 91 keys, generated
+      from the live workspace `.env` and verified to round-trip
+      byte-identically through the app's own dotenv parser. Both the deploy
+      and backup keys decrypt it.
+- [x] Verified backup of the external Postgres: `pg_dump -Fc` →
+      `/home/pluggedin/backups/v220_prod-phase0-<ts>.dump` (17 MiB, 755
+      objects). Restored into a throwaway `pgvector/pgvector:pg16`
+      container with `infra/postgres/init.sql` applied: 0 errors, 84 tables,
+      **124,437 rows, row counts identical to source on every table**.
+      The database is 112 MiB — an order of magnitude under the <5 GiB the
+      cutover was sized against, so the Phase-5 window should be minutes.
 - [ ] Snapshot `/home/pluggedin/zvec-data`, `/home/pluggedin/uploads`, `/var/mcp-packages` (`/var/mcp-packages` will not be copied, but verify it's still readable). Tarball goes alongside the PG dump.
-- [ ] Install Docker Engine ≥ 24, Docker Compose plugin (already present per survey), `sops` ≥ 3.8, `age` ≥ 1.1.
+- [ ] Drop DNS TTL on `plugged.in` A record to 60s (currently likely 3600+). Wait one previous-TTL window before any cutover.
 
 **Rollback:** none needed; this phase is read-only on prod.
+
+#### Secret rotation (2026-07-31)
+
+The encrypted blob is committed to a **public** repo. That is the intended
+SOPS design and age/X25519 is sound, but the ciphertext is public and
+permanent, so everything the app generates itself was rotated before the
+first push — the values in git have never protected anything.
+
+**Rotated in `secrets.env.sops`:**
+
+| Secret | Consequence of the rotation |
+|---|---|
+| `NEXTAUTH_SECRET` + `AUTH_SECRET` | Every existing session is invalidated — all users are logged out at cutover. Kept byte-identical to each other: NextAuth v4 reads the first, v5 the second, and a split value silently rejects tokens signed by the other. |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | **Requires the data migration below.** Despite the name this is not a Next.js internal — `lib/encryption.ts` derives the AES-256-GCM key for MCP server configs and OAuth tokens from it. |
+| `CRON_SECRET` | Ofelia expands `$CRON_SECRET` inside `pluggedin-app`, so the containerised jobs pick it up automatically. The **host crontab hardcodes the old value** and will start getting 401s the moment the app runs with the new one — see the ordering note in Phase 5. |
+| `UNSUBSCRIBE_TOKEN_SECRET` | Unsubscribe links in already-sent emails stop validating. Regenerated at 48 bytes (64 chars), which also clears the "≥64 chars recommended for production" warning in `lib/env-validation.ts` that the old 44-char value tripped. |
+| `ADMIN_MIGRATION_SECRET` | None; only gates the admin migration endpoint. |
+| `REGISTRY_INTERNAL_API_KEY` | Shared with the registry service at `registry.plugged.in`. **Both sides must be updated together** or the registry integration fails closed. |
+| `POSTGRES_PASSWORD` | New credential for the containerised PG; never used anywhere before. |
+
+**Dropped:** `API_KEY_ENCRYPTION_SECRET` — referenced nowhere in the repo
+(grep across ts/tsx/js/mjs/json, excluding `node_modules` and `.next`).
+Carrying a dead secret into a public blob is pure downside.
+
+**Deferred to a later rotation** (ops decision, 2026-07-31) — these are
+third-party credentials that can only be reissued from the provider's
+console. They keep their current live values in the committed blob:
+
+- Model providers: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`,
+  `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
+- OAuth apps (rotating the secret requires updating the provider console;
+  brief sign-in outage): `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_SECRET`
+- GitHub tokens: `GITHUB_TOKEN`, `GITHUB_PAT`, `GITHUB_PACKAGES_TOKEN`
+- Other services: `SMITHERY_API_KEY`, `PAP_COLLECTOR_API_KEY`,
+  `EMAIL_SERVER_PASSWORD`, `K8S_SERVICE_ACCOUNT_TOKEN`
+
+One property of deferring is worth stating plainly, because it is the part
+that a later rotation does *not* undo: git history is append-only, so once
+this branch is pushed the current ciphertext is public **permanently**.
+Reissuing these keys later protects everything from that point forward, but
+the blob containing today's values stays published, and the age private key
+is the only thing standing between it and the plaintext. That makes the key
+custody items below load-bearing rather than housekeeping:
+
+- `/etc/sops/age/keys.txt` is the single copy that must exist on this host.
+- The offsite backup key must live *offsite*; both keys on one box gives
+  the second recipient no independent value.
+- If the age key is ever suspected compromised, the third-party rotation
+  stops being deferrable and becomes incident response.
+
+Until the deferred rotation happens, `infra/scripts/rotate-keys.sh` is the
+lever for the age key itself — but note it re-wraps the existing ciphertext,
+so it changes who can decrypt, not what was published.
+
+##### The data re-encryption migration
+
+`infra/scripts/reencrypt-data-key.mjs` moves every value encrypted under the
+old key onto the new one. It covers 10 (table, column) pairs across
+`mcp_servers`, `mcp_server_oauth_config`, `mcp_server_oauth_tokens` and
+`mcp_server_remote_headers` — **5,305 live values**.
+
+```bash
+OLD_KEY=... NEW_KEY=... DATABASE_URL=... node infra/scripts/reencrypt-data-key.mjs --dry-run
+OLD_KEY=... NEW_KEY=... DATABASE_URL=... node infra/scripts/reencrypt-data-key.mjs --apply
+            NEW_KEY=... DATABASE_URL=... node infra/scripts/reencrypt-data-key.mjs --verify
+```
+
+Rehearsed end to end against a throwaway container holding a full restore of
+the Phase-0 prod dump:
+
+- `--dry-run`: 5,305/5,305 decryptable, 0 failures.
+- `--apply`: 5,305 re-encrypted, 0 failures, **1m45s** on 12 cores.
+- `--verify`: 5,305/5,305 readable under the new key.
+- **Fidelity**: SHA-256 of every plaintext captured before and after —
+  all 5,305 identical, so the rotation preserved the data byte-for-byte.
+- **Negative control**: `--verify` with the *old* key fails on all 5,305,
+  confirming the data really moved rather than the run being a no-op.
+
+`scrypt(N=16384)` runs per value with a per-value random salt, so no derived
+key can be cached; the script fans out across cores to keep this inside the
+cutover budget. It writes one transaction per column, so an interrupted run
+leaves that column wholly on the old key and `--apply` can simply be re-run.
+
+The old key is preserved in `/home/pluggedin/backups/rotation-<ts>/HANDOFF.env`
+(0600, outside the repo). **Without it the 5,305 values are unrecoverable.**
+Destroy that file only after `--verify` passes against the production stack.
+
+#### Defects the dry run caught in the Phase-1 scaffolding
+
+All of these were latent. Each would have failed, or silently degraded, the first real deploy.
+
+| Where | Defect | Fix |
+|---|---|---|
+| `infra/sops/.sops.yaml` | `path_regex` anchored on `\.(env\|yaml)$`, which never matches `secrets.env.sops`. Creating the file fell through to "no matching creation rule". | Anchored on `\.(env\|yaml\|yml\|json)\.sops$`. |
+| `infra/scripts/deploy.sh` | `sops --decrypt` with no `--input-type`: sops can't infer a format from the `.sops` extension, defaults to JSON, and dies on the first `#` in the dotenv payload. | Pass `--input-type dotenv --output-type dotenv`. |
+| `infra/docker-compose.yml` | `init.sql` creates `pg_stat_statements`, but the postgres `command:` never set `shared_preload_libraries`. `CREATE EXTENSION` succeeds; every read of the view then errors. | Added `-c shared_preload_libraries=pg_stat_statements`. |
+| workspace `.env` | 35 vars carry unquoted trailing `# comments`, and `PLUGGEDIN_MCP_DIST_PATH` is defined twice with conflicting values (and referenced nowhere in app source). Compose's `env_file` parser is stricter than dotenv here. | Secrets generator strips comments and quoting; the dead var is dropped. |
+| `infra/scripts/verify.sh` | Asserted `"status":"ok"` from `/api/health`, but the endpoint is typed `'healthy' \| 'unhealthy'` and has never emitted `ok`. The smoke test could therefore only ever fail — and both `deploy.sh` and `cutover-from-native.sh` gate on it, so no deploy could have completed. | Assert `"status":"healthy"`, plus an explicit `database:true` check so a degraded stack can't pass as green. |
+| `infra/scripts/deploy.sh` | Compose runs variable interpolation over `env_file` contents, so any secret containing `$` is silently truncated at the first `$` — a bcrypt hash `ops:$2b$10$abc…` reaches the container as `ops:$2b$10`. Compose warns but exits 0, so it surfaces only as a runtime auth failure. | Extract `*_FILE` secrets from the raw plaintext first, then write the compose-facing copy with `$` doubled. |
+| `Dockerfile` / `infra/README.md` | Image ran as uid 1001 while every bind-mounted host dir is uid 1000, so the README told operators to `chown -R 1001` — 88 GiB of `/var/mcp-packages`, and it would have broken rollback, since the native systemd service runs as `pluggedin` (uid 1000) and could no longer write its own data. | Build the image's `app` user as 1000:1000 (releasing the base image's `node` account, which already held that id). No chown, rollback stays intact. |
+| `infra/traefik/dynamic/middlewares.yml` | nginx compresses (`gzip on`, `gzip_min_length 10240`, explicit `gzip_types`); Traefik had no `compress` middleware at all, so every response would have gone out uncompressed. | Added a `compress` middleware mirroring nginx's settings, attached to every router except SSE (compressing an event stream defeats incremental delivery). Verified: 71,178 → 22,371 bytes. |
+| `infra/scripts/cutover-from-native.sh` | Restored the external PG dump — whose rows are encrypted with the *pre-rotation* key — and then started the app on the rotated key, leaving 5,305 values undecryptable. It also never dropped the host crontab (which hardcodes the old `CRON_SECRET`), and `up -d` could not have bound :80/:443 because the compose ports were hardcoded to 8080/8443. | Added a `rotate_data_key` step after every restore that refuses to proceed without `OLD_KEY`; added crontab backup+removal; parameterised the Traefik ports with production defaults. |
 
 ### Phase 1 — Repo-side scaffolding (this PR)
 
@@ -147,13 +268,54 @@ Each phase has explicit **rollback** instructions. We never burn a bridge before
 
 ### Phase 2 — Stand up Traefik on a non-conflicting port (1 hour)
 
-The current nginx owns `:80` and `:443`. We bring Traefik up on `:8080` (dashboard) and `:8443` (TLS) bound to a test hostname like `staging.plugged.in` (point a temporary A record at the host), validate certificate issuance, then proceed.
+Executed 2026-07-31 as compose project `pluggedin-pre`. The native nginx kept
+`:80`/`:443` throughout; Traefik took `:8080`/`:8443`.
 
-- [ ] `docker compose -f infra/docker-compose.yml up -d traefik`
-- [ ] Issue a cert for `staging.plugged.in` via HTTP-01 (requires Traefik to own a public port-80 path under that hostname during the test window — we use `8080:80` on Traefik first and gate certbot's existing `:80` ownership by stopping nginx for the 60s validation window only).
-- [ ] `curl --resolve staging.plugged.in:8443:127.0.0.1 https://staging.plugged.in:8443/whoami` returns 200 from Traefik's `whoami` test backend.
+- [x] `docker compose up -d traefik` — healthy, both ports bound.
+- [x] `/ping` returns 200 on the web entrypoint.
+- [x] HTTP→HTTPS redirect returns `301 → https://plugged.in/`, matching the
+      nginx behaviour it replaces.
+- [x] All six file-provider middlewares register:
+      `security-headers`, `rate-limit`, `cache-immutable`, `cache-30d`,
+      `widget-cors`, `dashboard-auth`.
+- [x] Dashboard basic auth verified end to end: wrong credentials → 401,
+      correct → 200 on `/api/overview`.
+- [ ] ACME issuance — **blocked on DNS**, see below.
 
 **Rollback:** `docker compose down traefik`.
+
+#### Blocker: Traefik ≤ v3.5 cannot talk to Docker Engine 29
+
+The single most dangerous defect found so far. Traefik pins its Docker client
+to **API 1.24**; Docker Engine 29 dropped everything below **1.40**. The
+docker provider then fails every poll with `client version 1.24 is too old`
+and **no label-based router is ever discovered** — which is every route this
+stack has, since all of them live in `labels:` on `pluggedin-app`.
+
+The failure mode is the nasty kind: Traefik reports this as a provider error,
+its own healthcheck stays green, and the container sits there `(healthy)`
+serving a site-wide 404. A cutover that trusted the healthcheck would have
+looked fine and served nothing.
+
+`DOCKER_API_VERSION` does not help — the pin overrides the environment.
+Reproduced on v3.3, v3.4 and v3.5; fixed in **v3.7.9**. The compose file is
+pinned to `traefik:v3.7` and that is a floor, not a preference.
+
+#### Remaining Phase-2 work needs DNS
+
+ACME HTTP-01 issuance cannot be completed from here:
+
+- `traefik.plugged.in` does not resolve (`NXDOMAIN`), so the dashboard
+  certificate fails. An A record pointing at this host is required.
+- HTTP-01 validation needs inbound `:80`, which nginx still owns. The
+  validation window is the ~60s during cutover when nginx stops and Traefik
+  takes the port.
+
+Everything else about the ACME path is wired and correct — Traefik registered
+with the CA successfully, so only the DNS records and port ownership are
+outstanding. While iterating, the resolver is pointed at
+`acme-staging-v02.api.letsencrypt.org` to protect the 5-per-week production
+rate limit.
 
 ### Phase 3 — Containerise Postgres + Redis next to the live app (½ day, no downtime)
 
@@ -168,17 +330,208 @@ The live app is untouched in this phase; we have a populated containerised PG si
 
 ### Phase 4 — Containerise the app, port `:12005` parked under Traefik (½ day)
 
-- [ ] Build the image: `infra/scripts/build.sh` (also runs in CI on every push to `main`).
-- [ ] `docker compose up -d pluggedin-app` (binds internal port `3000`, Traefik exposes it via the labelled router set).
-- [ ] Internal smoke test on the docker network: `docker compose exec traefik curl -fsS http://pluggedin-app:3000/api/health`.
-- [ ] Run `infra/scripts/verify.sh --app` which hits `/api/health`, `/api/rag/query` (with a known query), and the auth flow.
-- [ ] **Critically: the container has the right zvec path because compose sets `ZVEC_DATA_PATH=/app/data/vectors` and bind-mounts `/home/pluggedin/zvec-data` there.** The drift class of bug from this week becomes structurally impossible.
+Executed 2026-07-31. The live nginx kept routing `plugged.in` to the native
+`:12005` throughout; the containerised app was reachable only via Traefik on
+`:8443`.
 
-The live nginx still routes `plugged.in` to the native `:12005`. The containerised app is reachable only through Traefik on `:8443`.
+- [x] Image built from the deploying commit (6.36 GB).
+- [x] `docker compose up -d pluggedin-app` → healthy in 9s.
+- [x] `verify.sh --quick` all green: traefik ping, pg_isready, `SELECT 1`,
+      redis PING, `/api/health → healthy`, database reachable.
+- [x] End-to-end through Traefik: `GET /` and `/api/health` both 200.
+- [x] All seven security headers match the nginx originals exactly
+      (CSP, HSTS, X-Frame-Options, X-XSS-Protection, X-Content-Type-Options,
+      Referrer-Policy, Permissions-Policy).
+- [x] gzip verified: 71,178 → 22,371 bytes on `/`.
+- [x] Redis reachable from the app (`PING → PONG`), and the app logs
+      "Using Redis backend for distributed rate limiting". The
+      "Cannot load ioredis" warning alongside it is **pre-existing** — the
+      live native app emits the identical pair, because the Edge-runtime
+      context falls back to the memory store while the Node runtime
+      connects normally. Not a migration regression.
+- [x] zvec path correct via `ZVEC_DATA_PATH=/app/data/vectors`; the drift
+      class of bug that motivated this migration is structurally impossible.
 
 **Rollback:** `docker compose down pluggedin-app`.
 
-### Phase 5 — Cutover (≤ 10 min downtime, scheduled)
+#### Hazard: a parallel app container is not side-effect free
+
+The plan treated Phase 4 as harmless because the containerised app takes no
+user traffic. It is not, for two reasons, and both need managing on any
+future parallel run:
+
+1. **Shared writable bind mounts.** As committed, the app container mounts
+   the *same* `/home/pluggedin/zvec-data` the live app is using. zvec is an
+   embedded, file-backed store with no cross-process locking, so two writers
+   risk corrupting production vectors. This run instead gave the container a
+   copy of zvec-data and mounted `uploads` and `/var/mcp-packages` read-only.
+   Do the same for any future parallel run; the committed compose file is
+   correct for the post-cutover world, where only one app exists.
+
+2. **The app runs its own OAuth refresh scheduler on startup**, against real
+   upstream providers, using production credentials. Most providers rotate
+   refresh tokens on use — so a *successful* refresh in the parallel
+   container would invalidate the token the live app still holds and break
+   production OAuth. This run got away with it: all 6 tokens were already
+   expired (January/February), so 0 were refreshed and no token was consumed.
+   That was luck, not design. The container was stopped as soon as
+   verification finished, and any future parallel run should keep its
+   lifetime to minutes.
+
+### Phase 5 — Cutover — DONE 2026-07-31
+
+Executed 21:47:21Z. **Downtime ~3 minutes.** The stack is live: Traefik owns
+:80/:443 with a fresh Let's Encrypt certificate, the app runs from the
+containerised Postgres, and Ofelia has taken over all seven cron jobs.
+
+Verified from outside the host after cutover:
+
+- `https://plugged.in/` → 200 in 0.45s, certificate issued 2026-07-31 by
+  Let's Encrypt (replacing the certbot cert from Jul 21).
+- `http://` → 301 to https, matching the nginx behaviour it replaced.
+- All seven security headers byte-identical to the nginx originals.
+- gzip active: 71,201 → 22,309 bytes on `/`.
+- `/api/health` → `healthy`, database reachable.
+- 5,305 encrypted values re-encrypted onto the rotated key, **0 failures**,
+  verified.
+- zvec mounted correctly at `/app/data/vectors` with the real 18 MB of data
+  — the drift that motivated this whole migration is now structurally
+  impossible.
+- Ofelia registered all 7 jobs.
+
+**It took two attempts.** The first aborted mid-window and was rolled back in
+~44 seconds with no data loss — the external PG was quiesced and took no
+writes, so restarting the native services resumed exactly where they left
+off. See the incident notes below.
+
+#### Two attempts, and why the first failed
+
+Attempt 1 died after the dump had been restored, at `pnpm db:migrate`:
+
+    [FATAL tini (7)] exec pnpm failed: No such file or directory
+
+`/usr/local/bin/pnpm` and `tsx` were dangling symlinks and had been since the
+Dockerfile was written — it copied `/root/.local/share/pnpm`, which only ever
+contains pnpm's `store/`, because corepack keeps the shim elsewhere. `ln -s`
+does not validate targets, so the build passed and the Dockerfile comment
+documented a command that had never worked.
+
+The deeper cause was a gap in verification, not in the Dockerfile: Phase 4
+validated the **runtime** path (`node server.js`, health, routing, headers)
+but never the **migration** path the cutover depends on. A green Phase 4 was
+not evidence the cutover would work.
+
+Before retrying, the full post-restore sequence was rehearsed against the
+real restored data with nginx still serving. That rehearsal immediately
+caught a *second* blocker that would have aborted attempt 2 the same way:
+the migration script was mounted at `/migration`, and Node resolves bare
+imports by walking up from the importing file, so it never reached
+`/app/node_modules` and died with `ERR_MODULE_NOT_FOUND: Cannot find package
+'pg'`. Mounting under `/app/migration` fixes it.
+
+Lesson worth keeping: rehearse every step that runs *inside* the window,
+against real data, outside the window.
+
+#### Post-cutover security audit and hardening (2026-08-01)
+
+Audited the running stack rather than the config. Four issues, all fixed on
+the live system; the site stayed up throughout.
+
+**1. The Docker socket made Traefik a host-root path.** Traefik mounted
+`/var/run/docker.sock:ro`. That `:ro` only makes the socket *file*
+read-only, not the API. Measured against the live stack: 108 environment
+variables readable off `pluggedin-app`, 28 of them secret-bearing, and
+`POST /containers/create` reachable — one bind-mount of `/` away from root
+on the host. SOPS encryption at rest buys nothing against that path.
+
+Replaced with a `docker-socket-proxy` service on a dedicated
+`internal: true` network that only Traefik joins. `POST=0` denies every
+mutating call; only `CONTAINERS`, `NETWORKS`, `EVENTS` and `VERSION` are
+allowed. Verified after the swap: `/version`, `/containers/json` and
+`/networks` return 200; `POST /containers/create`, `/images/json`,
+`/containers/*/exec` and `/secrets` all return 403. All five
+label-discovered routers survived, and Traefik now has zero `docker.sock`
+mounts.
+
+**Residual, stated plainly:** the proxy is endpoint-scoped, not
+field-scoped. Traefik's docker provider genuinely needs
+`GET /containers/{id}/json` to read routing labels, and that response still
+carries `Config.Env` — so the 28 secret-bearing variables remain readable
+through the proxy. The host-root escalation is closed; secret *disclosure*
+on a Traefik compromise is not. Closing it properly means getting secrets
+out of container environment entirely (a `*_FILE` indirection the app reads
+at runtime), which is an application change and is tracked as follow-up.
+
+**2. MCP sandboxing was off — now on.** `bwrap` failed with
+`pivot_root: Operation not permitted`, and `MCP_ISOLATION_FALLBACK=none`
+meant every STDIO MCP server ran unsandboxed, where the native stack used
+firejail. Added `seccomp:unconfined` and `systempaths=unconfined` alongside
+the existing `CAP_SYS_ADMIN` and `apparmor:unconfined`. Verified in the live
+container: `SANDBOX_OK`, `pid=2` inside the namespace.
+
+Note the syntax: `systempaths` takes `=`, not `:`. The colon form is
+rejected by the daemon with `invalid --security-opt`, and because compose
+fails the *recreate* rather than the config parse, the old container keeps
+serving — the error is easy to miss.
+
+The trade-off accepted: this drops the container's own seccomp filter and
+unmasks `/proc`. That is worth it here, because the alternative is running
+arbitrary third-party MCP code with no isolation at all, holding user
+credentials. If sandboxing is ever disabled again, drop `CAP_SYS_ADMIN` and
+these two options together — alone they are cost with no benefit.
+
+**3. The Traefik dashboard had no rate limiting.** It was the only router
+without `rate-limit`, while `traefik.plugged.in` resolves publicly and
+`/api/rawdata` dumps the whole routing configuration behind a single bcrypt
+password. Added `rate-limit` ahead of the auth middleware.
+
+**4. The rate limiter was bypassable.** `sourceCriterion.ipStrategy.depth: 1`
+selects the right-most `X-Forwarded-For` entry. Traefik is the edge here, so
+that header is entirely attacker-supplied and middlewares evaluate it before
+Traefik appends the real client IP. Varying it per request meant a fresh
+bucket every time. Dropped `sourceCriterion` so the limiter keys on the real
+connection `RemoteAddr`.
+
+Both 3 and 4 hot-reloaded through the file provider with no restart.
+
+##### Checked and found sound
+
+Recorded so they are not re-litigated:
+
+- TLS 1.0 and 1.1 are **rejected**; 1.2 and 1.3 accepted, matching the
+  `ssl_protocols` the nginx site inherited from `options-ssl-nginx.conf`.
+  (An earlier draft of this audit claimed otherwise — that was a bad test:
+  it grepped for `Cipher is`, which also matches OpenSSL's
+  `Cipher is (NONE)` failure line.)
+- Only 22, 80 and 443 listen on a public interface.
+- Postgres and Redis publish no ports; compose network only.
+- Decrypted secrets live on tmpfs at `/run/sops`, mode 0400, never on disk.
+- All seven security headers present on every route.
+
+#### Superseded: MCP sandboxing was OFF at cutover
+
+Measured on the live stack after cutover. `bwrap` fails with
+`pivot_root: Operation not permitted`, and `MCP_ISOLATION_FALLBACK=none`
+means STDIO MCP servers therefore run **unsandboxed**. The native stack
+sandboxed them with firejail, so this is a regression in posture.
+
+`CAP_SYS_ADMIN` + `apparmor:unconfined` — what the plan assumed would be
+enough — is not:
+
+| Configuration | Result |
+|---|---|
+| `apparmor:unconfined` only | `pivot_root: Operation not permitted` |
+| `+ seccomp:unconfined` | `Can't mount proc on /newroot/proc` |
+| `+ systempaths:unconfined` | works — `SANDBOX_OK`, `pid=2` inside |
+
+The fix is two commented lines in `infra/docker-compose.yml`. It is left as
+an explicit decision because it is a genuine trade-off: enabling it restores
+per-server sandboxing of arbitrary third-party code, at the cost of the
+container's own seccomp filter and masked `/proc`.
+
+---
+
+### Phase 5 (original plan) — Cutover (≤ 10 min downtime, scheduled)
 
 This is the only step that affects users. Pick a low-traffic window.
 
@@ -187,8 +540,18 @@ This is the only step that affects users. Pick a low-traffic window.
 [T-5]  Run pre-cutover dump for safety:
        infra/scripts/cutover-from-native.sh --dump-only
 [T-0]  systemctl stop pluggedin nginx
+       crontab -l > /home/pluggedin/crontab.pre-ofelia.backup; crontab -r
+         ^ MUST happen here, not in Phase 7. The host crontab hardcodes the
+           pre-rotation CRON_SECRET; leaving it live past cutover means
+           7 jobs hammering the new app with 401s.
        Take a delta-dump (changes since the Phase-0 dump) and apply it:
        infra/scripts/cutover-from-native.sh --delta-apply
+       Re-encrypt the rotated data key against the freshly restored DB —
+       before the app starts, or it will read rows it cannot decrypt:
+         OLD_KEY=$(grep '^OLD_NEXT...' <rotation-dir>/HANDOFF.env | cut -d= -f2-) \
+         NEW_KEY=... DATABASE_URL=... \
+         node infra/scripts/reencrypt-data-key.mjs --apply
+         node infra/scripts/reencrypt-data-key.mjs --verify   # must be 0 failures
        Move :80/:443 ownership: bring Traefik down, change its host-port
        binding from 8443→443 and 8080→80, bring it back up.
        Verify cert validity, verify /api/health, verify AI search on a
@@ -215,8 +578,10 @@ The compose file already references `infra/sops/runtime/secrets.env`, which is t
 
 ### Phase 7 — Move crontab into Ofelia (1 hour)
 
-- [ ] The seven host cron entries become entries in `infra/ofelia/config.ini`.
-- [ ] `crontab -l > /home/pluggedin/crontab.pre-ofelia.backup; crontab -r`.
+- [x] The seven host cron entries become entries in `infra/ofelia/config.ini`.
+- [ ] `crontab -r` — **moved into the Phase-5 cutover** because `CRON_SECRET`
+      was rotated; see the ordering note there. The backup still goes to
+      `/home/pluggedin/crontab.pre-ofelia.backup` first.
 - [ ] `docker compose up -d ofelia`.
 - [ ] Verify each job fires at least once on its schedule (timestamps in `docker compose logs ofelia`).
 

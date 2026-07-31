@@ -91,12 +91,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       bubblewrap tini ca-certificates wget postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Non-root runtime user. Bind-mounted host dirs (zvec-data, uploads,
-# mcp-packages, logs) must be owned by uid 1001 / gid 1001 on the host —
-# documented in infra/README.md.
-ARG APP_UID=1001
-ARG APP_GID=1001
-RUN groupadd -g ${APP_GID} app && useradd -m -u ${APP_UID} -g app app
+# Non-root runtime user, matched to the host `pluggedin` account (1000:1000)
+# that already owns the bind-mounted directories: zvec-data, uploads,
+# /var/mcp-packages and /var/log/pluggedin.
+#
+# This defaulted to 1001, which would have required `chown -R 1001:1001` over
+# those paths at cutover. Two problems with that: /var/mcp-packages is 88 GiB,
+# and — worse — the native systemd service runs as `pluggedin` (uid 1000), so
+# re-owning the directories would have broken the documented rollback path.
+# Matching the host uid costs nothing and keeps rollback a one-liner.
+#
+# The node base image already ships a `node` account at 1000:1000, so that
+# has to be released before `app` can claim the id — plain groupadd exits 4.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN set -eux; \
+    if id -u node >/dev/null 2>&1; then userdel -r node 2>/dev/null || userdel node; fi; \
+    if getent group node >/dev/null 2>&1; then groupdel node; fi; \
+    groupadd -g ${APP_GID} app; \
+    useradd -m -u ${APP_UID} -g app app
 
 WORKDIR /app
 
@@ -106,9 +119,13 @@ COPY --from=builder --chown=app:app /app/public ./public
 
 # Drizzle migrations and the reindex-rag script live outside of the
 # standalone bundle but inside the image so we can:
-#   docker compose run --rm pluggedin-app pnpm db:migrate
-#   docker compose run --rm pluggedin-app pnpm reindex:rag
+#   docker compose run --rm pluggedin-app node_modules/.bin/drizzle-kit migrate
+#   docker compose run --rm pluggedin-app node_modules/.bin/tsx scripts/reindex-rag.ts
 # without rebuilding the image.
+#
+# Invoke the binaries directly rather than through `pnpm <script>`: a runtime
+# image has no reason to carry a package manager, and going through one added
+# a dependency that silently did not exist (see the symlink note below).
 COPY --from=builder --chown=app:app /app/drizzle ./drizzle
 COPY --from=builder --chown=app:app /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder --chown=app:app /app/db ./db
@@ -117,9 +134,40 @@ COPY --from=builder --chown=app:app /app/scripts ./scripts
 COPY --from=builder --chown=app:app /app/package.json ./package.json
 COPY --from=builder --chown=app:app /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
-COPY --from=builder /root/.local/share/pnpm /usr/local/share/pnpm
-RUN ln -s /usr/local/share/pnpm/pnpm /usr/local/bin/pnpm \
- && ln -s /usr/local/share/pnpm/tsx  /usr/local/bin/tsx
+# Put the project's own bin dir on PATH so `tsx` and `drizzle-kit` resolve.
+#
+# Two dead ends are worth recording, because both look right and neither is:
+#
+# 1. The original copied /root/.local/share/pnpm and symlinked pnpm+tsx out
+#    of it. That directory only ever holds pnpm's content-addressable
+#    `store/` — corepack keeps the shim elsewhere — so both links dangled.
+#    `ln -s` does not validate its target, so the build passed and it only
+#    surfaced when something tried to exec them:
+#      [FATAL tini (7)] exec pnpm failed: No such file or directory
+#    which is what `pnpm db:migrate` hit mid-cutover.
+#
+# 2. Symlinking /usr/local/bin/tsx -> /app/node_modules/.bin/tsx also fails.
+#    pnpm's shims start with `basedir=$(dirname "$0")` and then load
+#    "$basedir/../<pkg>/dist/cli.mjs", so invoking one through a symlink
+#    elsewhere computes the wrong basedir:
+#      Error: Cannot find module '/usr/local/tsx/dist/cli.mjs'
+#
+# PATH avoids both: the shim is executed at its real location, so basedir
+# resolves to /app/node_modules/.bin and the relative load works.
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
+# Fail the build rather than ship an image where the migration tooling is
+# missing or unrunnable — the failure mode this replaces cost a live cutover
+# window. Runs the real binaries, so a broken shim is caught here.
+RUN set -eux; \
+    test -x /app/node_modules/.bin/tsx || \
+      { echo "FATAL: tsx missing — did the devDependency prune drop it?"; \
+        ls /app/node_modules/.bin | head -40; exit 1; }; \
+    test -x /app/node_modules/.bin/drizzle-kit || \
+      { echo "FATAL: drizzle-kit missing — did the devDependency prune drop it?"; \
+        ls /app/node_modules/.bin | head -40; exit 1; }; \
+    tsx --version; \
+    drizzle-kit --version
 
 # Directories the app writes into. Bind-mounts will override these at
 # runtime; chown'ing here means the container still works on a fresh

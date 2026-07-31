@@ -38,37 +38,101 @@ x-app-environment: &app-env
 
 services:
   traefik:
-    image: traefik:v3.2
+    # v3.7 is a hard floor, not a preference. Traefik pins its Docker client
+    # to API 1.24 up to and including v3.5; Docker Engine 29 dropped
+    # everything below 1.40. On the older images the docker provider fails
+    # every poll with "client version 1.24 is too old", so NO label-based
+    # router is ever discovered — and because Traefik reports that as a
+    # provider error while its own healthcheck stays green, the failure mode
+    # is a site-wide 404 behind a healthy container. Verified here: v3.3,
+    # v3.4 and v3.5 all reproduce it; v3.7.9 does not.
+    # DOCKER_API_VERSION does not help — the pin overrides the environment.
+    image: traefik:v3.7
     restart: always
     container_name: traefik
     command:
       - --configFile=/etc/traefik/traefik.yml
     ports:
-      # Pre-cutover defaults so `docker compose up` on the prod host won't
-      # collide with the native nginx that still owns 80/443. Phase 2
-      # staging hits Traefik on these. At Phase 5 cutover, edit this
-      # block to `- "80:80"` / `- "443:443"`, restart Traefik, then stop
-      # nginx — order matters because LE HTTP-01 needs the public :80.
-      - "8080:80"
-      - "8443:443"
+      # Defaults are the production ports, so an ordinary `deploy.sh` on the
+      # prod host is always correct. Only the pre-cutover phases, where the
+      # native nginx still owns 80/443, override these:
+      #   TRAEFIK_HTTP_PORT=8080 TRAEFIK_HTTPS_PORT=8443 docker compose up -d
+      # Defaulting the other way round meant every post-cutover deploy would
+      # silently drop the site back to :8080 unless the operator remembered
+      # to edit this block back.
+      # Ordering at cutover: nginx must release :80 before Traefik claims it,
+      # because LE HTTP-01 validates over the public :80.
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
       - traefik-acme:/letsencrypt
       - /run/sops:/run/sops:ro
-      # Docker socket, read-only, so Traefik can do label-based router
-      # discovery. Read-only blocks container start/stop but does NOT
-      # block reading env vars (`docker inspect`) on other services.
-      # TODO(docker-socket-proxy): front this with Tecnativa's
-      # docker-socket-proxy scoped to /containers and /networks only.
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # No docker.sock here any more — router discovery goes through
+      # docker-socket-proxy, which denies every POST. See that service.
     networks:
       - pluggedin
+      - dockerproxy
+    depends_on:
+      docker-socket-proxy:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # Gatekeeper in front of the Docker API.
+  #
+  # Traefik previously mounted /var/run/docker.sock directly. The `:ro` on
+  # that mount is close to meaningless: it makes the socket *file* read-only,
+  # not the API. Measured against the live stack before this change, that
+  # access could read 108 environment variables off pluggedin-app — 28 of
+  # them secret-bearing, including provider API keys — and POST
+  # /containers/create was reachable, which is one bind-mount of / away from
+  # root on the host. SOPS encryption at rest buys nothing against that path.
+  #
+  # This proxy exposes only what Traefik's docker provider actually calls,
+  # and POST=0 denies every mutating request, so container creation is gone.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: always
+    container_name: docker-socket-proxy
+    environment:
+      # Read-only endpoints the provider needs: list/inspect containers,
+      # resolve networks, negotiate the API version, and watch for changes.
+      CONTAINERS: "1"
+      NETWORKS: "1"
+      EVENTS: "1"
+      VERSION: "1"
+      # Everything else denied. POST=0 is the one that matters most.
+      POST: "0"
+      IMAGES: "0"
+      VOLUMES: "0"
+      EXEC: "0"
+      SERVICES: "0"
+      TASKS: "0"
+      SWARM: "0"
+      NODES: "0"
+      SECRETS: "0"
+      CONFIGS: "0"
+      PLUGINS: "0"
+      SYSTEM: "0"
+      INFO: "0"
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      DISTRIBUTION: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dockerproxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:2375/version"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   pluggedin-app:
     image: ghcr.io/veriteknik/pluggedin-app:${IMAGE_TAG:-latest}
@@ -104,6 +168,28 @@ services:
       - SYS_ADMIN
     security_opt:
       - apparmor:unconfined
+      # These three together are what bubblewrap needs to build a sandbox
+      # from inside a container. CAP_SYS_ADMIN + apparmor:unconfined alone
+      # is NOT enough — measured on this host:
+      #   apparmor only ................ pivot_root: Operation not permitted
+      #   + seccomp:unconfined ......... Can't mount proc on /newroot/proc
+      #   + systempaths:unconfined ..... works (SANDBOX_OK, pid=2 inside)
+      #
+      # The trade-off, stated plainly: this drops the container's own seccomp
+      # filter and unmasks /proc. We take that deliberately, because
+      # MCP_ISOLATION_FALLBACK=none means the alternative is running every
+      # STDIO MCP server — arbitrary third-party code, holding user
+      # credentials — with no isolation at all. A per-server sandbox is worth
+      # more here than a filter on the app process, which runs our own code.
+      #
+      # If sandboxing is ever disabled again, drop CAP_SYS_ADMIN and these
+      # two lines together: on their own they are cost with no benefit.
+      - seccomp:unconfined
+      # `systempaths` takes `=`, not `:` — the colon form is rejected by the
+      # daemon with `invalid --security-opt`. It is not an apparmor/seccomp
+      # style profile reference, it is a flag that unmasks the /proc paths
+      # Docker hides by default, which bubblewrap needs to mount its own.
+      - systempaths=unconfined
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -143,7 +229,7 @@ services:
       traefik.http.routers.plugged-in-static.tls.certresolver: "le"
       traefik.http.routers.plugged-in-static.priority: "110"
       traefik.http.routers.plugged-in-static.service: "plugged-in"
-      traefik.http.routers.plugged-in-static.middlewares: "security-headers@file,cache-immutable@file"
+      traefik.http.routers.plugged-in-static.middlewares: "security-headers@file,cache-immutable@file,compress@file"
       #
       # /blog-images/* — 30-day cache.
       traefik.http.routers.plugged-in-blog-imgs.rule: "Host(`plugged.in`) && PathPrefix(`/blog-images`)"
@@ -151,7 +237,7 @@ services:
       traefik.http.routers.plugged-in-blog-imgs.tls.certresolver: "le"
       traefik.http.routers.plugged-in-blog-imgs.priority: "110"
       traefik.http.routers.plugged-in-blog-imgs.service: "plugged-in"
-      traefik.http.routers.plugged-in-blog-imgs.middlewares: "security-headers@file,cache-30d@file"
+      traefik.http.routers.plugged-in-blog-imgs.middlewares: "security-headers@file,cache-30d@file,compress@file"
       #
       # /widget.js — CORS open for embedding from any origin.
       traefik.http.routers.plugged-in-widget.rule: "Host(`plugged.in`) && Path(`/widget.js`)"
@@ -161,7 +247,7 @@ services:
       traefik.http.routers.plugged-in-widget.service: "plugged-in"
       # rate-limit on widget too: open CORS + publicly embeddable on any
       # origin makes this a cheap abuse target without it.
-      traefik.http.routers.plugged-in-widget.middlewares: "security-headers@file,widget-cors@file,rate-limit@file"
+      traefik.http.routers.plugged-in-widget.middlewares: "security-headers@file,widget-cors@file,rate-limit@file,compress@file"
       #
       # Catchall — everything else on the host. Lowest priority on
       # purpose so the specific routers above always win.
@@ -170,7 +256,7 @@ services:
       traefik.http.routers.plugged-in.tls.certresolver: "le"
       traefik.http.routers.plugged-in.priority: "100"
       traefik.http.routers.plugged-in.service: "plugged-in"
-      traefik.http.routers.plugged-in.middlewares: "security-headers@file,rate-limit@file"
+      traefik.http.routers.plugged-in.middlewares: "security-headers@file,rate-limit@file,compress@file"
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -195,6 +281,13 @@ services:
       retries: 10
     command:
       - postgres
+      # pg_stat_statements is a shared-memory module, not a plain extension.
+      # postgres/init.sql runs `CREATE EXTENSION pg_stat_statements`, which
+      # succeeds without this flag but leaves the view raising "must be
+      # loaded via shared_preload_libraries" on every read. Changing this
+      # requires a postgres restart, not a reload.
+      - -c
+      - shared_preload_libraries=pg_stat_statements
       - -c
       - shared_buffers=4GB
       - -c
@@ -265,3 +358,9 @@ networks:
     ipam:
       config:
         - subnet: 172.28.0.0/16
+  # Traefik <-> docker-socket-proxy only. `internal: true` means no route to
+  # or from the outside world, and pluggedin-app is deliberately NOT attached
+  # — the app has no business reaching the Docker API at all.
+  dockerproxy:
+    driver: bridge
+    internal: true

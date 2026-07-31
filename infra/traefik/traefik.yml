@@ -65,7 +65,14 @@ providers:
     directory: /etc/traefik/dynamic
     watch: true
   docker:
-    endpoint: "unix:///var/run/docker.sock"
+    # docker-socket-proxy, not the raw socket. Mounting /var/run/docker.sock
+    # here — even `:ro`, which only makes the socket *file* read-only, not
+    # the API — gave Traefik the ability to read every container's
+    # environment (measured: 108 vars off pluggedin-app, 28 secret-bearing)
+    # and to POST /containers/create, which is one bind-mount of / away from
+    # host root. The proxy denies all POST and exposes only the read
+    # endpoints the docker provider actually uses.
+    endpoint: "tcp://docker-socket-proxy:2375"
     # Default-allow on the docker provider is a footgun; every container
     # that wants exposure must opt in via `traefik.enable=true`.
     exposedByDefault: false
