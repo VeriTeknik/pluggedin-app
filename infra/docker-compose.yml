@@ -69,19 +69,70 @@ services:
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
       - traefik-acme:/letsencrypt
       - /run/sops:/run/sops:ro
-      # Docker socket, read-only, so Traefik can do label-based router
-      # discovery. Read-only blocks container start/stop but does NOT
-      # block reading env vars (`docker inspect`) on other services.
-      # TODO(docker-socket-proxy): front this with Tecnativa's
-      # docker-socket-proxy scoped to /containers and /networks only.
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # No docker.sock here any more — router discovery goes through
+      # docker-socket-proxy, which denies every POST. See that service.
     networks:
       - pluggedin
+      - dockerproxy
+    depends_on:
+      docker-socket-proxy:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # Gatekeeper in front of the Docker API.
+  #
+  # Traefik previously mounted /var/run/docker.sock directly. The `:ro` on
+  # that mount is close to meaningless: it makes the socket *file* read-only,
+  # not the API. Measured against the live stack before this change, that
+  # access could read 108 environment variables off pluggedin-app — 28 of
+  # them secret-bearing, including provider API keys — and POST
+  # /containers/create was reachable, which is one bind-mount of / away from
+  # root on the host. SOPS encryption at rest buys nothing against that path.
+  #
+  # This proxy exposes only what Traefik's docker provider actually calls,
+  # and POST=0 denies every mutating request, so container creation is gone.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: always
+    container_name: docker-socket-proxy
+    environment:
+      # Read-only endpoints the provider needs: list/inspect containers,
+      # resolve networks, negotiate the API version, and watch for changes.
+      CONTAINERS: "1"
+      NETWORKS: "1"
+      EVENTS: "1"
+      VERSION: "1"
+      # Everything else denied. POST=0 is the one that matters most.
+      POST: "0"
+      IMAGES: "0"
+      VOLUMES: "0"
+      EXEC: "0"
+      SERVICES: "0"
+      TASKS: "0"
+      SWARM: "0"
+      NODES: "0"
+      SECRETS: "0"
+      CONFIGS: "0"
+      PLUGINS: "0"
+      SYSTEM: "0"
+      INFO: "0"
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      DISTRIBUTION: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dockerproxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:2375/version"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   pluggedin-app:
     image: ghcr.io/veriteknik/pluggedin-app:${IMAGE_TAG:-latest}
@@ -117,26 +168,28 @@ services:
       - SYS_ADMIN
     security_opt:
       - apparmor:unconfined
-      # ⚠ MCP SANDBOXING IS CURRENTLY OFF. Verified on the live stack after
-      # cutover: bwrap fails with "pivot_root: Operation not permitted", so
-      # with MCP_ISOLATION_FALLBACK=none every STDIO MCP server runs
-      # unsandboxed. The native stack sandboxed them with firejail, so this
-      # is a regression in posture, not a pre-existing state.
-      #
-      # CAP_SYS_ADMIN + apparmor:unconfined is NOT sufficient. Measured:
+      # These three together are what bubblewrap needs to build a sandbox
+      # from inside a container. CAP_SYS_ADMIN + apparmor:unconfined alone
+      # is NOT enough — measured on this host:
       #   apparmor only ................ pivot_root: Operation not permitted
       #   + seccomp:unconfined ......... Can't mount proc on /newroot/proc
       #   + systempaths:unconfined ..... works (SANDBOX_OK, pid=2 inside)
       #
-      # Uncommenting the two lines below restores per-server sandboxing, at
-      # the cost of the container's own seccomp filter and masked /proc.
-      # That is a real trade-off and deliberately left as an explicit
-      # decision: MCP servers execute arbitrary third-party code, which
-      # argues for sandboxing them; a weaker container boundary argues the
-      # other way. Whichever is chosen, choose it — do not leave it
-      # accidental.
-      # - seccomp:unconfined
-      # - systempaths:unconfined
+      # The trade-off, stated plainly: this drops the container's own seccomp
+      # filter and unmasks /proc. We take that deliberately, because
+      # MCP_ISOLATION_FALLBACK=none means the alternative is running every
+      # STDIO MCP server — arbitrary third-party code, holding user
+      # credentials — with no isolation at all. A per-server sandbox is worth
+      # more here than a filter on the app process, which runs our own code.
+      #
+      # If sandboxing is ever disabled again, drop CAP_SYS_ADMIN and these
+      # two lines together: on their own they are cost with no benefit.
+      - seccomp:unconfined
+      # `systempaths` takes `=`, not `:` — the colon form is rejected by the
+      # daemon with `invalid --security-opt`. It is not an apparmor/seccomp
+      # style profile reference, it is a flag that unmasks the /proc paths
+      # Docker hides by default, which bubblewrap needs to mount its own.
+      - systempaths=unconfined
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -305,3 +358,9 @@ networks:
     ipam:
       config:
         - subnet: 172.28.0.0/16
+  # Traefik <-> docker-socket-proxy only. `internal: true` means no route to
+  # or from the outside world, and pluggedin-app is deliberately NOT attached
+  # — the app has no business reaching the Docker API at all.
+  dockerproxy:
+    driver: bridge
+    internal: true

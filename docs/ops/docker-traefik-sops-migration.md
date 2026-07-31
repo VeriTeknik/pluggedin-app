@@ -432,7 +432,83 @@ imports by walking up from the importing file, so it never reached
 Lesson worth keeping: rehearse every step that runs *inside* the window,
 against real data, outside the window.
 
-#### Known regression: MCP sandboxing is currently OFF
+#### Post-cutover security audit and hardening (2026-08-01)
+
+Audited the running stack rather than the config. Four issues, all fixed on
+the live system; the site stayed up throughout.
+
+**1. The Docker socket made Traefik a host-root path.** Traefik mounted
+`/var/run/docker.sock:ro`. That `:ro` only makes the socket *file*
+read-only, not the API. Measured against the live stack: 108 environment
+variables readable off `pluggedin-app`, 28 of them secret-bearing, and
+`POST /containers/create` reachable — one bind-mount of `/` away from root
+on the host. SOPS encryption at rest buys nothing against that path.
+
+Replaced with a `docker-socket-proxy` service on a dedicated
+`internal: true` network that only Traefik joins. `POST=0` denies every
+mutating call; only `CONTAINERS`, `NETWORKS`, `EVENTS` and `VERSION` are
+allowed. Verified after the swap: `/version`, `/containers/json` and
+`/networks` return 200; `POST /containers/create`, `/images/json`,
+`/containers/*/exec` and `/secrets` all return 403. All five
+label-discovered routers survived, and Traefik now has zero `docker.sock`
+mounts.
+
+**Residual, stated plainly:** the proxy is endpoint-scoped, not
+field-scoped. Traefik's docker provider genuinely needs
+`GET /containers/{id}/json` to read routing labels, and that response still
+carries `Config.Env` — so the 28 secret-bearing variables remain readable
+through the proxy. The host-root escalation is closed; secret *disclosure*
+on a Traefik compromise is not. Closing it properly means getting secrets
+out of container environment entirely (a `*_FILE` indirection the app reads
+at runtime), which is an application change and is tracked as follow-up.
+
+**2. MCP sandboxing was off — now on.** `bwrap` failed with
+`pivot_root: Operation not permitted`, and `MCP_ISOLATION_FALLBACK=none`
+meant every STDIO MCP server ran unsandboxed, where the native stack used
+firejail. Added `seccomp:unconfined` and `systempaths=unconfined` alongside
+the existing `CAP_SYS_ADMIN` and `apparmor:unconfined`. Verified in the live
+container: `SANDBOX_OK`, `pid=2` inside the namespace.
+
+Note the syntax: `systempaths` takes `=`, not `:`. The colon form is
+rejected by the daemon with `invalid --security-opt`, and because compose
+fails the *recreate* rather than the config parse, the old container keeps
+serving — the error is easy to miss.
+
+The trade-off accepted: this drops the container's own seccomp filter and
+unmasks `/proc`. That is worth it here, because the alternative is running
+arbitrary third-party MCP code with no isolation at all, holding user
+credentials. If sandboxing is ever disabled again, drop `CAP_SYS_ADMIN` and
+these two options together — alone they are cost with no benefit.
+
+**3. The Traefik dashboard had no rate limiting.** It was the only router
+without `rate-limit`, while `traefik.plugged.in` resolves publicly and
+`/api/rawdata` dumps the whole routing configuration behind a single bcrypt
+password. Added `rate-limit` ahead of the auth middleware.
+
+**4. The rate limiter was bypassable.** `sourceCriterion.ipStrategy.depth: 1`
+selects the right-most `X-Forwarded-For` entry. Traefik is the edge here, so
+that header is entirely attacker-supplied and middlewares evaluate it before
+Traefik appends the real client IP. Varying it per request meant a fresh
+bucket every time. Dropped `sourceCriterion` so the limiter keys on the real
+connection `RemoteAddr`.
+
+Both 3 and 4 hot-reloaded through the file provider with no restart.
+
+##### Checked and found sound
+
+Recorded so they are not re-litigated:
+
+- TLS 1.0 and 1.1 are **rejected**; 1.2 and 1.3 accepted, matching the
+  `ssl_protocols` the nginx site inherited from `options-ssl-nginx.conf`.
+  (An earlier draft of this audit claimed otherwise — that was a bad test:
+  it grepped for `Cipher is`, which also matches OpenSSL's
+  `Cipher is (NONE)` failure line.)
+- Only 22, 80 and 443 listen on a public interface.
+- Postgres and Redis publish no ports; compose network only.
+- Decrypted secrets live on tmpfs at `/run/sops`, mode 0400, never on disk.
+- All seven security headers present on every route.
+
+#### Superseded: MCP sandboxing was OFF at cutover
 
 Measured on the live stack after cutover. `bwrap` fails with
 `pivot_root: Operation not permitted`, and `MCP_ISOLATION_FALLBACK=none`
