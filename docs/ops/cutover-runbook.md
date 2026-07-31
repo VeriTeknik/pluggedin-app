@@ -47,7 +47,53 @@ password. Phases 0–4 were all done unprivileged; the cutover cannot be.
 sudo -v          # confirm you can escalate before starting the window
 ```
 
-Run the cutover from an interactive shell where you can authenticate.
+Run the cutover from an interactive shell where you can authenticate — or
+grant the scoped rule in §0.3 and it can run unattended.
+
+### 0.3 Optional: scoped rule for unattended execution
+
+Auditing the scripts, exactly **one** privileged operation exists in the
+cutover path: `systemctl stop pluggedin nginx` (and its rollback partner).
+Everything else either needs no privilege or needs two directories that root
+must create once.
+
+Note upfront: `pluggedin` is in the `docker` group, which is already
+root-equivalent on this host — the docker socket can mount `/` and escalate.
+So this rule grants strictly less than the account already has; it is about
+keeping the *automated* path narrow and auditable, not about creating a new
+boundary.
+
+**One-time setup** (creates the directories, makes the reboot-safe tmpfiles
+rule, and lets the deploy account read the age key at its canonical path so
+the second copy under `~/.config` can be deleted):
+
+```bash
+sudo bash infra/scripts/setup-cutover-access.sh
+```
+
+**The rule**, installed with `visudo` so syntax is validated before it takes
+effect — a malformed sudoers file can lock everyone out:
+
+```bash
+sudo visudo -f /etc/sudoers.d/pluggedin-cutover
+```
+
+Paste the contents of `infra/sudoers/pluggedin-cutover`. It permits four
+exact command lines and a read-only probe, nothing more: argument lists are
+matched literally by sudo, so it does not allow `systemctl stop <anything
+else>`, `daemon-reload`, or a bare `systemctl`.
+
+Confirm it works without stopping anything:
+
+```bash
+sudo -n systemctl show pluggedin --property=ActiveState
+```
+
+**Remove it once the cutover is done and stable:**
+
+```bash
+sudo rm /etc/sudoers.d/pluggedin-cutover
+```
 
 ---
 
@@ -57,12 +103,13 @@ Run the cutover from an interactive shell where you can authenticate.
 cd /home/pluggedin/pluggedin-app
 git checkout infra/sops-phase0        # or main, once merged
 
-# Age key must be readable by root — the deploy runs as root.
-sudo test -r /etc/sops/age/keys.txt && echo "age key ok"
+# Age key readable at its canonical path (group-readable after §0.3 setup).
+test -r /etc/sops/age/keys.txt && echo "age key ok"
 
 # The previous data-encryption key. Without it the restored dump cannot be
 # migrated onto the rotated key and the app will not be able to read it.
-export OLD_KEY=$(sudo grep '^OLD_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' \
+# The handoff file is owned by `pluggedin` — no escalation needed here.
+export OLD_KEY=$(grep '^OLD_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' \
     /home/pluggedin/backups/rotation-*/HANDOFF.env | head -1 | cut -d= -f2-)
 [ -n "$OLD_KEY" ] && echo "OLD_KEY loaded (${#OLD_KEY} chars)"
 

@@ -1,0 +1,36 @@
+# Install as /etc/sudoers.d/pluggedin-cutover, via:
+#   sudo visudo -f /etc/sudoers.d/pluggedin-cutover
+# Use visudo, not cp — it validates syntax before the file takes effect, and
+# a malformed sudoers file locks every user out of escalation.
+#
+# Scope: the only privileged operation in the containerised-stack cutover is
+# stopping the native services so Traefik can take :80/:443, plus starting
+# them again on rollback. Nothing else under infra/scripts/ needs root once
+# /run/sops and /var/backups/pluggedin exist — see
+# infra/scripts/setup-cutover-access.sh.
+#
+# sudo matches argument lists literally, so these entries permit exactly
+# these invocations: not `systemctl stop <anything else>`, not
+# `daemon-reload`, not a bare `systemctl`.
+#
+# Context worth knowing: `pluggedin` is in the `docker` group, which is
+# already root-equivalent on this host (docker socket -> mount / -> root).
+# This rule therefore grants strictly less than the account already holds.
+# Its value is keeping the automated path narrow and auditable.
+#
+# DELETE once the cutover is done and stable:
+#   sudo rm /etc/sudoers.d/pluggedin-cutover
+
+Cmnd_Alias PLUGGEDIN_CUTOVER = \
+    /usr/bin/systemctl stop pluggedin nginx, \
+    /usr/bin/systemctl start nginx pluggedin, \
+    /bin/systemctl stop pluggedin nginx, \
+    /bin/systemctl start nginx pluggedin
+
+# Read-only probe, so the rule can be confirmed working without stopping
+# anything. `show` only prints unit properties.
+Cmnd_Alias PLUGGEDIN_PROBE = \
+    /usr/bin/systemctl show pluggedin --property=ActiveState, \
+    /bin/systemctl show pluggedin --property=ActiveState
+
+pluggedin ALL=(root) NOPASSWD: PLUGGEDIN_CUTOVER, PLUGGEDIN_PROBE
