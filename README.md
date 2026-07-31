@@ -80,9 +80,16 @@ The default `docker-compose.yml` **builds the app image from source** (`./Docker
 git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
 cp .env.example .env
-# Edit .env and set at minimum NEXTAUTH_SECRET (generate one with:
-#   openssl rand -base64 32
-# ). The bundled PostgreSQL/Redis URLs already work out of the box.
+
+# Edit .env and set these three. Compose refuses to start without the last two,
+# so there is no way to end up running with a password this repository knows.
+#   NEXTAUTH_SECRET=$(openssl rand -base64 32)
+#   POSTGRES_PASSWORD=$(openssl rand -hex 32)
+#   REDIS_PASSWORD=$(openssl rand -hex 32)
+#
+# Use hex (or another URL-safe value) for the last two: they are interpolated
+# into a postgresql:// / redis:// URL, so @ : / ? # would corrupt it.
+# Compose builds DATABASE_URL and REDIS_URL from them — leave those alone.
 
 # Build the app image and start the full stack (PostgreSQL 18 + pgvector,
 # Redis, one-shot migration, then the app):

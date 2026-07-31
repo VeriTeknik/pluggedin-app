@@ -22,7 +22,12 @@ on:
       # infra-only PRs it'll still rebuild the image, which is acceptable
       # — the image is small and the host runner has the cache warm.
       - 'infra/**'
+      # The root compose files were absent from this list, so a PR touching
+      # only the stack end users actually run got zero compose validation.
+      - 'docker-compose*.yml'
+      - '.env.example'
       - '.github/workflows/build-image.yml'
+      - '.github/scripts/**'
   workflow_dispatch:
 
 # Default to read-only token. The build job re-grants packages:write
@@ -153,6 +158,62 @@ jobs:
             echo "POSTGRES_PASSWORD=stub"
           } | sudo tee /run/sops/secrets.env >/dev/null
           docker compose -f infra/docker-compose.yml config -q
+
+      # Only infra/docker-compose.yml was validated here. The three root compose
+      # files — including the default self-host stack end users run — were never
+      # parsed in CI, which is how an insecure default shipped unnoticed.
+      # Services declare `env_file: - .env`, which compose requires to EXIST as a
+      # file even though interpolation is fed from --env-file /dev/null. The stub
+      # is deliberately EMPTY: it satisfies env_file without contributing to
+      # interpolation, which the fail-closed assertion below depends on.
+      - name: Stub .env for compose validation
+        run: |
+          set -euo pipefail
+          test ! -s .env
+          : > .env
+
+      - name: Validate root compose files
+        run: |
+          set -euo pipefail
+          # Throwaway per-run values, generated rather than hardcoded so there is
+          # no literal password in this file for a secret scanner to flag.
+          export POSTGRES_PASSWORD REDIS_PASSWORD DB_PASSWORD
+          POSTGRES_PASSWORD=$(openssl rand -hex 16)
+          REDIS_PASSWORD=$(openssl rand -hex 16)
+          DB_PASSWORD=$(openssl rand -hex 16)
+          for f in docker-compose.yml docker-compose.dev.yml docker-compose.production.yml; do
+            echo "== $f =="
+            docker compose --env-file /dev/null -f "$f" config -q
+          done
+
+      - name: Assert self-host stack refuses to start without passwords
+        run: |
+          set -euo pipefail
+          # POSTGRES_PASSWORD/REDIS_PASSWORD are deliberately default-less, so a
+          # self-hoster cannot end up running a database whose password is in
+          # this repository. Prove the fail-closed interpolation still bites.
+          # No passwords are exported here and the .env stub is empty, so both
+          # interpolation sources are genuinely absent.
+          if docker compose --env-file /dev/null -f docker-compose.yml config -q 2>/dev/null; then
+            echo "::error file=docker-compose.yml::rendered without POSTGRES_PASSWORD/REDIS_PASSWORD — the required-variable guard was weakened"
+            exit 1
+          fi
+          echo "ok: docker-compose.yml fails closed when passwords are unset"
+
+      - name: Assert datastores are not published beyond loopback
+        run: |
+          set -euo pipefail
+          export POSTGRES_PASSWORD REDIS_PASSWORD DB_PASSWORD
+          POSTGRES_PASSWORD=$(openssl rand -hex 16)
+          REDIS_PASSWORD=$(openssl rand -hex 16)
+          DB_PASSWORD=$(openssl rand -hex 16)
+          rendered=()
+          for f in docker-compose.yml docker-compose.dev.yml docker-compose.production.yml; do
+            out="${RUNNER_TEMP}/${f}.json"
+            docker compose --env-file /dev/null -f "$f" config --format json > "$out"
+            rendered+=("$out")
+          done
+          python3 .github/scripts/assert_compose_ports.py "${rendered[@]}"
 
       - uses: ludeeus/action-shellcheck@2.0.0
         with:
