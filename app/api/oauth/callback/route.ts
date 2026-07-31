@@ -147,12 +147,23 @@ export async function GET(request: NextRequest) {
     // that stop one user redeeming another's authorization code. The behaviour
     // is unchanged except that a user mismatch is now recorded as a security
     // event rather than being indistinguishable from a missing state.
-    const pkceState = await validatePkceState(state, session.user.id);
+    const validation = await validatePkceState(state, session.user.id);
 
-    if (!pkceState) {
-      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
-      return safeRedirect('/mcp-servers', { oauth_error: 'invalid_state' });
+    if (!validation.ok) {
+      // Expiry is reported separately from other failures. Collapsing them
+      // would lose the signal that distinguishes a user who simply took too
+      // long from one presenting a state that never belonged to them.
+      const expired = validation.reason === 'expired';
+      mcpOAuthCallbacks.inc({
+        provider: 'unknown',
+        status: expired ? 'expired' : 'invalid_state',
+      });
+      return safeRedirect('/mcp-servers', {
+        oauth_error: expired ? 'state_expired' : 'invalid_state',
+      });
     }
+
+    const pkceState = validation.state;
 
     const serverUuid = pkceState.server_uuid;
     const codeVerifier = pkceState.code_verifier;

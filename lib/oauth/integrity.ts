@@ -110,14 +110,17 @@ export function generateCodeChallenge(verifier: string): string {
  * .test.ts has been asserting against this extracted shape all along without
  * ever running (the file failed to collect, so its 17 tests were invisible).
  *
- * Returns the state row when every check passes, null otherwise. A null result
- * is always accompanied by a recorded security metric and, where the state is
- * unusable, its deletion — a rejected state must not survive to be retried.
+ * Returns the state row when every check passes. On failure it returns a reason
+ * rather than a bare null: the callback distinguishes an expired state from an
+ * invalid one in its metrics and in the error it shows the user, and collapsing
+ * both into null would quietly drop that distinction.
+ *
+ * Every failure records a metric, and the ones that leave the state unusable
+ * delete it — a rejected state must not survive to be retried.
  */
-export async function validatePkceState(
-  state: string,
-  userId: string
-): Promise<{
+export type PkceValidationFailure = 'not_found' | 'user_mismatch' | 'integrity' | 'expired';
+
+export interface PkceStateRow {
   state: string;
   server_uuid: string;
   user_id: string;
@@ -125,20 +128,27 @@ export async function validatePkceState(
   redirect_uri: string;
   integrity_hash: string;
   expires_at: Date;
-} | null> {
+}
+
+export async function validatePkceState(
+  state: string,
+  userId: string
+): Promise<
+  { ok: true; state: PkceStateRow } | { ok: false; reason: PkceValidationFailure }
+> {
   const { db } = await import('@/db');
   const { oauthPkceStatesTable } = await import('@/db/schema');
   const { eq } = await import('drizzle-orm');
-  const { recordCodeInjectionAttempt, recordIntegrityViolation } = await import(
-    '@/lib/observability/oauth-metrics'
-  );
+  const { recordCodeInjectionAttempt, recordIntegrityViolation, recordPkceValidation } =
+    await import('@/lib/observability/oauth-metrics');
 
   const stored = await db.query.oauthPkceStatesTable.findFirst({
     where: eq(oauthPkceStatesTable.state, state),
   });
 
   if (!stored || !stored.user_id) {
-    return null;
+    recordPkceValidation(false, 'not_found');
+    return { ok: false, reason: 'not_found' };
   }
 
   // Authorization code injection: the state exists, but it belongs to somebody
@@ -154,21 +164,25 @@ export async function validatePkceState(
       expectedUser: stored.user_id,
     });
     recordCodeInjectionAttempt();
-    return null;
+    recordPkceValidation(false, 'user_mismatch');
+    return { ok: false, reason: 'user_mismatch' };
   }
 
   if (!verifyIntegrityHash(stored as Parameters<typeof verifyIntegrityHash>[0])) {
     log.security('pkce_state_integrity_violation', userId, { state });
     recordIntegrityViolation('hash_mismatch');
+    recordPkceValidation(false, 'integrity');
     await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
-    return null;
+    return { ok: false, reason: 'integrity' };
   }
 
   if (stored.expires_at < new Date()) {
     log.security('pkce_state_expired', userId, { state });
+    recordPkceValidation(false, 'expired');
     await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
-    return null;
+    return { ok: false, reason: 'expired' };
   }
 
-  return stored as Awaited<ReturnType<typeof validatePkceState>>;
+  recordPkceValidation(true);
+  return { ok: true, state: stored as PkceStateRow };
 }
