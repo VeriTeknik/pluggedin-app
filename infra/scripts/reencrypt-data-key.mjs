@@ -103,9 +103,28 @@ async function mapPool(items, limit, fn) {
   return results;
 }
 
+// Note for anyone tempted to "fix" this by decoding the key before use:
+// scrypt takes the RAW STRING, deliberately. lib/encryption.ts does exactly
+// the same (`scryptSync(baseKey, salt, ...)` on the env value), and the two
+// must agree or nothing decrypts. The base64 decode below is a strength
+// check only — it never produces the key material.
+//
+// The strict format test matters because Buffer.from(v, 'base64') silently
+// discards characters outside the alphabet. A key mangled in transit — a
+// stray quote, a line break folded in by a copy-paste — could still clear a
+// bare length check, and the failure would then surface as thousands of GCM
+// authentication errors mid-migration rather than as "your key is malformed"
+// before anything is touched.
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
 function requireKey(name) {
   const v = process.env[name];
   if (!v) throw new Error(`${name} is not set`);
+  if (!BASE64.test(v)) {
+    throw new Error(
+      `${name} is not valid base64 — check for whitespace, quotes or a line break`
+    );
+  }
   if (Buffer.from(v, 'base64').length < 32) {
     throw new Error(`${name} must decode to at least 32 bytes`);
   }
