@@ -134,26 +134,38 @@ COPY --from=builder --chown=app:app /app/scripts ./scripts
 COPY --from=builder --chown=app:app /app/package.json ./package.json
 COPY --from=builder --chown=app:app /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
-# `pnpm` and `tsx` on PATH, pointing at binaries that actually exist.
+# Put the project's own bin dir on PATH so `tsx` and `drizzle-kit` resolve.
 #
-# This previously copied /root/.local/share/pnpm and symlinked pnpm+tsx out
-# of it. That directory only ever contained pnpm's content-addressable
-# `store/` — corepack keeps the pnpm shim elsewhere — so both symlinks
-# dangled. `ln -s` does not validate its target, so the build passed and the
-# breakage only surfaced when something tried to exec them:
+# Two dead ends are worth recording, because both look right and neither is:
 #
-#   [FATAL tini (7)] exec pnpm failed: No such file or directory
+# 1. The original copied /root/.local/share/pnpm and symlinked pnpm+tsx out
+#    of it. That directory only ever holds pnpm's content-addressable
+#    `store/` — corepack keeps the shim elsewhere — so both links dangled.
+#    `ln -s` does not validate its target, so the build passed and it only
+#    surfaced when something tried to exec them:
+#      [FATAL tini (7)] exec pnpm failed: No such file or directory
+#    which is what `pnpm db:migrate` hit mid-cutover.
 #
-# which is precisely what `pnpm db:migrate` hit mid-cutover. tsx and
-# drizzle-kit are real executables under /app/node_modules/.bin (both kept
-# out of the devDependency prune above for exactly this reason), so link
-# there instead. The `test -x` guard makes a future regression fail the
-# build rather than ship a dangling link.
+# 2. Symlinking /usr/local/bin/tsx -> /app/node_modules/.bin/tsx also fails.
+#    pnpm's shims start with `basedir=$(dirname "$0")` and then load
+#    "$basedir/../<pkg>/dist/cli.mjs", so invoking one through a symlink
+#    elsewhere computes the wrong basedir:
+#      Error: Cannot find module '/usr/local/tsx/dist/cli.mjs'
+#
+# PATH avoids both: the shim is executed at its real location, so basedir
+# resolves to /app/node_modules/.bin and the relative load works.
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
+# Fail the build rather than ship an image where the migration tooling is
+# missing or unrunnable — the failure mode this replaces cost a live cutover
+# window. Runs the real binaries, so a broken shim is caught here.
 RUN set -eux; \
-    test -x /app/node_modules/.bin/tsx; \
-    test -x /app/node_modules/.bin/drizzle-kit; \
-    ln -sf /app/node_modules/.bin/tsx         /usr/local/bin/tsx; \
-    ln -sf /app/node_modules/.bin/drizzle-kit /usr/local/bin/drizzle-kit; \
+    test -x /app/node_modules/.bin/tsx || \
+      { echo "FATAL: tsx missing — did the devDependency prune drop it?"; \
+        ls /app/node_modules/.bin | head -40; exit 1; }; \
+    test -x /app/node_modules/.bin/drizzle-kit || \
+      { echo "FATAL: drizzle-kit missing — did the devDependency prune drop it?"; \
+        ls /app/node_modules/.bin | head -40; exit 1; }; \
     tsx --version; \
     drizzle-kit --version
 

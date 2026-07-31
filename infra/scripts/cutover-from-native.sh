@@ -113,10 +113,17 @@ reencrypt_after_restore() {
   # Run inside the app image: it carries node and the app's node_modules
   # (including pg). The script itself is mounted from the checkout so it
   # tracks the repo rather than the image build.
+  #
+  # Mount point must be UNDER /app. Node resolves bare imports by walking up
+  # from the importing file, so a script at /migration/ looks in
+  # /migration/node_modules then /node_modules and never reaches
+  # /app/node_modules — it dies with
+  #   ERR_MODULE_NOT_FOUND: Cannot find package 'pg'
+  # At /app/migration/ the walk hits /app/node_modules on the first parent.
   "${COMPOSE[@]}" run --rm --no-deps \
-    -v "${INFRA_DIR}/scripts:/migration:ro" \
+    -v "${INFRA_DIR}/scripts:/app/migration:ro" \
     -e OLD_KEY="${OLD_KEY:-}" -e NEW_KEY="$new_key" -e DATABASE_URL="$db_url" \
-    pluggedin-app node /migration/reencrypt-data-key.mjs "$mode"
+    pluggedin-app node /app/migration/reencrypt-data-key.mjs "$mode"
 }
 
 rotate_data_key() {
