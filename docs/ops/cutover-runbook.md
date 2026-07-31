@@ -13,27 +13,41 @@ Budget a 30-minute window anyway.
 
 ---
 
-## 0. Prerequisites — both are blockers
+## 0. Prerequisites
 
-Neither can be done from the migration tooling; both need a human.
+### 0.1 DNS — ✅ done and verified 2026-07-31
 
-### 0.1 DNS
+`traefik.plugged.in` A → `185.96.168.249`, which is this host's public IP.
 
-| Record | Value | Why |
-|---|---|---|
-| `traefik.plugged.in` A | this host's public IP | Currently `NXDOMAIN`. Traefik pre-lists it on the websecure entrypoint, so ACME fails on every startup until it resolves. Without it the dashboard has no certificate. |
-| `plugged.in` A TTL | drop to 60s | Lets you retreat quickly. Do this **one previous-TTL window ahead** — if TTL is currently 3600, that means at least an hour before cutover. |
+Verified by more than a `dig`: with the record live, Traefik's ACME error
+changed from `NXDOMAIN looking up A` to
 
-`plugged.in` itself already points here, so no change beyond the TTL.
+```
+403 unauthorized :: 185.96.168.249: Invalid response from
+https://traefik.plugged.in/.well-known/acme-challenge/<token>: 404
+```
 
-### 0.2 Root access
+That 404 is nginx answering, because it still owns `:80`. So the whole ACME
+path — DNS resolution, Let's Encrypt reaching this host on port 80 — is
+confirmed working, and the only thing left blocking issuance is port
+ownership, which cutover resolves the instant nginx stops.
 
-Every remaining step needs `sudo`. The whole migration up to this point was
-done unprivileged; the cutover cannot be.
+**The `plugged.in` TTL does *not* need dropping.** The original plan listed
+it, and this runbook repeated it, but it does not apply to this cutover:
+Traefik and nginx terminate on the same host IP, so no DNS record changes and
+rollback never waits on propagation. It is currently 14400 and that is fine.
+Leave it alone.
+
+### 0.2 Root access — ⛔ the remaining blocker
+
+Every step below needs `sudo`, and `sudo -n` on this host still prompts for a
+password. Phases 0–4 were all done unprivileged; the cutover cannot be.
 
 ```bash
 sudo -v          # confirm you can escalate before starting the window
 ```
+
+Run the cutover from an interactive shell where you can authenticate.
 
 ---
 
@@ -116,6 +130,24 @@ CANARY_API_KEY=<a real api key> infra/scripts/verify.sh
 
 `verify.sh` without `CANARY_API_KEY` skips the canary. Run it *with* the key
 at least once here; "GSLB" must return the VeriTeknik document.
+
+### If the certificate does not issue
+
+`infra/traefik/traefik.yml` points at the **production** Let's Encrypt CA,
+which allows only **5 certificates per registered domain per week**. Do not
+loop on a failing issuance — you can exhaust the week's budget in minutes and
+then be unable to get a real certificate at all.
+
+If the first attempt fails, switch the `caServer:` line to the staging CA
+(the commented line directly above it), debug there where limits are
+effectively unbounded, then switch back for the real issuance:
+
+```bash
+docker compose -f infra/docker-compose.yml logs traefik | grep -i acme
+```
+
+Confirm nothing else is holding `:80` — that is the failure mode this
+runbook's §0.1 verification isolated.
 
 Then watch for 15 minutes:
 
