@@ -50,7 +50,7 @@ sudo dpkg -i /tmp/sops.deb
 sudo mkdir -p /etc/sops/age
 sudo age-keygen -o /etc/sops/age/keys.txt
 sudo chmod 0400 /etc/sops/age/keys.txt
-# Add the public key (`age1...`) to infra/sops/.sops.yaml
+# Add the public key (`age1...`) to .sops.yaml at the repo root
 # BACK UP THE PRIVATE KEY OFFLINE.
 
 # UID/GID alignment for bind-mounted host dirs: nothing to do.
