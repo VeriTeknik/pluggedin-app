@@ -292,14 +292,25 @@ export async function rotateRefreshToken(input: {
     return {
       ok: false,
       error: 'invalid_grant',
-      description: 'Unknown refresh token',
+      description: 'Refresh token is not valid',
     };
   }
+
+  // A refresh token presented by a client it was not issued to is not a boring
+  // validation failure — it is the clearest evidence available that the token
+  // has left the client that holds it. Rejecting without revoking let an
+  // attacker confirm a stolen token was live without tripping the control that
+  // exists to contain exactly that, then choose their moment: client_id is
+  // public, so the correct one is always available when they want it.
+  //
+  // Revocation needs possession of a real refresh token, so this cannot be
+  // driven by guessing — an unknown hash never reaches here.
   if (record.client_uuid !== input.clientUuid) {
+    await revokeFamily(record.family_id, 'refresh_token_wrong_client');
     return {
       ok: false,
       error: 'invalid_grant',
-      description: 'Token was issued to another client',
+      description: 'Refresh token is not valid',
     };
   }
 
