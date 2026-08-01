@@ -54,36 +54,30 @@ otherwise the file it points at never appears and the consumer fails closed.
 
 ## Adding an age recipient
 
-`sops updatekeys` does **not** work in this repo. It reads recipients from
-`.sops.yaml`, and that file sits in `infra/sops/` rather than the repo root:
-
-- run from the repo root → `Config file not found`
-- run from `infra/sops/` → config found, but the path it matches against is now a
-  bare filename, so `no matching creation rules found`
-
-Until `.sops.yaml` moves to the repo root (see Known issues), re-encrypt explicitly:
+Add the public key to the `age:` list in **`.sops.yaml` at the repo root**, then
+re-wrap the data key from the repo root:
 
 ```bash
 export SOPS_AGE_KEY_FILE=/etc/sops/age/keys.txt
-TMP=$(mktemp -p /run/user/$(id -u))          # tmpfs, never disk
-sops -d --input-type dotenv --output-type dotenv infra/sops/secrets.env.sops > "$TMP"
-
-sops --encrypt --age "<deploy-pub>,<backup-pub>,<new-pub>" \
-     --input-type dotenv --output-type dotenv \
-     --output infra/sops/secrets.env.sops "$TMP"
-
-shred -uf "$TMP"
+sops updatekeys --input-type dotenv -y infra/sops/secrets.env.sops
 ```
 
-Then update the recipient list in `infra/sops/.sops.yaml` so it stays accurate, and
-verify (below) before committing.
+`--input-type dotenv` is required here as everywhere else. Verify with the negative
+test below before committing.
+
+`.sops.yaml` must stay at the repo root. sops searches upward from the working
+directory and matches `path_regex` against the path as given, so with the config
+inside `infra/sops/` neither location worked — the repo root gave `Config file not
+found`, and running from inside the directory found the config but matched a bare
+filename and gave `no matching creation rules found`.
 
 ## Verifying who can decrypt — isolate HOME or the test lies
 
-sops falls back to the default keyring at `~/.config/sops/age/keys.txt`. If a copy
-of the deploy key is there, **every** decryption test passes, including with a key
-that is not a recipient at all. A stranger key appearing to read 91 secrets is that
-false positive, not a breach.
+sops falls back to the default keyring at `~/.config/sops/age/keys.txt`. If a copy of
+the deploy key is there, **every** decryption test passes, including with a key that is
+not a recipient at all — a stranger key appearing to read 91 secrets is that false
+positive, not a breach. That copy has since been removed from this host, but isolate
+`HOME` anyway: the test should not depend on a file's continued absence.
 
 ```bash
 EMPTY=$(mktemp -d)
@@ -111,12 +105,6 @@ blob.
 
 ## Known issues
 
-- **`.sops.yaml` is in `infra/sops/`, so creation rules can never match.** Harmless
-  today only because every encrypt in this repo passes `--age` explicitly. Moving it
-  to the repo root would make `updatekeys` and plain `sops <newfile>` work.
-- **A duplicate deploy key sits at `~/.config/sops/age/keys.txt`**, byte-identical to
-  `/etc/sops/age/keys.txt`. It is what breaks decryption tests. Delete it; `/etc` is
-  group-readable by `pluggedin`.
 - **Third-party credentials in the blob are un-rotated** (provider API keys, OAuth
   client secrets, GitHub tokens, SMTP, k8s) — a deliberate deferral, tracked in
   `docs/ops/docker-traefik-sops-migration.md`.
@@ -129,5 +117,4 @@ blob.
 | Editing the blob without `deploy.sh` | Running containers keep the old value |
 | Pre-escaping `$` in a value | Doubled twice, value corrupted |
 | Testing decryption without isolating `HOME` | False pass — the default keyring answers |
-| Using `sops updatekeys` | Fails; see Adding an age recipient |
 | Adding a `*_FILE` secret without touching `deploy.sh` | Consumer fails closed |
