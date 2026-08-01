@@ -36,8 +36,46 @@ RUNNER_USER="${RUNNER_USER:-ghrunner}"
 OLD_HOME="/home/pluggedin/actions-runner"
 NEW_HOME="/home/${RUNNER_USER}/actions-runner"
 
-command -v dockerd-rootless-setuptool.sh >/dev/null \
-  || { echo "docker-ce-rootless-extras missing; apt-get install -y docker-ce-rootless-extras" >&2; exit 1; }
+# ---------------------------------------------------------------------------
+# PREFLIGHT — every requirement is checked BEFORE anything is stopped.
+#
+# An earlier version checked only for dockerd-rootless-setuptool.sh, stopped
+# and uninstalled the production runner, and only then discovered that
+# newuidmap/newgidmap were missing. That left CI with no runner at all and
+# nothing installed to replace it. Nothing below this block is destructive;
+# nothing above it is skippable.
+# ---------------------------------------------------------------------------
+missing=()
+command -v dockerd-rootless-setuptool.sh >/dev/null || missing+=("docker-ce-rootless-extras")
+# uidmap provides newuidmap/newgidmap, without which the user namespace the
+# rootless daemon depends on cannot be set up.
+command -v newuidmap >/dev/null || missing+=("uidmap")
+command -v newgidmap >/dev/null || missing+=("uidmap")
+command -v rootlesskit >/dev/null || missing+=("rootlesskit")
+# Optional but strongly preferred: without it the rootless daemon falls back
+# to the vfs storage driver, which copies every layer and makes a 4 GB image
+# build painfully slow and disk-hungry.
+command -v fuse-overlayfs >/dev/null || missing+=("fuse-overlayfs")
+
+if [ ${#missing[@]} -gt 0 ]; then
+  # shellcheck disable=SC2207
+  uniq_missing=($(printf '%s\n' "${missing[@]}" | sort -u))
+  echo "Missing prerequisites — install these first, then re-run:" >&2
+  echo >&2
+  echo "  sudo apt-get update && sudo apt-get install -y ${uniq_missing[*]}" >&2
+  echo >&2
+  echo "Nothing has been changed. The existing runner is untouched." >&2
+  exit 1
+fi
+
+# Also confirm unprivileged user namespaces are permitted at all; on some
+# hardened kernels they are disabled outright and rootless simply cannot work.
+if [ -r /proc/sys/kernel/unprivileged_userns_clone ]; then
+  [ "$(cat /proc/sys/kernel/unprivileged_userns_clone)" = "1" ] \
+    || { echo "unprivileged user namespaces are disabled; rootless cannot work here" >&2; exit 1; }
+fi
+
+echo "==> preflight ok: rootless prerequisites present"
 
 echo "==> 1. stop and unregister the existing runner"
 OLD_SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print $1}' | head -1)
