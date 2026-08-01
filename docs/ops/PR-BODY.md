@@ -113,3 +113,5 @@ in its own PR with its own testing window, not tacked onto this one.
   It should be removed from the host now the cutover is done.
 - The rollback path (`systemctl start nginx pluggedin`) is still intact and
   was exercised for real during the first attempt — ~44s, no data loss.
+
+<!-- protection smoke test -->
