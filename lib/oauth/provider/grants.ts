@@ -55,6 +55,13 @@ export function classifyRefreshFailure(record: {
  * the access tokens issued from them valid until they expire — up to an hour of
  * continued access *after* the compromise was detected, which would defeat most
  * of the point of detecting it.
+ *
+ * Which is exactly why the two updates share a transaction. Sequentially, a
+ * failure on the second one produces that same half-revoked state by accident:
+ * refresh chain dead, access tokens live, and the caller told how many rows it
+ * revoked as though it had succeeded. The usual trigger for this function is
+ * detected refresh-token reuse, so the moment it matters most is the moment the
+ * database is least worth trusting to stay up.
  */
 export async function revokeFamily(
   familyId: string,
@@ -62,19 +69,21 @@ export async function revokeFamily(
 ): Promise<number> {
   const now = new Date();
 
-  const revokedRefresh = await db
-    .update(oauthRefreshTokensTable)
-    .set({ revoked_at: now, revocation_reason: reason })
-    .where(eq(oauthRefreshTokensTable.family_id, familyId))
-    .returning();
+  return db.transaction(async (tx) => {
+    const revokedRefresh = await tx
+      .update(oauthRefreshTokensTable)
+      .set({ revoked_at: now, revocation_reason: reason })
+      .where(eq(oauthRefreshTokensTable.family_id, familyId))
+      .returning();
 
-  const revokedAccess = await db
-    .update(oauthAccessTokensTable)
-    .set({ revoked_at: now })
-    .where(eq(oauthAccessTokensTable.family_id, familyId))
-    .returning();
+    const revokedAccess = await tx
+      .update(oauthAccessTokensTable)
+      .set({ revoked_at: now })
+      .where(eq(oauthAccessTokensTable.family_id, familyId))
+      .returning();
 
-  return revokedRefresh.length + revokedAccess.length;
+    return revokedRefresh.length + revokedAccess.length;
+  });
 }
 
 async function issueTokenPair(input: {
