@@ -62,7 +62,18 @@ entryPoints:
 
 providers:
   file:
-    directory: /etc/traefik/dynamic
+    # Deliberately NOT /etc/traefik/dynamic bind-mounted from the git working
+    # tree. `watch: true` means any rewrite of those files is picked up
+    # immediately — including a rewrite by `git pull` or `git checkout`, which
+    # the documented deploy performs on every release. Observed: a checkout
+    # where the before and after content were byte-identical still 404'd the
+    # site for ~40s, because the watcher read the file mid-write, found no
+    # `compress` middleware, and every router referencing it failed. Content
+    # equality is not write atomicity.
+    #
+    # deploy.sh now stages this directory into tmpfs with atomic renames, so
+    # git never touches what Traefik reads and a partial file is unobservable.
+    directory: /run/sops/traefik-dynamic
     watch: true
   docker:
     # docker-socket-proxy, not the raw socket. Mounting /var/run/docker.sock

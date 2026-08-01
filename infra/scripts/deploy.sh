@@ -104,6 +104,32 @@ sed 's/\$/$$/g' "$SECRETS_RAW" > "$SECRETS_DECRYPTED"
 chmod 0400 "$SECRETS_DECRYPTED"
 shred -uf "$SECRETS_RAW" 2>/dev/null || rm -f "$SECRETS_RAW"
 
+# 3c. Stage Traefik's dynamic config into tmpfs, out of reach of git.
+#     Traefik watches this directory and reloads on any change. When it was
+#     bind-mounted from the working tree, `git pull` — which the documented
+#     deploy runs immediately before this script — could be observed
+#     mid-write: Traefik loaded a file missing a middleware, every router
+#     referencing it errored, and the site 404'd until the next reload.
+#
+#     Copy to a temp name then rename. rename(2) within a directory is
+#     atomic, so the watcher only ever sees a complete file; without it we
+#     would just move the same race here.
+log "staging traefik dynamic config"
+TRAEFIK_DYNAMIC_DIR="${RUNTIME_DIR}/traefik-dynamic"
+mkdir -p "$TRAEFIK_DYNAMIC_DIR"
+chmod 0755 "$TRAEFIK_DYNAMIC_DIR"
+staged=0
+for src in "${INFRA_DIR}"/traefik/dynamic/*.yml; do
+  [ -f "$src" ] || continue
+  base="$(basename "$src")"
+  cp "$src" "${TRAEFIK_DYNAMIC_DIR}/.${base}.tmp"
+  chmod 0444 "${TRAEFIK_DYNAMIC_DIR}/.${base}.tmp"
+  mv -f "${TRAEFIK_DYNAMIC_DIR}/.${base}.tmp" "${TRAEFIK_DYNAMIC_DIR}/${base}"
+  staged=$((staged + 1))
+done
+[ "$staged" -gt 0 ] || die "no dynamic config staged — Traefik would start with no middlewares"
+log "staged ${staged} dynamic config file(s)"
+
 # 4. Pull image (skip with --no-pull)
 if [ "$PULL" -eq 1 ]; then
   log "pulling images"
