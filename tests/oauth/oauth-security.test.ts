@@ -1,26 +1,48 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createHash, randomBytes } from 'crypto';
-import { mockApiResponse, mockApiError, resetAllMocks } from '../test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * OAuth 2.1 Security Tests
+ * OAuth 2.1 P0 security controls.
  *
- * Tests security features including:
- * - Authorization code injection prevention
- * - PKCE state integrity verification
- * - Refresh token reuse detection
- * - User-server ownership validation
- * - Integrity hash validation
+ * This file previously asserted against an API that did not exist. It expected
+ * validatePkceState to return null on rejection (it returns a discriminated
+ * union), computed integrity hashes as sha256("state:server:user") (they are
+ * HMAC-SHA256 over four pipe-joined fields including the code verifier), and
+ * modelled server ownership as three sequential queries (it is one joined
+ * query). None of that was caught, because the file failed to collect: its
+ * import of lib/oauth/integrity resolved to nothing, vitest reported "no tests",
+ * and all seventeen cases sat green-by-absence for as long as they existed.
+ *
+ * Two of them tested nothing even in principle — one awaited db.delete() and
+ * then asserted db.delete had been called, which is an assertion about the mock.
+ * Those are replaced by cases that exercise the real deletion paths.
+ *
+ * The rewrite therefore keeps every original intent and re-points it at the
+ * shipped implementations.
  */
 
-// Mock dependencies
-vi.mock('@/lib/observability/logger', () => ({
-  log: {
-    oauth: vi.fn(),
-    error: vi.fn(),
-    security: vi.fn(),
-    info: vi.fn(),
+process.env.NEXTAUTH_SECRET = 'test-secret-for-oauth-integrity-hashes';
+
+const { mockDb } = vi.hoisted(() => ({
+  mockDb: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    query: {
+      oauthPkceStatesTable: { findFirst: vi.fn() },
+      mcpServerOAuthTokensTable: { findFirst: vi.fn() },
+      mcpServersTable: { findFirst: vi.fn() },
+      profilesTable: { findFirst: vi.fn() },
+      projectsTable: { findFirst: vi.fn() },
+    },
   },
+}));
+
+vi.mock('@/db', () => ({ db: mockDb }));
+
+vi.mock('@/lib/observability/logger', () => ({
+  log: { oauth: vi.fn(), error: vi.fn(), security: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
 vi.mock('@/lib/observability/oauth-metrics', () => ({
@@ -29,720 +51,424 @@ vi.mock('@/lib/observability/oauth-metrics', () => ({
   recordTokenReuseDetected: vi.fn(),
   recordTokenRevocation: vi.fn(),
   recordPkceValidation: vi.fn(),
+  recordTokenRefresh: vi.fn(),
 }));
 
 vi.mock('@/lib/encryption', () => ({
-  encryptField: vi.fn((value) => `encrypted_${JSON.stringify(value)}`),
-  decryptField: vi.fn((value) => {
-    if (typeof value === 'string' && value.startsWith('encrypted_')) {
-      return JSON.parse(value.substring(10));
-    }
-    return value;
-  }),
+  encryptField: vi.fn((value: unknown) => `encrypted_${JSON.stringify(value)}`),
+  decryptField: vi.fn((value: unknown) =>
+    typeof value === 'string' && value.startsWith('encrypted_')
+      ? JSON.parse(value.substring(10))
+      : value
+  ),
 }));
 
-vi.mock('@/db', () => {
-  const mockDb = {
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    returning: vi.fn(),
-    limit: vi.fn().mockReturnThis(),
-    query: {
-      oauthPkceStatesTable: {
-        findFirst: vi.fn(),
-      },
-      mcpServerOAuthTokensTable: {
-        findFirst: vi.fn(),
-      },
-      mcpServersTable: {
-        findFirst: vi.fn(),
-      },
-      profilesTable: {
-        findFirst: vi.fn(),
-      },
-      projectsTable: {
-        findFirst: vi.fn(),
-      },
-    },
+vi.mock('@/lib/oauth/oauth-config-store', () => ({
+  getOAuthConfig: vi.fn(),
+}));
+
+import { db } from '@/db';
+import { encryptField } from '@/lib/encryption';
+import { generateIntegrityHash, validatePkceState } from '@/lib/oauth/integrity';
+import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
+import { createPkceState } from '@/lib/oauth/pkce';
+import { refreshOAuthToken } from '@/lib/oauth/token-refresh-service';
+import { log } from '@/lib/observability/logger';
+import {
+  recordCodeInjectionAttempt,
+  recordIntegrityViolation,
+  recordTokenReuseDetected,
+  recordTokenRevocation,
+} from '@/lib/observability/oauth-metrics';
+
+const SERVER_UUID = 'test-server-uuid';
+const USER_ID = 'test-user-id';
+const ATTACKER_ID = 'attacker-user-id';
+const REDIRECT_URI = 'http://localhost:12005/api/oauth/callback';
+
+/**
+ * A stored PKCE row whose integrity hash is genuinely correct. Tests that need
+ * a *bad* hash override integrity_hash explicitly, so the difference between
+ * the valid and tampered cases is visible in the test body.
+ */
+function pkceRow(overrides: Record<string, unknown> = {}) {
+  const state = (overrides.state as string) ?? 'state-abc';
+  const serverUuid = (overrides.server_uuid as string) ?? SERVER_UUID;
+  const userId = (overrides.user_id as string) ?? USER_ID;
+  const codeVerifier = (overrides.code_verifier as string) ?? randomBytes(32).toString('base64url');
+
+  return {
+    state,
+    server_uuid: serverUuid,
+    user_id: userId,
+    code_verifier: codeVerifier,
+    redirect_uri: REDIRECT_URI,
+    integrity_hash: generateIntegrityHash({ state, serverUuid, userId, codeVerifier }),
+    expires_at: new Date(Date.now() + 120_000),
+    created_at: new Date(),
+    ...overrides,
   };
-  return { db: mockDb };
+}
+
+/**
+ * validateServerOwnership issues one joined query:
+ *   select().from(servers).innerJoin(profiles).innerJoin(projects).where().limit()
+ * The old mocks stopped at .where(), which is why every ownership test died on
+ * "innerJoin is not a function".
+ */
+function mockOwnership(rows: { user_id: string; server_uuid: string }[]) {
+  const afterWhere = { limit: vi.fn().mockResolvedValue(rows) };
+  const joined: Record<string, unknown> = {};
+  joined.innerJoin = vi.fn(() => joined);
+  joined.where = vi.fn(() => afterWhere);
+  (db.select as ReturnType<typeof vi.fn>).mockReturnValue({ from: vi.fn(() => joined) });
+}
+
+/**
+ * db.update(...).set(...).where(...) is awaited directly on the lock-clearing
+ * paths and has .returning() called on it during lock acquisition, so where()
+ * must be both a promise and an object carrying returning().
+ */
+function mockUpdate(returningQueue: unknown[][]) {
+  const setPayloads: Record<string, unknown>[] = [];
+  let call = 0;
+  (db.update as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    set: vi.fn((payload: Record<string, unknown>) => {
+      setPayloads.push(payload);
+      return {
+        where: vi.fn(() => {
+          const rows = returningQueue[Math.min(call, returningQueue.length - 1)] ?? [];
+          call += 1;
+          const result = Promise.resolve({ rowCount: 1 }) as Promise<unknown> & {
+            returning: () => Promise<unknown[]>;
+          };
+          result.returning = () => Promise.resolve(rows);
+          return result;
+        }),
+      };
+    }),
+  }));
+  return setPayloads;
+}
+
+function tokenRow(overrides: Record<string, unknown> = {}) {
+  return {
+    uuid: 'token-uuid',
+    server_uuid: SERVER_UUID,
+    access_token_encrypted: encryptField('old_access_token'),
+    refresh_token_encrypted: encryptField('old_refresh_token'),
+    refresh_token_used_at: null,
+    refresh_token_locked_at: new Date(),
+    expires_at: new Date(Date.now() - 1000),
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  (db.delete as ReturnType<typeof vi.fn>).mockReturnValue({
+    where: vi.fn().mockResolvedValue({ rowCount: 1 }),
+  });
+  (db.query.mcpServersTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+    uuid: SERVER_UUID,
+    streamable_http_options_encrypted: encryptField({ headers: {} }),
+  });
 });
 
-describe('OAuth 2.1 Security Tests', () => {
-  const mockServerUuid = 'test-server-uuid';
-  const mockUserId = 'test-user-id';
-  const mockAttackerUserId = 'attacker-user-id';
-  const mockRedirectUri = 'http://localhost:12005/api/oauth/callback';
+describe('Authorization code injection prevention (P0)', () => {
+  it('rejects a state that belongs to another user', async () => {
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({ user_id: USER_ID })
+    );
 
+    const result = await validatePkceState('state-abc', ATTACKER_ID);
+
+    expect(result).toEqual({ ok: false, reason: 'user_mismatch' });
+    expect(recordCodeInjectionAttempt).toHaveBeenCalled();
+  });
+
+  it('accepts the same state for the user it was issued to', async () => {
+    // The mismatch above must be about ownership, not about the row being
+    // unusable — otherwise the test would pass for the wrong reason.
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({ user_id: USER_ID })
+    );
+
+    const result = await validatePkceState('state-abc', USER_ID);
+
+    expect(result.ok).toBe(true);
+    expect(recordCodeInjectionAttempt).not.toHaveBeenCalled();
+  });
+
+  it('reports a state nobody holds as not_found rather than as a mismatch', async () => {
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    expect(await validatePkceState('no-such-state', USER_ID)).toEqual({
+      ok: false,
+      reason: 'not_found',
+    });
+    expect(recordCodeInjectionAttempt).not.toHaveBeenCalled();
+  });
+
+  it('binds a new PKCE state to the user creating it', async () => {
+    let inserted: Record<string, unknown> | undefined;
+    (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({
+      values: vi.fn((values: Record<string, unknown>) => {
+        inserted = values;
+        return { returning: vi.fn().mockResolvedValue([values]) };
+      }),
+    });
+
+    await createPkceState(SERVER_UUID, USER_ID, REDIRECT_URI);
+
+    expect(inserted?.user_id).toBe(USER_ID);
+    expect(inserted?.server_uuid).toBe(SERVER_UUID);
+    // The hash must cover the row it is stored with, or verification later is
+    // checking a hash against parameters it was never computed from.
+    expect(inserted?.integrity_hash).toBe(
+      generateIntegrityHash({
+        state: inserted?.state as string,
+        serverUuid: SERVER_UUID,
+        userId: USER_ID,
+        codeVerifier: inserted?.code_verifier as string,
+      })
+    );
+  });
+});
+
+describe('PKCE state integrity verification (P0)', () => {
+  it('accepts a row whose hash matches its parameters', async () => {
+    const row = pkceRow({ state: 'integrity-ok' });
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(row);
+
+    const result = await validatePkceState('integrity-ok', USER_ID);
+
+    expect(result).toEqual({ ok: true, state: row });
+  });
+
+  it('rejects a tampered hash and destroys the state', async () => {
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({ state: 'tampered', integrity_hash: 'tampered_hash_value' })
+    );
+
+    const result = await validatePkceState('tampered', USER_ID);
+
+    expect(result).toEqual({ ok: false, reason: 'integrity' });
+    expect(recordIntegrityViolation).toHaveBeenCalledWith('hash_mismatch');
+    // A state that failed verification must not survive to be retried.
+    expect(db.delete).toHaveBeenCalled();
+  });
+
+  it('detects substitution of the server the state was issued for', async () => {
+    // The hash commits to the original server_uuid; the stored row names a
+    // different one. This is the attack the hash exists to catch.
+    const original = pkceRow({ state: 'substituted' });
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...original,
+      server_uuid: 'substituted-server-uuid',
+    });
+
+    expect(await validatePkceState('substituted', USER_ID)).toEqual({
+      ok: false,
+      reason: 'integrity',
+    });
+  });
+
+  it('is not fooled by a hash built the way the old tests built it', async () => {
+    // sha256("state:server:user") — no secret, no code verifier. If this ever
+    // verifies, the integrity hash has stopped being a MAC.
+    const state = 'legacy-hash';
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({
+        state,
+        integrity_hash: createHash('sha256')
+          .update(`${state}:${SERVER_UUID}:${USER_ID}`)
+          .digest('hex'),
+      })
+    );
+
+    expect(await validatePkceState(state, USER_ID)).toEqual({ ok: false, reason: 'integrity' });
+  });
+
+  it('separates an expired state from an invalid one', async () => {
+    // The callback reports these differently to the user and to metrics, so
+    // collapsing them would be a real regression.
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({ state: 'stale', expires_at: new Date(Date.now() - 1000) })
+    );
+
+    expect(await validatePkceState('stale', USER_ID)).toEqual({ ok: false, reason: 'expired' });
+    expect(db.delete).toHaveBeenCalled();
+  });
+});
+
+describe('Refresh token reuse detection (P0)', () => {
   beforeEach(() => {
-    resetAllMocks();
-    vi.clearAllTimers();
+    mockOwnership([{ user_id: USER_ID, server_uuid: SERVER_UUID }]);
   });
 
-  afterEach(() => {
-    resetAllMocks();
+  it('revokes every token when a refresh token is replayed', async () => {
+    mockUpdate([[tokenRow({ refresh_token_used_at: new Date(Date.now() - 1000) })]]);
+
+    const result = await refreshOAuthToken(SERVER_UUID, USER_ID);
+
+    expect(result).toBe(false);
+    expect(recordTokenReuseDetected).toHaveBeenCalled();
+    expect(recordTokenRevocation).toHaveBeenCalledWith('reuse_detected');
+    expect(db.delete).toHaveBeenCalled();
   });
 
-  describe('Authorization Code Injection Prevention (P0)', () => {
-    it('should reject authorization code with mismatched user_id', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
-      const { recordCodeInjectionAttempt } = await import('@/lib/observability/oauth-metrics');
-
-      const mockState = 'state-belongs-to-victim';
-      const mockCodeVerifier = randomBytes(32).toString('base64url');
-      const mockIntegrityHash = createHash('sha256')
-        .update(`${mockState}:${mockServerUuid}:${mockUserId}`)
-        .digest('hex');
-
-      // PKCE state belongs to victim user
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue({
-        state: mockState,
-        server_uuid: mockServerUuid,
-        user_id: mockUserId, // Victim's user ID
-        code_verifier: mockCodeVerifier,
-        redirect_uri: mockRedirectUri,
-        integrity_hash: mockIntegrityHash,
-        expires_at: new Date(Date.now() + 2 * 60 * 1000),
-        created_at: new Date(),
-      });
-
-      // Attacker tries to use victim's state
-      const result = await validatePkceState(mockState, mockAttackerUserId);
-
-      // Should reject the state
-      expect(result).toBeNull();
-
-      // Should record security event
-      expect(recordCodeInjectionAttempt).toHaveBeenCalled();
+  it('treats a use older than the detection window as normal rotation', async () => {
+    // Reuse detection is windowed at 10s. A token legitimately rotated an hour
+    // ago must not be mistaken for a replay, or every long-lived connection
+    // would revoke itself.
+    mockUpdate([[tokenRow({ refresh_token_used_at: new Date(Date.now() - 3_600_000) })]]);
+    (getOAuthConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      client_id: 'test-client-id',
+      token_endpoint: 'https://auth.example.com/token',
     });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ access_token: 'new', refresh_token: 'new_r', expires_in: 3600 }),
+    }) as unknown as typeof fetch;
 
-    it('should prevent cross-user authorization code usage', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
+    const result = await refreshOAuthToken(SERVER_UUID, USER_ID);
 
-      const victimState = 'victim-state-123';
-      const attackerState = 'attacker-state-456';
-
-      // Set up victim's PKCE state
-      (db.query.oauthPkceStatesTable.findFirst as any).mockImplementation((params: any) => {
-        if (params.where.state === victimState) {
-          return Promise.resolve({
-            state: victimState,
-            server_uuid: mockServerUuid,
-            user_id: mockUserId,
-            code_verifier: randomBytes(32).toString('base64url'),
-            redirect_uri: mockRedirectUri,
-            integrity_hash: 'victim-hash',
-            expires_at: new Date(Date.now() + 2 * 60 * 1000),
-            created_at: new Date(),
-          });
-        }
-        return Promise.resolve(null);
-      });
-
-      // Attacker tries to use victim's state
-      const result = await validatePkceState(victimState, mockAttackerUserId);
-      expect(result).toBeNull();
-
-      // Victim can use their own state
-      const validResult = await validatePkceState(victimState, mockUserId);
-      expect(validResult).toBeDefined();
-    });
-
-    it('should bind PKCE state to specific user session', async () => {
-      const { createPkceState } = await import('@/lib/oauth/pkce');
-      const { db } = await import('@/db');
-
-      const mockState = 'session-bound-state';
-      const mockCodeVerifier = randomBytes(32).toString('base64url');
-
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockImplementation((values: any) => {
-          // Ensure user_id is bound to PKCE state
-          expect(values.user_id).toBe(mockUserId);
-          return {
-            returning: vi.fn().mockResolvedValue([{
-              state: mockState,
-              code_verifier: mockCodeVerifier,
-              server_uuid: mockServerUuid,
-              user_id: mockUserId,
-              redirect_uri: mockRedirectUri,
-              expires_at: new Date(Date.now() + 5 * 60 * 1000),
-            }]),
-          };
-        }),
-      });
-
-      await createPkceState(mockServerUuid, mockUserId, mockRedirectUri);
-      expect(db.insert).toHaveBeenCalled();
-    });
+    expect(result).toBe(true);
+    expect(recordTokenReuseDetected).not.toHaveBeenCalled();
+    expect(db.delete).not.toHaveBeenCalled();
   });
 
-  describe('PKCE State Integrity Verification (P0)', () => {
-    it('should validate integrity hash matches state parameters', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
-
-      const mockState = 'integrity-test-state';
-      const mockCodeVerifier = randomBytes(32).toString('base64url');
-
-      // Correct integrity hash
-      const correctHash = createHash('sha256')
-        .update(`${mockState}:${mockServerUuid}:${mockUserId}`)
-        .digest('hex');
-
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue({
-        state: mockState,
-        server_uuid: mockServerUuid,
-        user_id: mockUserId,
-        code_verifier: mockCodeVerifier,
-        redirect_uri: mockRedirectUri,
-        integrity_hash: correctHash,
-        expires_at: new Date(Date.now() + 2 * 60 * 1000),
-        created_at: new Date(),
-      });
-
-      (db.delete as any).mockReturnValue({
-        where: vi.fn().mockResolvedValue({ rowCount: 1 }),
-      });
-
-      const result = await validatePkceState(mockState, mockUserId);
-      expect(result).toBeDefined();
-      expect(result?.state).toBe(mockState);
+  it('marks the old refresh token used once rotation succeeds', async () => {
+    const setPayloads = mockUpdate([[tokenRow()]]);
+    (getOAuthConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      client_id: 'test-client-id',
+      token_endpoint: 'https://auth.example.com/token',
     });
-
-    it('should reject state with tampered integrity hash', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
-      const { recordIntegrityViolation } = await import('@/lib/observability/oauth-metrics');
-
-      const mockState = 'tampered-state';
-      const mockCodeVerifier = randomBytes(32).toString('base64url');
-
-      // Tampered/incorrect integrity hash
-      const tamperedHash = 'tampered_hash_value';
-
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue({
-        state: mockState,
-        server_uuid: mockServerUuid,
-        user_id: mockUserId,
-        code_verifier: mockCodeVerifier,
-        redirect_uri: mockRedirectUri,
-        integrity_hash: tamperedHash,
-        expires_at: new Date(Date.now() + 2 * 60 * 1000),
-        created_at: new Date(),
-      });
-
-      const result = await validatePkceState(mockState, mockUserId);
-      expect(result).toBeNull();
-      expect(recordIntegrityViolation).toHaveBeenCalledWith('hash_mismatch');
-    });
-
-    it('should detect state parameter substitution attack', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
-
-      const originalState = 'original-state';
-      const substitutedServerUuid = 'substituted-server-uuid';
-
-      // Hash was created for original parameters
-      const originalHash = createHash('sha256')
-        .update(`${originalState}:${mockServerUuid}:${mockUserId}`)
-        .digest('hex');
-
-      // But server_uuid in database was substituted
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue({
-        state: originalState,
-        server_uuid: substitutedServerUuid, // SUBSTITUTED!
-        user_id: mockUserId,
-        code_verifier: randomBytes(32).toString('base64url'),
-        redirect_uri: mockRedirectUri,
-        integrity_hash: originalHash, // Hash doesn't match substituted params
-        expires_at: new Date(Date.now() + 2 * 60 * 1000),
-        created_at: new Date(),
-      });
-
-      const result = await validatePkceState(originalState, mockUserId);
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('Refresh Token Reuse Detection (P0)', () => {
-    it('should detect and revoke tokens on refresh token reuse', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
-      const { recordTokenReuseDetected, recordTokenRevocation } = await import('@/lib/observability/oauth-metrics');
-
-      // Mock server ownership validation
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { profile_uuid: 'profile-uuid' }
-            ]),
-          }),
-        }),
-      });
-
-      (db.query.profilesTable.findFirst as any).mockResolvedValue({
-        uuid: 'profile-uuid',
-        project_uuid: 'project-uuid',
-      });
-
-      (db.query.projectsTable.findFirst as any).mockResolvedValue({
-        uuid: 'project-uuid',
-        user_id: mockUserId,
-      });
-
-      // Token record shows refresh token was already used (SECURITY VIOLATION)
-      const usedAt = new Date(Date.now() - 1000); // Used 1 second ago
-
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{
-              uuid: 'token-uuid',
-              server_uuid: mockServerUuid,
-              access_token_encrypted: 'encrypted_access_token',
-              refresh_token_encrypted: 'encrypted_refresh_token',
-              refresh_token_used_at: usedAt, // ALREADY USED - REPLAY ATTACK!
-              refresh_token_locked_at: new Date(),
-              expires_at: new Date(Date.now() - 1000), // Expired
-            }]),
-          }),
-        }),
-      });
-
-      // Mock token deletion (revocation)
-      (db.delete as any).mockReturnValue({
-        where: vi.fn().mockResolvedValue({ rowCount: 1 }),
-      });
-
-      const result = await refreshOAuthToken(mockServerUuid, mockUserId);
-
-      expect(result).toBe(false);
-      expect(recordTokenReuseDetected).toHaveBeenCalled();
-      expect(recordTokenRevocation).toHaveBeenCalledWith('reuse_detected');
-      expect(db.delete).toHaveBeenCalled(); // Tokens should be revoked
-    });
-
-    it('should mark refresh token as used after successful rotation', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
-      const { encryptField } = await import('@/lib/encryption');
-
-      // Mock server ownership
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ profile_uuid: 'profile-uuid' }]),
-          }),
-        }),
-      });
-
-      (db.query.profilesTable.findFirst as any).mockResolvedValue({ project_uuid: 'project-uuid' });
-      (db.query.projectsTable.findFirst as any).mockResolvedValue({ user_id: mockUserId });
-
-      // First update: Lock acquisition
-      let updateCallCount = 0;
-      (db.update as any).mockImplementation(() => ({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockImplementation(() => {
-              updateCallCount++;
-              if (updateCallCount === 1) {
-                // Lock acquisition
-                return Promise.resolve([{
-                  uuid: 'token-uuid',
-                  server_uuid: mockServerUuid,
-                  access_token_encrypted: encryptField('old_access_token'),
-                  refresh_token_encrypted: encryptField('old_refresh_token'),
-                  refresh_token_used_at: null, // NOT USED YET - SAFE
-                  refresh_token_locked_at: new Date(),
-                  expires_at: new Date(Date.now() - 1000), // Expired
-                }]);
-              } else {
-                // Token update after refresh
-                return Promise.resolve([{
-                  uuid: 'token-uuid',
-                  server_uuid: mockServerUuid,
-                  access_token_encrypted: encryptField('new_access_token'),
-                  refresh_token_encrypted: encryptField('new_refresh_token'),
-                  refresh_token_used_at: new Date(), // MARKED AS USED
-                  refresh_token_locked_at: null,
-                  expires_at: new Date(Date.now() + 3600000),
-                }]);
-              }
-            }),
-          }),
-        }),
-      }));
-
-      // Mock OAuth config
-      vi.doMock('@/lib/oauth/oauth-config-store', () => ({
-        getOAuthConfig: vi.fn().mockResolvedValue({
-          serverUuid: mockServerUuid,
-          client_id: 'test-client-id',
-          token_endpoint: 'https://auth.example.com/token',
-        }),
-      }));
-
-      // Mock token endpoint response
-      global.fetch = vi.fn().mockResolvedValue(mockApiResponse({
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
         access_token: 'new_access_token',
         refresh_token: 'new_refresh_token',
-        token_type: 'Bearer',
         expires_in: 3600,
-      }));
+      }),
+    }) as unknown as typeof fetch;
 
-      // Mock server query for streamable options update
-      (db.query.mcpServersTable.findFirst as any).mockResolvedValue({
-        uuid: mockServerUuid,
-        streamable_http_options_encrypted: encryptField({ headers: {} }),
-      });
+    const result = await refreshOAuthToken(SERVER_UUID, USER_ID);
 
-      const result = await refreshOAuthToken(mockServerUuid, mockUserId);
-
-      expect(result).toBe(true);
-      expect(updateCallCount).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should prevent concurrent refresh token usage with optimistic locking', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
-
-      // Mock server ownership
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ profile_uuid: 'profile-uuid' }]),
-          }),
-        }),
-      });
-
-      (db.query.profilesTable.findFirst as any).mockResolvedValue({ project_uuid: 'project-uuid' });
-      (db.query.projectsTable.findFirst as any).mockResolvedValue({ user_id: mockUserId });
-
-      // Simulate concurrent request - token is already locked
-      const recentLockTime = new Date(Date.now() - 5000); // Locked 5 seconds ago
-
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{
-              uuid: 'token-uuid',
-              server_uuid: mockServerUuid,
-              access_token_encrypted: 'encrypted_access_token',
-              refresh_token_encrypted: 'encrypted_refresh_token',
-              refresh_token_used_at: null,
-              refresh_token_locked_at: recentLockTime, // LOCKED BY ANOTHER REQUEST
-              expires_at: new Date(Date.now() - 1000),
-            }]),
-          }),
-        }),
-      });
-
-      // Second concurrent request should see the lock and return true
-      // (trusting the first request to complete the refresh)
-      const result = await refreshOAuthToken(mockServerUuid, mockUserId);
-      expect(result).toBe(true); // Trusts ongoing refresh
-    });
+    expect(result).toBe(true);
+    // Located by content, not by position: rotation is followed by a write to
+    // the server's streamable options, so the last payload is not this one.
+    const rotation = setPayloads.find((p) => 'access_token_encrypted' in p);
+    expect(rotation?.refresh_token_used_at).toBeInstanceOf(Date);
+    expect(rotation?.refresh_token_locked_at).toBeNull();
+    expect(rotation?.access_token_encrypted).toBe(encryptField('new_access_token'));
   });
 
-  describe('Server Ownership Validation (P0)', () => {
-    it('should prevent token substitution across different user servers', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
-      const { log } = await import('@/lib/observability/logger');
-
-      // Server belongs to different user
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ profile_uuid: 'profile-uuid' }]),
-          }),
-        }),
-      });
-
-      (db.query.profilesTable.findFirst as any).mockResolvedValue({ project_uuid: 'project-uuid' });
-
-      // Project belongs to DIFFERENT user
-      (db.query.projectsTable.findFirst as any).mockResolvedValue({
-        uuid: 'project-uuid',
-        user_id: 'different-user-id', // NOT the requesting user
-      });
-
-      const result = await refreshOAuthToken(mockServerUuid, mockUserId);
-
-      expect(result).toBe(false);
-      expect(log.security).toHaveBeenCalledWith(
-        'oauth_ownership_violation',
-        mockUserId,
-        expect.objectContaining({
-          serverUuid: mockServerUuid,
-        })
-      );
+  it('defers to the holder when the lock cannot be acquired', async () => {
+    // Lock contention is signalled by the UPDATE matching no rows, not by
+    // inspecting a returned timestamp — the old test asserted the latter and so
+    // never exercised this branch at all.
+    mockUpdate([[]]);
+    (db.query.mcpServerOAuthTokensTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      server_uuid: SERVER_UUID,
+      refresh_token_locked_at: null,
+      expires_at: new Date(Date.now() + 3_600_000),
     });
 
-    it('should validate ownership chain: Server → Profile → Project → User', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
+    const result = await refreshOAuthToken(SERVER_UUID, USER_ID);
 
-      const mockProfileUuid = 'valid-profile-uuid';
-      const mockProjectUuid = 'valid-project-uuid';
+    expect(result).toBe(true);
+  });
+});
 
-      // Step 1: Server → Profile
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ profile_uuid: mockProfileUuid }]),
-          }),
-        }),
-      });
+describe('Server ownership validation (P0)', () => {
+  it('refuses to refresh a server owned by somebody else', async () => {
+    mockOwnership([{ user_id: 'different-user-id', server_uuid: SERVER_UUID }]);
+    mockUpdate([[tokenRow()]]);
 
-      // Step 2: Profile → Project
-      (db.query.profilesTable.findFirst as any).mockResolvedValue({
-        uuid: mockProfileUuid,
-        project_uuid: mockProjectUuid,
-      });
+    const result = await refreshOAuthToken(SERVER_UUID, USER_ID);
 
-      // Step 3: Project → User
-      (db.query.projectsTable.findFirst as any).mockResolvedValue({
-        uuid: mockProjectUuid,
-        user_id: mockUserId, // Correct user
-      });
-
-      // Mock token state for lock acquisition
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{
-              uuid: 'token-uuid',
-              server_uuid: mockServerUuid,
-              access_token_encrypted: 'encrypted_access_token',
-              refresh_token_encrypted: 'encrypted_refresh_token',
-              refresh_token_used_at: null,
-              refresh_token_locked_at: new Date(),
-              expires_at: new Date(Date.now() + 1000000), // Not expired
-            }]),
-          }),
-        }),
-      });
-
-      await refreshOAuthToken(mockServerUuid, mockUserId);
-
-      // Should have validated the complete chain
-      expect(db.select).toHaveBeenCalled();
-      expect(db.query.profilesTable.findFirst).toHaveBeenCalled();
-      expect(db.query.projectsTable.findFirst).toHaveBeenCalled();
-    });
-
-    it('should reject if server not found in database', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
-
-      // Server not found
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]), // EMPTY - SERVER NOT FOUND
-          }),
-        }),
-      });
-
-      const result = await refreshOAuthToken('non-existent-server', mockUserId);
-      expect(result).toBe(false);
-    });
+    expect(result).toBe(false);
+    expect(log.security).toHaveBeenCalledWith(
+      'oauth_ownership_violation',
+      USER_ID,
+      expect.objectContaining({ serverUuid: SERVER_UUID })
+    );
+    // The ownership check must gate the lock, not run alongside it.
+    expect(db.update).not.toHaveBeenCalled();
   });
 
-  describe('PKCE State Replay Prevention', () => {
-    it('should prevent reuse of deleted PKCE state via audit table', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
+  it('validates the chain server → profile → project → user in one query', async () => {
+    mockOwnership([{ user_id: USER_ID, server_uuid: SERVER_UUID }]);
+    mockUpdate([[tokenRow({ expires_at: new Date(Date.now() + 3_600_000) })]]);
 
-      const reusedState = 'already-used-state';
+    const result = await refreshOAuthToken(SERVER_UUID, USER_ID);
 
-      // State was already deleted and moved to audit table
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue(null);
-
-      // But audit table shows it was used
-      const auditQuery = vi.fn().mockResolvedValue([{
-        state: reusedState,
-        server_uuid: mockServerUuid,
-        user_id: mockUserId,
-        used_at: new Date(Date.now() - 1000),
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        audit_reason: 'used',
-      }]);
-
-      // Mock audit table check (would be in the validatePkceState implementation)
-      vi.doMock('@/db', () => ({
-        db: {
-          ...mockDb,
-          query: {
-            ...mockDb.query,
-            oauthPkceStatesAuditTable: {
-              findFirst: auditQuery,
-            },
-          },
-        },
-      }));
-
-      const result = await validatePkceState(reusedState, mockUserId);
-      expect(result).toBeNull(); // Should reject - state already used
-    });
-
-    it('should maintain 30-day audit trail for PKCE states', async () => {
-      const { db } = await import('@/db');
-
-      // Simulate PKCE state deletion trigger
-      const deletedState = {
-        state: 'deleted-state-123',
-        server_uuid: mockServerUuid,
-        user_id: mockUserId,
-        code_verifier: randomBytes(32).toString('base64url'),
-        redirect_uri: mockRedirectUri,
-        integrity_hash: 'hash',
-        created_at: new Date(),
-        expires_at: new Date(Date.now() + 5 * 60 * 1000),
-      };
-
-      // Mock audit table insert (simulating DB trigger)
-      const auditInsert = vi.fn().mockResolvedValue([{
-        state: deletedState.state,
-        server_uuid: deletedState.server_uuid,
-        user_id: deletedState.user_id,
-        used_at: new Date(),
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        audit_reason: 'used',
-      }]);
-
-      (db.insert as any).mockReturnValue({
-        values: auditInsert,
-      });
-
-      // Simulate deletion (would trigger audit in real DB)
-      (db.delete as any).mockReturnValue({
-        where: vi.fn().mockResolvedValue({ rowCount: 1 }),
-      });
-
-      // The trigger should have inserted into audit table
-      // (In real scenario, this is automatic via PostgreSQL trigger)
-      await db.delete();
-
-      // Verify audit could store the state
-      expect(db.delete).toHaveBeenCalled();
-    });
+    // Token is still valid, so this returns true without contacting the IdP.
+    expect(result).toBe(true);
+    expect(db.select).toHaveBeenCalled();
   });
 
-  describe('Security Event Logging', () => {
-    it('should log code injection attempts with attacker details', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
-      const { log } = await import('@/lib/observability/logger');
+  it('refuses when the server does not exist', async () => {
+    mockOwnership([]);
 
-      const mockState = 'victim-state';
+    const result = await refreshOAuthToken('non-existent-server', USER_ID);
 
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue({
-        state: mockState,
-        server_uuid: mockServerUuid,
-        user_id: mockUserId, // Victim
-        code_verifier: randomBytes(32).toString('base64url'),
-        redirect_uri: mockRedirectUri,
-        integrity_hash: 'hash',
-        expires_at: new Date(Date.now() + 2 * 60 * 1000),
-        created_at: new Date(),
-      });
+    expect(result).toBe(false);
+    expect(log.security).toHaveBeenCalledWith(
+      'oauth_server_not_found',
+      USER_ID,
+      expect.objectContaining({ serverUuid: 'non-existent-server' })
+    );
+  });
+});
 
-      await validatePkceState(mockState, mockAttackerUserId);
+describe('Security event logging', () => {
+  it('records the presenting user when a state is hijacked', async () => {
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({ state: 'victim-state', user_id: USER_ID })
+    );
 
-      expect(log.security).toHaveBeenCalledWith(
-        expect.stringContaining('injection'),
-        mockAttackerUserId,
-        expect.any(Object)
-      );
-    });
+    await validatePkceState('victim-state', ATTACKER_ID);
 
-    it('should log integrity violations with hash details', async () => {
-      const { validatePkceState } = await import('@/lib/oauth/integrity');
-      const { db } = await import('@/db');
-      const { log } = await import('@/lib/observability/logger');
+    expect(log.security).toHaveBeenCalledWith(
+      'pkce_state_user_mismatch',
+      ATTACKER_ID,
+      expect.objectContaining({ state: 'victim-state', expectedUser: USER_ID })
+    );
+  });
 
-      const mockState = 'tampered-state';
-      const tamperedHash = 'invalid_hash';
+  it('records integrity violations against the state that failed', async () => {
+    (db.query.oauthPkceStatesTable.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      pkceRow({ state: 'tampered-state', integrity_hash: 'invalid_hash' })
+    );
 
-      (db.query.oauthPkceStatesTable.findFirst as any).mockResolvedValue({
-        state: mockState,
-        server_uuid: mockServerUuid,
-        user_id: mockUserId,
-        code_verifier: randomBytes(32).toString('base64url'),
-        redirect_uri: mockRedirectUri,
-        integrity_hash: tamperedHash,
-        expires_at: new Date(Date.now() + 2 * 60 * 1000),
-        created_at: new Date(),
-      });
+    await validatePkceState('tampered-state', USER_ID);
 
-      await validatePkceState(mockState, mockUserId);
+    expect(log.security).toHaveBeenCalledWith(
+      'pkce_state_integrity_violation',
+      USER_ID,
+      expect.objectContaining({ state: 'tampered-state' })
+    );
+  });
 
-      expect(log.security).toHaveBeenCalled();
-    });
+  it('records when the replayed token was previously used', async () => {
+    mockOwnership([{ user_id: USER_ID, server_uuid: SERVER_UUID }]);
+    const usedAt = new Date(Date.now() - 5000);
+    mockUpdate([[tokenRow({ refresh_token_used_at: usedAt })]]);
 
-    it('should log token reuse with timestamp information', async () => {
-      const { refreshOAuthToken } = await import('@/lib/oauth/token-refresh-service');
-      const { db } = await import('@/db');
-      const { log } = await import('@/lib/observability/logger');
+    await refreshOAuthToken(SERVER_UUID, USER_ID);
 
-      // Mock ownership validation
-      (db.select as any).mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ profile_uuid: 'profile-uuid' }]),
-          }),
-        }),
-      });
-
-      (db.query.profilesTable.findFirst as any).mockResolvedValue({ project_uuid: 'project-uuid' });
-      (db.query.projectsTable.findFirst as any).mockResolvedValue({ user_id: mockUserId });
-
-      const usedAt = new Date(Date.now() - 5000);
-
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{
-              uuid: 'token-uuid',
-              server_uuid: mockServerUuid,
-              access_token_encrypted: 'encrypted_token',
-              refresh_token_encrypted: 'encrypted_refresh',
-              refresh_token_used_at: usedAt, // ALREADY USED
-              refresh_token_locked_at: new Date(),
-              expires_at: new Date(Date.now() - 1000),
-            }]),
-          }),
-        }),
-      });
-
-      (db.delete as any).mockReturnValue({
-        where: vi.fn().mockResolvedValue({ rowCount: 1 }),
-      });
-
-      await refreshOAuthToken(mockServerUuid, mockUserId);
-
-      expect(log.security).toHaveBeenCalledWith(
-        'oauth_refresh_token_reuse_detected',
-        mockUserId,
-        expect.objectContaining({
-          serverUuid: mockServerUuid,
-          tokenUsedAt: usedAt,
-        })
-      );
-    });
+    expect(log.security).toHaveBeenCalledWith(
+      'oauth_refresh_token_reuse_detected',
+      USER_ID,
+      expect.objectContaining({ serverUuid: SERVER_UUID, tokenUsedAt: usedAt })
+    );
+    expect(log.security).toHaveBeenCalledWith(
+      'oauth_tokens_revoked',
+      USER_ID,
+      expect.objectContaining({ reason: 'refresh_token_reuse' })
+    );
   });
 });
