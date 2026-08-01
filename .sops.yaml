@@ -17,6 +17,14 @@ creation_rules:
   # earlier version anchored on `\.(env|yaml)$`, which silently matched
   # nothing, so newly created files fell through to sops' "no matching
   # creation rule" error.
+  #
+  # This file must live at the REPO ROOT, not in infra/sops/. sops searches
+  # for .sops.yaml upward from the working directory, and matches path_regex
+  # against the path as given. With the config inside infra/sops/, neither
+  # location worked: from the repo root sops reported "Config file not
+  # found", and from inside the directory it found the config but matched
+  # against a bare filename and reported "no matching creation rules found".
+  # `sops updatekeys` was unusable either way.
   - path_regex: infra/sops/.*\.(env|yaml|yml|json)\.sops$
     encrypted_regex: "^(.*)$"
     # Generated at Phase 0 (2026-07-31). Public recipients only — safe to
