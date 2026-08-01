@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { oauthClientsTable } from '@/db/schema';
-import { redeemAuthorizationCode, rotateRefreshToken } from '@/lib/oauth/grants';
-import { connectorBaseUrl } from '@/lib/oauth/metadata';
+import { redeemAuthorizationCode, rotateRefreshToken } from '@/lib/oauth/provider/grants';
+import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
 
 // RFC 6749 s4.1.3: this endpoint takes application/x-www-form-urlencoded.
 // Next.js route handlers default to JSON parsing, which returns 415 here and

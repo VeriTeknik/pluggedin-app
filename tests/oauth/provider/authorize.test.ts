@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/authorize';
+import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/provider/authorize';
 
 function params(overrides: Record<string, string> = {}): URLSearchParams {
   return new URLSearchParams({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TTL, credentialsMatch, hashCredential, mintCredential } from '@/lib/oauth/tokens';
+import { TTL, credentialsMatch, hashCredential, mintCredential } from '@/lib/oauth/provider/tokens';
 
 describe('credential minting', () => {
   it('produces unguessable, URL-safe, unique credentials', () => {

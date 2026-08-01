@@ -4,7 +4,7 @@ import {
   TOOL_SCOPES,
   hasScope,
   parseScopeParam,
-} from '@/lib/oauth/scopes';
+} from '@/lib/oauth/provider/scopes';
 
 describe('supported scopes', () => {
   it('mirrors the read/write split the directory requires in annotations', () => {

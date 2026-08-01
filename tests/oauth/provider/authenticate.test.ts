@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildUnauthorizedResponse } from '@/lib/oauth/authenticate';
+import { buildUnauthorizedResponse } from '@/lib/oauth/provider/authenticate';
 
 const METADATA_URL = 'https://plugged.in/.well-known/oauth-protected-resource';
 

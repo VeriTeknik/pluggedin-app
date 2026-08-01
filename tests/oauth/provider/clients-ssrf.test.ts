@@ -10,7 +10,7 @@ vi.mock('@/db', () => ({
   },
 }));
 
-import { resolveClient } from '@/lib/oauth/clients';
+import { resolveClient } from '@/lib/oauth/provider/clients';
 
 const ISSUER = 'https://plugged.in';
 

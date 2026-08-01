@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { oauthClientsTable } from '@/db/schema';
-import { DCR_CLIENT_TTL_MS } from '@/lib/oauth/clients';
-import { connectorBaseUrl } from '@/lib/oauth/metadata';
+import { DCR_CLIENT_TTL_MS } from '@/lib/oauth/provider/clients';
+import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
 
 // RFC 7591 s3.1: registration requests are application/json. The token endpoint
 // is form-urlencoded — do not share a parser between them.

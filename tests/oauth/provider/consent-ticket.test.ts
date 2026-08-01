@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { issueConsentTicket, verifyConsentTicket } from '@/lib/oauth/consent-ticket';
+import { issueConsentTicket, verifyConsentTicket } from '@/lib/oauth/provider/consent-ticket';
 
 const REQUEST = {
   clientUuid: '11111111-1111-1111-1111-111111111111',

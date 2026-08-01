@@ -8,11 +8,11 @@ import { getProjects } from '@/app/actions/projects';
 import { db } from '@/db';
 import { oauthAuthorizationCodesTable, oauthClientsTable } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
-import { buildErrorRedirect } from '@/lib/oauth/authorize';
-import { verifyConsentTicket } from '@/lib/oauth/consent-ticket';
-import { connectorBaseUrl } from '@/lib/oauth/metadata';
-import { redirectUriMatches } from '@/lib/oauth/redirect-uri';
-import { TTL, hashCredential, mintCredential } from '@/lib/oauth/tokens';
+import { buildErrorRedirect } from '@/lib/oauth/provider/authorize';
+import { verifyConsentTicket } from '@/lib/oauth/provider/consent-ticket';
+import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
+import { redirectUriMatches } from '@/lib/oauth/provider/redirect-uri';
+import { TTL, hashCredential, mintCredential } from '@/lib/oauth/provider/tokens';
 
 /**
  * A server action is an HTTP endpoint, so anything it accepts as a parameter is

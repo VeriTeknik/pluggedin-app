@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { buildProtectedResourceMetadata, connectorBaseUrl } from '@/lib/oauth/metadata';
+import { buildProtectedResourceMetadata, connectorBaseUrl } from '@/lib/oauth/provider/metadata';
 
 export const dynamic = 'force-dynamic';
 

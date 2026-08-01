@@ -19,7 +19,7 @@
  * marked unverified because no origin vouches for them at all.
  */
 
-import type { ResolvedClient } from '@/lib/oauth/clients';
+import type { ResolvedClient } from '@/lib/oauth/provider/clients';
 
 export interface ClientDisplay {
   /** Safe to render. Falls back to the verified origin, then to the raw id. */

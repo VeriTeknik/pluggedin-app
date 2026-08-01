@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyRefreshFailure } from '@/lib/oauth/grants';
+import { classifyRefreshFailure } from '@/lib/oauth/provider/grants';
 
 const future = new Date(Date.now() + 60_000);
 const past = new Date(Date.now() - 60_000);

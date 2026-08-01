@@ -50,7 +50,7 @@ vi.mock('@/app/actions/projects', () => ({
 }));
 
 import { approveConsent } from '@/app/oauth/authorize/actions';
-import { issueConsentTicket } from '@/lib/oauth/consent-ticket';
+import { issueConsentTicket } from '@/lib/oauth/provider/consent-ticket';
 
 const CLIENT_UUID = '11111111-1111-1111-1111-111111111111';
 const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';

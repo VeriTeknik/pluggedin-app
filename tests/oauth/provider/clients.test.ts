@@ -4,7 +4,7 @@ import {
   DCR_CLIENT_TTL_MS,
   isCimdClientId,
   validateCimdDocument,
-} from '@/lib/oauth/clients';
+} from '@/lib/oauth/provider/clients';
 
 const URL_ID = 'https://claude.ai/oauth/claude-code-client-metadata';
 

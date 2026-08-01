@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { ClientDisplay } from '@/lib/oauth/client-display';
-import type { Scope } from '@/lib/oauth/scopes';
+import type { ClientDisplay } from '@/lib/oauth/provider/client-display';
+import type { Scope } from '@/lib/oauth/provider/scopes';
 
 import { approveConsent, denyConsent } from './actions';
 

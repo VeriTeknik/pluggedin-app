@@ -15,7 +15,7 @@ vi.mock('@/db', () => ({
   },
 }));
 
-import { authenticateConnectorRequest } from '@/lib/oauth/authenticate';
+import { authenticateConnectorRequest } from '@/lib/oauth/provider/authenticate';
 
 const FUTURE = new Date(Date.now() + 3_600_000);
 const PAST = new Date(Date.now() - 1_000);

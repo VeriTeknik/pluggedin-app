@@ -3,7 +3,7 @@ import {
   buildAuthorizationServerMetadata,
   buildClientIdMetadataDocument,
   buildProtectedResourceMetadata,
-} from '@/lib/oauth/metadata';
+} from '@/lib/oauth/provider/metadata';
 
 const ISSUER = 'https://plugged.in';
 const RESOURCE = 'https://plugged.in/api/mcp';

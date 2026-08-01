@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { oauthAccessTokensTable, oauthRefreshTokensTable } from '@/db/schema';
-import { revokeFamily } from '@/lib/oauth/grants';
-import { hashCredential } from '@/lib/oauth/tokens';
+import { revokeFamily } from '@/lib/oauth/provider/grants';
+import { hashCredential } from '@/lib/oauth/provider/tokens';
 
 // RFC 7009. Always returns 200, even for an unknown token: telling a caller
 // whether a token existed turns this endpoint into an oracle.

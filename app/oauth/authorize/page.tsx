@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth/next';
 
 import { getProjects } from '@/app/actions/projects';
 import { authOptions } from '@/lib/auth';
-import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/authorize';
-import { describeClient } from '@/lib/oauth/client-display';
-import { resolveClient } from '@/lib/oauth/clients';
-import { issueConsentTicket } from '@/lib/oauth/consent-ticket';
-import { connectorBaseUrl } from '@/lib/oauth/metadata';
-import { isLoopbackRedirect, redirectUriMatches } from '@/lib/oauth/redirect-uri';
+import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/provider/authorize';
+import { describeClient } from '@/lib/oauth/provider/client-display';
+import { resolveClient } from '@/lib/oauth/provider/clients';
+import { issueConsentTicket } from '@/lib/oauth/provider/consent-ticket';
+import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
+import { isLoopbackRedirect, redirectUriMatches } from '@/lib/oauth/provider/redirect-uri';
 
 import { ConsentForm } from './consent-form';
 

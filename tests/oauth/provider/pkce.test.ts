@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SUPPORTED_CHALLENGE_METHODS, verifyPkce } from '@/lib/oauth/pkce';
+import { SUPPORTED_CHALLENGE_METHODS, verifyPkce } from '@/lib/oauth/provider/pkce';
 
 // RFC 7636 Appendix B
 const RFC_VERIFIER = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';

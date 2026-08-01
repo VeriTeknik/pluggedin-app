@@ -3,7 +3,7 @@ import {
   CLAUDE_HOSTED_REDIRECT_URI,
   isLoopbackRedirect,
   redirectUriMatches,
-} from '@/lib/oauth/redirect-uri';
+} from '@/lib/oauth/provider/redirect-uri';
 
 describe('exact matching for non-loopback URIs', () => {
   it('accepts an identical https URI', () => {
