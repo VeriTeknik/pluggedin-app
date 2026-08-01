@@ -3702,7 +3702,16 @@ export const oauthClientsTable = pgTable(
     expires_at: timestamp('expires_at', { withTimezone: true }),
   },
   (table) => ({
-    oauthClientsIssuerClientIdIdx: index('oauth_clients_issuer_client_id_idx').on(
+    // Unique, not merely indexed. The comment above calls (issuer, client_id)
+    // the natural key; leaving it as a plain index made that an aspiration.
+    // resolveClient reads then inserts, so two concurrent first-time requests
+    // for the same client both saw nothing and both inserted. Duplicates then
+    // matter far beyond wasted rows: the token endpoint picks one row with
+    // LIMIT 1 while an authorization code carries the uuid of the other, the
+    // client_uuid comparison fails, and rotation treats that as a token
+    // presented by the wrong client — revoking a legitimate client's whole
+    // family.
+    oauthClientsIssuerClientIdIdx: uniqueIndex('oauth_clients_issuer_client_id_idx').on(
       table.issuer,
       table.client_id
     ),

@@ -177,7 +177,19 @@ export async function resolveClient(
     };
   }
 
-  const inserted = await db.insert(oauthClientsTable).values(values).returning();
+  // Idempotent against the natural key. The unique index makes a concurrent
+  // duplicate impossible; this makes losing that race a no-op rather than a
+  // 500 — the loser adopts the row the winner wrote instead of failing a
+  // perfectly valid authorization request.
+  const inserted = await db
+    .insert(oauthClientsTable)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [oauthClientsTable.issuer, oauthClientsTable.client_id],
+      set: values,
+    })
+    .returning();
+
   return {
     uuid: inserted[0].uuid,
     client_id: clientId,
