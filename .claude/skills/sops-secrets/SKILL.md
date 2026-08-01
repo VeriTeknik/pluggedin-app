@@ -39,18 +39,25 @@ git commit -am "ops: add KEY"
 ./infra/scripts/deploy.sh
 ```
 
-**The deploy is not optional.** `env_file` is read when the container is *created*.
-Editing the blob without deploying changes nothing that is running, and the next
-unrelated deploy will silently pick the change up — which is how a config change
-gets blamed on the wrong commit.
+**The deploy is not optional.** `deploy.sh` is what decrypts the blob to
+`/run/sops/secrets.env`, which containers mount. Editing the blob without deploying
+changes nothing that is running, and the next unrelated deploy will silently pick the
+change up — which is how a config change gets blamed on the wrong commit.
 
-Do **not** pre-escape `$` in values. `deploy.sh` doubles them, because Compose
-interpolates `env_file` contents and would otherwise truncate the value at the
-first `$` (a bcrypt hash arrives as `ops:$2b$10`). Escaping twice corrupts it.
+Write values **literally** — no escaping of any kind. Nothing between sops and the
+process interpolates: the app parses the mounted file with dotenv and Postgres reads a
+`*_FILE`. A `$` you double becomes a literal `$$`.
 
-If the new secret is consumed via `*_FILE` indirection rather than the environment
-(as Traefik's dashboard auth is), add an `extract_secret` line to `deploy.sh` too —
-otherwise the file it points at never appears and the consumer fails closed.
+(Historical note, because the reverse used to be true: while services used
+`env_file:`, Compose interpolated it and truncated values at the first `$`, so
+`deploy.sh` doubled them. That step was removed when secrets moved out of the
+environment — keeping it would have corrupted exactly the bcrypt-shaped secrets it
+was added to protect.)
+
+If the new secret is consumed via `*_FILE` indirection rather than by the app
+(as Traefik's dashboard auth and the Postgres password are), add an `extract_secret`
+line to `deploy.sh` too — otherwise the file it points at never appears and the
+consumer fails closed.
 
 ## Adding an age recipient
 

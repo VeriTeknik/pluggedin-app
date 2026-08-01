@@ -10,7 +10,7 @@ Postgres 16 + pgvector, Redis, Ofelia (cron), and a docker-socket-proxy. The nat
 nginx + systemd stack it replaced is stopped and disabled but still installed.
 
 Entry point is always `infra/scripts/deploy.sh`. Running compose by hand skips secret
-decryption and will fail on a missing `env_file`.
+decryption, so the secrets file and the staged Traefik config never appear.
 
 ## Quick reference
 
@@ -48,9 +48,10 @@ reload; `touch infra/traefik/dynamic/middlewares.yml` forces one.
 
 ## Verifying a change actually reached production
 
-Container environment is read at **create** time. `docker compose up -d` only
-recreates a container if its definition changed — editing a mounted file or the SOPS
-blob does not. If a change must take effect, confirm the container was recreated:
+Mounts and environment are fixed at **create** time, and `docker compose up -d` only
+recreates a container if its *definition* changed — rewriting a mounted file does not.
+Secrets now come from a mounted file loaded at process start, so a changed secret needs
+the container restarted, not merely the file rewritten. If a change must take effect, confirm the container was recreated:
 
 ```bash
 docker inspect pluggedin-app --format '{{.State.StartedAt}}'
@@ -93,5 +94,5 @@ the rotated data key.
 | `git pull` without checking the site after | Possible silent 404 window |
 | Trusting `verify.sh` alone | Internal-only; misses a broken public route |
 | Assuming an edited mounted file took effect | Containers keep old env until recreated |
-| Running compose directly instead of `deploy.sh` | No secrets decrypted; `env_file` missing |
+| Running compose directly instead of `deploy.sh` | Secrets never decrypted; Traefik config never staged |
 | Restoring a dump without re-encrypting | Every MCP config and OAuth token unreadable |
