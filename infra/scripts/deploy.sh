@@ -54,17 +54,18 @@ command -v docker >/dev/null || die "docker not installed"
 #    isn't root for the deploy.
 mkdir -p "$RUNTIME_DIR"
 chmod 0700 "$RUNTIME_DIR"
-trap 'shred -uf "$SECRETS_DECRYPTED" "${RUNTIME_DIR}/.secrets.raw" 2>/dev/null || rm -f "$SECRETS_DECRYPTED" "${RUNTIME_DIR}/.secrets.raw"' EXIT
+# The decrypted secrets outlive this script: containers mount the file for
+# the lifetime of the stack, so it must NOT be shredded on exit. It lives on
+# tmpfs and is mode 0400.
 
 # 3. Decrypt.
 #    --input-type/--output-type are mandatory here: sops infers format from
 #    the file extension, and `.sops` is not a format it knows, so it falls
 #    back to JSON and dies on the first `#` comment in the dotenv payload.
 log "decrypting secrets"
-SECRETS_RAW="${RUNTIME_DIR}/.secrets.raw"
 sops --decrypt --input-type dotenv --output-type dotenv \
-  "$SECRETS_ENCRYPTED" > "$SECRETS_RAW"
-chmod 0400 "$SECRETS_RAW"
+  "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
+chmod 0400 "$SECRETS_DECRYPTED"
 
 # 3a. Project specific secrets out of the env file into single-line files
 #     under /run/sops/, because Traefik and a few other services consume
@@ -75,7 +76,7 @@ extract_secret() {
   local key="$1" dest="${RUNTIME_DIR}/$2"
   # shellcheck disable=SC2002  # explicit cat keeps the awk pipeline simple
   local value
-  value=$(grep -E "^${key}=" "$SECRETS_RAW" | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//')
+  value=$(grep -E "^${key}=" "$SECRETS_DECRYPTED" | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//')
   if [ -z "$value" ]; then
     log "WARN: ${key} missing from secrets.env (skipping ${dest})"
     return
@@ -85,24 +86,19 @@ extract_secret() {
 }
 
 extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
+# Postgres reads POSTGRES_PASSWORD_FILE instead of an environment variable,
+# so the password never appears in Config.Env.
+extract_secret POSTGRES_PASSWORD pg-password
 # traefik/dynamic/middlewares.yml references this file directly via
 # `usersFile:`. No rewriting of committed files at deploy time. Traefik's
 # TLS issuance uses HTTP-01, so no DNS-provider token needs extracting.
 
-# 3b. Escape `$` for Compose.
-#     Compose runs variable interpolation over env_file contents, so a value
-#     containing `$` is silently truncated at the `$`: a bcrypt hash
-#     `ops:$2b$10$abc...` reaches the container as `ops:$2b$10`. It warns
-#     ("variable is not set") but exits 0, and the corrupted value only
-#     surfaces as an auth failure at runtime. Doubling `$` makes Compose
-#     emit a literal one.
-#
-#     This runs AFTER extract_secret, which must see the raw value — the
-#     htpasswd file Traefik reads is consumed directly, not through Compose.
-log "escaping \$ for compose interpolation"
-sed 's/\$/$$/g' "$SECRETS_RAW" > "$SECRETS_DECRYPTED"
-chmod 0400 "$SECRETS_DECRYPTED"
-shred -uf "$SECRETS_RAW" 2>/dev/null || rm -f "$SECRETS_RAW"
+# NOTE: there is deliberately no `$`-escaping step here any more.
+#     While services used `env_file:`, Compose interpolated the file and
+#     truncated any value at its first `$`, so deploy.sh doubled them. No
+#     service uses env_file now — the app parses the mounted file with dotenv
+#     and Postgres reads a *_FILE — and neither interpolates. Re-introducing
+#     the escaping would hand both of them literal `$$`.
 
 # 3c. Stage Traefik's dynamic config into tmpfs, out of reach of git.
 #     Traefik watches this directory and reloads on any change. When it was

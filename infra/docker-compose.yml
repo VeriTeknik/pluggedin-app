@@ -4,8 +4,9 @@
 #   infra/scripts/deploy.sh
 # which decrypts infra/sops/secrets.env.sops into /run/sops/secrets.env
 # (tmpfs) and exports IMAGE_TAG before invoking compose. Running compose
-# by hand without the wrapper will fail because env_file points at the
-# decrypted file.
+# by hand without the wrapper will fail: the secrets file and the staged
+# Traefik dynamic config both live under /run/sops and are produced by
+# deploy.sh.
 #
 # Single host, single app instance. Traefik is the only thing bound to
 # host ports 80/443. Routing rules and per-route middlewares live in
@@ -20,10 +21,22 @@
 
 x-app-environment: &app-env
   NODE_ENV: production
+  # Secrets are NOT in this container's environment. They are mounted as a
+  # file and loaded into the Node process at startup instead, because
+  # anything in `environment:`/`env_file:` lands in Docker's Config.Env and
+  # is readable by anything that can reach the Docker API — which includes
+  # Traefik through the socket proxy, since the docker provider needs
+  # container inspect to read routing labels.
+  #
+  # NODE_OPTIONS applies to every node process in the image, so `server.js`,
+  # `drizzle-kit migrate` and the re-encryption script all get the secrets
+  # without each invocation having to remember a flag.
+  NODE_OPTIONS: "-r dotenv/config"
+  DOTENV_CONFIG_PATH: /run/secrets/app.env
   # The bug class that triggered the docker migration: ZVEC_DATA_PATH
   # was not propagating from workspace .env into the standalone build.
-  # In the container env_file is the single source of truth, but we
-  # still set ZVEC_DATA_PATH here so the value is visible in
+  # In the container the mounted secrets file is the single source of
+  # truth, but we still set ZVEC_DATA_PATH here so the value is visible in
   # `docker compose config` and impossible to forget on a fresh deploy.
   ZVEC_DATA_PATH: /app/data/vectors
   ZVEC_ALLOW_EXTERNAL_PATH: "false"
@@ -142,11 +155,12 @@ services:
     restart: always
     container_name: pluggedin-app
     hostname: pluggedin-app
-    env_file:
-      - /run/sops/secrets.env
     environment:
       <<: *app-env
     volumes:
+      # The decrypted secrets, as a file rather than environment. See the
+      # NODE_OPTIONS note in x-app-environment above.
+      - /run/sops/secrets.env:/run/secrets/app.env:ro
       - /home/pluggedin/zvec-data:/app/data/vectors:rw
       - /home/pluggedin/uploads:/app/uploads:rw
       - /var/mcp-packages:/app/.cache/mcp-packages:rw
@@ -265,14 +279,17 @@ services:
     image: pgvector/pgvector:pg16
     restart: always
     container_name: postgres
-    env_file:
-      - /run/sops/secrets.env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-v220_prod}
       POSTGRES_USER: ${POSTGRES_USER:-pluggedin}
-      # POSTGRES_PASSWORD comes from secrets.env via env_file.
+      # _FILE indirection keeps the password out of Config.Env. The official
+      # image reads it only when initialising a fresh data directory, so on
+      # an existing volume this is inert — but disaster recovery restores
+      # into an empty volume, which is exactly when it matters.
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
+      - /run/sops/pg-password:/run/secrets/pg_password:ro
       - pgdata:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
     networks:
