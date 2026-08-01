@@ -78,32 +78,46 @@ Then the protected-resource document:
 curl -s "$BASE/.well-known/oauth-protected-resource" | jq '{resource, authorization_servers}'
 ```
 
-- `resource` must equal the URL the user types into Claude, byte for byte
+- `resource` must equal the URL the user types into Claude, byte for byte, and
+  that URL is **`$BASE/api/mcp`** — not `$BASE`. The route builds it that way
+  already; this check is to catch a `NEXTAUTH_URL` with a trailing slash or the
+  wrong scheme, which would make the two disagree by a character.
 - only the **first** entry of `authorization_servers` is read — put the real one first
+
+```bash
+# the two must be identical
+test "$(curl -s "$BASE/.well-known/oauth-protected-resource" | jq -r .resource)" \
+     = "$BASE/api/mcp" && echo match || echo MISMATCH
+```
 
 ---
 
-## 2. The 401 challenge
+## 2. The 401 challenge — not wired yet, and that is expected
 
-The `WWW-Authenticate` header is ignored on a 200. It must arrive on a 401 or
-Claude never starts the OAuth flow.
+`/api/mcp` returns a bare `401` today, with **no** `WWW-Authenticate` header.
+Check it and move on:
 
 ```bash
-curl -si "$BASE/api/mcp" | head -20
+curl -si "$BASE/api/mcp" | head -10
+#  expect: HTTP/1.1 401, and no WWW-Authenticate line
 ```
 
-Expect `HTTP/1.1 401` and a header of the shape:
+That route still authenticates with a NextAuth session cookie; it predates this
+work. `buildUnauthorizedResponse()` and `authenticateConnectorRequest()` shipped
+in #175 but nothing calls them yet — wiring them to the MCP route is Phase B.
+
+**So do not treat a missing challenge as a broken deploy.** It is the single
+most likely thing to be misread here, because everything around it works: the
+discovery documents resolve, the consent screen renders, tokens issue.
+
+When Phase B lands, this section becomes a real check and the expected header is:
 
 ```
 WWW-Authenticate: Bearer resource_metadata="https://plugged.in/.well-known/oauth-protected-resource"
 ```
 
-Also check it with a bad token, which is the case that actually happens in
-production:
-
-```bash
-curl -si -H 'Authorization: Bearer not-a-real-token' "$BASE/api/mcp" | head -5
-```
+with the rule that matters — it is ignored on a `200`, so it has to arrive on
+the `401`.
 
 ---
 
@@ -113,7 +127,8 @@ Worth doing once per environment. It exercises the paths that carried the real
 bugs.
 
 ```
-1. In Claude: Settings → Connectors → Add custom connector → paste $BASE
+1. In Claude: Settings → Connectors → Add custom connector
+   URL: $BASE/api/mcp        <- the /api/mcp path is required, not optional
 2. You should be sent to /oauth/authorize and, if signed out, to /login first
 3. The consent screen must show:
    - the client's name, and beneath it "Verified as belonging to claude.ai"
@@ -236,8 +251,9 @@ make discovery unavailable — the flow cannot start without it.
 ## 8. Known gaps, so they are not mistaken for faults
 
 - **Phase B has not shipped.** Users can complete authorization, but there is no
-  tool surface behind it yet. A connection that authorizes and then exposes no
-  tools is the expected state, not a bug.
+  tool surface behind it yet, and `/api/mcp` still answers with a bare `401`
+  rather than the bearer challenge (section 2). A connection that authorizes and
+  then exposes no tools is the expected state, not a bug.
 - **204 test failures exist on `main`** and are unrelated to this work — they
   predate both branches and are untouched by them. Compare against `main` before
   attributing a failure to the connector.
