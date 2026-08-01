@@ -113,34 +113,87 @@ sudo -u "$RUNNER_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$RUNNER_USER")" \
   dockerd-rootless-setuptool.sh install --skip-iptables || {
     echo "    rootless install failed — see the output above" >&2; exit 1; }
 
-echo "==> 5. install the runner under ${RUNNER_USER}"
-cat <<MSG
+echo "==> 5. install and register the runner"
+#
+# Done here rather than handed to the operator as copy-paste. The manual
+# version had two defects: it left <REGISTRATION_TOKEN> as a placeholder that
+# is easy to paste literally, and it told the operator to run
+# `sudo ./svc.sh install` from inside ${RUNNER_USER}'s shell — which cannot
+# work, because that account deliberately has no sudo rights. This script is
+# already root, so it does the privileged half itself.
+if [ -z "${RUNNER_TOKEN:-}" ]; then
+  cat >&2 <<MSG
 
-    Finish as ${RUNNER_USER}, with a fresh registration token from
-    Settings -> Actions -> Runners -> New self-hosted runner:
+Set RUNNER_TOKEN and re-run. Get a fresh one (valid ~1h) from:
+  Settings -> Actions -> Runners -> New self-hosted runner
+  (copy the value after --token in the ./config.sh line GitHub shows)
 
-      sudo -iu ${RUNNER_USER}
-      mkdir -p ${NEW_HOME} && cd ${NEW_HOME}
-      curl -fsSL -o runner.tar.gz \\
-        https://github.com/actions/runner/releases/download/v2.328.0/actions-runner-linux-x64-2.328.0.tar.gz
-      tar xzf runner.tar.gz && rm runner.tar.gz
-      export DOCKER_HOST=unix:///run/user/\$(id -u)/docker.sock
-      ./config.sh --url https://github.com/VeriTeknik/pluggedin-app \\
-                  --token <REGISTRATION_TOKEN> \\
-                  --labels self-hosted,linux,x64,plugged-in-prod \\
-                  --unattended
-      sudo ./svc.sh install ${RUNNER_USER} && sudo ./svc.sh start
+  sudo RUNNER_TOKEN=XXXX bash infra/scripts/isolate-gha-runner.sh
 
-    DOCKER_HOST must be set for the service too, or the build will talk to the
-    system daemon and undo the isolation. After ./svc.sh install:
-
-      sudo systemctl edit actions.runner.*.service
-      # [Service]
-      # Environment=DOCKER_HOST=unix:///run/user/<UID>/docker.sock
-
-    Then push any branch and confirm the build job runs and pushes to GHCR.
+Everything up to this point is already done and is safe to re-run.
 MSG
+  exit 1
+fi
+
+RUNNER_VERSION="${RUNNER_VERSION:-2.328.0}"
+TARBALL="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
+RUNNER_UID="$(id -u "$RUNNER_USER")"
+DOCKER_SOCK="unix:///run/user/${RUNNER_UID}/docker.sock"
+
+install -d -o "$RUNNER_USER" -g "$RUNNER_USER" "$NEW_HOME"
+if [ ! -x "${NEW_HOME}/config.sh" ]; then
+  sudo -u "$RUNNER_USER" curl -fsSL -o "${NEW_HOME}/${TARBALL}" \
+    "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${TARBALL}"
+  sudo -u "$RUNNER_USER" tar xzf "${NEW_HOME}/${TARBALL}" -C "$NEW_HOME"
+  rm -f "${NEW_HOME}/${TARBALL}"
+fi
+
+# Unattended registration as the runner user. --replace takes over the name if
+# a stale registration is still present.
+sudo -u "$RUNNER_USER" env DOCKER_HOST="$DOCKER_SOCK" \
+  "${NEW_HOME}/config.sh" \
+    --url "https://github.com/VeriTeknik/pluggedin-app" \
+    --token "$RUNNER_TOKEN" \
+    --name "${RUNNER_USER}-rootless" \
+    --labels self-hosted,linux,x64,plugged-in-prod \
+    --unattended --replace
+
+# svc.sh must run as root; that is why this is in the script and not a
+# copy-paste block aimed at an account with no sudo.
+( cd "$NEW_HOME" && ./svc.sh install "$RUNNER_USER" )
+
+# DOCKER_HOST has to reach the service, or every build talks to the SYSTEM
+# daemon and the isolation this whole script exists for is silently undone.
+SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print $1}' | head -1)
+[ -n "$SVC" ] || { echo "runner service not found after install" >&2; exit 1; }
+mkdir -p "/etc/systemd/system/${SVC}.d"
+cat > "/etc/systemd/system/${SVC}.d/10-rootless-docker.conf" <<EOF
+[Service]
+Environment=DOCKER_HOST=${DOCKER_SOCK}
+EOF
+systemctl daemon-reload
+( cd "$NEW_HOME" && ./svc.sh start ) || systemctl start "$SVC"
+
+echo "==> 6. verify"
+sleep 5
+systemctl is-active "$SVC" >/dev/null && echo "    ok: ${SVC} active" || { echo "    FAIL: service not active"; exit 1; }
+if systemctl show "$SVC" -p Environment | grep -q "${DOCKER_SOCK}"; then
+  echo "    ok: service points at the rootless daemon"
+else
+  echo "    FAIL: DOCKER_HOST not in the service environment — builds would use the system daemon" >&2
+  exit 1
+fi
+# The point of the exercise: the runner's docker must not be able to read
+# host secrets. Root can, so this is checked as the runner user.
+if sudo -u "$RUNNER_USER" env DOCKER_HOST="$DOCKER_SOCK" \
+     docker run --rm -v /etc/sops/age:/host:ro alpine cat /host/keys.txt >/dev/null 2>&1; then
+  echo "    FAIL: rootless docker could read the age key — isolation is NOT holding" >&2
+  exit 1
+else
+  echo "    ok: rootless docker cannot read /etc/sops/age/keys.txt"
+fi
 
 echo
-echo "==> done. Old runner directory left at ${OLD_HOME} for rollback; remove it"
-echo "    once the new runner has completed a green build."
+echo "==> done. Remove the stale 'pluggedin' runner at"
+echo "    Settings -> Actions -> Runners once a build has gone green."
+echo "    Old directory kept at ${OLD_HOME} for rollback."
