@@ -108,9 +108,24 @@ export function validateUrlForSSRF(url: string, allowPrivate = false): URL {
   return parsedUrl;
 }
 
+/** Redirect hops followed before giving up. Matches the fetch spec's default. */
+const MAX_REDIRECTS = 20;
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
 /**
- * Safe fetch with SSRF protection
- * Validates URL before making request
+ * Safe fetch with SSRF protection.
+ *
+ * Validates the URL **on every hop**, not just the first. fetch follows
+ * redirects by default, so validating only the initial URL left the guard
+ * trivially bypassable: a public host answering `302 Location:
+ * http://169.254.169.254/` would be followed straight into cloud metadata. The
+ * redirect is therefore handled here (`redirect: 'manual'`) and each Location
+ * is re-validated before it is followed.
+ *
+ * Relative Locations are resolved against the current URL first, since a bare
+ * `/internal` would otherwise fail to parse and be treated as unreachable
+ * rather than as the same-host redirect it is.
  *
  * @param url - URL to fetch
  * @param options - Fetch options
@@ -121,9 +136,50 @@ export async function safeFetch(
   options?: RequestInit,
   allowPrivate = false
 ): Promise<Response> {
-  // Validate URL for SSRF
-  validateUrlForSSRF(url, allowPrivate);
+  // Reassigned when a 301/302/303 downgrades the method — see below.
+  // eslint-disable-next-line prefer-const
+  let requestInit = options;
+  let currentUrl = url;
 
-  // Make the fetch request
-  return fetch(url, options);
+  for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
+    // Fetch the URL the validator returned rather than the string that went
+    // into it. The two are equivalent, but using the validated value makes the
+    // sanitiser-to-sink path explicit — to a reader and to static analysis,
+    // which otherwise cannot tell that a validator throwing on the line above
+    // guards this call.
+    const validated = validateUrlForSSRF(currentUrl, allowPrivate);
+
+    const response = await fetch(validated, { ...requestInit, redirect: 'manual' });
+
+    if (!REDIRECT_STATUSES.has(response.status)) return response;
+
+    const location = response.headers.get('location');
+    // A redirect status with no Location is the server's problem, not a hop —
+    // hand it back rather than inventing a destination.
+    if (!location) return response;
+
+    // RFC 9110: 301, 302 and 303 turn the follow-up request into a GET and drop
+    // the body; only 307 and 308 preserve the method. Replaying a POST body to
+    // a redirect target is both a spec violation and a way to deliver a payload
+    // somewhere the caller never addressed.
+    if (response.status === 301 || response.status === 302 || response.status === 303) {
+      requestInit = { ...requestInit, method: 'GET', body: undefined };
+    }
+
+    // Release the redirect's body before moving on. With redirect: 'manual'
+    // every hop hands back a response nobody reads, and undici holds the
+    // stream — and its connection — until GC gets to it. The callers here
+    // resolve attacker-supplied URLs, so a hostile host can answer with
+    // large-bodied redirects and lean on that: twenty hops per request, each
+    // leaving a stream open. cancel() discards it without downloading, which
+    // is the point; response.text() would fetch the very bytes being refused.
+    await response.body?.cancel().catch(() => {
+      // An already-disturbed or closed body is nothing to act on, and failing
+      // to release it must not fail the request that was otherwise fine.
+    });
+
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+
+  throw new Error('Too many redirects');
 }

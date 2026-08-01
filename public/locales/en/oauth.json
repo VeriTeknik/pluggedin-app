@@ -1,0 +1,25 @@
+{
+  "consent": {
+    "title": "Connect {{client}} to Plugged.in",
+    "verifiedOrigin": "Verified as belonging to {{origin}}",
+    "unverifiedName": "This app chose its own name and nothing verifies it. Only continue if you recognise it.",
+    "redirectTo": "You will be returned to {{host}}",
+    "loopbackWarning": "This client runs on your own computer. Only continue if you started it yourself.",
+    "hubsTitle": "Which Hubs may this connection reach?",
+    "scopesTitle": "What it will be able to do",
+    "approve": "Connect",
+    "deny": "Cancel",
+    "scope": {
+      "library:read": "Read your documents and search your knowledge base",
+      "library:write": "Create and update documents",
+      "memory:read": "Read your memory",
+      "memory:write": "Record observations derived from your conversations into your memory",
+      "clipboard:read": "Read your clipboard",
+      "clipboard:write": "Write to your clipboard",
+      "tasks:read": "Read your tasks",
+      "tasks:write": "Create and complete tasks",
+      "hubs:read": "See which Hubs you have",
+      "offline_access": "Stay connected without asking you again"
+    }
+  }
+}

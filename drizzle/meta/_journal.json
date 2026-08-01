@@ -687,6 +687,27 @@
       "when": 1772489028607,
       "tag": "0097_same_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1785472174219,
+      "tag": "0098_curly_colonel_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1785602920342,
+      "tag": "0099_wise_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1785605891905,
+      "tag": "0100_known_prowler",
+      "breakpoints": true
     }
   ]
 }

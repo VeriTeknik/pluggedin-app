@@ -1,0 +1,25 @@
+{
+  "consent": {
+    "title": "{{client}} verbinden met Plugged.in",
+    "verifiedOrigin": "Geverifieerd als behorend bij {{origin}}",
+    "unverifiedName": "Deze app heeft zijn eigen naam gekozen en niets verifieert die. Ga alleen verder als u de app herkent.",
+    "redirectTo": "U keert terug naar {{host}}",
+    "loopbackWarning": "Deze client draait op uw eigen computer. Ga alleen verder als u deze zelf hebt gestart.",
+    "hubsTitle": "Welke Hubs mag deze verbinding bereiken?",
+    "scopesTitle": "Wat het zal kunnen doen",
+    "approve": "Verbinden",
+    "deny": "Annuleren",
+    "scope": {
+      "library:read": "Uw documenten lezen en uw kennisbank doorzoeken",
+      "library:write": "Documenten maken en bijwerken",
+      "memory:read": "Uw geheugen lezen",
+      "memory:write": "Observaties uit uw gesprekken vastleggen in uw geheugen",
+      "clipboard:read": "Uw klembord lezen",
+      "clipboard:write": "Naar uw klembord schrijven",
+      "tasks:read": "Uw taken lezen",
+      "tasks:write": "Taken maken en voltooien",
+      "hubs:read": "Zien welke Hubs u heeft",
+      "offline_access": "Verbonden blijven zonder het opnieuw te vragen"
+    }
+  }
+}
