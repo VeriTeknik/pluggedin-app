@@ -332,14 +332,22 @@ export async function rotateRefreshToken(input: {
     };
   }
 
-  // Same atomicity requirement as code redemption: two concurrent refreshes
-  // could both read an unrotated token and both issue a pair. Claiming the
-  // rotation conditionally means the loser is treated as what it is — a second
-  // use of an already-rotated token, i.e. exactly the reuse signal.
-  // Same unit as code redemption: claim, then issue against the claim. A
-  // failure between them would spend the refresh token and hand back nothing,
-  // and the client's retry would look like reuse — revoking the whole family
-  // over a transient database error.
+  // Claim, then issue against the claim, on one transaction.
+  //
+  // Conditional claim, because two concurrent refreshes could both read an
+  // unrotated token and both issue a pair; the loser is then treated as what it
+  // is, a second use of an already-rotated token.
+  //
+  // One transaction, because a failure between claiming and issuing would spend
+  // the token and hand back nothing, and the client's retry would read as reuse
+  // — revoking the whole family over a transient database error.
+  //
+  // The claim also requires the row to be unrevoked. classifyRefreshFailure
+  // above judged a snapshot read before this transaction opened, so a family
+  // revoked in between would pass that check and still be claimable here — and
+  // revocation happens during an attack, concurrently with the attacker's other
+  // requests, so that window is open exactly when it matters. Letting the
+  // database re-check the condition at write time is what closes it.
   return db.transaction(async (tx) => {
     const rotated = await tx
       .update(oauthRefreshTokensTable)
@@ -347,12 +355,31 @@ export async function rotateRefreshToken(input: {
       .where(
         and(
           eq(oauthRefreshTokensTable.uuid, record.uuid),
-          isNull(oauthRefreshTokensTable.rotated_at)
+          isNull(oauthRefreshTokensTable.rotated_at),
+          isNull(oauthRefreshTokensTable.revoked_at)
         )
       )
       .returning();
 
     if (rotated.length === 0) {
+      // The claim can fail for two different reasons and only one of them is a
+      // reuse signal. Re-read rather than assume: revoking an already-revoked
+      // family would overwrite the original reason and timestamp, destroying
+      // the record of why it was revoked in the first place.
+      const [current] = await tx
+        .select()
+        .from(oauthRefreshTokensTable)
+        .where(eq(oauthRefreshTokensTable.uuid, record.uuid))
+        .limit(1);
+
+      if (current?.revoked_at) {
+        return {
+          ok: false,
+          error: 'invalid_grant',
+          description: 'Refresh token revoked',
+        };
+      }
+
       // Revoked on the caller's transaction: this commits, since losing the
       // claim is a real reuse signal rather than an error to roll back.
       await revokeFamily(record.family_id, 'refresh_token_reuse_detected', tx);
