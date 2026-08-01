@@ -16,6 +16,14 @@
  * Deliberately NOT covered by the ticket: which Hubs the user picked. That is a
  * genuine user choice made in the form, so it arrives as input and is checked
  * against the user's own projects at action time instead.
+ *
+ * The ticket also names the user it was issued to, and the actions refuse a
+ * ticket presented by anyone else. Without that it authenticates the request
+ * but not the requester: a ticket is a bearer object with a ten-minute life,
+ * and one issued to A but submitted in B's session would mint a code against
+ * B's account and B's Hubs, delivered to the client's registered redirect URI.
+ * The payload is signed, not encrypted, so it is readable by design — the
+ * binding is what makes it non-transferable, not secrecy.
  */
 
 import { createHmac, timingSafeEqual } from 'crypto';
@@ -38,7 +46,7 @@ interface Clock {
 }
 
 type VerifyResult =
-  | { ok: true; request: ValidatedAuthorizeRequest }
+  | { ok: true; request: ValidatedAuthorizeRequest; userId: string }
   | { ok: false; reason: string };
 
 function signingKey(): string {
@@ -53,11 +61,13 @@ function sign(payload: string): string {
 
 export function issueConsentTicket(
   request: ValidatedAuthorizeRequest,
+  userId: string,
   clock: Clock = {}
 ): string {
   const now = clock.now ?? Date.now;
   const payload = Buffer.from(
     JSON.stringify({
+      userId,
       clientUuid: request.clientUuid,
       redirectUri: request.redirectUri,
       scopes: request.scopes,
@@ -94,8 +104,15 @@ export function verifyConsentTicket(ticket: string, clock: Clock = {}): VerifyRe
     return { ok: false, reason: 'Ticket expired' };
   }
 
+  // A ticket signed before this field existed has no owner to compare against,
+  // so it is refused rather than treated as belonging to whoever presents it.
+  if (typeof decoded.userId !== 'string' || decoded.userId === '') {
+    return { ok: false, reason: 'Ticket is not bound to a user' };
+  }
+
   return {
     ok: true,
+    userId: decoded.userId,
     request: {
       clientUuid: String(decoded.clientUuid),
       redirectUri: String(decoded.redirectUri),

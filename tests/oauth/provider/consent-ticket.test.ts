@@ -1,3 +1,5 @@
+import { createHmac } from 'crypto';
+
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ValidatedAuthorizeRequest } from '@/lib/oauth/provider/consent-ticket';
@@ -5,6 +7,8 @@ import { issueConsentTicket, verifyConsentTicket } from '@/lib/oauth/provider/co
 
 // Typed as the real request rather than inferred: `as const` made scopes a
 // readonly tuple, which is not what issueConsentTicket accepts.
+const USER_ID = 'user-1';
+
 const REQUEST: ValidatedAuthorizeRequest = {
   clientUuid: '11111111-1111-1111-1111-111111111111',
   redirectUri: 'https://claude.ai/api/mcp/auth_callback',
@@ -19,7 +23,7 @@ beforeEach(() => {
 
 describe('consent tickets', () => {
   it('round-trips the validated request', () => {
-    const ticket = issueConsentTicket(REQUEST);
+    const ticket = issueConsentTicket(REQUEST, USER_ID);
     const result = verifyConsentTicket(ticket);
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -34,7 +38,7 @@ describe('consent tickets', () => {
   it('rejects a ticket whose payload was edited', () => {
     // The whole point: an attacker swapping redirect_uri or code_challenge must
     // invalidate the signature rather than be accepted.
-    const ticket = issueConsentTicket(REQUEST);
+    const ticket = issueConsentTicket(REQUEST, USER_ID);
     const [payload, signature] = ticket.split('.');
     const tampered = Buffer.from(
       JSON.stringify({ ...JSON.parse(Buffer.from(payload, 'base64url').toString()), redirectUri: 'https://evil.example/steal' })
@@ -44,19 +48,19 @@ describe('consent tickets', () => {
   });
 
   it('rejects a ticket signed with a different secret', () => {
-    const ticket = issueConsentTicket(REQUEST);
+    const ticket = issueConsentTicket(REQUEST, USER_ID);
     process.env.NEXTAUTH_SECRET = 'a-completely-different-secret-value';
     expect(verifyConsentTicket(ticket).ok).toBe(false);
   });
 
   it('rejects an expired ticket', () => {
-    const ticket = issueConsentTicket(REQUEST, { now: () => 0 });
+    const ticket = issueConsentTicket(REQUEST, USER_ID, { now: () => 0 });
     // 11 minutes later, past the 10-minute window.
     expect(verifyConsentTicket(ticket, { now: () => 660_000 }).ok).toBe(false);
   });
 
   it('accepts a ticket inside the window', () => {
-    const ticket = issueConsentTicket(REQUEST, { now: () => 0 });
+    const ticket = issueConsentTicket(REQUEST, USER_ID, { now: () => 0 });
     expect(verifyConsentTicket(ticket, { now: () => 60_000 }).ok).toBe(true);
   });
 
@@ -68,9 +72,31 @@ describe('consent tickets', () => {
   });
 
   it('preserves a null state rather than dropping it', () => {
-    const ticket = issueConsentTicket({ ...REQUEST, state: null });
+    const ticket = issueConsentTicket({ ...REQUEST, state: null }, USER_ID);
     const result = verifyConsentTicket(ticket);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.request.state).toBeNull();
+  });
+
+  it('names the user it was issued to', () => {
+    const result = verifyConsentTicket(issueConsentTicket(REQUEST, USER_ID));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.userId).toBe(USER_ID);
+  });
+
+  it('refuses a ticket with no user bound to it', () => {
+    // A payload predating the binding has no owner to compare a session
+    // against. Accepting it would make the ticket bearer-only again, which is
+    // exactly what the binding removes.
+    const legacy = Buffer.from(
+      JSON.stringify({ ...REQUEST, iat: Date.now() })
+    ).toString('base64url');
+    const signature = createHmac('sha256', process.env.NEXTAUTH_SECRET as string)
+      .update(legacy)
+      .digest('base64url');
+
+    const result = verifyConsentTicket(`${legacy}.${signature}`);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('Ticket is not bound to a user');
   });
 });

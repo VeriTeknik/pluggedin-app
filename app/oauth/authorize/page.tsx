@@ -72,13 +72,17 @@ export default async function AuthorizePage({
   // browser as editable fields. A server action is an HTTP endpoint, so if the
   // action accepted redirectUri / codeChallenge / clientUuid as parameters,
   // every check above would be decorative.
-  const ticket = issueConsentTicket({
-    clientUuid: client.uuid,
-    redirectUri: parsed.request.redirectUri,
-    scopes: parsed.request.scopes,
-    codeChallenge: parsed.request.codeChallenge,
-    state: parsed.request.state,
-  });
+  const ticket = issueConsentTicket(
+    {
+      clientUuid: client.uuid,
+      redirectUri: parsed.request.redirectUri,
+      scopes: parsed.request.scopes,
+      codeChallenge: parsed.request.codeChallenge,
+      state: parsed.request.state,
+    },
+    // Binds the ticket to this session, so it cannot be spent in another one.
+    session.user.id
+  );
 
   return (
     <ConsentForm

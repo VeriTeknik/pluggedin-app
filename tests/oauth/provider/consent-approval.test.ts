@@ -66,14 +66,16 @@ beforeEach(() => {
   projectsImpl = () => Promise.resolve([{ uuid: 'hub-1', name: 'Hub One' }]);
 });
 
-function ticket() {
+const USER_ID = 'user-1';
+
+function ticket(userId: string = USER_ID) {
   return issueConsentTicket({
     clientUuid: CLIENT_UUID,
     redirectUri: REDIRECT,
     scopes: ['library:read'],
     codeChallenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
     state: 'xyz',
-  });
+  }, userId);
 }
 
 describe('approveConsent', () => {
@@ -154,5 +156,19 @@ describe('approveConsent', () => {
       approveConsent({ ticket: ticket(), grantedProjectUuids: ['hub-1'] })
     ).rejects.toBe(redirectError);
     expect(insertedCodes).toHaveLength(0);
+  });
+
+  it('refuses a ticket issued to a different session', () => {
+    // The mocked session is USER_ID. A ticket bound to somebody else must not
+    // be spendable here — otherwise it would mint a code against this user's
+    // account and Hubs from an authorization request they never started.
+    clientRows.push({ uuid: CLIENT_UUID, redirect_uris: [REDIRECT] });
+    return approveConsent({
+      ticket: ticket('someone-else'),
+      grantedProjectUuids: ['hub-1'],
+    }).then((result) => {
+      expect(result.success).toBe(false);
+      expect(insertedCodes).toHaveLength(0);
+    });
   });
 });

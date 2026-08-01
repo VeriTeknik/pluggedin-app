@@ -42,6 +42,12 @@ export async function approveConsent(input: ApproveInput) {
     if (!verified.ok) {
       return { success: false as const, error: `Invalid consent request: ${verified.reason}` };
     }
+    // The ticket names who it was issued to. Checking only that *somebody* is
+    // signed in would let a ticket issued to one user be spent in another's
+    // session, minting a code against that user's account and Hubs.
+    if (verified.userId !== session.user.id) {
+      return { success: false as const, error: 'This consent request belongs to another session' };
+    }
     const request = verified.request;
 
     if (input.grantedProjectUuids.length === 0) {
@@ -115,9 +121,22 @@ export async function approveConsent(input: ApproveInput) {
 }
 
 export async function denyConsent(ticket: string) {
+  // Denial writes nothing and issues nothing, and the ticket payload is signed
+  // rather than encrypted, so the redirect this returns is one the holder could
+  // already build. The check is here because the ticket is bound to a user and
+  // every action that reads one should honour that binding — an action that
+  // ignores it today is where the next side effect gets added tomorrow.
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { success: false as const, error: 'Not signed in' };
+  }
+
   const verified = verifyConsentTicket(ticket);
   if (!verified.ok) {
     return { success: false as const, error: 'Invalid consent request' };
+  }
+  if (verified.userId !== session.user.id) {
+    return { success: false as const, error: 'This consent request belongs to another session' };
   }
   return {
     success: true as const,
