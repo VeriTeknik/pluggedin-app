@@ -166,6 +166,18 @@ export async function safeFetch(
       requestInit = { ...requestInit, method: 'GET', body: undefined };
     }
 
+    // Release the redirect's body before moving on. With redirect: 'manual'
+    // every hop hands back a response nobody reads, and undici holds the
+    // stream — and its connection — until GC gets to it. The callers here
+    // resolve attacker-supplied URLs, so a hostile host can answer with
+    // large-bodied redirects and lean on that: twenty hops per request, each
+    // leaving a stream open. cancel() discards it without downloading, which
+    // is the point; response.text() would fetch the very bytes being refused.
+    await response.body?.cancel().catch(() => {
+      // An already-disturbed or closed body is nothing to act on, and failing
+      // to release it must not fail the request that was otherwise fine.
+    });
+
     currentUrl = new URL(location, currentUrl).toString();
   }
 

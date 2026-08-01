@@ -137,4 +137,46 @@ describe('safeFetch redirect handling', () => {
       expect(init.redirect).toBe('manual');
     }
   });
+
+  it('releases each redirect body instead of leaving the stream open', async () => {
+    // redirect: 'manual' hands back a response per hop that nobody reads.
+    // undici keeps the stream and its connection alive until GC, and these
+    // callers resolve attacker-supplied URLs — so a hostile host answering with
+    // large-bodied redirects turns twenty hops into twenty open streams.
+    const cancels: string[] = [];
+    const hop = (name: string, location: string) => {
+      const response = new Response('x'.repeat(1024), { status: 302, headers: { location } });
+      vi.spyOn(response.body as ReadableStream, 'cancel').mockImplementation(() => {
+        cancels.push(name);
+        return Promise.resolve();
+      });
+      return response;
+    };
+
+    const final = ok();
+    const finalCancel = vi.spyOn(final.body as ReadableStream, 'cancel');
+
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(hop('first', 'https://public.example/second'))
+      .mockResolvedValueOnce(hop('second', 'https://public.example/final'))
+      .mockResolvedValueOnce(final);
+
+    const result = await safeFetch('https://public.example/start');
+
+    expect(cancels).toEqual(['first', 'second']);
+    // The response handed to the caller is theirs to read.
+    expect(finalCancel).not.toHaveBeenCalled();
+    expect(await result.text()).toBe('{}');
+  });
+
+  it('still returns the response when releasing a redirect body fails', async () => {
+    const broken = new Response('body', { status: 302, headers: { location: 'https://public.example/final' } });
+    vi.spyOn(broken.body as ReadableStream, 'cancel').mockRejectedValue(new Error('already locked'));
+
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(broken)
+      .mockResolvedValueOnce(ok());
+
+    await expect(safeFetch('https://public.example/start')).resolves.toBeDefined();
+  });
 });
