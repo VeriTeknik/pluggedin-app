@@ -45,8 +45,10 @@ vi.mock('next-auth/next', () => ({
   getServerSession: () => Promise.resolve({ user: { id: 'user-1' } }),
 }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
+let projectsImpl: () => Promise<{ uuid: string; name: string }[]> = () =>
+  Promise.resolve([{ uuid: 'hub-1', name: 'Hub One' }]);
 vi.mock('@/app/actions/projects', () => ({
-  getProjects: () => Promise.resolve([{ uuid: 'hub-1', name: 'Hub One' }]),
+  getProjects: () => projectsImpl(),
 }));
 
 import { approveConsent } from '@/app/oauth/authorize/actions';
@@ -61,6 +63,7 @@ beforeEach(() => {
   clientRows.length = 0;
   insertedCodes.length = 0;
   lookupColumn = undefined;
+  projectsImpl = () => Promise.resolve([{ uuid: 'hub-1', name: 'Hub One' }]);
 });
 
 function ticket() {
@@ -134,5 +137,22 @@ describe('approveConsent', () => {
   it('refuses an unknown client', async () => {
     const result = await approveConsent({ ticket: ticket(), grantedProjectUuids: ['hub-1'] });
     expect(result.success).toBe(false);
+  });
+
+  it('lets a session-expiry redirect through instead of reporting it as an error', async () => {
+    // getProjects goes through withAuth, which redirects to /login when the
+    // session has gone — and Next signals redirects by throwing. The catch-all
+    // in this action swallowed that, leaving the user on the consent screen
+    // reading the string "NEXT_REDIRECT" with no way forward.
+    clientRows.push({ uuid: CLIENT_UUID, redirect_uris: [REDIRECT] });
+    const redirectError = Object.assign(new Error('NEXT_REDIRECT'), {
+      digest: 'NEXT_REDIRECT;replace;/login;307;',
+    });
+    projectsImpl = () => Promise.reject(redirectError);
+
+    await expect(
+      approveConsent({ ticket: ticket(), grantedProjectUuids: ['hub-1'] })
+    ).rejects.toBe(redirectError);
+    expect(insertedCodes).toHaveLength(0);
   });
 });

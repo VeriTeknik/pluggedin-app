@@ -1,6 +1,7 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { getServerSession } from 'next-auth/next';
 
@@ -99,6 +100,13 @@ export async function approveConsent(input: ApproveInput) {
     url.searchParams.set('iss', connectorBaseUrl());
     return { success: true as const, data: { redirectTo: url.toString() } };
   } catch (error) {
+    // Next signals redirects by throwing, so a catch-all swallows them. This
+    // one wraps getProjects(), which goes through withAuth() and redirects to
+    // /login when the session has gone. Swallowed, the user stays on the
+    // consent screen looking at the string "NEXT_REDIRECT" where an error
+    // message should be, with no way forward. Same pattern as
+    // lib/auth-helpers.ts, which already re-throws these.
+    if (isRedirectError(error)) throw error;
     return {
       success: false as const,
       error: error instanceof Error ? error.message : 'Unknown error',

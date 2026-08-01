@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import type { ValidatedAuthorizeRequest } from '@/lib/oauth/provider/consent-ticket';
 import { issueConsentTicket, verifyConsentTicket } from '@/lib/oauth/provider/consent-ticket';
 
-const REQUEST = {
+// Typed as the real request rather than inferred: `as const` made scopes a
+// readonly tuple, which is not what issueConsentTicket accepts.
+const REQUEST: ValidatedAuthorizeRequest = {
   clientUuid: '11111111-1111-1111-1111-111111111111',
   redirectUri: 'https://claude.ai/api/mcp/auth_callback',
-  scopes: ['library:read', 'offline_access'] as const,
+  scopes: ['library:read', 'offline_access'],
   codeChallenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
   state: 'xyz',
 };
@@ -22,7 +25,7 @@ describe('consent tickets', () => {
     if (result.ok) {
       expect(result.request.clientUuid).toBe(REQUEST.clientUuid);
       expect(result.request.redirectUri).toBe(REQUEST.redirectUri);
-      expect(result.request.scopes).toEqual([...REQUEST.scopes]);
+      expect(result.request.scopes).toEqual(REQUEST.scopes);
       expect(result.request.codeChallenge).toBe(REQUEST.codeChallenge);
       expect(result.request.state).toBe('xyz');
     }

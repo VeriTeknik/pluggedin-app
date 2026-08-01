@@ -37,6 +37,12 @@ type GrantResult =
  * the reuse signal, an attacker holding a stolen token could simply wait for it
  * to lapse and escape family revocation.
  */
+/**
+ * Either the pool or a transaction handle. Functions that must run inside a
+ * caller's transaction take one of these rather than reaching for `db`.
+ */
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export function classifyRefreshFailure(record: {
   rotated_at: Date | null;
   revoked_at: Date | null;
@@ -65,11 +71,25 @@ export function classifyRefreshFailure(record: {
  */
 export async function revokeFamily(
   familyId: string,
+  reason: string,
+  executor?: DbExecutor
+): Promise<number> {
+  // When the caller already holds a transaction we join it instead of opening
+  // another. Opening one would take a second connection from the pool while the
+  // caller's is still held, which is how a revocation triggered mid-rotation
+  // deadlocks under load.
+  if (executor) return revokeFamilyWith(executor, familyId, reason);
+  return db.transaction((tx) => revokeFamilyWith(tx, familyId, reason));
+}
+
+async function revokeFamilyWith(
+  tx: DbExecutor,
+  familyId: string,
   reason: string
 ): Promise<number> {
   const now = new Date();
 
-  return db.transaction(async (tx) => {
+  {
     const revokedRefresh = await tx
       .update(oauthRefreshTokensTable)
       .set({ revoked_at: now, revocation_reason: reason })
@@ -83,25 +103,32 @@ export async function revokeFamily(
       .returning();
 
     return revokedRefresh.length + revokedAccess.length;
-  });
+  }
 }
 
-async function issueTokenPair(input: {
-  clientUuid: string;
-  userId: string;
-  grantedProjectUuids: string[];
-  scopes: string[];
-  familyId: string;
-  parentId: string | null;
-}): Promise<IssuedTokens> {
+/**
+ * The two inserts always share a transaction. The caller passes the executor so
+ * that the claim which authorises the issuance — consuming an authorization
+ * code, or marking a refresh token rotated — can share it too. Issuing tokens
+ * atomically but claiming separately just moves the unrecoverable state one
+ * step earlier: the code is spent, no tokens exist, and the client has nothing
+ * left to retry with.
+ */
+async function issueTokenPair(
+  input: {
+    clientUuid: string;
+    userId: string;
+    grantedProjectUuids: string[];
+    scopes: string[];
+    familyId: string;
+    parentId: string | null;
+  },
+  tx: DbExecutor
+): Promise<IssuedTokens> {
   const accessToken = mintCredential();
   const refreshToken = mintCredential();
 
-  // Both rows in one transaction. Separately, a failure on the second insert
-  // would leave the authorization code consumed and the caller holding an
-  // access token with no way to refresh it — a state they cannot recover from
-  // without starting the whole flow again.
-  await db.transaction(async (tx) => {
+  {
     await tx.insert(oauthAccessTokensTable).values({
       token_hash: hashCredential(accessToken),
       family_id: input.familyId,
@@ -127,7 +154,7 @@ async function issueTokenPair(input: {
       scopes: input.scopes,
       expires_at: new Date(Date.now() + TTL.refreshTokenMs),
     });
-  });
+  }
 
   return {
     access_token: accessToken,
@@ -207,35 +234,45 @@ export async function redeemAuthorizationCode(input: {
   // both would issue tokens. Making consumption a single conditional UPDATE and
   // reading how many rows it touched is what actually makes redemption
   // single-use — whoever's UPDATE lands first gets the row, the other gets none.
-  const claimed = await db
-    .update(oauthAuthorizationCodesTable)
-    .set({ consumed_at: new Date() })
-    .where(
-      and(
-        eq(oauthAuthorizationCodesTable.uuid, record.uuid),
-        isNull(oauthAuthorizationCodesTable.consumed_at)
+  // Claiming the code and issuing against it are one unit. Split, a failure
+  // during issuance leaves the code consumed and no tokens anywhere: the client
+  // cannot retry, because a second redemption is correctly refused as reuse.
+  // The user has to walk the whole authorization flow again.
+  return db.transaction(async (tx) => {
+    const claimed = await tx
+      .update(oauthAuthorizationCodesTable)
+      .set({ consumed_at: new Date() })
+      .where(
+        and(
+          eq(oauthAuthorizationCodesTable.uuid, record.uuid),
+          isNull(oauthAuthorizationCodesTable.consumed_at)
+        )
       )
-    )
-    .returning();
+      .returning();
 
-  if (claimed.length === 0) {
+    if (claimed.length === 0) {
+      return {
+        ok: false,
+        error: 'invalid_grant',
+        description: 'Authorization code already used',
+      };
+    }
+
     return {
-      ok: false,
-      error: 'invalid_grant',
-      description: 'Authorization code already used',
+      ok: true,
+      tokens: await issueTokenPair(
+        {
+          clientUuid: record.client_uuid,
+          userId: record.user_id,
+          grantedProjectUuids: record.granted_project_uuids,
+          scopes: record.scopes,
+          familyId: crypto.randomUUID(),
+          parentId: null,
+        },
+        tx
+      ),
     };
-  }
-
-  const tokens = await issueTokenPair({
-    clientUuid: record.client_uuid,
-    userId: record.user_id,
-    grantedProjectUuids: record.granted_project_uuids,
-    scopes: record.scopes,
-    familyId: crypto.randomUUID(),
-    parentId: null,
   });
-
-  return { ok: true, tokens };
 }
 
 export async function rotateRefreshToken(input: {
@@ -288,35 +325,47 @@ export async function rotateRefreshToken(input: {
   // could both read an unrotated token and both issue a pair. Claiming the
   // rotation conditionally means the loser is treated as what it is — a second
   // use of an already-rotated token, i.e. exactly the reuse signal.
-  const rotated = await db
-    .update(oauthRefreshTokensTable)
-    .set({ rotated_at: new Date() })
-    .where(
-      and(
-        eq(oauthRefreshTokensTable.uuid, record.uuid),
-        isNull(oauthRefreshTokensTable.rotated_at)
+  // Same unit as code redemption: claim, then issue against the claim. A
+  // failure between them would spend the refresh token and hand back nothing,
+  // and the client's retry would look like reuse — revoking the whole family
+  // over a transient database error.
+  return db.transaction(async (tx) => {
+    const rotated = await tx
+      .update(oauthRefreshTokensTable)
+      .set({ rotated_at: new Date() })
+      .where(
+        and(
+          eq(oauthRefreshTokensTable.uuid, record.uuid),
+          isNull(oauthRefreshTokensTable.rotated_at)
+        )
       )
-    )
-    .returning();
+      .returning();
 
-  if (rotated.length === 0) {
-    await revokeFamily(record.family_id, 'refresh_token_reuse_detected');
+    if (rotated.length === 0) {
+      // Revoked on the caller's transaction: this commits, since losing the
+      // claim is a real reuse signal rather than an error to roll back.
+      await revokeFamily(record.family_id, 'refresh_token_reuse_detected', tx);
+      return {
+        ok: false,
+        error: 'invalid_grant',
+        description:
+          'Refresh token reuse detected; all tokens for this authorization were revoked',
+      };
+    }
+
     return {
-      ok: false,
-      error: 'invalid_grant',
-      description:
-        'Refresh token reuse detected; all tokens for this authorization were revoked',
+      ok: true,
+      tokens: await issueTokenPair(
+        {
+          clientUuid: record.client_uuid,
+          userId: record.user_id,
+          grantedProjectUuids: record.granted_project_uuids,
+          scopes: record.scopes,
+          familyId: record.family_id,
+          parentId: record.uuid,
+        },
+        tx
+      ),
     };
-  }
-
-  const tokens = await issueTokenPair({
-    clientUuid: record.client_uuid,
-    userId: record.user_id,
-    grantedProjectUuids: record.granted_project_uuids,
-    scopes: record.scopes,
-    familyId: record.family_id,
-    parentId: record.uuid,
   });
-
-  return { ok: true, tokens };
 }

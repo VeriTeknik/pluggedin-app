@@ -11,9 +11,9 @@ describe('oauth schema', () => {
     // The column is named token_hash on purpose: a column called `token`
     // invites someone to write the token into it.
     expect(oauthAccessTokensTable.token_hash).toBeDefined();
-    expect((oauthAccessTokensTable as Record<string, unknown>).token).toBeUndefined();
+    expect((oauthAccessTokensTable as unknown as Record<string, unknown>).token).toBeUndefined();
     expect(oauthRefreshTokensTable.token_hash).toBeDefined();
-    expect((oauthRefreshTokensTable as Record<string, unknown>).token).toBeUndefined();
+    expect((oauthRefreshTokensTable as unknown as Record<string, unknown>).token).toBeUndefined();
   });
 
   it('carries the fields refresh-token reuse detection needs', () => {
