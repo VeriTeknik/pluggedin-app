@@ -23,8 +23,15 @@ cosmetic.**
 | `0100_known_prowler` | Makes `(issuer, client_id)` a **unique** index | Duplicate client rows become possible, and a duplicate can revoke a legitimate client's whole token family |
 
 ```bash
-pnpm db:migrate
+docker compose -f infra/docker-compose.yml run --rm pluggedin-app \
+  node_modules/.bin/drizzle-kit migrate
 ```
+
+`pnpm` is deliberately absent from the runtime image — it shipped as a dangling
+symlink and aborted a cutover mid-window, so the migration path now invokes
+`drizzle-kit` directly. `pnpm db:migrate` on the host would also target the
+wrong database: the app's Postgres is the containerised one, not whatever the
+host shell resolves.
 
 Then confirm, rather than assuming the command's exit code told the truth:
 
@@ -98,9 +105,14 @@ test "$(curl -s "$BASE/.well-known/oauth-protected-resource" | jq -r .resource)"
 Check it and move on:
 
 ```bash
-curl -si "$BASE/api/mcp" | head -10
-#  expect: HTTP/1.1 401, and no WWW-Authenticate line
+curl -si -X POST "$BASE/api/mcp" -H 'Content-Type: application/json' -d '{}' | head -10
+#  expect: HTTP/2 401, and no WWW-Authenticate line
 ```
+
+**Use POST.** A GET returns `400 {"error":"Missing Mcp-Session-Id header"}`,
+which is the session check firing before authentication is ever reached — a
+different failure that looks like a broken deploy. Verified against production:
+GET → 400, POST → 401.
 
 That route still authenticates with a NextAuth session cookie; it predates this
 work. `buildUnauthorizedResponse()` and `authenticateConnectorRequest()` shipped
@@ -192,12 +204,20 @@ a made-up refresh token and a real one belonging to another client. Both must
 return the identical message. Different wording is an oracle for sorting stolen
 tokens.
 
-**The token endpoint takes form encoding, not JSON.** A JSON body returns 415,
-which reads like an outage rather than a content-type mistake:
+**The token endpoint takes form encoding, not JSON.** A JSON body returns
+`400` naming the problem outright:
 
 ```bash
 curl -si -X POST "$BASE/api/oauth/token" -H 'Content-Type: application/json' -d '{}' | head -3
+#  expect: HTTP/2 400
+#  body:   {"error":"invalid_request",
+#           "error_description":"Body must be application/x-www-form-urlencoded"}
 ```
+
+An earlier version of this section said 415, and warned the response "reads
+like an outage rather than a content-type mistake". Neither holds: the status
+is 400 and the body states the exact cause. Left in as a check because it is
+still worth knowing the endpoint refuses JSON — just not as a trap.
 
 ---
 
