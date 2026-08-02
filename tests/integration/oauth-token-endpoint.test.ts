@@ -106,6 +106,21 @@ async function mintAuthorizationCode(): Promise<string> {
   return code;
 }
 
+/**
+ * Backends blocked on a lock in *this* database, excluding our own connection.
+ * Scoped deliberately: pg_stat_activity spans the whole cluster.
+ */
+async function lockWaiterPids(): Promise<number[]> {
+  const rows = await db.execute(
+    sql`select pid from pg_stat_activity
+        where datname = current_database()
+          and pid <> pg_backend_pid()
+          and wait_event_type = 'Lock'
+          and state = 'active'`
+  );
+  return (rows.rows as { pid: number }[]).map((r) => Number(r.pid));
+}
+
 async function familyCounts(familyId: string) {
   const [refresh, access] = await Promise.all([
     db.select().from(oauthRefreshTokensTable).where(eq(oauthRefreshTokensTable.family_id, familyId)),
@@ -235,21 +250,21 @@ describeIfDb('OAuth token endpoint, against a real database', () => {
     });
 
     await isLocked;
+
+    // Who is already waiting on a lock, before the caller has been given a
+    // chance to. pg_stat_activity is cluster-wide, so without this baseline any
+    // unrelated backend blocked anywhere on the instance would satisfy the poll
+    // below — and this test database shares its Postgres with the dev one. A
+    // stale waiter over there would release the holder early and quietly
+    // restore the timing assumption this replaced.
+    const waitersBefore = new Set(await lockWaiterPids());
+
     const result = body();
 
-    // Wait until the caller's UPDATE is genuinely blocked on the row lock,
-    // rather than sleeping and hoping. A fixed delay would still produce a
-    // passing test if the UPDATE had not arrived yet — it would simply run
-    // against the committed row afterwards and be refused by a different
-    // branch. The assertion would hold and the mutation coverage claimed for
-    // this helper would quietly stop being true.
     const deadline = Date.now() + 5000;
     for (;;) {
-      const waiting = await db.execute(
-        sql`select count(*)::int as n from pg_stat_activity
-            where wait_event_type = 'Lock' and state = 'active'`
-      );
-      if (Number((waiting.rows[0] as { n: number }).n) > 0) break;
+      const fresh = (await lockWaiterPids()).filter((pid) => !waitersBefore.has(pid));
+      if (fresh.length > 0) break;
       if (Date.now() > deadline) throw new Error('caller never blocked on the row lock');
       await new Promise((r) => setTimeout(r, 20));
     }
