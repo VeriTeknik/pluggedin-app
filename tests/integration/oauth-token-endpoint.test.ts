@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -236,8 +236,24 @@ describeIfDb('OAuth token endpoint, against a real database', () => {
 
     await isLocked;
     const result = body();
-    // Give the blocked UPDATE a moment to actually reach the lock.
-    await new Promise((r) => setTimeout(r, 100));
+
+    // Wait until the caller's UPDATE is genuinely blocked on the row lock,
+    // rather than sleeping and hoping. A fixed delay would still produce a
+    // passing test if the UPDATE had not arrived yet — it would simply run
+    // against the committed row afterwards and be refused by a different
+    // branch. The assertion would hold and the mutation coverage claimed for
+    // this helper would quietly stop being true.
+    const deadline = Date.now() + 5000;
+    for (;;) {
+      const waiting = await db.execute(
+        sql`select count(*)::int as n from pg_stat_activity
+            where wait_event_type = 'Lock' and state = 'active'`
+      );
+      if (Number((waiting.rows[0] as { n: number }).n) > 0) break;
+      if (Date.now() > deadline) throw new Error('caller never blocked on the row lock');
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
     release();
     await holder;
     return result;
