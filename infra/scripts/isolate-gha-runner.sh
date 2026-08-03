@@ -78,6 +78,8 @@ fi
 echo "==> preflight ok: rootless prerequisites present"
 
 echo "==> 1. stop and unregister the existing runner"
+# Anything already present is by definition the previous runner; the new one
+# does not exist yet at this point.
 OLD_SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print $1}' | head -1)
 if [ -n "$OLD_SVC" ]; then
   systemctl stop "$OLD_SVC" || true
@@ -194,8 +196,23 @@ sudo -u "$RUNNER_USER" env DOCKER_HOST="$DOCKER_SOCK" \
 
 # DOCKER_HOST has to reach the service, or every build talks to the SYSTEM
 # daemon and the isolation this whole script exists for is silently undone.
-SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print $1}' | head -1)
-[ -n "$SVC" ] || { echo "runner service not found after install" >&2; exit 1; }
+# Match the service by the runner NAME we registered, not by "whatever
+# actions.runner unit sorts first". If the old service failed to uninstall,
+# `head -1` could select it — the DOCKER_HOST drop-in would land on the wrong
+# unit, the verification below would then inspect that same wrong unit and
+# pass, and the real runner would quietly build against the SYSTEM daemon.
+# That is the exact failure this whole script exists to prevent, arriving
+# silently and with a green check next to it.
+RUNNER_NAME="${RUNNER_USER}-rootless"
+SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' \
+      | awk '{print $1}' | grep -F ".${RUNNER_NAME}.service" | head -1)
+if [ -z "$SVC" ]; then
+  echo "runner service for '${RUNNER_NAME}' not found after install" >&2
+  echo "units present:" >&2
+  systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print "  "$1}' >&2
+  exit 1
+fi
+echo "    configuring ${SVC}"
 mkdir -p "/etc/systemd/system/${SVC}.d"
 cat > "/etc/systemd/system/${SVC}.d/10-rootless-docker.conf" <<EOF
 [Service]
