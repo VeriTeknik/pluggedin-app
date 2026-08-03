@@ -98,8 +98,38 @@ fi
 # Lingering lets the rootless daemon run without an active login session.
 loginctl enable-linger "$RUNNER_USER"
 # Subuid/subgid ranges are what make the user namespace possible.
-grep -q "^${RUNNER_USER}:" /etc/subuid || usermod --add-subuids 200000-265535 "$RUNNER_USER"
-grep -q "^${RUNNER_USER}:" /etc/subgid || usermod --add-subgids 200000-265535 "$RUNNER_USER"
+#
+# useradd normally allocates these itself, and when it does the guard below
+# short-circuits and nothing here runs — on this host it assigned 165536, not
+# the range an earlier version of this script hardcoded, so that constant was
+# never actually applied. It was still wrong to carry: on a system whose
+# useradd does not auto-allocate, a fixed range can collide with one already
+# issued to another user, and overlapping ranges produce rootless failures
+# that are hard to trace back to their cause.
+#
+# Derive the next free range from what is already allocated instead.
+next_free_subid() {
+  local file="$1" size=65536 highest=0 start count end
+  while IFS=: read -r _ start count; do
+    [ -n "${start:-}" ] || continue
+    end=$((start + count))
+    [ "$end" -gt "$highest" ] && highest=$end
+  done < "$file"
+  # Stay clear of real uids; 100000 is the conventional floor.
+  [ "$highest" -lt 100000 ] && highest=100000
+  echo "${highest}-$((highest + size - 1))"
+}
+
+if ! grep -q "^${RUNNER_USER}:" /etc/subuid; then
+  range=$(next_free_subid /etc/subuid)
+  usermod --add-subuids "$range" "$RUNNER_USER"
+  echo "    allocated subuid range ${range}"
+fi
+if ! grep -q "^${RUNNER_USER}:" /etc/subgid; then
+  range=$(next_free_subid /etc/subgid)
+  usermod --add-subgids "$range" "$RUNNER_USER"
+  echo "    allocated subgid range ${range}"
+fi
 
 echo "==> 3. confirm the isolation actually holds"
 fail=0
