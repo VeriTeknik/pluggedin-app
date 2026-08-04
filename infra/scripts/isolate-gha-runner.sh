@@ -52,10 +52,14 @@ command -v dockerd-rootless-setuptool.sh >/dev/null || missing+=("docker-ce-root
 command -v newuidmap >/dev/null || missing+=("uidmap")
 command -v newgidmap >/dev/null || missing+=("uidmap")
 command -v rootlesskit >/dev/null || missing+=("rootlesskit")
-# Optional but strongly preferred: without it the rootless daemon falls back
-# to the vfs storage driver, which copies every layer and makes a 4 GB image
-# build painfully slow and disk-hungry.
-command -v fuse-overlayfs >/dev/null || missing+=("fuse-overlayfs")
+# fuse-overlayfs is NOT required and must not gate the run. Kernels from 5.11
+# support rootless overlayfs natively — this host is on 6.8 and the daemon
+# reports storage-driver=overlayfs without using fuse-overlayfs at all. It
+# only matters on older kernels, where its absence drops the daemon to the vfs
+# driver, which copies every layer and makes a 4 GB build slow and
+# disk-hungry. An earlier version of this block listed it as optional in the
+# comment and then enforced it as mandatory in the code, which would have
+# refused to run on exactly the modern systems that do not need it.
 
 if [ ${#missing[@]} -gt 0 ]; then
   # shellcheck disable=SC2207
@@ -73,6 +77,17 @@ fi
 if [ -r /proc/sys/kernel/unprivileged_userns_clone ]; then
   [ "$(cat /proc/sys/kernel/unprivileged_userns_clone)" = "1" ] \
     || { echo "unprivileged user namespaces are disabled; rootless cannot work here" >&2; exit 1; }
+fi
+
+if ! command -v fuse-overlayfs >/dev/null; then
+  kmaj=$(uname -r | cut -d. -f1); kmin=$(uname -r | cut -d. -f2)
+  if [ "$kmaj" -gt 5 ] || { [ "$kmaj" -eq 5 ] && [ "$kmin" -ge 11 ]; }; then
+    echo "note: fuse-overlayfs absent; kernel $(uname -r) has native rootless overlayfs, so it is not needed"
+  else
+    echo "WARNING: fuse-overlayfs absent and kernel $(uname -r) predates native rootless overlayfs." >&2
+    echo "         The daemon will fall back to the vfs driver: correct, but slow and disk-hungry." >&2
+    echo "         Install it with: apt-get install -y fuse-overlayfs" >&2
+  fi
 fi
 
 echo "==> preflight ok: rootless prerequisites present"
