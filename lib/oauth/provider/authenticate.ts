@@ -69,10 +69,20 @@ export async function authenticateConnectorRequest(
 
   // Fire-and-forget: last_used_at is telemetry, and awaiting it would put a
   // write on the critical path of every tool call.
+  //
+  // The catch is not decoration. An unhandled rejection terminates the process
+  // by default since Node 15, so without it a transient database error on a
+  // telemetry write could take down the server in the middle of serving a
+  // request that had already succeeded.
   void db
     .update(oauthAccessTokensTable)
     .set({ last_used_at: new Date() })
-    .where(eq(oauthAccessTokensTable.uuid, record.uuid));
+    .where(eq(oauthAccessTokensTable.uuid, record.uuid))
+    .catch((error) => {
+      console.warn('[connector] last_used_at update failed', {
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+    });
 
   return {
     ok: true,
