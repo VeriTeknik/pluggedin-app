@@ -62,13 +62,25 @@ export const TOOLS: readonly ToolDefinition[] = Object.freeze([
 /** Tools whose required scope the caller holds. */
 export function visibleTools(grantedScopes: string[]): ToolDefinition[] {
   return TOOLS.filter((tool) => {
-    const required = TOOL_SCOPES[tool.name];
+    const required = requiredScopeFor(tool.name);
     return required !== undefined && grantedScopes.includes(required);
   });
 }
 
+/**
+ * Own properties only. TOOL_SCOPES is an object literal, so it inherits from
+ * Object.prototype and a plain lookup answers for names nobody defined:
+ * requiredScopeFor('constructor') returns a *function*, which is truthy.
+ *
+ * Nothing was exploitable — findTool scans an array by name equality and no
+ * prototype key survives it, so the call never reached a handler. But that made
+ * the safety incidental rather than stated: the redundant-looking `definition`
+ * check in dispatch was the only thing standing between an attacker-supplied
+ * tool name and a truthy handler. A later cleanup removing it as duplicated
+ * would have opened the path silently.
+ */
 export function requiredScopeFor(toolName: string): Scope | undefined {
-  return TOOL_SCOPES[toolName];
+  return Object.hasOwn(TOOL_SCOPES, toolName) ? TOOL_SCOPES[toolName] : undefined;
 }
 
 export function findTool(toolName: string): ToolDefinition | undefined {

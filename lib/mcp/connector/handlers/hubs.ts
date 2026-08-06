@@ -104,10 +104,23 @@ export async function openHub(
   // per-token convenience so the next call need not repeat the choice. It does
   // not reintroduce what SEP-2567 removed, because nothing about the connection
   // carries it — a different token has a different default.
-  await db
-    .update(oauthAccessTokensTable)
-    .set({ default_project_uuid: projectUuid })
-    .where(eq(oauthAccessTokensTable.uuid, identity.tokenUuid));
+  //
+  // The Hub can be deleted between the read above and this write, and the
+  // foreign key then rejects it. That is a narrow race but a real one, and the
+  // generic handler would report it as "Internal error" — which tells the user
+  // nothing and reads like an outage. 23503 is Postgres's foreign-key
+  // violation; here it means precisely one thing, so it is named.
+  try {
+    await db
+      .update(oauthAccessTokensTable)
+      .set({ default_project_uuid: projectUuid })
+      .where(eq(oauthAccessTokensTable.uuid, identity.tokenUuid));
+  } catch (error) {
+    if ((error as { code?: string })?.code === '23503') {
+      return failure(`The Hub "${argument}" no longer exists.`);
+    }
+    throw error;
+  }
 
   const opened = rows.find((row) => row.uuid === projectUuid);
   return text({

@@ -261,3 +261,63 @@ describe('JSON-RPC envelope', () => {
     if (outcome.kind === 'error') expect(outcome.code).toBe(-32601);
   });
 });
+
+describe('attacker-supplied tool names', () => {
+  it('does not resolve a handler through the prototype chain', async () => {
+    // TOOL_HANDLERS and TOOL_SCOPES are object literals, so a plain lookup
+    // answers for names nobody defined. requiredScopeFor('constructor')
+    // returned a function — truthy — and only findTool's array scan kept the
+    // call from reaching Object as a handler. That made the safety incidental.
+    for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf']) {
+      const outcome = await dispatchAuthenticated(call(name), identity({ scopes: ['hubs:read'] }));
+      expect(outcome.kind, `${name} reached a handler`).toBe('error');
+      if (outcome.kind === 'error') expect(outcome.message).toContain('Unknown tool');
+    }
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it('reports no scope for a prototype key', async () => {
+    const { requiredScopeFor } = await import('@/lib/mcp/connector/tools');
+    expect(requiredScopeFor('constructor')).toBeUndefined();
+    expect(requiredScopeFor('toString')).toBeUndefined();
+    expect(requiredScopeFor('pluggedin_list_hubs')).toBe('hubs:read');
+  });
+});
+
+describe('a Hub deleted mid-call', () => {
+  it('says so instead of reporting an internal error', async () => {
+    (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{ uuid: HUB_A, name: 'Acme' }]) })),
+    });
+    (db.update as ReturnType<typeof vi.fn>).mockReturnValue({
+      set: vi.fn(() => ({
+        where: vi.fn().mockRejectedValue(Object.assign(new Error('fk'), { code: '23503' })),
+      })),
+    });
+
+    const outcome = await dispatchAuthenticated(
+      call('pluggedin_open_hub', { hub: 'Acme' }),
+      identity()
+    );
+
+    if (outcome.kind !== 'result') throw new Error('expected a result');
+    const result = outcome.result as { isError?: boolean; content: { text: string }[] };
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('no longer exists');
+  });
+
+  it('still propagates an error that is not a foreign-key violation', async () => {
+    // Swallowing every failure here would turn a real outage into "that Hub is
+    // gone", which sends the user looking in the wrong place.
+    (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{ uuid: HUB_A, name: 'Acme' }]) })),
+    });
+    (db.update as ReturnType<typeof vi.fn>).mockReturnValue({
+      set: vi.fn(() => ({ where: vi.fn().mockRejectedValue(new Error('connection lost')) })),
+    });
+
+    await expect(
+      dispatchAuthenticated(call('pluggedin_open_hub', { hub: 'Acme' }), identity())
+    ).rejects.toThrow('connection lost');
+  });
+});

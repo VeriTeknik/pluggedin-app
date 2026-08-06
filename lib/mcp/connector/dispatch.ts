@@ -75,11 +75,15 @@ export async function dispatchAuthenticated(
 
       const definition = findTool(name);
       const required = requiredScopeFor(name);
-      const handler = TOOL_HANDLERS[name];
+      const handler = Object.hasOwn(TOOL_HANDLERS, name) ? TOOL_HANDLERS[name] : undefined;
 
       // All three must agree. A tool defined but unmapped, or mapped but
       // scopeless, is a wiring mistake — and answering "unknown tool" for it is
       // better than reaching a handler no scope guards.
+      //
+      // Both lookups are own-property only, because `name` is attacker-supplied
+      // and these are object literals: TOOL_HANDLERS['constructor'] would
+      // otherwise resolve to Object and be called as a handler.
       if (!definition || !required || !handler) {
         return { kind: 'error', code: JSONRPC.METHOD_NOT_FOUND, message: `Unknown tool: ${name}` };
       }
