@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
 import { authOptions } from '@/lib/auth';
-import { handleConnectorRequest } from '@/lib/mcp/connector/handle-request';
+import { handleConnectorRequest, isPublicConnectorRequest } from '@/lib/mcp/connector/handle-request';
 import { getSessionManager } from '@/lib/mcp/sessions/SessionManager';
 import { handleStreamableHTTPRequest } from '@/lib/mcp/streamable-http/handler';
 import { buildUnauthorizedResponse } from '@/lib/oauth/provider/authenticate';
@@ -40,11 +40,25 @@ export async function POST(req: NextRequest) {
     // unauthenticated caller would get a 500 instead of the challenge — so a
     // client whose first probe is empty never learns where to authenticate,
     // which is the failure this endpoint exists to avoid.
-    if (req.headers.get('authorization')?.startsWith('Bearer ')) {
-      let body: unknown;
-      try {
-        body = await req.json();
-      } catch {
+    const hasBearer = req.headers.get('authorization')?.startsWith('Bearer ') ?? false;
+
+    // The body is needed to route, not only to serve: server/discover is
+    // answerable without any credential, so a request carrying no token still
+    // belongs to the connector when that is what it asks for. Gating the
+    // connector on the bearer header alone sent an unauthenticated discover to
+    // the session path, which answered 401 — leaving a client unable to
+    // negotiate before authenticating, which is the one thing discovery exists
+    // to make possible.
+    let body: unknown;
+    let parsed = true;
+    try {
+      body = await req.json();
+    } catch {
+      parsed = false;
+    }
+
+    if (hasBearer) {
+      if (!parsed) {
         return NextResponse.json(
           { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
           { status: 400 }
@@ -52,6 +66,14 @@ export async function POST(req: NextRequest) {
       }
       return handleConnectorRequest(req, body);
     }
+
+    if (parsed && isPublicConnectorRequest(body)) {
+      return handleConnectorRequest(req, body);
+    }
+
+    // An unparseable body from an unauthenticated caller still gets the
+    // challenge rather than an error: the header is how they learn where to
+    // authenticate, and a first probe with no payload is the obvious one.
 
     // Get user session for authentication
     const session = await getServerSession(authOptions);
@@ -64,7 +86,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
 
     // Handle the Streamable HTTP request
     const result = await handleStreamableHTTPRequest({

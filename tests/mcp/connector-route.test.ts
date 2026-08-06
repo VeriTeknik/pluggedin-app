@@ -114,3 +114,45 @@ describe('session path', () => {
     expect(handleStreamableHTTPRequest).toHaveBeenCalledOnce();
   });
 });
+
+describe('discovery without a credential', () => {
+  it('answers server/discover with no Authorization header at all', async () => {
+    // The bug this exists for: the route gated the connector on the bearer
+    // header, so an unauthenticated discover fell through to the session path
+    // and was answered 401. Negotiating is what a client does *before* it can
+    // authenticate, so that made discovery unreachable in exactly the case it
+    // is for.
+    //
+    // The earlier route test asked for discover *with* a bearer token, which
+    // passes either way — choosing the authenticated case is what hid this.
+    const response = await POST(
+      post(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'server/discover' }))
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.protocolVersions[0]).toBe('2026-07-28');
+    expect(handleStreamableHTTPRequest).not.toHaveBeenCalled();
+  });
+
+  it('still challenges an unauthenticated call to a non-public method', async () => {
+    const response = await POST(
+      post(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }))
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('www-authenticate')).toContain('resource_metadata');
+  });
+
+  it('does not let a session-transport request be mistaken for discovery', async () => {
+    sessionValue.current = { user: { id: 'user-1' } };
+
+    const response = await POST(
+      post(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }), {
+        'Mcp-Session-Id': 'legacy-session',
+      })
+    );
+
+    expect(handleStreamableHTTPRequest).toHaveBeenCalledOnce();
+    expect(response.status).toBe(200);
+  });
+});
