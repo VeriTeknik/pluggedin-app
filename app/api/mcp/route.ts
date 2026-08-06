@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
 import { authOptions } from '@/lib/auth';
+import { handleConnectorRequest } from '@/lib/mcp/connector/handle-request';
 import { getSessionManager } from '@/lib/mcp/sessions/SessionManager';
 import { handleStreamableHTTPRequest } from '@/lib/mcp/streamable-http/handler';
+import { buildUnauthorizedResponse } from '@/lib/oauth/provider/authenticate';
 import { getCorsHeaders, handleCorsOptions } from '@/lib/security/cors';
 import { createSecureErrorResponse, ErrorCode } from '@/lib/security/error-handler';
 
@@ -20,19 +22,50 @@ export async function POST(req: NextRequest) {
   try {
     // Get the session ID from headers
     const sessionId = req.headers.get('Mcp-Session-Id');
-    
+
+    // Two callers reach this endpoint and they authenticate differently.
+    //
+    // A bearer token means the hosted connector: MCP 2026-07-28, stateless, no
+    // Mcp-Session-Id, authorized by an OAuth access token. A cookie means the
+    // older session-based streamable transport, kept working until the local
+    // proxy is retired.
+    //
+    // Branching rather than rewriting is deliberate. Nothing in this repository
+    // calls the session path today and the proxy uses /api/mcp-servers, but
+    // "no caller I can find" is not "no caller", and deleting a live endpoint
+    // to save one conditional is a poor trade.
+    //
+    // Credential first, body second. Parsing up front is tidier to read and
+    // wrong: a malformed or absent body would throw before the branch, and an
+    // unauthenticated caller would get a 500 instead of the challenge — so a
+    // client whose first probe is empty never learns where to authenticate,
+    // which is the failure this endpoint exists to avoid.
+    if (req.headers.get('authorization')?.startsWith('Bearer ')) {
+      let body: unknown;
+      try {
+        body = await req.json();
+      } catch {
+        return NextResponse.json(
+          { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
+          { status: 400 }
+        );
+      }
+      return handleConnectorRequest(req, body);
+    }
+
     // Get user session for authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+      // Neither credential. Answer with the connector's challenge rather than a
+      // bare 401: the WWW-Authenticate header is how Claude learns where the
+      // authorization server is, and it is ignored on any status but 401.
+      return buildUnauthorizedResponse(
+        `${(process.env.NEXTAUTH_URL ?? '').replace(/\/+$/, '')}/.well-known/oauth-protected-resource`
       );
     }
 
-    // Parse the request body
     const body = await req.json();
-    
+
     // Handle the Streamable HTTP request
     const result = await handleStreamableHTTPRequest({
       method: 'POST',
