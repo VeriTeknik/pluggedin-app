@@ -92,7 +92,12 @@ WantedBy=timers.target
 EOF
   systemctl daemon-reload
   systemctl enable --now pluggedin-prune.timer
-  systemctl list-timers pluggedin-prune.timer --no-pager | head -2
+  # `| head` closes the pipe early, systemd takes SIGPIPE, and with pipefail
+  # that exit 141 propagates and kills the script before it reports success.
+  # Observed for real: the confirmation line below never printed on the first
+  # install, even though the timer had been created correctly. Harmless here,
+  # but a non-zero exit from an installer is exactly what automation keys on.
+  systemctl list-timers pluggedin-prune.timer --no-pager | head -2 || true
   echo
   echo "Re-run --install-timer after changing this script; the timer uses the"
   echo "installed copy, not the checkout, so edits in git do not take effect"
