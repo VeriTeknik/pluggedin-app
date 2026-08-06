@@ -162,11 +162,24 @@ fi
 AFTER=$(free_gb)
 log "disk after: ${AFTER}G free (reclaimed $((AFTER - BEFORE))G)"
 
-# The running image is the one thing that must never become unreachable. If it
+# The running image is the one thing that must never become unreachable: if it
 # exists in no registry, the local copy is the only copy and losing it means a
-# rebuild, not a redeploy.
-if ! docker manifest inspect "ghcr.io/veriteknik/pluggedin-app:live" >/dev/null 2>&1; then
-  log "note: :live is not in GHCR — the local image is the only copy"
+# rebuild rather than a redeploy.
+#
+# Distinguishing "absent" from "cannot tell" matters here. GHCR answers an
+# unauthenticated request for ANY tag — real or invented — with `denied: denied`,
+# so treating a non-zero exit as proof of absence produces a warning that is
+# permanently wrong and quickly ignored. Root runs this timer and has no
+# registry credentials, which is exactly the case that would misreport.
+if REG_OUT=$(docker manifest inspect "ghcr.io/veriteknik/pluggedin-app:live" 2>&1); then
+  log "ok — :live is present in GHCR"
+else
+  case "$REG_OUT" in
+    *denied*|*unauthorized*|*authentication*|*"no basic auth"*)
+      log "note: cannot check GHCR for :live (no registry credentials) — not asserting either way" ;;
+    *)
+      log "WARNING: :live is not in GHCR — the local image is the only copy" ;;
+  esac
 fi
 
 # A prune that leaves the disk critically full is not a success; say so loudly
