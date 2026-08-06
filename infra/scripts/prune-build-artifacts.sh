@@ -57,7 +57,16 @@ free_gb() { df -BG --output=avail / | tail -1 | tr -dc '0-9'; }
 
 if [ "$INSTALL_TIMER" -eq 1 ]; then
   [ "$(id -u)" -eq 0 ] || { echo "--install-timer needs root" >&2; exit 1; }
+  # Install a COPY rather than pointing at the git working tree. A systemd unit
+  # aimed at a checkout breaks the moment anyone changes branch: the file is
+  # only on the branch that added it, so switching to main deletes it and the
+  # timer then fails silently every night. Same lesson as Traefik watching the
+  # working tree — long-lived system state must not depend on which commit is
+  # checked out.
   SELF="$(readlink -f "$0")"
+  INSTALLED=/usr/local/sbin/pluggedin-prune-build-artefacts
+  install -m 0755 -o root -g root "$SELF" "$INSTALLED"
+  echo "installed ${INSTALLED} (copy of ${SELF})"
   cat > /etc/systemd/system/pluggedin-prune.service <<EOF
 [Unit]
 Description=Reclaim disk from Docker build artefacts
@@ -65,7 +74,7 @@ After=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash ${SELF}
+ExecStart=/bin/bash ${INSTALLED}
 EOF
   cat > /etc/systemd/system/pluggedin-prune.timer <<'EOF'
 [Unit]
@@ -84,7 +93,11 @@ EOF
   systemctl daemon-reload
   systemctl enable --now pluggedin-prune.timer
   systemctl list-timers pluggedin-prune.timer --no-pager | head -2
-  echo "timer installed; it will also run now if a scheduled run was missed"
+  echo
+  echo "Re-run --install-timer after changing this script; the timer uses the"
+  echo "installed copy, not the checkout, so edits in git do not take effect"
+  echo "until they are installed."
+
   exit 0
 fi
 
