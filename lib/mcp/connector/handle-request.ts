@@ -42,6 +42,11 @@ export async function handleConnectorRequest(req: Request, raw: unknown): Promis
 
   // server/discover is the negotiation itself, so it precedes authentication.
   if (isPublicMethod(request.method)) {
+    // A notification is unanswerable whichever side of authentication it
+    // arrives on. Checking only on the authenticated path left the public one
+    // replying to a request JSON-RPC says has no reply.
+    if (isNotification(request)) return new Response(null, { status: 202 });
+
     const outcome = dispatchPublic(request);
     return outcome.kind === 'result'
       ? json(jsonRpcResult(request.id, outcome.result))

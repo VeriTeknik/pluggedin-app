@@ -23,10 +23,6 @@ export async function POST(req: NextRequest) {
     // Get the session ID from headers
     const sessionId = req.headers.get('Mcp-Session-Id');
 
-    // Parse the request body once: both paths below need it, and a Request
-    // body can only be read a single time.
-    const body = await req.json();
-
     // Two callers reach this endpoint and they authenticate differently.
     //
     // A bearer token means the hosted connector: MCP 2026-07-28, stateless, no
@@ -38,7 +34,22 @@ export async function POST(req: NextRequest) {
     // calls the session path today and the proxy uses /api/mcp-servers, but
     // "no caller I can find" is not "no caller", and deleting a live endpoint
     // to save one conditional is a poor trade.
+    //
+    // Credential first, body second. Parsing up front is tidier to read and
+    // wrong: a malformed or absent body would throw before the branch, and an
+    // unauthenticated caller would get a 500 instead of the challenge — so a
+    // client whose first probe is empty never learns where to authenticate,
+    // which is the failure this endpoint exists to avoid.
     if (req.headers.get('authorization')?.startsWith('Bearer ')) {
+      let body: unknown;
+      try {
+        body = await req.json();
+      } catch {
+        return NextResponse.json(
+          { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
+          { status: 400 }
+        );
+      }
       return handleConnectorRequest(req, body);
     }
 
@@ -52,6 +63,8 @@ export async function POST(req: NextRequest) {
         `${(process.env.NEXTAUTH_URL ?? '').replace(/\/+$/, '')}/.well-known/oauth-protected-resource`
       );
     }
+
+    const body = await req.json();
 
     // Handle the Streamable HTTP request
     const result = await handleStreamableHTTPRequest({

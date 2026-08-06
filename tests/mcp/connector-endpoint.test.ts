@@ -169,4 +169,15 @@ describe('envelope', () => {
     // Let the rejection settle: an unhandled one would surface here.
     await new Promise((r) => setTimeout(r, 10));
   });
+
+  it('does not reply to a public notification either', async () => {
+    // server/discover answers before authentication, and the notification rule
+    // does not care which side of authentication a request arrives on. The
+    // check only existed on the authenticated path.
+    const body = { jsonrpc: '2.0', method: 'server/discover' };
+    const response = await handleConnectorRequest(post(body), body);
+
+    expect(response.status).toBe(202);
+    expect(await response.text()).toBe('');
+  });
 });
