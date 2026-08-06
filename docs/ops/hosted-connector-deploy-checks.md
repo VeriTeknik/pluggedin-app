@@ -123,8 +123,12 @@ Then check the case that actually happens in production — a token that has
 expired or been revoked. It must also challenge, not answer:
 
 ```bash
+# Any string that is not a live token will do; the point is that an
+# unrecognised one is challenged rather than answered.
+BOGUS=$(head -c 16 /dev/urandom | base64)
+
 curl -si -X POST "$BASE/api/mcp" \
-  -H 'Authorization: Bearer not-a-real-token' \
+  -H "Authorization: Bearer $BOGUS" \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | head -5
 #  expect: 401 with the same WWW-Authenticate header
