@@ -99,37 +99,68 @@ test "$(curl -s "$BASE/.well-known/oauth-protected-resource" | jq -r .resource)"
 
 ---
 
-## 2. The 401 challenge — not wired yet, and that is expected
+## 2. The 401 challenge
 
-`/api/mcp` returns a bare `401` today, with **no** `WWW-Authenticate` header.
-Check it and move on:
+This is now a real check. The `WWW-Authenticate` header is how Claude learns
+where the authorization server is, and it is ignored on a `200` — so it has to
+arrive on the `401`.
 
 ```bash
 curl -si -X POST "$BASE/api/mcp" -H 'Content-Type: application/json' -d '{}' | head -10
-#  expect: HTTP/2 401, and no WWW-Authenticate line
 ```
 
-**Use POST.** A GET returns `400 {"error":"Missing Mcp-Session-Id header"}`,
-which is the session check firing before authentication is ever reached — a
-different failure that looks like a broken deploy. Verified against production:
-GET → 400, POST → 401.
-
-That route still authenticates with a NextAuth session cookie; it predates this
-work. `buildUnauthorizedResponse()` and `authenticateConnectorRequest()` shipped
-in #175 but nothing calls them yet — wiring them to the MCP route is Phase B.
-
-**So do not treat a missing challenge as a broken deploy.** It is the single
-most likely thing to be misread here, because everything around it works: the
-discovery documents resolve, the consent screen renders, tokens issue.
-
-When Phase B lands, this section becomes a real check and the expected header is:
+Expect `401` and a header of this shape:
 
 ```
 WWW-Authenticate: Bearer resource_metadata="https://plugged.in/.well-known/oauth-protected-resource"
 ```
 
-with the rule that matters — it is ignored on a `200`, so it has to arrive on
-the `401`.
+**Use POST.** A GET returns `400 {"error":"Missing Mcp-Session-Id header"}` from
+the older session transport, which is a different failure that reads like a
+broken deploy.
+
+Then check the case that actually happens in production — a token that has
+expired or been revoked. It must also challenge, not answer:
+
+```bash
+# Any string that is not a live token will do; the point is that an
+# unrecognised one is challenged rather than answered.
+BOGUS=$(head -c 16 /dev/urandom | base64)
+
+curl -si -X POST "$BASE/api/mcp" \
+  -H "Authorization: Bearer $BOGUS" \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | head -5
+#  expect: 401 with the same WWW-Authenticate header
+```
+
+The body has to be a valid JSON-RPC request here. `-d '{}'` is valid JSON but
+not a valid request, so the envelope is rejected with `400` before the token is
+ever examined — which looks like the token was accepted.
+
+And the probe most likely to be typed first, which must also challenge rather
+than error:
+
+```bash
+curl -si -X POST "$BASE/api/mcp" | head -5
+#  expect: 401 — not 500
+```
+
+That last one is a check, not a formality. The route used to read the request
+body before deciding which credential was in play, so an empty or malformed body
+threw first and produced a `500`. A client whose opening probe carries no
+payload would never have seen the header telling it where to authenticate.
+
+### Discovery answers without a token
+
+`server/discover` is the negotiation, so it precedes authentication — a client
+that cannot discover what we speak has no route to authenticating at all:
+
+```bash
+curl -s -X POST "$BASE/api/mcp" -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"server/discover"}' | jq '.result.protocolVersions'
+#  expect: ["2026-07-28"]
+```
 
 ---
 
@@ -270,10 +301,10 @@ make discovery unavailable — the flow cannot start without it.
 
 ## 8. Known gaps, so they are not mistaken for faults
 
-- **Phase B has not shipped.** Users can complete authorization, but there is no
-  tool surface behind it yet, and `/api/mcp` still answers with a bare `401`
-  rather than the bearer challenge (section 2). A connection that authorizes and
-  then exposes no tools is the expected state, not a bug.
+- **The tool surface is partial.** Hub selection ships — `pluggedin_list_hubs`
+  and `pluggedin_open_hub`. Library, clipboard, tasks and memory are Phase C, so
+  a connection that authorizes and shows only the two Hub tools is the expected
+  state, not a bug.
 - **204 test failures exist on `main`** and are unrelated to this work — they
   predate both branches and are untouched by them. Compare against `main` before
   attributing a failure to the connector.

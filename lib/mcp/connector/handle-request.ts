@@ -33,6 +33,18 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/**
+ * Whether a body asks for something answerable without a credential.
+ *
+ * The route needs this before it can decide where to send the request: a
+ * discover call carries no token and still belongs here, because negotiating
+ * is what a client does *before* it can authenticate.
+ */
+export function isPublicConnectorRequest(raw: unknown): boolean {
+  const parsed = parseJsonRpc(raw);
+  return parsed.ok && isPublicMethod(parsed.request.method);
+}
+
 export async function handleConnectorRequest(req: Request, raw: unknown): Promise<Response> {
   const parsed = parseJsonRpc(raw);
   if (!parsed.ok) {
