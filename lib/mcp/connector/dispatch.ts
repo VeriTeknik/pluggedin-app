@@ -16,6 +16,7 @@
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
 import { listHubs, openHub, type ToolResult } from './handlers/hubs';
+import { askKnowledge, getDocument, listDocuments } from './handlers/library';
 import {
   buildDiscoverResult,
   buildInitializeResult,
@@ -46,6 +47,9 @@ const TOOL_HANDLERS: Record<
 > = {
   pluggedin_list_hubs: (identity) => listHubs(identity),
   pluggedin_open_hub: (identity, params) => openHub(identity, params),
+  pluggedin_list_documents: (identity, params) => listDocuments(identity, params),
+  pluggedin_get_document: (identity, params) => getDocument(identity, params),
+  pluggedin_ask_knowledge_base: (identity, params) => askKnowledge(identity, params),
 };
 
 export async function dispatchAuthenticated(
