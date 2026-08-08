@@ -94,16 +94,28 @@ describe('tools/list', () => {
       { jsonrpc: '2.0', id: 1, method: 'tools/list' },
       identity({ scopes: ['hubs:read'] })
     );
-    const withoutHubs = await dispatchAuthenticated(
+    const withLibrary = await dispatchAuthenticated(
       { jsonrpc: '2.0', id: 1, method: 'tools/list' },
       identity({ scopes: ['library:read'] })
+    );
+    const withNothing = await dispatchAuthenticated(
+      { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+      identity({ scopes: [] })
     );
 
     const names = (o: typeof withHubs) =>
       o.kind === 'result' ? (o.result as { tools: { name: string }[] }).tools.map((t) => t.name) : [];
 
-    expect(names(withHubs)).toContain('pluggedin_list_hubs');
-    expect(names(withoutHubs)).toHaveLength(0);
+    // Each scope shows its own group and nothing else — the interesting
+    // assertion is the exclusion, since a leaking tool list is how a model
+    // learns to call something it will only be refused for.
+    expect(names(withHubs)).toEqual(['pluggedin_list_hubs', 'pluggedin_open_hub']);
+    expect(names(withLibrary)).toEqual([
+      'pluggedin_list_documents',
+      'pluggedin_get_document',
+      'pluggedin_ask_knowledge_base',
+    ]);
+    expect(names(withNothing)).toHaveLength(0);
   });
 
   it('gives every listed tool a title and an explicit read/destructive hint', async () => {
