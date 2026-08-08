@@ -18,7 +18,8 @@ import { db } from '@/db';
 import { oauthAccessTokensTable, projectsTable } from '@/db/schema';
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
-import { mintHubHandle, readHubHandle } from '../handles';
+import { mintHubHandle } from '../handles';
+import { requireGrantedHub } from '../hub-scope';
 
 export interface ToolResult {
   content: { type: 'text'; text: string }[];
@@ -57,26 +58,6 @@ export async function listHubs(identity: ConnectorIdentity): Promise<ToolResult>
   return text({ hubs });
 }
 
-/**
- * Resolves whatever the caller passed — a minted handle, or a Hub name — to a
- * granted project. The granted set is the authority; the handle is only a
- * convenience, so an unreadable one falls through to the name lookup rather
- * than failing differently.
- */
-export function resolveGrantedHub(
-  identity: ConnectorIdentity,
-  argument: string,
-  byName: { uuid: string; name: string }[]
-): string | undefined {
-  const fromHandle = readHubHandle(argument, identity.tokenUuid);
-  if (fromHandle && identity.grantedProjectUuids.includes(fromHandle)) return fromHandle;
-
-  const named = byName.find((row) => row.name === argument);
-  if (named && identity.grantedProjectUuids.includes(named.uuid)) return named.uuid;
-
-  return undefined;
-}
-
 export async function openHub(
   identity: ConnectorIdentity,
   params: Record<string, unknown>
@@ -84,21 +65,10 @@ export async function openHub(
   const argument = typeof params.hub === 'string' ? params.hub.trim() : '';
   if (!argument) return failure('hub is required: pass a name or a handle from pluggedin_list_hubs');
 
-  const granted = identity.grantedProjectUuids;
-  if (granted.length === 0) return failure('No Hubs were granted to this connection.');
-
-  const rows = await db
-    .select({ uuid: projectsTable.uuid, name: projectsTable.name })
-    .from(projectsTable)
-    .where(inArray(projectsTable.uuid, granted));
-
-  const projectUuid = resolveGrantedHub(identity, argument, rows);
-  if (!projectUuid) {
-    // Deliberately the same answer whether the Hub does not exist or exists and
-    // was not granted. Distinguishing them would let a caller enumerate other
-    // people's Hub names one guess at a time.
-    return failure(`No granted Hub matches "${argument}". Use pluggedin_list_hubs to see them.`);
-  }
+  // The same gate every other handler goes through, so opening a Hub cannot
+  // reach one that was never granted.
+  const resolved = await requireGrantedHub(identity, argument);
+  if (!resolved.ok) return failure(resolved.message);
 
   // Server state keyed to a credential, not protocol session state: this is a
   // per-token convenience so the next call need not repeat the choice. It does
@@ -113,7 +83,7 @@ export async function openHub(
   try {
     await db
       .update(oauthAccessTokensTable)
-      .set({ default_project_uuid: projectUuid })
+      .set({ default_project_uuid: resolved.hub })
       .where(eq(oauthAccessTokensTable.uuid, identity.tokenUuid));
   } catch (error) {
     if ((error as { code?: string })?.code === '23503') {
@@ -122,10 +92,9 @@ export async function openHub(
     throw error;
   }
 
-  const opened = rows.find((row) => row.uuid === projectUuid);
   return text({
-    opened: opened?.name,
-    handle: mintHubHandle(identity.tokenUuid, projectUuid),
+    opened: resolved.name,
+    handle: mintHubHandle(identity.tokenUuid, resolved.hub),
     note: 'Pass this handle as the `hub` argument on subsequent calls.',
   });
 }
