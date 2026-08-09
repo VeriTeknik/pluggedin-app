@@ -1,3 +1,5 @@
+import { safeLocalStorage } from '@/lib/storage-utils';
+
 // Font families map for easy access
 export const fontFamilies = {
   geist: 'var(--font-geist-sans)',
@@ -16,16 +18,9 @@ export type FontFamily = keyof typeof fontFamilies;
 
 // Initialize font from localStorage or use default on client
 export function initializeFont() {
-  if (typeof window !== 'undefined') {
-    try {
-      const savedFont = localStorage.getItem('pluggedin-font') as FontFamily;
-      if (savedFont && savedFont in fontFamilies) {
-        setFont(savedFont);
-      }
-    } catch (error) {
-      // localStorage might be disabled, silently continue
-      console.warn('localStorage is not available for font preferences');
-    }
+  const savedFont = safeLocalStorage.getItem('pluggedin-font') as FontFamily | null;
+  if (savedFont && savedFont in fontFamilies) {
+    setFont(savedFont);
   }
 }
 
@@ -43,12 +38,8 @@ export function setFont(fontFamily: FontFamily) {
       // Add the new font class
       document.documentElement.classList.add(`font-${fontFamily}`);
       
-      // Save to localStorage with error handling
-      try {
-        localStorage.setItem('pluggedin-font', fontFamily);
-      } catch (storageError) {
-        console.warn('Could not save font preference to localStorage');
-      }
+      // Save to localStorage (no-op when storage is unavailable)
+      safeLocalStorage.setItem('pluggedin-font', fontFamily);
     } catch (error) {
       console.warn('Could not apply font changes to document');
     }

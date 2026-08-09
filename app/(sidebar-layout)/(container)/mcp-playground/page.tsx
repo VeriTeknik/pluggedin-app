@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { useProfiles } from '@/hooks/use-profiles';
+import { safeLocalStorage } from '@/lib/storage-utils';
 import { McpServer } from '@/types/mcp-server';
 
 import { ChatHeader } from './components/chat-header';
@@ -71,7 +72,7 @@ export default function McpPlaygroundPage() {
         setSidebarCollapsed(true);
       } else if (window.innerWidth >= 1280) {
         // Auto-expand on larger screens if no preference saved
-        const saved = localStorage.getItem('playground-sidebar-collapsed');
+        const saved = safeLocalStorage.getItem('playground-sidebar-collapsed');
         if (saved === null) {
           setSidebarCollapsed(false);
         }
@@ -85,16 +86,16 @@ export default function McpPlaygroundPage() {
 
   // Load sidebar state from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('playground-sidebar-collapsed');
+    const saved = safeLocalStorage.getItem('playground-sidebar-collapsed');
     if (saved !== null && !isMobile) {
-      setSidebarCollapsed(JSON.parse(saved));
+      setSidebarCollapsed(saved === 'true');
     }
   }, [isMobile]);
 
   // Save sidebar state to localStorage
   useEffect(() => {
     if (!isMobile) {
-      localStorage.setItem('playground-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+      safeLocalStorage.setJSON('playground-sidebar-collapsed', sidebarCollapsed);
     }
   }, [sidebarCollapsed, isMobile]);
 

@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+import { safeLocalStorage } from "@/lib/storage-utils";
+
 type Theme = "light" | "dark" | "system";
 
 type ThemeProviderProps = {
@@ -34,18 +36,13 @@ export function ThemeProvider({
   // Ensure we only access localStorage on the client side
   useEffect(() => {
     setMounted(true);
-    
-    // Only access localStorage after component is mounted on client
-    if (typeof window !== 'undefined') {
-      try {
-        const savedTheme = localStorage.getItem(storageKey);
-        if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')) {
-          setTheme(savedTheme as Theme);
-        }
-      } catch (error) {
-        // localStorage might be disabled, use default theme
-        console.warn('localStorage is not available, using default theme');
-      }
+
+    // Only access localStorage after component is mounted on client.
+    // safeLocalStorage returns null when storage is blocked, so the default
+    // theme is used without throwing.
+    const savedTheme = safeLocalStorage.getItem(storageKey);
+    if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
+      setTheme(savedTheme);
     }
   }, [storageKey]);
 
@@ -71,14 +68,8 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      // Only access localStorage on client side
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(storageKey, theme);
-        } catch (error) {
-          console.warn('localStorage is not available');
-        }
-      }
+      // Persistence is best-effort; the theme still applies for this session
+      safeLocalStorage.setItem(storageKey, theme);
       setTheme(theme);
     },
   };

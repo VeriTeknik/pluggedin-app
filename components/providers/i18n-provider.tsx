@@ -6,6 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import { useSafeSession } from '@/hooks/use-safe-session';
 import i18n from '@/i18n/client';
 import { Locale, locales } from '@/i18n/config';
+import { safeLocalStorage } from '@/lib/storage-utils';
 
 export function I18nProvider({
   children,
@@ -38,7 +39,7 @@ export function I18nProvider({
               if (i18n.language !== language) {
                 i18n.changeLanguage(language);
               }
-              localStorage.setItem('pluggedin_language', language);
+              safeLocalStorage.setItem('pluggedin_language', language);
               return;
             }
           }
@@ -53,7 +54,7 @@ export function I18nProvider({
       }
 
       // 2. Check localStorage
-      const storedLang = localStorage.getItem('pluggedin_language');
+      const storedLang = safeLocalStorage.getItem('pluggedin_language');
       if (storedLang && locales.includes(storedLang as Locale)) {
         if (i18n.language !== storedLang) {
           i18n.changeLanguage(storedLang);
@@ -68,7 +69,7 @@ export function I18nProvider({
           console.debug(`Detected browser language: ${browserLang}, setting language.`);
         }
         i18n.changeLanguage(browserLang);
-        localStorage.setItem('pluggedin_language', browserLang);
+        safeLocalStorage.setItem('pluggedin_language', browserLang);
       }
 
       // 4. If nothing else, use initialLocale (fallback)
@@ -77,7 +78,11 @@ export function I18nProvider({
       }
     }
 
-    loadLanguage();
+    // Never let this become an unhandled rejection — language detection is
+    // best-effort and must not surface as a global error.
+    loadLanguage().catch((error) => {
+      console.warn('Failed to resolve preferred language:', error);
+    });
   }, [mounted, session, status, initialLocale]);
 
   return (
