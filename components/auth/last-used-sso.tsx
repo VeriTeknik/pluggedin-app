@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
+import { safeLocalStorage } from '@/lib/storage-utils';
 
 interface LastUsedSSO {
   provider: string;
@@ -16,7 +17,7 @@ export function LastUsedSSO() {
   
   useEffect(() => {
     // Get last used SSO from localStorage
-    const stored = localStorage.getItem('last-used-sso');
+    const stored = safeLocalStorage.getItem('last-used-sso');
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as LastUsedSSO;

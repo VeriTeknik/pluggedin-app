@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { useMounted } from '@/hooks/use-mounted';
 import { fontFamilies, FontFamily, setFont } from '@/lib/font-utils';
+import { safeLocalStorage } from '@/lib/storage-utils';
 
 const fonts = [
   { value: 'geist', label: 'settings.appearance.fonts.geist' },
@@ -46,7 +47,7 @@ export function AppearanceSection() {
   
   // Get the saved font on component mount
   useEffect(() => {
-    const savedFont = localStorage.getItem('pluggedin-font') as FontFamily;
+    const savedFont = safeLocalStorage.getItem('pluggedin-font') as FontFamily | null;
     if (savedFont && savedFont in fontFamilies) {
       setCurrentFont(savedFont);
       setFont(savedFont);

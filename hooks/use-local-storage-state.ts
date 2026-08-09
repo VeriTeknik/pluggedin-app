@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { safeLocalStorage } from '@/lib/storage-utils';
+
 type Updater<T> = T | ((prev: T) => T);
 
 /**
@@ -10,26 +12,17 @@ type Updater<T> = T | ((prev: T) => T);
  * nullish to avoid stale entries.
  */
 export function useLocalStorageState<T>(key: string, defaultValue: T) {
-  const isBrowser = typeof window !== 'undefined';
-
   const readValue = () => {
-    if (!isBrowser) {
+    const storedValue = safeLocalStorage.getItem(key);
+    if (storedValue === null) {
       return defaultValue;
     }
 
     try {
-      const storedValue = window.localStorage.getItem(key);
-      if (storedValue === null) {
-        return defaultValue;
-      }
-      try {
-        return JSON.parse(storedValue) as T;
-      } catch {
-        return storedValue as unknown as T;
-      }
-    } catch (error) {
-      console.warn(`Failed to read localStorage key "${key}":`, error);
-      return defaultValue;
+      return JSON.parse(storedValue) as T;
+    } catch {
+      // Legacy values may have been stored unserialised
+      return storedValue as unknown as T;
     }
   };
 
@@ -43,20 +36,12 @@ export function useLocalStorageState<T>(key: string, defaultValue: T) {
   );
 
   useEffect(() => {
-    if (!isBrowser) {
-      return;
+    if (state === null || state === undefined) {
+      safeLocalStorage.removeItem(key);
+    } else {
+      safeLocalStorage.setJSON(key, state);
     }
-
-    try {
-      if (state === null || state === undefined) {
-        window.localStorage.removeItem(key);
-      } else {
-        window.localStorage.setItem(key, JSON.stringify(state));
-      }
-    } catch (error) {
-      console.warn(`Failed to persist localStorage key "${key}":`, error);
-    }
-  }, [key, state, isBrowser]);
+  }, [key, state]);
 
   return [state, setLocalStorageState] as const;
 }
