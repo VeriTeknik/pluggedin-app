@@ -62,10 +62,19 @@ chmod 0700 "$RUNTIME_DIR"
 #    --input-type/--output-type are mandatory here: sops infers format from
 #    the file extension, and `.sops` is not a format it knows, so it falls
 #    back to JSON and dies on the first `#` comment in the dotenv payload.
+#
+#    Write via a temp file and rename rather than redirecting onto the
+#    destination. The destination is left mode 0400, so on every deploy after
+#    the first the redirect opens an existing read-only file and dies with
+#    "Permission denied" — the script only ever worked on a host where the
+#    file did not exist yet. rename(2) replaces the target regardless of its
+#    mode (it needs write permission on the directory, not the file) and is
+#    atomic, so a concurrent reader never sees a half-written secrets file.
 log "decrypting secrets"
 sops --decrypt --input-type dotenv --output-type dotenv \
-  "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
-chmod 0400 "$SECRETS_DECRYPTED"
+  "$SECRETS_ENCRYPTED" > "${SECRETS_DECRYPTED}.tmp"
+chmod 0400 "${SECRETS_DECRYPTED}.tmp"
+mv -f "${SECRETS_DECRYPTED}.tmp" "$SECRETS_DECRYPTED"
 
 # 3a. Project specific secrets out of the env file into single-line files
 #     under /run/sops/, because Traefik and a few other services consume
@@ -81,8 +90,11 @@ extract_secret() {
     log "WARN: ${key} missing from secrets.env (skipping ${dest})"
     return
   fi
-  printf '%s' "$value" > "$dest"
-  chmod 0400 "$dest"
+  # Same temp-then-rename reason as the secrets file above: $dest is left
+  # mode 0400, so redirecting onto it fails on every re-deploy.
+  printf '%s' "$value" > "${dest}.tmp"
+  chmod 0400 "${dest}.tmp"
+  mv -f "${dest}.tmp" "$dest"
 }
 
 extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
