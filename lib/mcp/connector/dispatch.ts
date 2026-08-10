@@ -15,8 +15,9 @@
 
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
-import { listHubs, openHub, type ToolResult } from './handlers/hubs';
+import { listHubs, openHub } from './handlers/hubs';
 import { askKnowledge, getDocument, listDocuments } from './handlers/library';
+import type { ToolResult } from './tool-result';
 import {
   buildDiscoverResult,
   buildInitializeResult,

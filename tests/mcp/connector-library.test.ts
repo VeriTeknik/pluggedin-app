@@ -232,3 +232,26 @@ describe('what is handed to the model', () => {
     expect(result.text).toContain('No document');
   });
 });
+
+describe('grants that outlived their Hubs', () => {
+  it('says the Hubs are gone rather than telling the user to open one', async () => {
+    // A Hub deleted after consent leaves its uuid on the token, so the granted
+    // set is non-empty while the query returns nothing. The fallthrough used to
+    // answer "several Hubs are available, open one" — false, since none are,
+    // and it pointed at a tool that would fail the same way. A wrong message
+    // recommending a dead end is worse than no message.
+    grantedHubs([]);
+
+    const result = payloadOf(
+      await dispatchAuthenticated(
+        call('pluggedin_list_documents'),
+        identity({ grantedProjectUuids: [HUB_A], defaultProjectUuid: HUB_A })
+      )
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain('no longer exist');
+    expect(result.text).not.toContain('pluggedin_open_hub');
+    expect(actions.getDocs).not.toHaveBeenCalled();
+  });
+});

@@ -69,6 +69,19 @@ export async function requireGrantedHub(
     .from(projectsTable)
     .where(inArray(projectsTable.uuid, granted));
 
+  // The granted set can outlive the Hubs in it: a Hub deleted after consent
+  // leaves its uuid on the token. Without this the caller fell through to
+  // "several Hubs are available, open one" — false, since none are, and it
+  // pointed at a tool that would fail the same way. A wrong message that
+  // recommends a dead end is worse than no message.
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      message:
+        'The Hubs granted to this connection no longer exist. Re-authorize the connector to choose current ones.',
+    };
+  }
+
   const asked = typeof argument === 'string' ? argument.trim() : '';
   if (asked) {
     const fromHandle = readHubHandle(asked, identity.tokenUuid);

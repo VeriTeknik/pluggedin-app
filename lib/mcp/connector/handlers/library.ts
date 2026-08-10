@@ -17,21 +17,10 @@
 import { askKnowledgeBase, getDocByUuid, getDocs } from '@/app/actions/library';
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
+import { toolFailure as failure, toolText as text, type ToolResult } from '../tool-result';
+
 import type { GrantedHub } from '../hub-scope';
 import { requireGrantedHub } from '../hub-scope';
-
-export interface ToolResult {
-  content: { type: 'text'; text: string }[];
-  isError?: boolean;
-}
-
-function text(value: unknown): ToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] };
-}
-
-function failure(message: string): ToolResult {
-  return { content: [{ type: 'text', text: message }], isError: true };
-}
 
 /** What a model is given about a document. Deliberately narrower than Doc. */
 function summarise(doc: {
