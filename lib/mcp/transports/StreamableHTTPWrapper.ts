@@ -37,11 +37,15 @@ export class StreamableHTTPWrapper implements Transport {
     // Store timeout value (default 30 seconds if not specified)
     this.timeout = options.timeout || 30000;
 
-    // Create the underlying transport with our fetch wrapper
+    // Create the underlying transport with our fetch wrapper.
+    // NOTE: StreamableHTTPClientTransportOptions exposes the custom fetch under the
+    // `fetch` key. This was previously passed as `fetchImplementation`, which the SDK
+    // silently ignored — so the session-capturing wrapper never ran and Mcp-Session-Id
+    // headers were never persisted. See issue #172.
     this.transport = new StreamableHTTPClientTransport(url, {
       ...options,
       // Add response interceptor to capture session ID with timeout support
-      fetchImplementation: this.createFetchWrapper(options.fetchImplementation),
+      fetch: this.createFetchWrapper(options.fetch ?? options.fetchImplementation),
     });
 
     // Forward events from the wrapped transport
