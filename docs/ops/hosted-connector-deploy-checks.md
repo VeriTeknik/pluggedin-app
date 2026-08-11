@@ -301,10 +301,21 @@ make discovery unavailable — the flow cannot start without it.
 
 ## 8. Known gaps, so they are not mistaken for faults
 
-- **The tool surface is partial.** Hub selection ships — `pluggedin_list_hubs`
-  and `pluggedin_open_hub`. Library, clipboard, tasks and memory are Phase C, so
-  a connection that authorizes and shows only the two Hub tools is the expected
-  state, not a bug.
+- **The tool surface is partial.** Eight tools ship today:
+
+  | Group | Tools |
+  |---|---|
+  | Hubs | `list_hubs`, `open_hub` |
+  | Library | `list_documents`, `get_document`, `ask_knowledge_base` |
+  | Tasks | `list_notifications`, `mark_notification_done`, `delete_notification` |
+
+  Clipboard and memory are not wired yet, and neither are `search_documents` or
+  `update_document` — those two have no action underneath to call. A connection
+  showing eight tools is the expected state, not a truncated list.
+
+  Tools are also filtered by the scopes the token holds, so a connection
+  authorized for fewer scopes will legitimately show fewer tools. Check the
+  granted scopes before treating a short list as a fault.
 - **204 test failures exist on `main`** and are unrelated to this work — they
   predate both branches and are untouched by them. Compare against `main` before
   attributing a failure to the connector.
