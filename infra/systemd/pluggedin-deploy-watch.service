@@ -18,6 +18,20 @@ Environment=SOPS_AGE_KEY_FILE=/etc/sops/age/keys.txt
 # A deploy including a migration and an image pull can legitimately take a
 # while; the lock means a slow run cannot pile up behind the timer.
 TimeoutStartSec=1800
+# Hardening: this unit reads /etc/sops/age/keys.txt on a host whose compromise
+# would expose every production secret. These directives constrain the damage a
+# compromised deploy process could do. They are unverified at runtime — this unit
+# has deliberately never been started, and the first supervised run must confirm
+# docker and git still work under them. A hardening directive breaking the deploy
+# would only surface when the deploy is needed.
+NoNewPrivileges=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
 
 [Install]
 WantedBy=multi-user.target
