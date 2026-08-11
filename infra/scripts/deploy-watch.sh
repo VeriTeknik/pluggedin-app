@@ -29,6 +29,11 @@ log()  { printf '[deploy-watch %s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 die()  { printf '[deploy-watch] FATAL: %s\n' "$*" >&2; exit 1; }
 now()  { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
+# Resolver for lock file path, respecting STATE_DIR overrides after sourcing.
+lock_file() {
+  printf '%s/deploy-watch.lock' "${STATE_DIR}"
+}
+
 # --- state -----------------------------------------------------------------
 # Flat key=value. Values are single-line and script-controlled, so no quoting
 # rules are needed; state_set rewrites via mktemp + rename, never in place.
