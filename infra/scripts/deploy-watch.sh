@@ -70,6 +70,30 @@ cmd_status() {
   fi
 }
 
+# --- revision and image resolution -----------------------------------------
+running_revision() {
+  # Empty (not an error) when the container does not exist: a first install
+  # is a legitimate state, and the caller decides what to do about it.
+  docker inspect "$APP_CONTAINER" \
+    --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
+    2>/dev/null || printf ''
+}
+
+short_sha() { git -C "$DEPLOY_TREE" rev-parse --short=7 "$1"; }
+
+image_exists() {
+  # `docker manifest inspect` negotiates anonymous auth itself, which is what
+  # we want: the host is logged out of ghcr.io and the package is public.
+  # Same call infra/scripts/prune-build-artifacts.sh uses.
+  docker manifest inspect "${IMAGE_REPO}:$1" >/dev/null 2>&1
+}
+
+fetch_tree() {
+  [ -d "${DEPLOY_TREE}/.git" ] || die "deploy tree missing at ${DEPLOY_TREE} (see docs/ops/auto-deploy.md)"
+  git -C "$DEPLOY_TREE" fetch --quiet origin main
+  git -C "$DEPLOY_TREE" rev-parse origin/main
+}
+
 main() {
   case "${1:-}" in
     --status)  cmd_status; return 0 ;;
