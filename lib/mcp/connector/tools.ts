@@ -57,6 +57,64 @@ export const TOOLS: readonly ToolDefinition[] = Object.freeze([
     // restored by opening the other Hub.
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
+  {
+    name: 'pluggedin_list_documents',
+    title: 'List documents in a Hub',
+    description:
+      'List the documents stored in a Plugged.in Hub. Returns each document with an id to pass to pluggedin_get_document.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        hub: {
+          type: 'string',
+          description:
+            'Optional. Hub name or handle from pluggedin_list_hubs. Defaults to the open Hub, or the only Hub if there is one.',
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: 'pluggedin_get_document',
+    title: 'Get a document',
+    description:
+      'Fetch one document from a Plugged.in Hub by the id returned from pluggedin_list_documents.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Document id.' },
+        hub: {
+          type: 'string',
+          description:
+            'Optional. Hub name or handle from pluggedin_list_hubs. Defaults to the open Hub, or the only Hub if there is one.',
+        },
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: 'pluggedin_ask_knowledge_base',
+    title: 'Ask the Hub knowledge base',
+    description:
+      "Ask a question answered from the documents in a Plugged.in Hub, with the sources it drew on. Use this instead of listing and reading documents when the user asks something the Hub's contents would answer.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The question to answer.' },
+        hub: {
+          type: 'string',
+          description:
+            'Optional. Hub name or handle from pluggedin_list_hubs. Defaults to the open Hub, or the only Hub if there is one.',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false },
+  },
 ]);
 
 /** Tools whose required scope the caller holds. */
