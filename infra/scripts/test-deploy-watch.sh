@@ -86,6 +86,62 @@ STUB_RUNNING_REV="$REV" is "$(STUB_RUNNING_REV="$REV" running_revision)" "$REV" 
 is "$(running_revision)" "" "running_revision is empty when the container is absent"
 teardown
 
+printf '\n[test] infra gate\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE"/{app,infra/scripts,.github/workflows,drizzle}
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+BASE="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+commit_file() { # commit_file <path> <content> -> prints new SHA
+  mkdir -p "$(dirname "${DEPLOY_TREE}/$1")"
+  echo "$2" > "${DEPLOY_TREE}/$1"
+  git -C "$DEPLOY_TREE" add -A
+  git -C "$DEPLOY_TREE" commit -qm "touch $1"
+  git -C "$DEPLOY_TREE" rev-parse HEAD
+}
+
+APP="$(commit_file app/page.tsx changed)"
+is "$(gate_blocked_files "$BASE" "$APP")" "" "app-only change is not blocked"
+
+INFRA="$(commit_file infra/scripts/deploy.sh changed)"
+is "$(gate_blocked_files "$APP" "$INFRA")" "infra/scripts/deploy.sh" "infra/ change is blocked"
+
+COMPOSE="$(commit_file docker-compose.production.yml changed)"
+is "$(gate_blocked_files "$INFRA" "$COMPOSE")" "docker-compose.production.yml" "root compose change is blocked"
+
+DOCKERFILE="$(commit_file Dockerfile changed)"
+is "$(gate_blocked_files "$COMPOSE" "$DOCKERFILE")" "Dockerfile" "Dockerfile change is blocked"
+
+WF="$(commit_file .github/workflows/build-image.yml changed)"
+is "$(gate_blocked_files "$DOCKERFILE" "$WF")" ".github/workflows/build-image.yml" "workflow change is blocked"
+
+# Paths that merely look like the protected ones must NOT be blocked.
+DECOY="$(commit_file app/infra/helper.ts changed)"
+is "$(gate_blocked_files "$WF" "$DECOY")" "" "app/infra/ is not the protected infra/ prefix"
+DECOY2="$(commit_file app/Dockerfile.md changed)"
+is "$(gate_blocked_files "$DECOY" "$DECOY2")" "" "a nested Dockerfile.md is not the root Dockerfile"
+DECOY3="$(commit_file drizzle/0001_x.sql changed)"
+is "$(gate_blocked_files "$DECOY2" "$DECOY3")" "" "migrations are app changes, not infra"
+
+# The range, not just the tip: an infra commit buried behind an app commit
+# must still block.
+BURIED_INFRA="$(commit_file infra/docker-compose.yml changed)"
+BURIED_APP="$(commit_file app/page.tsx again)"
+is "$(gate_blocked_files "$DECOY3" "$BURIED_APP")" "infra/docker-compose.yml" \
+  "an infra commit behind a later app commit still blocks the range"
+
+# Fail-closed: an unknown starting revision cannot be evaluated.
+if gate_blocked_files "0000000000000000000000000000000000000000" "$BURIED_APP" >/dev/null 2>&1; then
+  bad "unknown revision must not evaluate as allowed"
+else
+  ok "unknown revision fails closed"
+fi
+teardown
+
 printf '\n[test] summary\n'
 printf '  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

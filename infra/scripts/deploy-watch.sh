@@ -94,6 +94,31 @@ fetch_tree() {
   git -C "$DEPLOY_TREE" rev-parse origin/main
 }
 
+# --- the infra gate --------------------------------------------------------
+# Only application-code changes deploy unattended.
+#
+# main allows merges with zero approving reviews and does not enforce branch
+# protection on admins, and the repository is public. The compensating control
+# has always been that a human runs deploy.sh; automating that removes it. A
+# commit that can rewrite compose, the Dockerfile, or a workflow is a commit
+# that can change what the host mounts and what the container can reach — on a
+# host holding the SOPS age key. Those keep the human.
+#
+# Anchored at the start of the path so `app/infra/...` and `app/Dockerfile.md`
+# are NOT caught; only the real root-level paths are.
+GATE_RE='^(infra/|docker-compose[^/]*\.yml$|Dockerfile$|\.github/workflows/)'
+
+gate_blocked_files() {
+  local from="$1" to="$2"
+  # Fail-closed. If either endpoint is unknown to this tree the range cannot
+  # be judged, and "cannot judge" must never read as "nothing to worry about".
+  git -C "$DEPLOY_TREE" cat-file -e "${from}^{commit}" 2>/dev/null || return 1
+  git -C "$DEPLOY_TREE" cat-file -e "${to}^{commit}"   2>/dev/null || return 1
+  # Every commit that would go live, not just the tip: an infra change must not
+  # ride to production hidden behind a later innocuous commit.
+  git -C "$DEPLOY_TREE" diff --name-only "$from" "$to" | grep -E "$GATE_RE" || true
+}
+
 main() {
   case "${1:-}" in
     --status)  cmd_status; return 0 ;;
