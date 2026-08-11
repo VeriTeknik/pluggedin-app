@@ -516,6 +516,129 @@ is "$(state_get blocked_rev)" "" "blocked_rev clears once the running revision m
 is "$(state_get blocked_files)" "" "blocked_files clears along with blocked_rev"
 teardown
 
+printf '\n[test] do_deploy: rollback attempted but not verified when deploy.sh itself fails\n'
+setup_deploy_fixture
+echo app4 > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app4
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+# The exact "|| true"-swallowing case fix round 1 addressed: forward
+# deploy.sh fails (triggering the rollback branch) AND the rollback's own
+# deploy.sh call fails too. Must not read as a clean rollback.
+STUB_PREV_IMAGE=sha256:prev STUB_DEPLOY_FAIL=1 do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when deploy.sh fails on both the forward and rollback attempts"
+case "$(state_get last_outcome)" in
+  "rollback attempted but NOT verified:"*) ok "a failing rollback deploy.sh is reported as unverified, not a clean rollback" ;;
+  *) bad "a failing rollback deploy.sh is reported as unverified, not a clean rollback (got '$(state_get last_outcome)')" ;;
+esac
+is "$(grep -c 'deploy.sh --no-pull' "$CALL_LOG")" "2" "deploy.sh is invoked once forward and once for the attempted rollback"
+teardown
+
+printf '\n[test] do_deploy: backup failure leaves the stack untouched\n'
+setup_deploy_fixture
+echo y > "$DEPLOY_TREE/drizzle/0003_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig2
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+STUB_BACKUP_FAIL=1 do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when the backup fails"
+is "$(state_get last_outcome)" "failed: backup (stack untouched)" "backup failure is recorded"
+is "$(grep -c 'docker compose' "$CALL_LOG")" "0" "migration never runs after a failed backup"
+is "$(grep -c 'docker pull' "$CALL_LOG")" "0" "no image pull after a failed backup — stack untouched"
+teardown
+
+printf '\n[test] do_deploy: pull failure leaves the stack untouched\n'
+setup_deploy_fixture
+echo app5 > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app5
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+STUB_PULL_FAIL=1 do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when the image pull fails"
+is "$(state_get last_outcome)" "failed: pull (stack untouched)" "pull failure is recorded"
+is "$(grep -c 'docker tag' "$CALL_LOG")" "0" "no tag after a failed pull — stack untouched"
+is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "deploy.sh never runs after a failed pull — stack untouched"
+teardown
+
+printf '\n[test] external_check: bounded by a wall-clock deadline, not accumulated sleep\n'
+setup
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+cat > "$STUBS/curl" <<'STUB'
+#!/usr/bin/env bash
+# A backend that never answers quickly: every call takes 2s, and the
+# %{http_code} probe always reports unhealthy, so external_check never
+# succeeds and must eventually give up on its own.
+sleep 2
+case "$*" in
+  *-w*) printf '000' ;;
+  *) printf '{"status":"degraded"}' ;;
+esac
+exit 0
+STUB
+chmod +x "$STUBS/curl"
+PATH="$STUBS:$PATH"; export PATH
+
+# Reproduces the reviewer's exact fix-round-2 repro: INTERVAL=1s, TIMEOUT=3s,
+# each curl call takes 2s. The old accumulated-sleep implementation measured
+# ~8s here because it only counted `sleep` calls toward the budget and never
+# looked at how long curl itself took (three full attempts: 2s curl + 1s
+# sleep, twice, plus a third 2s curl before the counter finally tripped). A
+# wall-clock deadline anchored to $SECONDS bounds this to roughly TIMEOUT
+# plus one in-flight attempt's own duration, however long that turns out to
+# be — not a multiple of it.
+EXTERNAL_CHECK_INTERVAL=1 EXTERNAL_CHECK_TIMEOUT=3
+export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+start=$SECONDS
+external_check
+rc=$?
+elapsed=$((SECONDS - start))
+is "$rc" "1" "external_check still reports failure when the backend never turns healthy"
+if [ "$elapsed" -le 6 ]; then
+  ok "wall-clock bound holds: ${elapsed}s elapsed for a 3s budget with 2s curls (accumulated-sleep code measured ~8s here)"
+else
+  bad "wall-clock bound holds: ${elapsed}s elapsed for a 3s budget with 2s curls (want <= 6s; accumulated-sleep code measured ~8s)"
+fi
+teardown
+
+printf '\n[test] external_check: a zero interval does not busy-spin\n'
+setup
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+ATTEMPT_LOG="${TESTROOT}/attempts.log"; : > "$ATTEMPT_LOG"
+cat > "$STUBS/curl" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+  *-w*) echo x >> "$ATTEMPT_LOG"; printf '000' ;;
+  *) printf '{"status":"degraded"}' ;;
+esac
+exit 0
+STUB
+chmod +x "$STUBS/curl"
+PATH="$STUBS:$PATH"; export PATH
+# EXTERNAL_CHECK_INTERVAL=0 is reachable by configuration (documented as
+# overridable) and, pre-fix, would never advance a sleep-accumulated budget
+# — an unbounded busy loop. The wall-clock deadline (previous test) already
+# bounds total wall time regardless, but a busy-spin still burns CPU making
+# far more attempts than a 1s-floored interval would in the same window: at
+# a genuine 1s floor against a 2s budget, 2-3 curl calls is expected; an
+# unfloored interval=0 would make orders of magnitude more.
+EXTERNAL_CHECK_INTERVAL=0 EXTERNAL_CHECK_TIMEOUT=2
+export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+start=$SECONDS
+external_check
+rc=$?
+elapsed=$((SECONDS - start))
+attempts="$(wc -l < "$ATTEMPT_LOG")"
+is "$rc" "1" "external_check still returns (does not hang) with a zero interval"
+if [ "$elapsed" -le 6 ] && [ "$attempts" -le 6 ]; then
+  ok "a zero interval is floored rather than spun on: ${attempts} attempts in ${elapsed}s for a 2s budget"
+else
+  bad "a zero interval is floored rather than spun on: ${attempts} attempts in ${elapsed}s for a 2s budget (want <= 6 attempts, <= 6s)"
+fi
+teardown
+
 printf '\n[test] summary\n'
 printf '  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

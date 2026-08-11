@@ -29,8 +29,13 @@ COMPOSE_FILE="${COMPOSE_FILE:-${DEPLOY_TREE}/infra/docker-compose.yml}"
 # The app healthcheck declares start_period: 30s, and Traefik's own LB
 # healthcheck only re-polls backend health every 30s, so a freshly deployed
 # container can legitimately take up to ~60s before it is both healthy and
-# actually reachable through the LB. Poll every 5s for up to 90s (60s plus
-# margin) before external_check gives up. Overridable so tests don't sleep.
+# actually reachable through the LB. external_check polls every 5s against a
+# 90s (60s plus margin) WALL-CLOCK deadline — anchored to bash's $SECONDS,
+# not accumulated sleep durations — so a slow or hung curl cannot silently
+# inflate the real time this bounds. The true worst case is TIMEOUT plus at
+# most one in-flight attempt's own duration (bounded by curl's --max-time,
+# ~40s across the two curl calls one attempt makes), not TIMEOUT alone.
+# Overridable so tests don't sleep.
 EXTERNAL_CHECK_INTERVAL="${EXTERNAL_CHECK_INTERVAL:-5}"
 EXTERNAL_CHECK_TIMEOUT="${EXTERNAL_CHECK_TIMEOUT:-90}"
 
@@ -172,16 +177,30 @@ range_touches_migrations() {
 }
 
 external_check() {
-  local waited=0 code
+  local interval="$EXTERNAL_CHECK_INTERVAL"
+  # A non-positive (or non-numeric) interval must never be used to sleep: at
+  # 0 the loop would spin hot between deadline checks. The deadline below is
+  # what actually bounds total time spent here; this floor only protects the
+  # gap between attempts. Reachable by configuration (both vars are
+  # documented as overridable), so guarded explicitly rather than assumed.
+  [ "$interval" -gt 0 ] 2>/dev/null || interval=1
+
+  # Wall-clock deadline, not accumulated sleep: computed once, compared
+  # against bash's $SECONDS (which counts real elapsed seconds since shell
+  # start, not sleep calls) on every iteration. A curl that takes far longer
+  # than $interval — hung backend, slow TLS, whatever — no longer lets the
+  # loop run for a multiple of the intended budget; the worst case is
+  # bounded by curl's own --max-time regardless of how the sleeps land.
+  local deadline=$((SECONDS + EXTERNAL_CHECK_TIMEOUT))
+  local code
   while true; do
     code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "${SITE_URL}/api/health" 2>/dev/null || echo 000)"
     if [ "$code" = "200" ] \
          && curl -fsS --max-time 20 "${SITE_URL}/api/health" 2>/dev/null | grep -q '"status":"healthy"'; then
       return 0
     fi
-    waited=$((waited + EXTERNAL_CHECK_INTERVAL))
-    [ "$waited" -ge "$EXTERNAL_CHECK_TIMEOUT" ] && return 1
-    sleep "$EXTERNAL_CHECK_INTERVAL"
+    [ "$SECONDS" -ge "$deadline" ] && return 1
+    sleep "$interval"
   done
 }
 
