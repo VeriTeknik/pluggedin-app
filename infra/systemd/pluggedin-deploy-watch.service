@@ -1,0 +1,23 @@
+[Unit]
+Description=plugged.in automatic deployment poller
+Documentation=file:///home/pluggedin/pluggedin-app/docs/ops/auto-deploy.md
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pluggedin
+Group=pluggedin
+# Runs from the deploy tree, never the maintainer's working checkout.
+WorkingDirectory=/home/pluggedin/deploy-tree
+ExecStart=/home/pluggedin/deploy-tree/infra/scripts/deploy-watch.sh
+# Creates /var/lib/pluggedin-deploy-watch owned by User, so neither the
+# script nor an operator needs sudo to read --status.
+StateDirectory=pluggedin-deploy-watch
+Environment=SOPS_AGE_KEY_FILE=/etc/sops/age/keys.txt
+# A deploy including a migration and an image pull can legitimately take a
+# while; the lock means a slow run cannot pile up behind the timer.
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target
