@@ -17,6 +17,12 @@
 #   deploy-watch.sh --dry-run    # report what it would deploy; does not deploy
 #                                 # or change state, but DOES run `git fetch`
 #                                 # against origin to know what "latest" is
+#   deploy-watch.sh --clear-failed
+#                                 # a target that failed to deploy is never
+#                                 # retried automatically (see --status); this
+#                                 # clears that marker so the next cycle may
+#                                 # retry it. Not needed to deploy a NEWER
+#                                 # commit — that always proceeds on its own.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -82,6 +88,27 @@ cmd_status() {
     printf '  This will not deploy automatically. Deploy it by hand:\n'
     printf '    IMAGE_TAG=sha-%s infra/scripts/deploy.sh\n' "$(state_get blocked_short)"
   fi
+  local failed
+  failed="$(state_get failed_rev)"
+  if [ -n "$failed" ]; then
+    printf '\n  DEPLOY FAILED for target %s — will NOT retry automatically.\n' "$failed"
+    printf '  See "last outcome" above for why. To clear this and resume automatic\n'
+    printf '  deploys, do ONE of:\n'
+    printf '    1. Push a fix to main — a NEWER commit deploys on its own, no\n'
+    printf '       clearing needed, that is the whole point of the feature.\n'
+    printf '    2. Deploy this exact target by hand, which clears the marker on the\n'
+    printf '       next cycle once the running revision catches up to it:\n'
+    printf '         IMAGE_TAG=sha-%s infra/scripts/deploy.sh\n' "$(state_get failed_short)"
+    printf '    3. Clear the marker without deploying, e.g. after fixing the\n'
+    printf '       underlying problem out of band:\n'
+    printf '         infra/scripts/deploy-watch.sh --clear-failed\n'
+  fi
+}
+
+cmd_clear_failed() {
+  state_set failed_rev ""
+  state_set failed_short ""
+  printf 'cleared: the next cycle may retry the previously-failed target.\n'
 }
 
 # --- revision and image resolution -----------------------------------------
@@ -204,6 +231,18 @@ external_check() {
   done
 }
 
+# Deploys exactly one attempt at ("$short", "$rev"); never loops or retries
+# internally. CRITICAL C1: the caller (main, at the bottom of this file)
+# records "$rev" as failed_rev on a non-zero return and will not call this
+# again for the same target on its own — one attempt per target, not a
+# bounded retry budget. Reasoning: every attempt whose range touches
+# drizzle/ costs a full backup.sh run (minutes, gigabytes) before it even
+# reaches the step that might fail again, there is no notification channel
+# to say a retry budget was burned, and a genuinely broken target (bad
+# migration, image that fails health checks) will not start passing on
+# attempt 2 or 3 with no code change in between — only a fix pushed as a
+# NEW commit, or a human, changes the outcome. A bounded retry count would
+# buy nothing here but disk and Postgres load.
 do_deploy() {
   local short="$1" rev="$2" from="$3"
   local prev_image prev_rev
@@ -223,6 +262,23 @@ do_deploy() {
     return 1
   fi
 
+  # Pull before backup/migrate, matching the design
+  # (docs/superpowers/specs/2026-08-10-auto-deploy-design.md: "pull ->
+  # backup -> migrate -> up"). This also keeps the "(stack untouched)"
+  # wording in the two failure branches below honest: nothing that can
+  # change the running container or its schema has happened yet, so a pull
+  # or tag failure genuinely leaves the stack untouched. Pulling first also
+  # means the migration step below never has to fall back to an implicit
+  # `docker compose run` auto-pull of the image it migrates against.
+  if ! docker pull "${IMAGE_REPO}:sha-${short}" >/dev/null; then
+    state_set last_outcome "failed: pull (stack untouched)"
+    return 1
+  fi
+  if ! docker tag "${IMAGE_REPO}:sha-${short}" "${IMAGE_REPO}:live"; then
+    state_set last_outcome "failed: tag (stack untouched)"
+    return 1
+  fi
+
   if range_touches_migrations "$from" "$rev"; then
     log "range touches drizzle/ — taking a backup first"
     "${DEPLOY_TREE}/infra/scripts/backup.sh" || { state_set last_outcome "failed: backup (stack untouched)"; return 1; }
@@ -236,15 +292,6 @@ do_deploy() {
       state_set last_outcome "failed: migration (stack untouched)"
       return 1
     fi
-  fi
-
-  if ! docker pull "${IMAGE_REPO}:sha-${short}" >/dev/null; then
-    state_set last_outcome "failed: pull (stack untouched)"
-    return 1
-  fi
-  if ! docker tag "${IMAGE_REPO}:sha-${short}" "${IMAGE_REPO}:live"; then
-    state_set last_outcome "failed: tag (stack untouched)"
-    return 1
   fi
 
   if IMAGE_TAG=live "${DEPLOY_TREE}/infra/scripts/deploy.sh" --no-pull && external_check; then
@@ -286,9 +333,10 @@ do_deploy() {
 main() {
   local dry=0
   case "${1:-}" in
-    --status)  cmd_status; return 0 ;;
-    --dry-run) dry=1 ;;
-    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \?//'; return 0 ;;
+    --status)       cmd_status; return 0 ;;
+    --dry-run)      dry=1 ;;
+    --clear-failed) cmd_clear_failed; return 0 ;;
+    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \?//'; return 0 ;;
     "")        ;;
     *)         die "unknown argument: $1" ;;
   esac
@@ -325,12 +373,42 @@ main() {
     state_set blocked_files ""
   fi
 
+  # Same idea for a target that previously FAILED to deploy (see the
+  # failed_rev check below, and CRITICAL finding C1): if a human has since
+  # hand-deployed it (or something past it) and the running revision has
+  # caught up, the marker is stale — clear it rather than have --status
+  # report a failure forever after it has plainly been resolved.
+  local prev_failed
+  prev_failed="$(state_get failed_rev)"
+  if [ -n "$prev_failed" ] \
+       && git -C "$DEPLOY_TREE" cat-file -e "${prev_failed}^{commit}" 2>/dev/null \
+       && git -C "$DEPLOY_TREE" merge-base --is-ancestor "$prev_failed" "$running" 2>/dev/null; then
+    log "previously failed target ${prev_failed} is now running (hand-deployed?) — clearing the failure marker"
+    state_set failed_rev ""
+    state_set failed_short ""
+  fi
+
   if [ "$running" = "$target" ]; then
     log "up to date at $(short_sha "$target")"
     return 0
   fi
 
   short="$(short_sha "$target")"
+
+  # CRITICAL C1: a target that already failed must not be retried
+  # automatically by a later cycle — see do_deploy's failure branches and
+  # the state_set at the bottom of this function. Retrying blind, every 2
+  # minutes, forever, is what turned one failed deploy into ~240 encrypted
+  # backups and ~480 container replacements overnight (a migrating deploy
+  # costs a full backup on every attempt). A NEWER commit (this check
+  # compares against the exact failed SHA, not "anything still pending")
+  # is unaffected and deploys normally — that is the whole point of the
+  # feature, and is exactly how a fix pushed after a bad deploy gets live.
+  if [ "$target" = "$prev_failed" ]; then
+    log "target ${target} already failed a previous attempt — not retrying automatically (see --status, or infra/scripts/deploy-watch.sh --clear-failed)"
+    return 0
+  fi
+
   if ! image_exists "sha-${short}"; then
     log "image sha-${short} not published yet — waiting"
     return 0
@@ -363,7 +441,18 @@ main() {
 
   state_set blocked_rev ""
   state_set blocked_files ""
-  do_deploy "$short" "$target" "$running"
+
+  if do_deploy "$short" "$target" "$running"; then
+    return 0
+  fi
+  # Record the failed target so the check above refuses to retry it on the
+  # next cycle. do_deploy has already written the specific reason to
+  # last_outcome; this is deliberately just the target, not a retry count —
+  # see the C1 fix note above do_deploy for why one-and-stop, not a bounded
+  # number of automatic retries.
+  state_set failed_rev "$target"
+  state_set failed_short "$short"
+  return 1
 }
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then

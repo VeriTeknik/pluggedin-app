@@ -23,6 +23,11 @@ no matter how many purely-app commits land on top of it. The block only
 clears when a human deploys and the running revision moves past the infra
 commit (see "Unblocking the gate" below); nothing here goes stale on its own.
 
+**A deploy that fails is not retried automatically either** — see "When an
+automatic deploy fails" below. This is deliberate: a failed target stays
+failed until a human (or a fix pushed as a newer commit) resolves it,
+rather than the poller hammering the same broken target every two minutes.
+
 Nothing notifies you of any of this — no email, no Slack, nothing. The only
 way to learn a deploy happened, failed, or is blocked is to ask:
 
@@ -34,7 +39,34 @@ way to learn a deploy happened, failed, or is blocked is to ask:
     git -C /home/pluggedin/deploy-tree checkout --detach origin/main
     sudo cp infra/systemd/pluggedin-deploy-watch.* /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable --now pluggedin-deploy-watch.timer
+    sudo systemctl enable pluggedin-deploy-watch.timer
+
+`enable`, deliberately **without** `--now`. `pluggedin-deploy-watch.timer`
+has `OnBootSec=3min`: on any host that has already been up for more than 3
+minutes (i.e. every host except one that just rebooted), that fires
+immediately once the timer unit is started — a full, unsupervised deploy,
+on the spot, before the supervised first run below has ever happened. Enable
+now so the timer survives reboots; start it only at the end of "First run,
+supervised", once that run is confirmed good.
+
+### Bootstrap the state directory
+
+The service unit declares `StateDirectory=pluggedin-deploy-watch`, which
+normally makes systemd create `/var/lib/pluggedin-deploy-watch`, owned by
+`pluggedin:pluggedin`, the first time the *service* starts. But the
+supervised first run below runs the script by hand, before the service has
+ever started — and `/var/lib` itself is `root:root 0755`, so the `pluggedin`
+user cannot create a directory under it. Left alone, the hand run below dies
+on `mkdir` inside the script.
+
+Create it explicitly first, with the same ownership systemd would have used:
+
+    sudo install -d -o pluggedin -g pluggedin /var/lib/pluggedin-deploy-watch
+
+Use `install -d`, not a bare `sudo mkdir -p`, and do not run
+`deploy-watch.sh` itself under `sudo`: either one leaves the directory or
+its state file owned by `root`, and the service — which runs as
+`pluggedin`, not `root` — then cannot write to it on its next cycle.
 
 ## First run, supervised
 
@@ -58,11 +90,21 @@ need a human watching:
    maintainer's usual checkout) changes that label, so the first run may
    recreate more than just the app container.
 
-Run it by hand first and watch, rather than trusting the timer's first fire:
+Run it by hand first and watch, rather than trusting the timer's first fire.
+Run it **as the `pluggedin` user**, not as `root` and not via plain `sudo`
+(see the state-directory note above — an account mismatch here leaves a
+root-owned state file the service can never write again):
 
-    infra/scripts/deploy-watch.sh --dry-run
-    infra/scripts/deploy-watch.sh
+    sudo -u pluggedin -H infra/scripts/deploy-watch.sh --dry-run
+    sudo -u pluggedin -H infra/scripts/deploy-watch.sh
     docker compose -f /home/pluggedin/deploy-tree/infra/docker-compose.yml ps
+
+Once this is confirmed good — the container came up, `docker compose ps`
+looks right, and `infra/scripts/deploy-watch.sh --status` shows a clean `ok`
+outcome, not a `FAILED` or `BLOCKED` one — start the timer so it takes over
+future cycles:
+
+    sudo systemctl start pluggedin-deploy-watch.timer
 
 ## Unblocking the gate
 
@@ -71,6 +113,51 @@ Run it by hand first and watch, rather than trusting the timer's first fire:
 Deploying by hand moves the running revision past the infra commit, and the
 next cycle proceeds on its own (see "What deploys by itself" above for why
 later app-only commits alone never do this).
+
+## When an automatic deploy fails
+
+If `do_deploy` fails for a target — a bad migration, a health check that
+never turns green, anything in "When rollback reports a migration was
+applied" below — the watcher records that exact commit as the failed
+target and **will not attempt it again on its own**. This is deliberate,
+not a bug: a broken target does not start passing on attempt two with no
+code change in between, every attempt whose range touches `drizzle/` costs
+a full `backup.sh` run (minutes, gigabytes) before it even reaches the step
+that might fail again, and there is no notification channel to say a retry
+budget got burned overnight. One attempt, then stop, until something
+actually changes.
+
+`--status` shows it plainly:
+
+    infra/scripts/deploy-watch.sh --status
+    ...
+      DEPLOY FAILED for target <sha> — will NOT retry automatically.
+      See "last outcome" above for why. To clear this and resume automatic
+      deploys, do ONE of:
+        1. Push a fix to main — a NEWER commit deploys on its own, no
+           clearing needed, that is the whole point of the feature.
+        2. Deploy this exact target by hand, which clears the marker on the
+           next cycle once the running revision catches up to it:
+             IMAGE_TAG=sha-<short> infra/scripts/deploy.sh
+        3. Clear the marker without deploying, e.g. after fixing the
+           underlying problem out of band:
+             infra/scripts/deploy-watch.sh --clear-failed
+
+Concretely, one of three things clears the marker:
+
+- **A newer commit lands on `main`.** The watcher compares the failed
+  marker against the *exact* SHA that failed, not "anything still pending",
+  so a fix pushed as a new commit is a different target and deploys
+  normally — nothing to clear by hand.
+- **A human hand-deploys the failed commit (or something past it).** Once
+  the running revision catches up to or passes it, the next cycle notices
+  (the same staleness check the infra gate above already uses) and clears
+  the marker on its own.
+- **`infra/scripts/deploy-watch.sh --clear-failed`**, run as the
+  `pluggedin` user, if neither of the above applies yet — e.g. the
+  underlying problem (bad SOPS secret, registry outage) was fixed out of
+  band and the same commit should simply be allowed to retry on the next
+  poll.
 
 ## Verification timeout
 
