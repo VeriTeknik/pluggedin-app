@@ -344,32 +344,25 @@ esac
 STUB
   chmod +x "$STUBS/docker"
 
-  # external_check calls curl twice per attempt: a status-code probe (-w
-  # '%{http_code}') and, only if that was 200, a body fetch piped to grep.
-  # STUB_HEALTH_COUNTER_FILE, if set and containing N > 0, reports unhealthy
-  # for the next N status-code probes (decrementing on each) before
-  # reporting healthy — lets a test make the Nth external_check attempt (not
-  # just every attempt) fail, e.g. "forward check fails, rollback check
-  # passes" without needing real retry delays.
+  # external_check makes ONE curl call per attempt: body and status code
+  # together, split back apart via the trailing "\n%{http_code}" that -w
+  # appends. STUB_HEALTH_COUNTER_FILE, if set and containing N > 0, reports
+  # unhealthy (code 000, no body) for the next N attempts (decrementing on
+  # each) before reporting healthy — lets a test make the Nth external_check
+  # attempt (not just every attempt) fail, e.g. "forward check fails,
+  # rollback check passes" without needing real retry delays.
   cat > "$STUBS/curl" <<'STUB'
 #!/usr/bin/env bash
 bad_left=0
 if [ -n "${STUB_HEALTH_COUNTER_FILE:-}" ] && [ -f "$STUB_HEALTH_COUNTER_FILE" ]; then
   bad_left="$(cat "$STUB_HEALTH_COUNTER_FILE")"
 fi
-case "$*" in
-  *-w*)
-    if [ "$bad_left" -gt 0 ]; then
-      printf '000'
-      [ -n "${STUB_HEALTH_COUNTER_FILE:-}" ] && echo $((bad_left - 1)) > "$STUB_HEALTH_COUNTER_FILE"
-    else
-      printf '200'
-    fi
-    ;;
-  *)
-    printf '{"status":"healthy"}'
-    ;;
-esac
+if [ "$bad_left" -gt 0 ]; then
+  [ -n "${STUB_HEALTH_COUNTER_FILE:-}" ] && echo $((bad_left - 1)) > "$STUB_HEALTH_COUNTER_FILE"
+  printf '\n000'
+else
+  printf '{"status":"healthy"}\n200'
+fi
 exit 0
 STUB
   chmod +x "$STUBS/curl"
@@ -604,6 +597,34 @@ is "$(grep -c 'docker pull' "$CALL_LOG")" "0" "do_deploy is never reached for a 
 is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "do_deploy is never reached for a blocked target — deploy.sh never runs"
 teardown
 
+printf '\n[test] main: blocked_short clears on the clean path alongside blocked_rev and blocked_files\n'
+setup_main_fixture
+# Leftover state from some earlier, unrelated block — must not survive a
+# cycle whose target clears the gate. Before the fix, the clean-path clear
+# reset blocked_rev and blocked_files but forgot blocked_short, leaving a
+# stale short SHA behind (invisible via --status only because it gates on
+# blocked_rev being non-empty — a latent inconsistency, not a user-visible
+# bug, but the stale-clear branch already clears all three and the two
+# should match).
+state_set blocked_rev "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+state_set blocked_short "deadbee"
+state_set blocked_files "some/unrelated/path"
+
+echo appclean > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add app/page.tsx
+git -C "$DEPLOY_TREE" commit -qm appclean
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+
+( PATH="$STUBS:$PATH"; export PATH
+  STUB_RUNNING_REV="$FROM_REV"; export STUB_RUNNING_REV
+  main )
+rc=$?
+is "$rc" "0" "a clean, gate-passing deploy succeeds"
+is "$(state_get blocked_rev)" "" "blocked_rev clears on the clean path"
+is "$(state_get blocked_short)" "" "blocked_short clears on the clean path alongside blocked_rev and blocked_files"
+is "$(state_get blocked_files)" "" "blocked_files clears on the clean path"
+teardown
+
 printf '\n[test] main: a deploy failure records failed_rev; a second cycle does NOT retry the same target (C1)\n'
 setup_main_fixture
 echo app1 > "$DEPLOY_TREE/app/page.tsx"
@@ -818,6 +839,89 @@ if [ "$elapsed" -le 6 ] && [ "$attempts" -le 6 ]; then
 else
   bad "a zero interval is floored rather than spun on: ${attempts} attempts in ${elapsed}s for a 2s budget (want <= 6 attempts, <= 6s)"
 fi
+teardown
+
+printf '\n[test] external_check: requires both a 200 status AND a healthy body (single curl call, not a pipeline)\n'
+setup
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+# A dedicated stub, independent of setup_deploy_fixture's: this test drives
+# the exact HTTP code and body external_check sees, to prove neither
+# condition alone is sufficient. Mirrors the "\n%{http_code}" shape the real
+# -w format produces so the split-back-apart logic under test is exercised
+# for real, not bypassed.
+cat > "$STUBS/curl" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n%s' "${STUB_HTTP_BODY:-}" "${STUB_HTTP_CODE:-000}"
+exit 0
+STUB
+chmod +x "$STUBS/curl"
+PATH="$STUBS:$PATH"; export PATH
+EXTERNAL_CHECK_INTERVAL=0 EXTERNAL_CHECK_TIMEOUT=0
+export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+
+STUB_HTTP_CODE=200 STUB_HTTP_BODY='{"status":"degraded"}' external_check
+is "$?" "1" "a 200 status with an unhealthy body still fails — status alone is not enough"
+
+STUB_HTTP_CODE=500 STUB_HTTP_BODY='{"status":"healthy"}' external_check
+is "$?" "1" "a healthy body with a non-200 status still fails — body alone is not enough"
+
+STUB_HTTP_CODE=200 STUB_HTTP_BODY='{"status":"healthy"}' external_check
+is "$?" "0" "a 200 status with a healthy body passes"
+teardown
+
+printf '\n[test] main: an unresolvable running revision leaves a stale block in place and logs why\n'
+setup
+ORIGIN="${TESTROOT}/origin.git"
+git init -q --bare "$ORIGIN"
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+git -C "$DEPLOY_TREE" remote add origin "$ORIGIN"
+mkdir -p "$DEPLOY_TREE/app"
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+BLOCKED_REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+BLOCKED_SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$BLOCKED_REV")"
+
+state_set blocked_rev "$BLOCKED_REV"
+state_set blocked_short "$BLOCKED_SHORT"
+state_set blocked_files "infra/docker-compose.yml"
+
+# A running revision this deploy tree has never fetched — a force-push, a
+# pruned branch, or a container built from a commit that never landed here.
+# merge-base cannot be asked about it at all, and that must never be
+# silently treated the same as a resolvable "not yet caught up".
+BOGUS_REV="0123456789abcdef0123456789abcdef01234567"
+
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+cat > "$STUBS/docker" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "inspect" ]; then echo "$BOGUS_REV"; exit 0; fi
+# image_exists must report false so main() returns right after the
+# block-staleness check above, before ever reaching gate_blocked_files —
+# keeps this test isolated to the one code path it exercises.
+if [ "\$1" = "manifest" ]; then exit 1; fi
+exit 0
+STUB
+chmod +x "$STUBS/docker"
+
+output="$( PATH="$STUBS:$PATH"; export PATH; main )"
+rc=$?
+is "$rc" "0" "an unresolvable running revision does not crash the cycle"
+is "$(state_get blocked_rev)" "$BLOCKED_REV" "the block is NOT cleared when the running revision cannot be resolved"
+is "$(state_get blocked_short)" "$BLOCKED_SHORT" "blocked_short is likewise left in place"
+is "$(state_get blocked_files)" "infra/docker-compose.yml" "blocked_files is likewise left in place"
+case "$output" in
+  *"cannot tell whether the block on ${BLOCKED_REV} is stale"*"${BOGUS_REV}"*)
+    ok "logs which revision could not be resolved" ;;
+  *)
+    bad "logs which revision could not be resolved (got: $output)" ;;
+esac
+case "$output" in
+  *"clearing the block"*) bad "must not log a clearing message when the block was left in place" ;;
+  *) ok "does not log a clearing message when the block was left in place" ;;
+esac
 teardown
 
 printf '\n[test] summary\n'

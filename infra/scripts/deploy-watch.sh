@@ -45,7 +45,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-${DEPLOY_TREE}/infra/docker-compose.yml}"
 # not accumulated sleep durations — so a slow or hung curl cannot silently
 # inflate the real time this bounds. The true worst case is TIMEOUT plus at
 # most one in-flight attempt's own duration (bounded by curl's --max-time,
-# ~40s across the two curl calls one attempt makes), not TIMEOUT alone.
+# ~20s for the single curl call each attempt makes), not TIMEOUT alone.
 # Overridable so tests don't sleep.
 EXTERNAL_CHECK_INTERVAL="${EXTERNAL_CHECK_INTERVAL:-5}"
 EXTERNAL_CHECK_TIMEOUT="${EXTERNAL_CHECK_TIMEOUT:-90}"
@@ -224,11 +224,27 @@ external_check() {
   # loop run for a multiple of the intended budget; the worst case is
   # bounded by curl's own --max-time regardless of how the sleeps land.
   local deadline=$((SECONDS + EXTERNAL_CHECK_TIMEOUT))
-  local code
+  local response code body
   while true; do
-    code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "${SITE_URL}/api/health" 2>/dev/null || echo 000)"
-    if [ "$code" = "200" ] \
-         && curl -fsS --max-time 20 "${SITE_URL}/api/health" 2>/dev/null | grep -q '"status":"healthy"'; then
+    # Single call, not a status probe plus a separate body fetch: two curls
+    # per attempt doubled the request count and doubled the worst-case time
+    # one attempt could consume against the deadline above. The status code
+    # is appended after a newline via -w so it can be split back out below,
+    # rather than piping the body straight into `grep -q`, which under `set
+    # -o pipefail` can have grep exit (on a match) before curl finishes
+    # writing, turning curl's own SIGPIPE into a false-negative health check
+    # — the same class of bug as gate_blocked_files and
+    # range_touches_migrations above, both of which capture-then-grep for
+    # exactly this reason. In practice unreachable here (the health body is
+    # ~100 bytes against a 64KB pipe buffer, so curl always finishes first),
+    # but a third, differently-shaped site in this file invites someone to
+    # "simplify" the other two later. On any curl failure (non-2xx with
+    # -f, timeout, connection refused) response falls back to a body-less
+    # "000" so the split below still yields a code that can never equal 200.
+    response="$(curl -fsS --max-time 20 -w $'\n%{http_code}' "${SITE_URL}/api/health" 2>/dev/null || printf '\n000')"
+    code="${response##*$'\n'}"
+    body="${response%$'\n'*}"
+    if [ "$code" = "200" ] && [[ "$body" == *'"status":"healthy"'* ]]; then
       return 0
     fi
     [ "$SECONDS" -ge "$deadline" ] && return 1
@@ -367,15 +383,25 @@ main() {
   # the running revision has caught up to (or passed) whatever was blocked,
   # the block is stale — clear it, or `--status` reports BLOCKED forever
   # even though production is already running that commit.
+  # Both endpoints of the ancestry check must be resolvable in this tree
+  # before merge-base is trusted to answer at all — not just $prev_blocked.
+  # If $running (a force-push, a pruned branch, or a container built from a
+  # commit this tree never fetched) is not resolvable, merge-base itself
+  # fails and the block is fail-safe: it stays BLOCKED rather than being
+  # cleared on a guess. That is not dangerous, but it is silent — an
+  # operator staring at a BLOCKED status that will not clear has nothing to
+  # go on without the log line below.
   local prev_blocked
   prev_blocked="$(state_get blocked_rev)"
-  if [ -n "$prev_blocked" ] \
-       && git -C "$DEPLOY_TREE" cat-file -e "${prev_blocked}^{commit}" 2>/dev/null \
-       && git -C "$DEPLOY_TREE" merge-base --is-ancestor "$prev_blocked" "$running" 2>/dev/null; then
-    log "blocked revision ${prev_blocked} is now running (hand-deployed?) — clearing the block"
-    state_set blocked_rev ""
-    state_set blocked_short ""
-    state_set blocked_files ""
+  if [ -n "$prev_blocked" ] && git -C "$DEPLOY_TREE" cat-file -e "${prev_blocked}^{commit}" 2>/dev/null; then
+    if ! git -C "$DEPLOY_TREE" cat-file -e "${running}^{commit}" 2>/dev/null; then
+      log "cannot tell whether the block on ${prev_blocked} is stale: running revision ${running} is not resolvable in ${DEPLOY_TREE} — the block will NOT clear automatically; resolve it by hand (fetch the missing commit, or edit blocked_rev out of ${STATE_DIR}/deploy-watch.state)"
+    elif git -C "$DEPLOY_TREE" merge-base --is-ancestor "$prev_blocked" "$running" 2>/dev/null; then
+      log "blocked revision ${prev_blocked} is now running (hand-deployed?) — clearing the block"
+      state_set blocked_rev ""
+      state_set blocked_short ""
+      state_set blocked_files ""
+    fi
   fi
 
   # Same idea for a target that previously FAILED to deploy (see the
@@ -445,6 +471,7 @@ main() {
   fi
 
   state_set blocked_rev ""
+  state_set blocked_short ""
   state_set blocked_files ""
 
   if do_deploy "$short" "$target" "$running"; then
