@@ -42,10 +42,15 @@ export class StreamableHTTPWrapper implements Transport {
     // `fetch` key. This was previously passed as `fetchImplementation`, which the SDK
     // silently ignored — so the session-capturing wrapper never ran and Mcp-Session-Id
     // headers were never persisted. See issue #172.
+    //
+    // Pull the caller's fetch out under both the current (`fetch`) and deprecated
+    // (`fetchImplementation`) keys, then drop the deprecated alias from the options we
+    // forward so the SDK can't receive a stale key alongside our `fetch` override.
+    const { fetch: optionsFetch, fetchImplementation: _deprecatedFetch, ...transportOptions } = options;
     this.transport = new StreamableHTTPClientTransport(url, {
-      ...options,
+      ...transportOptions,
       // Add response interceptor to capture session ID with timeout support
-      fetch: this.createFetchWrapper(options.fetch ?? options.fetchImplementation),
+      fetch: this.createFetchWrapper(optionsFetch ?? _deprecatedFetch),
     });
 
     // Forward events from the wrapped transport

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { StreamableHTTPClientTransportOptions } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 /**
  * Regression tests for issue #172.
@@ -13,9 +14,19 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  * the session-capture behaviour end to end.
  */
 
+// The options object the SDK transport is constructed with. Typed against the SDK's
+// own options type (plus the deprecated `fetchImplementation` alias we assert is gone)
+// so a future SDK contract change surfaces here as a type error instead of silently
+// passing — which is exactly the failure mode issue #172 was.
+type CapturedTransportOptions = StreamableHTTPClientTransportOptions & {
+  fetchImplementation?: unknown;
+};
+
 // Shared holders — must be created via vi.hoisted so the vi.mock factories below
 // (which are hoisted to the top of the module) can reference them safely.
-const sdk = vi.hoisted(() => ({ capturedOptions: undefined as any }));
+const sdk = vi.hoisted(() => ({
+  capturedOptions: undefined as CapturedTransportOptions | undefined,
+}));
 
 const sessionMock = vi.hoisted(() => ({
   getLatestSession: vi.fn().mockResolvedValue(null),
@@ -30,7 +41,7 @@ vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => ({
     onerror?: (error: Error) => void;
     onmessage?: (message: unknown) => void;
     constructor(_url: URL, options: unknown) {
-      sdk.capturedOptions = options;
+      sdk.capturedOptions = options as CapturedTransportOptions;
     }
     start = vi.fn().mockResolvedValue(undefined);
     send = vi.fn().mockResolvedValue(undefined);
@@ -81,9 +92,9 @@ describe('StreamableHTTPWrapper (issue #172)', () => {
 
     expect(sdk.capturedOptions).toBeDefined();
     // The SDK contract: the wrapping fetch must be provided as `fetch`.
-    expect(typeof sdk.capturedOptions.fetch).toBe('function');
+    expect(typeof sdk.capturedOptions!.fetch).toBe('function');
     // The old, ignored key must no longer be used.
-    expect(sdk.capturedOptions.fetchImplementation).toBeUndefined();
+    expect(sdk.capturedOptions!.fetchImplementation).toBeUndefined();
   });
 
   it('captures Mcp-Session-Id from a response and persists a new session', async () => {
@@ -98,7 +109,7 @@ describe('StreamableHTTPWrapper (issue #172)', () => {
 
     await StreamableHTTPWrapper.create(new URL(ENDPOINT), {}, SERVER_UUID, PROFILE_UUID);
 
-    const wrappedFetch = sdk.capturedOptions.fetch as typeof fetch;
+    const wrappedFetch = sdk.capturedOptions!.fetch as typeof fetch;
     expect(typeof wrappedFetch).toBe('function');
 
     await wrappedFetch(ENDPOINT, { method: 'POST' });
@@ -120,7 +131,7 @@ describe('StreamableHTTPWrapper (issue #172)', () => {
 
     await StreamableHTTPWrapper.create(new URL(ENDPOINT), {}, SERVER_UUID, PROFILE_UUID);
 
-    const wrappedFetch = sdk.capturedOptions.fetch as typeof fetch;
+    const wrappedFetch = sdk.capturedOptions!.fetch as typeof fetch;
 
     await wrappedFetch(ENDPOINT, { method: 'POST' });
 
