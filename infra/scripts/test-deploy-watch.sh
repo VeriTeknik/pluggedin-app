@@ -142,6 +142,92 @@ else
 fi
 teardown
 
+printf '\n[test] infra gate: rename bypass\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE/infra/scripts"
+echo x > "$DEPLOY_TREE/infra/scripts/verify.sh"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm "add verify.sh"
+R1="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+mkdir -p "$DEPLOY_TREE/scripts"
+git -C "$DEPLOY_TREE" mv infra/scripts/verify.sh scripts/verify.sh
+git -C "$DEPLOY_TREE" commit -qm "move verify.sh out of infra/"
+R2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+is "$(gate_blocked_files "$R1" "$R2")" "infra/scripts/verify.sh" \
+  "renaming a gated path to a non-gated path still blocks (old path surfaces via --no-renames)"
+teardown
+
+printf '\n[test] infra gate: widened scope\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE"/{app,.github/workflows,.github/actions/build}
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+BASE2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+DFVAR="$(commit_file Dockerfile.production changed)"
+is "$(gate_blocked_files "$BASE2" "$DFVAR")" "Dockerfile.production" \
+  "a root Dockerfile variant is blocked"
+
+ACTION="$(commit_file .github/actions/build/action.yml changed)"
+is "$(gate_blocked_files "$DFVAR" "$ACTION")" ".github/actions/build/action.yml" \
+  "a composite action under .github/ is blocked, not just .github/workflows/"
+
+DOCKERIGNORE="$(commit_file .dockerignore changed)"
+is "$(gate_blocked_files "$ACTION" "$DOCKERIGNORE")" ".dockerignore" \
+  "root .dockerignore is blocked"
+
+# Newly covered patterns must still respect root-only anchoring.
+DECOY_DF="$(commit_file app/Dockerfile.x changed)"
+is "$(gate_blocked_files "$DOCKERIGNORE" "$DECOY_DF")" "" \
+  "Dockerfile.x nested under a subdirectory is not the root Dockerfile"
+
+DECOY_GH="$(commit_file app/.github/workflows/x.yml changed)"
+is "$(gate_blocked_files "$DECOY_DF" "$DECOY_GH")" "" \
+  "a nested .github under a subdirectory is not the protected root .github/"
+teardown
+
+printf '\n[test] infra gate: git diff failure fails closed\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+echo one > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt
+git -C "$DEPLOY_TREE" commit -qm one
+R1="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo two > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt
+git -C "$DEPLOY_TREE" commit -qm two
+R2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+# Force git diff itself to fail (distinct from grep finding no match) by
+# intercepting only the `-C <tree> diff ...` invocation; everything else
+# (including cat-file, used by the fail-closed revision check) passes
+# through to the real git.
+REALGIT="$(command -v git)"
+GITSTUB="${TESTROOT}/gitstub"; mkdir -p "$GITSTUB"
+cat > "$GITSTUB/git" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "-C" ] && [ "\$3" = "diff" ]; then
+  echo "fatal: forced failure for test" >&2
+  exit 128
+fi
+exec "$REALGIT" "\$@"
+STUB
+chmod +x "$GITSTUB/git"
+
+if PATH="$GITSTUB:$PATH" gate_blocked_files "$R1" "$R2" >/dev/null 2>&1; then
+  bad "a genuine git diff failure must not read as clean"
+else
+  ok "a genuine git diff failure fails closed"
+fi
+teardown
+
 printf '\n[test] summary\n'
 printf '  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

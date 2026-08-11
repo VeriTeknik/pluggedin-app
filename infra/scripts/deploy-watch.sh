@@ -100,23 +100,45 @@ fetch_tree() {
 # main allows merges with zero approving reviews and does not enforce branch
 # protection on admins, and the repository is public. The compensating control
 # has always been that a human runs deploy.sh; automating that removes it. A
-# commit that can rewrite compose, the Dockerfile, or a workflow is a commit
-# that can change what the host mounts and what the container can reach — on a
-# host holding the SOPS age key. Those keep the human.
+# commit that can rewrite compose, the Dockerfile, a workflow, or a composite
+# action is a commit that can change what the host mounts, what image gets
+# built, and what the container can reach — on a host holding the SOPS age
+# key. Those keep the human.
 #
-# Anchored at the start of the path so `app/infra/...` and `app/Dockerfile.md`
-# are NOT caught; only the real root-level paths are.
-GATE_RE='^(infra/|docker-compose[^/]*\.yml$|Dockerfile$|\.github/workflows/)'
+# Widened by the maintainer beyond the original spec, deliberately:
+#   - any root-level Dockerfile variant, not just exactly `Dockerfile` —
+#     `Dockerfile.production` exists at repo root today
+#   - all of .github/, not just .github/workflows/ — composite actions under
+#     .github/actions/ are invocable from gated workflows and are just as
+#     capable of reaching secrets as the workflow YAML itself
+#   - .dockerignore at root — it decides what lands in the build context,
+#     and a loosened one can leak files into a published image
+#
+# Anchored at the start of the path so `app/infra/...`, `app/Dockerfile.md`,
+# and a nested `app/.github/...` are NOT caught; only the real root-level
+# paths are.
+GATE_RE='^(infra/|docker-compose[^/]*\.yml$|Dockerfile[^/]*$|\.dockerignore$|\.github/)'
 
 gate_blocked_files() {
-  local from="$1" to="$2"
+  local from="$1" to="$2" diff_output
   # Fail-closed. If either endpoint is unknown to this tree the range cannot
   # be judged, and "cannot judge" must never read as "nothing to worry about".
   git -C "$DEPLOY_TREE" cat-file -e "${from}^{commit}" 2>/dev/null || return 1
   git -C "$DEPLOY_TREE" cat-file -e "${to}^{commit}"   2>/dev/null || return 1
+  # --no-renames: without it, git collapses a gated-path -> non-gated-path
+  # move into a single rename line naming only the new (unmatched) path, and
+  # the protected old path never appears in --name-only output at all. Forcing
+  # a plain delete+add keeps the old path visible to the grep below.
+  #
   # Every commit that would go live, not just the tip: an infra change must not
   # ride to production hidden behind a later innocuous commit.
-  git -C "$DEPLOY_TREE" diff --name-only "$from" "$to" | grep -E "$GATE_RE" || true
+  #
+  # The git diff itself is captured (and its exit status checked) separately
+  # from the grep filter, so only grep's "no match" (exit 1) is swallowed by
+  # `|| true` below. A genuine git diff failure must propagate as blocked, not
+  # be indistinguishable from "nothing matched."
+  diff_output="$(git -C "$DEPLOY_TREE" diff --no-renames --name-only "$from" "$to")" || return 1
+  grep -E "$GATE_RE" <<< "$diff_output" || true
 }
 
 main() {
