@@ -8,7 +8,7 @@ Application-code merges to `main`, within about two minutes. A commit range
 is blocked from unattended deployment if it touches any of:
 
 - `infra/`
-- `docker-compose*.yml`
+- `docker-compose*.yml` at the repo root
 - any root-level `Dockerfile` variant (e.g. `Dockerfile`, `Dockerfile.production`)
 - `.dockerignore` at the repo root
 - anything under `.github/` (not just `.github/workflows/` — composite
@@ -71,6 +71,28 @@ Run it by hand first and watch, rather than trusting the timer's first fire:
 Deploying by hand moves the running revision past the infra commit, and the
 next cycle proceeds on its own (see "What deploys by itself" above for why
 later app-only commits alone never do this).
+
+## Verification timeout
+
+After a deploy (and after a rollback attempt), `external_check` polls
+`${SITE_URL}/api/health` every `EXTERNAL_CHECK_INTERVAL` seconds (default
+`5`) until it returns HTTP 200 with `"status":"healthy"`, or until a
+wall-clock deadline of `EXTERNAL_CHECK_TIMEOUT` seconds (default `90`)
+passes — override either with those environment variables. The 90s default
+covers the app healthcheck's own `start_period: 30s` plus Traefik's LB
+healthcheck only re-polling backend health every 30s, so a freshly deployed
+container can legitimately take up to ~60s to become both healthy and
+reachable through Traefik before the deadline gives up on it.
+
+If deploys keep getting rolled back and you suspect verification is racing
+a slow container start rather than catching a real failure, check
+`journalctl -u pluggedin-deploy-watch.service` for how close to the 90s
+mark the failure landed. Near the deadline points at a slow start, not a
+broken deploy — retry with a longer budget, e.g.
+`EXTERNAL_CHECK_TIMEOUT=180 infra/scripts/deploy-watch.sh` for a one-off
+manual run, or via `Environment=` in the systemd unit for the timer. A
+failure early, well inside the default window, points at a genuinely broken
+deploy instead, and raising the timeout would only delay finding that out.
 
 ## When rollback reports a migration was applied
 
