@@ -129,7 +129,10 @@ is "$(gate_blocked_files "$DECOY2" "$DECOY3")" "" "migrations are app changes, n
 
 # The range, not just the tip: an infra commit buried behind an app commit
 # must still block.
-BURIED_INFRA="$(commit_file infra/docker-compose.yml changed)"
+# The infra commit's own SHA is deliberately not captured — the assertion
+# spans DECOY3..BURIED_APP precisely so the infra change sits buried inside
+# the range rather than at either endpoint.
+commit_file infra/docker-compose.yml changed >/dev/null
 BURIED_APP="$(commit_file app/page.tsx again)"
 is "$(gate_blocked_files "$DECOY3" "$BURIED_APP")" "infra/docker-compose.yml" \
   "an infra commit behind a later app commit still blocks the range"

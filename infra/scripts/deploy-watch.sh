@@ -25,7 +25,12 @@
 #                                 # commit — that always proceeds on its own.
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# There is deliberately no REPO_ROOT here. This script must operate on
+# $DEPLOY_TREE — the dedicated checkout pinned to the commit being deployed —
+# never on whichever tree it happens to be invoked from. Deriving a path from
+# BASH_SOURCE would reintroduce exactly the coupling the deploy tree exists to
+# remove. shellcheck flagged the unused variable; the right fix was to delete
+# it, not to silence the warning.
 DEPLOY_TREE="${DEPLOY_TREE:-/home/pluggedin/deploy-tree}"
 STATE_DIR="${STATE_DIR:-/var/lib/pluggedin-deploy-watch}"
 IMAGE_REPO="${IMAGE_REPO:-ghcr.io/veriteknik/pluggedin-app}"
