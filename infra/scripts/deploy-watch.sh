@@ -20,7 +20,6 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEPLOY_TREE="${DEPLOY_TREE:-/home/pluggedin/deploy-tree}"
 STATE_DIR="${STATE_DIR:-/var/lib/pluggedin-deploy-watch}"
-LOCK_FILE="${STATE_DIR}/deploy-watch.lock"
 IMAGE_REPO="${IMAGE_REPO:-ghcr.io/veriteknik/pluggedin-app}"
 APP_CONTAINER="${APP_CONTAINER:-pluggedin-app}"
 SITE_URL="${SITE_URL:-https://plugged.in}"
