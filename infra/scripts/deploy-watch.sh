@@ -14,7 +14,9 @@
 # Usage:
 #   deploy-watch.sh              # one poll cycle (what the timer runs)
 #   deploy-watch.sh --status     # report state, change nothing
-#   deploy-watch.sh --dry-run    # report what it would deploy, change nothing
+#   deploy-watch.sh --dry-run    # report what it would deploy; does not deploy
+#                                 # or change state, but DOES run `git fetch`
+#                                 # against origin to know what "latest" is
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -24,6 +26,13 @@ IMAGE_REPO="${IMAGE_REPO:-ghcr.io/veriteknik/pluggedin-app}"
 APP_CONTAINER="${APP_CONTAINER:-pluggedin-app}"
 SITE_URL="${SITE_URL:-https://plugged.in}"
 COMPOSE_FILE="${COMPOSE_FILE:-${DEPLOY_TREE}/infra/docker-compose.yml}"
+# The app healthcheck declares start_period: 30s, and Traefik's own LB
+# healthcheck only re-polls backend health every 30s, so a freshly deployed
+# container can legitimately take up to ~60s before it is both healthy and
+# actually reachable through the LB. Poll every 5s for up to 90s (60s plus
+# margin) before external_check gives up. Overridable so tests don't sleep.
+EXTERNAL_CHECK_INTERVAL="${EXTERNAL_CHECK_INTERVAL:-5}"
+EXTERNAL_CHECK_TIMEOUT="${EXTERNAL_CHECK_TIMEOUT:-90}"
 
 log()  { printf '[deploy-watch %s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 die()  { printf '[deploy-watch] FATAL: %s\n' "$*" >&2; exit 1; }
@@ -146,14 +155,34 @@ range_touches_migrations() {
   # backup.sh dumps Postgres AND rsyncs uploads and vector data into an
   # age-encrypted tarball — minutes and gigabytes. Far too heavy to run on
   # every app patch, and pointless when the schema cannot change.
-  git -C "$DEPLOY_TREE" diff --name-only "$1" "$2" | grep -qE '^drizzle/'
+  #
+  # Capture-then-grep, not a `git diff | grep -q` pipeline: under `set -o
+  # pipefail`, `grep -q` can exit the instant it finds a match, sending git a
+  # SIGPIPE it hasn't finished writing into; pipefail then surfaces that as
+  # this function's exit status. Same shape as gate_blocked_files above, for
+  # the same reason (see commit 6e924477, which hit this exact class on a
+  # different pipeline).
+  #
+  # A genuine `git diff` failure also fails closed here: treat "cannot tell"
+  # as "yes, might touch migrations" so the deploy takes the safe backup +
+  # migrate path rather than silently skipping it.
+  local out
+  out="$(git -C "$DEPLOY_TREE" diff --name-only "$1" "$2")" || return 0
+  grep -qE '^drizzle/' <<< "$out"
 }
 
 external_check() {
-  local code
-  code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "${SITE_URL}/api/health" || echo 000)"
-  [ "$code" = "200" ] || return 1
-  curl -fsS --max-time 20 "${SITE_URL}/api/health" | grep -q '"status":"healthy"'
+  local waited=0 code
+  while true; do
+    code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "${SITE_URL}/api/health" 2>/dev/null || echo 000)"
+    if [ "$code" = "200" ] \
+         && curl -fsS --max-time 20 "${SITE_URL}/api/health" 2>/dev/null | grep -q '"status":"healthy"'; then
+      return 0
+    fi
+    waited=$((waited + EXTERNAL_CHECK_INTERVAL))
+    [ "$waited" -ge "$EXTERNAL_CHECK_TIMEOUT" ] && return 1
+    sleep "$EXTERNAL_CHECK_INTERVAL"
+  done
 }
 
 do_deploy() {
@@ -163,11 +192,21 @@ do_deploy() {
   prev_rev="$(running_revision)"
 
   log "deploying ${short} (${rev})"
-  git -C "$DEPLOY_TREE" checkout --quiet --detach "$rev"
+  # Every command from here on that runs before the rollback branch is
+  # explicitly guarded (`if`/`||`), never bare. Under `set -e` a bare command
+  # that fails aborts the whole function immediately — including the
+  # rollback block and every state_set below it — leaving a broken deploy
+  # running in production with `--status` still showing the PREVIOUS cycle's
+  # (stale, now-false) "ok". A guarded failure is a reported failure; a bare
+  # one is a silent one.
+  if ! git -C "$DEPLOY_TREE" checkout --quiet --detach "$rev"; then
+    state_set last_outcome "failed: checkout ${rev} (stack untouched)"
+    return 1
+  fi
 
   if range_touches_migrations "$from" "$rev"; then
     log "range touches drizzle/ — taking a backup first"
-    "${DEPLOY_TREE}/infra/scripts/backup.sh" || { state_set last_outcome "failed: backup"; return 1; }
+    "${DEPLOY_TREE}/infra/scripts/backup.sh" || { state_set last_outcome "failed: backup (stack untouched)"; return 1; }
 
     # Migrate BEFORE the app is replaced. A failure here leaves the running
     # container untouched: old code against the unmigrated schema, which is a
@@ -180,9 +219,14 @@ do_deploy() {
     fi
   fi
 
-  docker pull "${IMAGE_REPO}:sha-${short}" >/dev/null \
-    || { state_set last_outcome "failed: pull"; return 1; }
-  docker tag "${IMAGE_REPO}:sha-${short}" "${IMAGE_REPO}:live"
+  if ! docker pull "${IMAGE_REPO}:sha-${short}" >/dev/null; then
+    state_set last_outcome "failed: pull (stack untouched)"
+    return 1
+  fi
+  if ! docker tag "${IMAGE_REPO}:sha-${short}" "${IMAGE_REPO}:live"; then
+    state_set last_outcome "failed: tag (stack untouched)"
+    return 1
+  fi
 
   if IMAGE_TAG=live "${DEPLOY_TREE}/infra/scripts/deploy.sh" --no-pull && external_check; then
     state_set last_outcome "ok ${short} at $(now)"
@@ -192,16 +236,30 @@ do_deploy() {
   fi
 
   log "verification failed — rolling back to ${prev_rev:-previous image}"
-  if [ -n "$prev_image" ]; then
-    docker tag "$prev_image" "${IMAGE_REPO}:live"
-    IMAGE_TAG=live "${DEPLOY_TREE}/infra/scripts/deploy.sh" --no-pull || true
-  fi
-  if range_touches_migrations "$from" "$rev"; then
-    # The image is back; the schema is not. Say so plainly — this is the one
-    # outcome that must never read as self-healed.
-    state_set last_outcome "ROLLED BACK ${short} at $(now) — MIGRATION ALREADY APPLIED, needs a human"
+  local rollback_state
+  if [ -z "$prev_image" ]; then
+    # Nothing to roll back to: no prior running container, or `docker
+    # inspect` itself failed. Say so — this must never be conflated with a
+    # rollback that actually happened.
+    rollback_state="NO ROLLBACK POSSIBLE (previous image unknown)"
+  elif docker tag "$prev_image" "${IMAGE_REPO}:live" \
+         && IMAGE_TAG=live "${DEPLOY_TREE}/infra/scripts/deploy.sh" --no-pull \
+         && external_check; then
+    rollback_state="rolled back and verified"
   else
-    state_set last_outcome "rolled back ${short} at $(now)"
+    # The retag and/or redeploy may have partly landed; external_check did
+    # not confirm the rollback itself is healthy. Distinct from "rolled back
+    # and verified" on purpose — this needs a human to look, not a shrug.
+    rollback_state="rollback attempted but NOT verified"
+  fi
+
+  if range_touches_migrations "$from" "$rev"; then
+    # The image may be back; the schema is not, and never was rolled back by
+    # this script. Say so plainly — this is the one outcome that must never
+    # read as self-healed.
+    state_set last_outcome "${rollback_state}: ${short} at $(now) — MIGRATION ALREADY APPLIED, needs a human"
+  else
+    state_set last_outcome "${rollback_state}: ${short} at $(now)"
   fi
   return 1
 }
@@ -231,6 +289,23 @@ main() {
   state_set running_rev "$running"
 
   [ -n "$running" ] || die "container ${APP_CONTAINER} not running — refusing to guess a baseline"
+
+  # A human can deploy a gated commit by hand at any time (that's the whole
+  # point of the gate) without this script ever seeing a clean range. Once
+  # the running revision has caught up to (or passed) whatever was blocked,
+  # the block is stale — clear it, or `--status` reports BLOCKED forever
+  # even though production is already running that commit.
+  local prev_blocked
+  prev_blocked="$(state_get blocked_rev)"
+  if [ -n "$prev_blocked" ] \
+       && git -C "$DEPLOY_TREE" cat-file -e "${prev_blocked}^{commit}" 2>/dev/null \
+       && git -C "$DEPLOY_TREE" merge-base --is-ancestor "$prev_blocked" "$running" 2>/dev/null; then
+    log "blocked revision ${prev_blocked} is now running (hand-deployed?) — clearing the block"
+    state_set blocked_rev ""
+    state_set blocked_short ""
+    state_set blocked_files ""
+  fi
+
   if [ "$running" = "$target" ]; then
     log "up to date at $(short_sha "$target")"
     return 0
