@@ -228,6 +228,28 @@ else
 fi
 teardown
 
+printf '\n[test] migration detection and dry run\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE"/{app,drizzle}
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+B="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo x > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app
+A="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo y > "$DEPLOY_TREE/drizzle/0002_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig
+M="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+range_touches_migrations "$B" "$A" && bad "app-only range must not request a backup" \
+  || ok "app-only range does not request a backup"
+range_touches_migrations "$A" "$M" && ok "range touching drizzle/ requests a backup" \
+  || bad "range touching drizzle/ requests a backup"
+teardown
+
 printf '\n[test] summary\n'
 printf '  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

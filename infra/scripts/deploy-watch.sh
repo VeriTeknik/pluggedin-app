@@ -141,12 +141,135 @@ gate_blocked_files() {
   grep -E "$GATE_RE" <<< "$diff_output" || true
 }
 
+# --- deploying -------------------------------------------------------------
+range_touches_migrations() {
+  # backup.sh dumps Postgres AND rsyncs uploads and vector data into an
+  # age-encrypted tarball — minutes and gigabytes. Far too heavy to run on
+  # every app patch, and pointless when the schema cannot change.
+  git -C "$DEPLOY_TREE" diff --name-only "$1" "$2" | grep -qE '^drizzle/'
+}
+
+external_check() {
+  local code
+  code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "${SITE_URL}/api/health" || echo 000)"
+  [ "$code" = "200" ] || return 1
+  curl -fsS --max-time 20 "${SITE_URL}/api/health" | grep -q '"status":"healthy"'
+}
+
+do_deploy() {
+  local short="$1" rev="$2" from="$3"
+  local prev_image prev_rev
+  prev_image="$(docker inspect "$APP_CONTAINER" --format '{{.Image}}' 2>/dev/null || printf '')"
+  prev_rev="$(running_revision)"
+
+  log "deploying ${short} (${rev})"
+  git -C "$DEPLOY_TREE" checkout --quiet --detach "$rev"
+
+  if range_touches_migrations "$from" "$rev"; then
+    log "range touches drizzle/ — taking a backup first"
+    "${DEPLOY_TREE}/infra/scripts/backup.sh" || { state_set last_outcome "failed: backup"; return 1; }
+
+    # Migrate BEFORE the app is replaced. A failure here leaves the running
+    # container untouched: old code against the unmigrated schema, which is a
+    # clean failure rather than a half-deployed one.
+    log "running migrations"
+    if ! IMAGE_TAG="sha-${short}" docker compose -f "$COMPOSE_FILE" \
+           run --rm pluggedin-app node_modules/.bin/drizzle-kit migrate; then
+      state_set last_outcome "failed: migration (stack untouched)"
+      return 1
+    fi
+  fi
+
+  docker pull "${IMAGE_REPO}:sha-${short}" >/dev/null \
+    || { state_set last_outcome "failed: pull"; return 1; }
+  docker tag "${IMAGE_REPO}:sha-${short}" "${IMAGE_REPO}:live"
+
+  if IMAGE_TAG=live "${DEPLOY_TREE}/infra/scripts/deploy.sh" --no-pull && external_check; then
+    state_set last_outcome "ok ${short} at $(now)"
+    state_set running_rev "$rev"
+    log "deploy ok"
+    return 0
+  fi
+
+  log "verification failed — rolling back to ${prev_rev:-previous image}"
+  if [ -n "$prev_image" ]; then
+    docker tag "$prev_image" "${IMAGE_REPO}:live"
+    IMAGE_TAG=live "${DEPLOY_TREE}/infra/scripts/deploy.sh" --no-pull || true
+  fi
+  if range_touches_migrations "$from" "$rev"; then
+    # The image is back; the schema is not. Say so plainly — this is the one
+    # outcome that must never read as self-healed.
+    state_set last_outcome "ROLLED BACK ${short} at $(now) — MIGRATION ALREADY APPLIED, needs a human"
+  else
+    state_set last_outcome "rolled back ${short} at $(now)"
+  fi
+  return 1
+}
+
 main() {
+  local dry=0
   case "${1:-}" in
     --status)  cmd_status; return 0 ;;
+    --dry-run) dry=1 ;;
     -h|--help) sed -n '2,20p' "$0" | sed 's/^# \?//'; return 0 ;;
+    "")        ;;
+    *)         die "unknown argument: $1" ;;
   esac
-  die "not implemented yet"
+
+  mkdir -p "$STATE_DIR"
+  # Never let two cycles overlap; the timer fires regardless of how long a
+  # deploy takes.
+  LOCK_FILE="$(lock_file)"
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || { log "another cycle holds the lock — skipping"; return 0; }
+
+  local target running short
+  target="$(fetch_tree)"
+  running="$(running_revision)"
+  state_set last_check "$(now)"
+  state_set latest_rev "$target"
+  state_set running_rev "$running"
+
+  [ -n "$running" ] || die "container ${APP_CONTAINER} not running — refusing to guess a baseline"
+  if [ "$running" = "$target" ]; then
+    log "up to date at $(short_sha "$target")"
+    return 0
+  fi
+
+  short="$(short_sha "$target")"
+  if ! image_exists "sha-${short}"; then
+    log "image sha-${short} not published yet — waiting"
+    return 0
+  fi
+
+  local blocked
+  if ! blocked="$(gate_blocked_files "$running" "$target")"; then
+    state_set blocked_rev "$target"
+    state_set blocked_short "$short"
+    state_set blocked_files "unevaluable range — failing closed"
+    log "BLOCKED: cannot evaluate ${running}..${target}"
+    return 0
+  fi
+  if [ -n "$blocked" ]; then
+    state_set blocked_rev "$target"
+    state_set blocked_short "$short"
+    state_set blocked_files "$(printf '%s' "$blocked" | tr '\n' ' ')"
+    log "BLOCKED by the infra gate: $(printf '%s' "$blocked" | tr '\n' ' ')"
+    log "deploy it by hand: IMAGE_TAG=sha-${short} infra/scripts/deploy.sh"
+    return 0
+  fi
+
+  if [ "$dry" -eq 1 ]; then
+    log "DRY RUN: would deploy sha-${short} (${target}); gate clear"
+    range_touches_migrations "$running" "$target" \
+      && log "DRY RUN: range touches drizzle/ — would back up and migrate first" \
+      || log "DRY RUN: no migrations in range"
+    return 0
+  fi
+
+  state_set blocked_rev ""
+  state_set blocked_files ""
+  do_deploy "$short" "$target" "$running"
 }
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
