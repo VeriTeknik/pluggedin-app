@@ -129,11 +129,11 @@ ORDER BY 2 DESC;
 \echo 'A secondary Workspace with no rows anywhere is a leftover, not a user'
 \echo 'decision — those can be dropped rather than merged.'
 \echo ''
-\echo 'NOTE: an earlier version of this counted only five tables and omitted'
-\echo 'mcp_activity, which section 3 shows is the largest by far. A Workspace'
-\echo 'whose only trace was activity logging was reported as completely empty.'
-\echo 'If you ran that version, the empty/holding-data split is understated on'
-\echo 'the holding-data side. This counts every table section 3 lists.'
+\echo 'NOTE: earlier versions of this hand-picked a handful of tables and so'
+\echo 'reported Workspaces as empty that were not — mcp_activity, the largest'
+\echo 'of them, was among the omissions. If you ran one of those, the empty'
+\echo 'side of the split is overstated. This counts all 22 tables carrying'
+\echo 'profile_uuid, taken from information_schema rather than chosen by hand.'
 
 WITH primary_profile AS (
   SELECT DISTINCT ON (project_uuid) project_uuid, uuid
@@ -151,15 +151,27 @@ SELECT
   count(*) FILTER (WHERE used > 0)                                AS holding_data
 FROM (
   SELECT s.uuid,
-    (SELECT count(*) FROM mcp_servers        WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM docs               WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM clipboards         WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM notifications      WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM agents             WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM mcp_activity       WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM shared_mcp_servers WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM memory_ring        WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM fresh_memory       WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM memory_sessions    WHERE profile_uuid = s.uuid) AS used
+    (SELECT count(*) FROM agents                  WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM audit_logs              WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM clipboards              WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM collective_feedback     WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM custom_mcp_servers      WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM docs                    WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM dream_consolidations    WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM embedded_chats          WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM fresh_memory            WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM individuation_snapshots WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM log_retention_policies  WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM mcp_activity            WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM mcp_oauth_sessions      WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM mcp_servers             WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM mcp_sessions            WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM memory_ring             WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM memory_sessions         WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM notifications           WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM playground_settings     WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM server_installations    WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM shared_collections      WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid) AS used
   FROM secondary s
 ) t;
