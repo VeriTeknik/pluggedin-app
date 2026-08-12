@@ -27,7 +27,7 @@
  * like it worked.
  */
 
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable } from '@/db/schema';
@@ -148,6 +148,34 @@ export async function requireHubProfile(
   const resolved = await requireGrantedHub(identity, argument);
   if (!resolved.ok) return resolved;
 
+  // The project records which profile is active, and the web UI reads exactly
+  // that (app/actions/profiles.ts). Taking the oldest instead would point the
+  // connector at a different profile than the browser, so the same user would
+  // see one set of tasks in the UI and another through Claude — with nothing
+  // to indicate why.
+  //
+  // Still validated against the Hub: active_profile_uuid is a plain column with
+  // no guarantee it still points inside this project.
+  const project = await db
+    .select({ active: projectsTable.active_profile_uuid })
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, resolved.hub))
+    .limit(1);
+
+  const active = project[0]?.active;
+  if (active) {
+    const confirmed = await db
+      .select({ uuid: profilesTable.uuid })
+      .from(profilesTable)
+      .where(and(eq(profilesTable.uuid, active), eq(profilesTable.project_uuid, resolved.hub)))
+      .limit(1);
+    if (confirmed.length > 0) {
+      return { ...resolved, profile: confirmed[0].uuid as HubProfile };
+    }
+  }
+
+  // No active profile recorded, or it has moved out of this Hub. Oldest first
+  // is then the stable choice — the same one the app creates by default.
   const rows = await db
     .select({ uuid: profilesTable.uuid })
     .from(profilesTable)

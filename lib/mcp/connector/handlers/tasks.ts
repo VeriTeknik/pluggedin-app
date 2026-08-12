@@ -65,7 +65,7 @@ export async function completeTask(
   params: Record<string, unknown>
 ): Promise<ToolResult> {
   const id = typeof params.id === 'string' ? params.id.trim() : '';
-  if (!id) return failure('id is required: pass a task id from pluggedin_list_tasks');
+  if (!id) return failure('id is required: pass a task id from pluggedin_list_notifications');
 
   const resolved = await requireHubProfile(identity, params.hub);
   if (!resolved.ok) return failure(resolved.message);
@@ -84,7 +84,7 @@ export async function removeTask(
   params: Record<string, unknown>
 ): Promise<ToolResult> {
   const id = typeof params.id === 'string' ? params.id.trim() : '';
-  if (!id) return failure('id is required: pass a task id from pluggedin_list_tasks');
+  if (!id) return failure('id is required: pass a task id from pluggedin_list_notifications');
 
   const resolved = await requireHubProfile(identity, params.hub);
   if (!resolved.ok) return failure(resolved.message);

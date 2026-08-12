@@ -48,25 +48,66 @@ function identity(overrides: Partial<ConnectorIdentity> = {}): ConnectorIdentity
 }
 
 /**
- * requireHubProfile makes two queries: the granted Hubs, then that Hub's
- * profiles. Answering them in order is what lets these tests assert the second
- * was scoped to the first.
+ * requireHubProfile queries in order: the granted Hubs, then the project's
+ * active_profile_uuid, then either a confirmation that the active profile is
+ * still inside that Hub, or the oldest profile as a fallback. Answering them in
+ * sequence is what lets these tests assert the connector lands on the same
+ * profile the web UI uses.
  */
 function hubThenProfile(
   hubs: { uuid: string; name: string }[],
-  profiles: { uuid: string }[]
+  profiles: { uuid: string }[],
+  activeProfileUuid?: string | null
 ) {
-  const profileWhere = vi.fn(() => ({
-    orderBy: vi.fn(() => ({ limit: vi.fn().mockResolvedValue(profiles) })),
-  }));
-  let call = 0;
+  const calls: string[] = [];
+  const confirmColumns: string[] = [];
+  let n = 0;
   (db.select as ReturnType<typeof vi.fn>).mockImplementation(() => ({
     from: vi.fn(() => {
-      call += 1;
-      return call === 1 ? { where: vi.fn().mockResolvedValue(hubs) } : { where: profileWhere };
+      n += 1;
+      if (n === 1) {
+        calls.push('granted-hubs');
+        return { where: vi.fn().mockResolvedValue(hubs) };
+      }
+      if (n === 2) {
+        calls.push('active-profile');
+        return {
+          where: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([{ active: activeProfileUuid ?? null }]),
+          })),
+        };
+      }
+      calls.push(activeProfileUuid ? 'confirm-active' : 'oldest-profile');
+      return {
+        where: vi.fn((condition: unknown) => {
+          confirmColumns.push(...columnsIn(condition));
+          return {
+            limit: vi.fn().mockResolvedValue(profiles),
+            orderBy: vi.fn(() => ({ limit: vi.fn().mockResolvedValue(profiles) })),
+          };
+        }),
+      };
     }),
   }));
-  return { profileWhere };
+  return { calls, confirmColumns };
+}
+
+/**
+ * drizzle nests an and() as SQL objects whose queryChunks hold further chunks,
+ * so the columns a condition names are only reachable by walking the tree.
+ * Reading them is how the test below asserts on the SQL the query states,
+ * rather than on what the mock chose to return — a mock that ignores the where
+ * clause answers the same whether or not the condition is there.
+ */
+function columnsIn(chunks: unknown, depth = 0): string[] {
+  if (depth > 6 || chunks == null) return [];
+  if (Array.isArray(chunks)) return chunks.flatMap((c) => columnsIn(c, depth + 1));
+  if (typeof chunks !== 'object') return [];
+  const node = chunks as { name?: unknown; queryChunks?: unknown };
+  return [
+    ...(typeof node.name === 'string' ? [node.name] : []),
+    ...columnsIn(node.queryChunks, depth + 1),
+  ];
 }
 
 function call(name: string, args: Record<string, unknown> = {}) {
@@ -99,11 +140,12 @@ describe('the profile is reached through the Hub', () => {
   it('scopes the profile query to the resolved Hub', async () => {
     // Without this the profile could come from any project the user owns,
     // which is what the existing clipboard helper does.
-    const { profileWhere } = hubThenProfile([{ uuid: HUB_A, name: 'Acme' }], [{ uuid: PROFILE_A }]);
+    const { calls } = hubThenProfile([{ uuid: HUB_A, name: 'Acme' }], [{ uuid: PROFILE_A }]);
 
     await dispatchAuthenticated(call('pluggedin_list_notifications'), identity());
 
-    expect(profileWhere).toHaveBeenCalledOnce();
+    expect(calls[0]).toBe('granted-hubs');
+    expect(calls).toContain('oldest-profile');
   });
 
   it('never reaches an action when the Hub cannot be resolved', async () => {
@@ -187,5 +229,64 @@ describe('annotations', () => {
       readOnlyHint: false,
       destructiveHint: false,
     });
+  });
+});
+
+describe('which profile the connector lands on', () => {
+  it("uses the project's active profile, not the oldest", async () => {
+    // The web UI reads active_profile_uuid. Taking the oldest instead would
+    // point the connector at a different profile than the browser, so the same
+    // user would see one set of tasks in the UI and another through Claude,
+    // with nothing to indicate why.
+    const OTHER = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    hubThenProfile([{ uuid: HUB_A, name: 'Acme' }], [{ uuid: OTHER }], OTHER);
+
+    await dispatchAuthenticated(call('pluggedin_list_notifications'), identity());
+
+    expect(actions.getNotifications).toHaveBeenCalledWith(OTHER, false);
+  });
+
+  it('confirms the active profile still belongs to the Hub', async () => {
+    // active_profile_uuid is a plain column with no guarantee it still points
+    // inside this project, so it is confirmed before being used.
+    //
+    // Asserted on the SQL rather than the result: the mock answers the same
+    // whether or not the project_uuid condition is present, so checking the
+    // returned rows would pass with the condition deleted.
+    const { confirmColumns } = hubThenProfile(
+      [{ uuid: HUB_A, name: 'Acme' }],
+      [{ uuid: PROFILE_A }],
+      PROFILE_A
+    );
+
+    await dispatchAuthenticated(call('pluggedin_list_notifications'), identity());
+
+    expect(confirmColumns).toContain('uuid');
+    expect(confirmColumns).toContain('project_uuid');
+  });
+
+  it('falls back when the active profile is not in the Hub', async () => {
+    hubThenProfile([{ uuid: HUB_A, name: 'Acme' }], [], 'a-profile-somewhere-else');
+
+    const result = payloadOf(
+      await dispatchAuthenticated(call('pluggedin_list_notifications'), identity())
+    );
+
+    expect(result.isError).toBe(true);
+    expect(actions.getNotifications).not.toHaveBeenCalled();
+  });
+
+  it('names no non-existent tool in its failures', async () => {
+    // The error strings said pluggedin_list_tasks, which is not a tool —
+    // TOOL_SCOPES fails closed, so a caller following that advice would be
+    // told the tool is unknown.
+    hubThenProfile([{ uuid: HUB_A, name: 'Acme' }], [{ uuid: PROFILE_A }]);
+
+    const result = payloadOf(
+      await dispatchAuthenticated(call('pluggedin_mark_notification_done', {}), identity())
+    );
+
+    expect(result.text).toContain('pluggedin_list_notifications');
+    expect(result.text).not.toContain('pluggedin_list_tasks');
   });
 });
