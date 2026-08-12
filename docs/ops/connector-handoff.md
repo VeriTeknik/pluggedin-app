@@ -26,7 +26,8 @@ Merged to `main`:
 Open:
 
 - **#194** — task tools and the `HubProfile` axis. Checks green, threads resolved.
-- **#197** — the two workspace-collapse survey scripts.
+- **#197** — the two workspace-collapse survey scripts, both run against
+  production, plus `workspace-promotion-plan.md`, which replaces the merge plan.
 
 The connector serves eight tools today: two Hub, three library, three task.
 
@@ -49,40 +50,54 @@ entirely.
 `tasks` shipped because `getNotifications(profileUuid, …)` takes the profile
 explicitly. That is the whole difference.
 
-The decision taken: **collapse Workspaces (profiles) into Hubs (projects)
-first**, so the question disappears rather than being worked around. Until that
-lands, do not wrap memory or clipboard.
+The decision taken: **remove the Workspace axis first**, so the question
+disappears rather than being worked around. Until that lands, do not wrap memory
+or clipboard.
 
 ## The workspace collapse
 
 Workspaces are already hidden from new users — `users.show_workspace_ui`
-defaults to false. The question is whether the concept can go entirely.
+defaults to false. The question was whether the concept can go entirely.
 
-Survey one has been run against production:
+**Read `docs/ops/workspace-promotion-plan.md` before doing anything here.** The
+approach changed on 2026-08-13, after both surveys had been run against
+production. It is no longer *merge the profiles inside a Hub*; it is *give each
+surviving profile its own Hub*. Every unique constraint that made the merge
+expensive is keyed on `profile_uuid`, and promotion does not change
+`profile_uuid` — so the 25 slug collisions never occur and none of the ~2.0k
+rows move. 24 empty secondary Workspaces get deleted, 39 get promoted, 49 users
+see any change at all.
 
-- **Collisions:** `mcp_servers.slug` 25 groups / 25 rows. Everything else zero —
-  including `clipboards.idx`, the one that would not have been a simple rename.
-- **Rows to move:** ~1.7k (`mcp_activity` 1431, `mcp_servers` 153,
-  `notifications` 89, `shared_mcp_servers` 6, `docs` 3).
-- **Scale:** 1238 users, 1340 projects, 53 multi-profile projects.
+What the surveys established, and what is still worth knowing:
 
-Two things about those numbers:
+- **Collisions under the old plan:** `mcp_servers.slug` 25 groups / 25 rows.
+  Everything else zero, including `clipboards.idx`, the one that would not have
+  been a simple rename. Moot under promotion; recorded because it is what the
+  scripts measure.
+- **Scale:** 1238 users, 1340 projects, 1403 profiles, 53 multi-profile
+  projects, 63 secondary Workspaces.
+- **Empty vs holding data: 24 / 39.** An earlier run said 26 / 37 and was
+  wrong — section 4 counted a hand-picked subset of tables. It now counts all 25
+  carrying `profile_uuid` and section 3 carries a guard that fails loudly if the
+  live schema has a table the script does not list. The list has drifted twice:
+  once picked by hand, once derived from `db/schema.ts`.
+- **No secondary Workspace has been written to in 94 days.** Newest row anywhere
+  in one is 2026-05-10; 2 inside 180 days, 19 inside a year. This is what makes
+  losing the Hub-level grouping acceptable.
 
-1. **The empty/holding-data split needs re-running.** Section 4 originally
-   counted a hand-picked subset of tables and reported Workspaces as empty that
-   were not. It now covers all 22 tables with a `profile_uuid` column, taken
-   from `information_schema`. The earlier "26 empty / 37 holding data" figure
-   overstates the empty side.
-2. **`users.last_login_at` is not an activity signal here.** It is populated for
-   68 of 1238 users. The `users_active_90d = 0` from section 1 means "login time
-   is not written", not "nobody uses Workspaces". `workspace-collapse-followup.sql`
-   asks the same question using data timestamps instead — run it.
+**`users.last_login_at` is not an activity signal here.** It is populated for 68
+of 1238 users. The `users_active_90d = 0` in section 1 means "login time is not
+written", not "nobody uses Workspaces". Use the follow-up script, which asks the
+same question from the data's own timestamps.
 
-**The slug collisions are not a pure rename.** `slug` is the tool-name prefix:
-tools are exposed as `{slug}__{tool}`. Renaming one renames every tool that
-server offers, so a user whose saved instructions call the old prefixed name
-would silently be calling a tool that no longer exists. The follow-up script
-tells you which side of each collision is dead; rename that one.
+**If the merge plan is ever revived, the slug collisions are not a pure rename.**
+`slug` is the tool-name prefix: tools are exposed as `{slug}__{tool}`. Renaming
+one renames every tool that server offers, so a user whose saved instructions
+call the old prefixed name would silently be calling a tool that no longer
+exists. The follow-up script says which side of each collision is dead. Measure
+that per server (`mcp_activity.server_uuid`), not per Workspace — attributing
+every call in a Workspace to every server in it marked 10 collisions contested
+when the real number is 7, and 17 of the 25 have never had either side called.
 
 ## Conventions this codebase now expects
 
@@ -101,7 +116,11 @@ supplied bearer token hid a routing fault. Coverage was never the problem.
 
 **Ask the database what exists.** Deriving a table list by grepping
 `db/schema.ts` produced tables with no such column and missed tables declared
-with double quotes. `information_schema` costs one query.
+with double quotes. `information_schema` costs one query. That list then drifted
+a second time — the schema-derived version was three tables short of production
+— so the survey now carries a guard that compares its own list against the live
+schema and prints anything missing. A hardcoded list is fine; a hardcoded list
+that cannot tell you it is stale is not.
 
 **Checking whether reviews are clear.** Do *not* filter comments on sentry's
 `*Resolved in <sha>*` prefix — that is not what GitHub means by an unresolved
@@ -151,7 +170,9 @@ comes back and the call looks like it worked.
 `requireHubProfile` prefers `projects.active_profile_uuid` — what the web UI
 reads — and confirms it still sits inside the granted Hub before using it.
 Taking the oldest profile instead meant the connector and the browser landed on
-different profiles.
+different profiles. Once the promotion plan lands this stops being a preference
+at all: one profile per Hub, enforced by a `UNIQUE` constraint on
+`profiles(project_uuid)`, so the lookup has exactly one answer.
 
 Hub handles are **not capabilities**. `pluggedin_open_hub` mints one because
 SEP-2567 left nowhere to keep "the currently selected Hub", but every call

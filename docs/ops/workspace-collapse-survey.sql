@@ -101,6 +101,34 @@ FROM (
 \echo 'These are the rows a merge has to move. A table reading 0 needs no'
 \echo 'thought at all.'
 
+-- This script names its tables explicitly, and that list has drifted twice:
+-- once when it was picked by hand, once when it was derived from db/schema.ts.
+-- The guard below asks the database instead. If it returns any rows, sections
+-- 3 and 4 are undercounting — add the table and re-run rather than reading the
+-- numbers, because the failure mode is a Workspace reported empty when it is
+-- not.
+\echo ''
+\echo 'Guard — any row here means this script''s table list is stale:'
+
+SELECT c.table_name AS table_missing_from_this_script
+FROM information_schema.columns c
+JOIN information_schema.tables t
+  ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+WHERE c.table_schema = 'public'
+  AND t.table_type = 'BASE TABLE'
+  AND c.column_name = 'profile_uuid'
+  AND c.table_name NOT IN (
+    'agents', 'audit_logs', 'clipboards', 'collective_feedback',
+    'custom_mcp_servers', 'docs', 'dream_consolidations', 'embedded_chats',
+    'fresh_memory', 'individuation_snapshots', 'log_retention_policies',
+    'log_settings', 'mcp_activity', 'mcp_oauth_sessions', 'mcp_servers',
+    'mcp_sessions', 'memory_ring', 'memory_sessions', 'notifications',
+    'playground_settings', 'server_installations', 'shared_collections',
+    'shared_mcp_servers', 'system_logs', 'user_server_favorites'
+  );
+
+\echo ''
+
 WITH primary_profile AS (
   SELECT DISTINCT ON (project_uuid) project_uuid, uuid
   FROM profiles ORDER BY project_uuid, created_at
@@ -110,16 +138,31 @@ secondary AS (
   LEFT JOIN primary_profile pp ON pp.uuid = pf.uuid
   WHERE pp.uuid IS NULL
 )
-SELECT 'mcp_servers' AS tbl, count(*) FROM mcp_servers            WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'docs',            count(*) FROM docs            WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'clipboards',      count(*) FROM clipboards      WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'notifications',   count(*) FROM notifications   WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'mcp_activity',    count(*) FROM mcp_activity    WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'agents',          count(*) FROM agents          WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'memory_ring',     count(*) FROM memory_ring     WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'fresh_memory',    count(*) FROM fresh_memory    WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'memory_sessions', count(*) FROM memory_sessions WHERE profile_uuid IN (SELECT uuid FROM secondary)
-UNION ALL SELECT 'shared_mcp_servers', count(*) FROM shared_mcp_servers WHERE profile_uuid IN (SELECT uuid FROM secondary)
+SELECT 'agents' AS tbl, count(*) FROM agents                      WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'audit_logs',       count(*) FROM audit_logs              WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'clipboards',       count(*) FROM clipboards              WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'collective_feedback', count(*) FROM collective_feedback  WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'custom_mcp_servers', count(*) FROM custom_mcp_servers    WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'docs',             count(*) FROM docs                    WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'dream_consolidations', count(*) FROM dream_consolidations WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'embedded_chats',   count(*) FROM embedded_chats          WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'fresh_memory',     count(*) FROM fresh_memory            WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'individuation_snapshots', count(*) FROM individuation_snapshots WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'log_retention_policies', count(*) FROM log_retention_policies   WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'log_settings',     count(*) FROM log_settings            WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'mcp_activity',     count(*) FROM mcp_activity            WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'mcp_oauth_sessions', count(*) FROM mcp_oauth_sessions    WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'mcp_servers',      count(*) FROM mcp_servers             WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'mcp_sessions',     count(*) FROM mcp_sessions            WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'memory_ring',      count(*) FROM memory_ring             WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'memory_sessions',  count(*) FROM memory_sessions         WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'notifications',    count(*) FROM notifications           WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'playground_settings', count(*) FROM playground_settings  WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'server_installations', count(*) FROM server_installations WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'shared_collections', count(*) FROM shared_collections    WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'shared_mcp_servers', count(*) FROM shared_mcp_servers    WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'system_logs',      count(*) FROM system_logs             WHERE profile_uuid IN (SELECT uuid FROM secondary)
+UNION ALL SELECT 'user_server_favorites', count(*) FROM user_server_favorites WHERE profile_uuid IN (SELECT uuid FROM secondary)
 ORDER BY 2 DESC;
 
 \echo ''
@@ -129,11 +172,13 @@ ORDER BY 2 DESC;
 \echo 'A secondary Workspace with no rows anywhere is a leftover, not a user'
 \echo 'decision — those can be dropped rather than merged.'
 \echo ''
-\echo 'NOTE: earlier versions of this hand-picked a handful of tables and so'
-\echo 'reported Workspaces as empty that were not — mcp_activity, the largest'
-\echo 'of them, was among the omissions. If you ran one of those, the empty'
-\echo 'side of the split is overstated. This counts all 22 tables carrying'
-\echo 'profile_uuid, taken from information_schema rather than chosen by hand.'
+\echo 'NOTE: earlier versions of this counted fewer tables and so reported'
+\echo 'Workspaces as empty that were not. Two corrections have been needed:'
+\echo 'a hand-picked list of 10 omitted mcp_activity, the largest of them, and'
+\echo 'a 22-table list taken from db/schema.ts omitted log_settings,'
+\echo 'system_logs and user_server_favorites. This counts all 25 tables'
+\echo 'carrying profile_uuid; section 3''s guard verifies that against the'
+\echo 'live schema rather than trusting this comment.'
 
 WITH primary_profile AS (
   SELECT DISTINCT ON (project_uuid) project_uuid, uuid
@@ -172,6 +217,9 @@ FROM (
   + (SELECT count(*) FROM playground_settings     WHERE profile_uuid = s.uuid)
   + (SELECT count(*) FROM server_installations    WHERE profile_uuid = s.uuid)
   + (SELECT count(*) FROM shared_collections      WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid) AS used
+  + (SELECT count(*) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM log_settings            WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM system_logs             WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM user_server_favorites   WHERE profile_uuid = s.uuid) AS used
   FROM secondary s
 ) t;

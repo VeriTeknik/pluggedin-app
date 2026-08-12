@@ -12,7 +12,7 @@
 --
 -- Two things are still open after survey one:
 --
---   1. Of the 37 secondary Workspaces holding data, which are live and which
+--   1. Of the 39 secondary Workspaces holding data, which are live and which
 --      are fossils? A fossil can be merged without anyone noticing.
 --
 --   2. In each of the 25 slug collisions, which side is dead? This matters
@@ -154,6 +154,10 @@ LIMIT 50;
 \echo 'slug is the tool-name prefix, so renaming one renames every tool that'
 \echo 'server exposes. Rename the side with no recent activity and nobody'
 \echo 'notices; rename the other and someone''s saved instructions break.'
+\echo ''
+\echo 'Liveness is measured per server (mcp_activity.server_uuid), not per'
+\echo 'Workspace. Attributing every call in a Workspace to every server in it'
+\echo 'marks silent servers live and overstates the contested cases.'
 
 WITH colliding AS (
   SELECT pf.project_uuid, s.slug
@@ -166,12 +170,12 @@ SELECT
   s.uuid                                                              AS server_uuid,
   pf.name                                                             AS workspace,
   s.created_at::date                                                  AS server_created,
-  (SELECT count(*) FROM mcp_activity a WHERE a.profile_uuid = pf.uuid) AS profile_activity_rows,
-  (SELECT max(a.created_at)::date FROM mcp_activity a WHERE a.profile_uuid = pf.uuid) AS last_activity
+  (SELECT count(*) FROM mcp_activity a WHERE a.server_uuid = s.uuid)  AS server_activity_rows,
+  (SELECT max(a.created_at)::date FROM mcp_activity a WHERE a.server_uuid = s.uuid) AS last_used
 FROM colliding c
 JOIN profiles pf     ON pf.project_uuid = c.project_uuid
 JOIN mcp_servers s   ON s.profile_uuid = pf.uuid AND s.slug = c.slug
-ORDER BY c.project_uuid, c.slug, last_activity DESC NULLS LAST;
+ORDER BY c.project_uuid, c.slug, last_used DESC NULLS LAST;
 
 \echo ''
 \echo 'Summary: collisions where exactly one side shows any activity are the'
@@ -184,8 +188,8 @@ WITH colliding AS (
   GROUP BY pf.project_uuid, s.slug HAVING count(*) > 1
 ),
 sides AS (
-  SELECT c.project_uuid, c.slug, pf.uuid AS profile_uuid,
-    (SELECT count(*) FROM mcp_activity a WHERE a.profile_uuid = pf.uuid) AS acts
+  SELECT c.project_uuid, c.slug, s.uuid AS server_uuid,
+    (SELECT count(*) FROM mcp_activity a WHERE a.server_uuid = s.uuid) AS acts
   FROM colliding c
   JOIN profiles pf   ON pf.project_uuid = c.project_uuid
   JOIN mcp_servers s ON s.profile_uuid = pf.uuid AND s.slug = c.slug
