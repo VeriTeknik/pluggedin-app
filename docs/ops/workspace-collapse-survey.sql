@@ -49,7 +49,7 @@ LIMIT 50;
 \echo 'inside one project became one. Zero everywhere means B is mechanical.'
 
 -- mcp_servers (profile_uuid, slug)
-SELECT 'mcp_servers.slug' AS constraint_, count(*) AS colliding_groups, sum(n) - count(*) AS rows_to_rename
+SELECT 'mcp_servers.slug' AS constraint_, count(*) AS colliding_groups, COALESCE(sum(n), 0) - count(*) AS rows_to_rename
 FROM (
   SELECT pf.project_uuid, s.slug, count(*) AS n
   FROM mcp_servers s JOIN profiles pf ON pf.uuid = s.profile_uuid
@@ -58,7 +58,7 @@ FROM (
 ) t;
 
 -- clipboards (profile_uuid, name)
-SELECT 'clipboards.name' AS constraint_, count(*) AS colliding_groups, sum(n) - count(*) AS rows_to_rename
+SELECT 'clipboards.name' AS constraint_, count(*) AS colliding_groups, COALESCE(sum(n), 0) - count(*) AS rows_to_rename
 FROM (
   SELECT pf.project_uuid, c.name, count(*) AS n
   FROM clipboards c JOIN profiles pf ON pf.uuid = c.profile_uuid
@@ -69,7 +69,7 @@ FROM (
 -- clipboards (profile_uuid, idx) — positional push/pop entries. Renumbering
 -- these changes what pop() returns, so a collision here is a behaviour
 -- decision, not a rename.
-SELECT 'clipboards.idx' AS constraint_, count(*) AS colliding_groups, sum(n) - count(*) AS rows_to_renumber
+SELECT 'clipboards.idx' AS constraint_, count(*) AS colliding_groups, COALESCE(sum(n), 0) - count(*) AS rows_to_renumber
 FROM (
   SELECT pf.project_uuid, c.idx, count(*) AS n
   FROM clipboards c JOIN profiles pf ON pf.uuid = c.profile_uuid
@@ -78,7 +78,7 @@ FROM (
 ) t;
 
 -- collective_feedback (pattern_uuid, profile_uuid)
-SELECT 'collective_feedback' AS constraint_, count(*) AS colliding_groups, sum(n) - count(*) AS rows_to_drop_or_merge
+SELECT 'collective_feedback' AS constraint_, count(*) AS colliding_groups, COALESCE(sum(n), 0) - count(*) AS rows_to_drop_or_merge
 FROM (
   SELECT pf.project_uuid, f.pattern_uuid, count(*) AS n
   FROM collective_feedback f JOIN profiles pf ON pf.uuid = f.profile_uuid
@@ -86,7 +86,7 @@ FROM (
 ) t;
 
 -- individuation_snapshots (profile_uuid, snapshot_date)
-SELECT 'individuation_snapshots' AS constraint_, count(*) AS colliding_groups, sum(n) - count(*) AS rows_to_merge
+SELECT 'individuation_snapshots' AS constraint_, count(*) AS colliding_groups, COALESCE(sum(n), 0) - count(*) AS rows_to_merge
 FROM (
   SELECT pf.project_uuid, s.snapshot_date, count(*) AS n
   FROM individuation_snapshots s JOIN profiles pf ON pf.uuid = s.profile_uuid
@@ -128,6 +128,12 @@ ORDER BY 2 DESC;
 \echo '=============================================='
 \echo 'A secondary Workspace with no rows anywhere is a leftover, not a user'
 \echo 'decision — those can be dropped rather than merged.'
+\echo ''
+\echo 'NOTE: an earlier version of this counted only five tables and omitted'
+\echo 'mcp_activity, which section 3 shows is the largest by far. A Workspace'
+\echo 'whose only trace was activity logging was reported as completely empty.'
+\echo 'If you ran that version, the empty/holding-data split is understated on'
+\echo 'the holding-data side. This counts every table section 3 lists.'
 
 WITH primary_profile AS (
   SELECT DISTINCT ON (project_uuid) project_uuid, uuid
@@ -145,10 +151,15 @@ SELECT
   count(*) FILTER (WHERE used > 0)                                AS holding_data
 FROM (
   SELECT s.uuid,
-    (SELECT count(*) FROM mcp_servers  WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM docs         WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM clipboards   WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM notifications WHERE profile_uuid = s.uuid)
-  + (SELECT count(*) FROM agents       WHERE profile_uuid = s.uuid) AS used
+    (SELECT count(*) FROM mcp_servers        WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM docs               WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM clipboards         WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM notifications      WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM agents             WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM mcp_activity       WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM shared_mcp_servers WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM memory_ring        WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM fresh_memory       WHERE profile_uuid = s.uuid)
+  + (SELECT count(*) FROM memory_sessions    WHERE profile_uuid = s.uuid) AS used
   FROM secondary s
 ) t;

@@ -42,10 +42,14 @@ secondary AS (
 last_seen AS (
   SELECT s.uuid, s.name,
     GREATEST(
-      COALESCE((SELECT max(created_at) FROM mcp_activity  WHERE profile_uuid = s.uuid), 'epoch'),
-      COALESCE((SELECT max(created_at) FROM mcp_servers   WHERE profile_uuid = s.uuid), 'epoch'),
-      COALESCE((SELECT max(created_at) FROM notifications WHERE profile_uuid = s.uuid), 'epoch'),
-      COALESCE((SELECT max(created_at) FROM docs          WHERE profile_uuid = s.uuid), 'epoch')
+      COALESCE((SELECT max(created_at) FROM mcp_activity       WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM mcp_servers        WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM notifications      WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM docs               WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM clipboards         WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM agents             WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM shared_mcp_servers WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM memory_sessions    WHERE profile_uuid = s.uuid), 'epoch')
     ) AS newest_row
   FROM secondary s
 )
@@ -78,17 +82,25 @@ SELECT
   (SELECT count(*) FROM docs          WHERE profile_uuid = s.uuid)      AS docs,
   (SELECT count(*) FROM notifications WHERE profile_uuid = s.uuid)      AS tasks,
   GREATEST(
-    COALESCE((SELECT max(created_at) FROM mcp_activity  WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM mcp_servers   WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM notifications WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM docs          WHERE profile_uuid = s.uuid), 'epoch')
+    COALESCE((SELECT max(created_at) FROM mcp_activity       WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM mcp_servers        WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM notifications      WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM docs               WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM clipboards         WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM agents             WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM shared_mcp_servers WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM memory_sessions    WHERE profile_uuid = s.uuid), 'epoch')
   )                                                                     AS newest_row
 FROM secondary s
 WHERE GREATEST(
-    COALESCE((SELECT max(created_at) FROM mcp_activity  WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM mcp_servers   WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM notifications WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM docs          WHERE profile_uuid = s.uuid), 'epoch')
+    COALESCE((SELECT max(created_at) FROM mcp_activity       WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM mcp_servers        WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM notifications      WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM docs               WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM clipboards         WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM agents             WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM shared_mcp_servers WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM memory_sessions    WHERE profile_uuid = s.uuid), 'epoch')
   ) > now() - interval '365 days'
 ORDER BY newest_row DESC
 LIMIT 50;
