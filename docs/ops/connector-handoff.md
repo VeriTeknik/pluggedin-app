@@ -27,7 +27,10 @@ Open:
 
 - **#194** — task tools and the `HubProfile` axis. Checks green, threads resolved.
 - **#197** — the two workspace-collapse survey scripts, both run against
-  production, plus `workspace-promotion-plan.md`, which replaces the merge plan.
+  production.
+- **#198** — the promotion itself: migration, script, 26 integration tests, and
+  `docs/ops/workspace-promotion-plan.md`. Rehearsed on a restored copy of
+  production and rolled back to a byte-identical fingerprint.
 
 The connector serves eight tools today: two Hub, three library, three task.
 
@@ -59,9 +62,9 @@ or clipboard.
 Workspaces are already hidden from new users — `users.show_workspace_ui`
 defaults to false. The question was whether the concept can go entirely.
 
-**Read `docs/ops/workspace-promotion-plan.md` before doing anything here.** The
-approach changed on 2026-08-13, after both surveys had been run against
-production. It is no longer *merge the profiles inside a Hub*; it is *give each
+**Read `docs/ops/workspace-promotion-plan.md` (in #198) before doing anything
+here.** The approach changed on 2026-08-13, after both surveys had been run
+against production, and #198 implements it. It is no longer *merge the profiles inside a Hub*; it is *give each
 surviving profile its own Hub*. Every unique constraint that made the merge
 expensive is keyed on `profile_uuid`, and promotion does not change
 `profile_uuid` — so the 25 slug collisions never occur and none of the ~2.0k
