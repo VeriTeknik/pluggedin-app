@@ -708,6 +708,20 @@
       "when": 1785605891905,
       "tag": "0100_known_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1786645940757,
+      "tag": "0101_workspace_promotions_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1786645942889,
+      "tag": "0102_one_workspace_per_hub",
+      "breakpoints": true
     }
   ]
 }
