@@ -138,9 +138,23 @@ gh api graphql -f query='{repository(owner:"VeriTeknik",name:"pluggedin-app"){
 Reporting a PR clean while it sat BLOCKED with three live threads happened here
 more than once.
 
-**A green check does not mean a review happened.** Sourcery's check reports
-SUCCESS when it posts a rate-limit message and stops. Read the review body
-before claiming two reviewers agreed.
+**A green check does not mean a review happened.** Sourcery stops reviewing a
+PR after five automatic re-reviews and reports the check as SKIPPED with
+"Auto re-review limit reached" — which rolls up green. #197 sat in exactly
+that state: every check passing, and the one commit that mattered never
+looked at. Commenting `@sourcery-ai review` requests a fresh pass.
+
+Read what the bot actually said, not the tick:
+
+```bash
+gh api repos/VeriTeknik/pluggedin-app/commits/<sha>/check-runs \
+  --jq '.check_runs[] | select(.name | test("Sourcery|Seer"))
+        | {name, conclusion, title: .output.title, summary: .output.summary}'
+```
+
+Seer names the commit it reviewed in its summary, so it can be checked against
+the head SHA. A summary that reports on an older commit is the same trap wearing
+a different hat.
 
 **Migrations.** `pnpm db:generate` then `pnpm db:migrate`, never hand-applied.
 On the box, `pnpm` is deliberately absent from the runtime image:
