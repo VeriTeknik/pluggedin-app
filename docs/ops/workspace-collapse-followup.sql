@@ -26,6 +26,28 @@
 \echo '=================================================='
 \echo '1. Are the non-empty secondary Workspaces alive?'
 \echo '=================================================='
+\echo ''
+\echo 'Guard — any row here means this script is missing a table, so a'
+\echo 'Workspace whose only recent activity lives in it reads as a fossil:'
+
+SELECT c.table_name AS table_missing_from_this_script
+FROM information_schema.columns c
+JOIN information_schema.tables t
+  ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+WHERE c.table_schema = 'public'
+  AND t.table_type = 'BASE TABLE'
+  AND c.column_name = 'profile_uuid'
+  AND c.table_name NOT IN (
+    'agents', 'audit_logs', 'clipboards', 'collective_feedback',
+    'custom_mcp_servers', 'docs', 'dream_consolidations', 'embedded_chats',
+    'fresh_memory', 'individuation_snapshots', 'log_retention_policies',
+    'log_settings', 'mcp_activity', 'mcp_oauth_sessions', 'mcp_servers',
+    'mcp_sessions', 'memory_ring', 'memory_sessions', 'notifications',
+    'playground_settings', 'server_installations', 'shared_collections',
+    'shared_mcp_servers', 'system_logs', 'user_server_favorites',
+    'workspace_promotions'
+  );
+\echo ''
 \echo 'Most recent activity per secondary Workspace, from data rather than'
 \echo 'logins. A Workspace whose newest row is old is a fossil.'
 
@@ -63,7 +85,10 @@ last_seen AS (
       COALESCE((SELECT max(created_at) FROM playground_settings     WHERE profile_uuid = s.uuid), 'epoch'),
       COALESCE((SELECT max(created_at) FROM server_installations    WHERE profile_uuid = s.uuid), 'epoch'),
       COALESCE((SELECT max(created_at) FROM shared_collections      WHERE profile_uuid = s.uuid), 'epoch'),
-      COALESCE((SELECT max(created_at) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid), 'epoch')
+      COALESCE((SELECT max(created_at) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(updated_at) FROM log_settings            WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM system_logs             WHERE profile_uuid = s.uuid), 'epoch'),
+      COALESCE((SELECT max(created_at) FROM user_server_favorites   WHERE profile_uuid = s.uuid), 'epoch')
     ) AS newest_row
   FROM secondary s
 )
@@ -117,7 +142,10 @@ SELECT
     COALESCE((SELECT max(created_at) FROM playground_settings     WHERE profile_uuid = s.uuid), 'epoch'),
     COALESCE((SELECT max(created_at) FROM server_installations    WHERE profile_uuid = s.uuid), 'epoch'),
     COALESCE((SELECT max(created_at) FROM shared_collections      WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid), 'epoch')
+    COALESCE((SELECT max(created_at) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(updated_at) FROM log_settings            WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM system_logs             WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM user_server_favorites   WHERE profile_uuid = s.uuid), 'epoch')
   )                                                                     AS newest_row
 FROM secondary s
 WHERE GREATEST(
@@ -142,7 +170,10 @@ WHERE GREATEST(
     COALESCE((SELECT max(created_at) FROM playground_settings     WHERE profile_uuid = s.uuid), 'epoch'),
     COALESCE((SELECT max(created_at) FROM server_installations    WHERE profile_uuid = s.uuid), 'epoch'),
     COALESCE((SELECT max(created_at) FROM shared_collections      WHERE profile_uuid = s.uuid), 'epoch'),
-    COALESCE((SELECT max(created_at) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid), 'epoch')
+    COALESCE((SELECT max(created_at) FROM shared_mcp_servers      WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(updated_at) FROM log_settings            WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM system_logs             WHERE profile_uuid = s.uuid), 'epoch'),
+    COALESCE((SELECT max(created_at) FROM user_server_favorites   WHERE profile_uuid = s.uuid), 'epoch')
   ) > now() - interval '365 days'
 ORDER BY newest_row DESC
 LIMIT 50;
