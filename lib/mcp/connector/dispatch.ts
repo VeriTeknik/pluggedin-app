@@ -17,6 +17,7 @@ import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
 import { listHubs, openHub } from './handlers/hubs';
 import { askKnowledge, getDocument, listDocuments } from './handlers/library';
+import { completeTask, listTasks, removeTask } from './handlers/tasks';
 import type { ToolResult } from './tool-result';
 import {
   buildDiscoverResult,
@@ -51,6 +52,9 @@ const TOOL_HANDLERS: Record<
   pluggedin_list_documents: (identity, params) => listDocuments(identity, params),
   pluggedin_get_document: (identity, params) => getDocument(identity, params),
   pluggedin_ask_knowledge_base: (identity, params) => askKnowledge(identity, params),
+  pluggedin_list_notifications: (identity, params) => listTasks(identity, params),
+  pluggedin_mark_notification_done: (identity, params) => completeTask(identity, params),
+  pluggedin_delete_notification: (identity, params) => removeTask(identity, params),
 };
 
 export async function dispatchAuthenticated(

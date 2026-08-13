@@ -115,6 +115,69 @@ export const TOOLS: readonly ToolDefinition[] = Object.freeze([
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false },
   },
+  {
+    name: 'pluggedin_list_notifications',
+    title: 'List tasks and notifications',
+    description:
+      'List the tasks and notifications in a Plugged.in Hub. Set onlyOpen to see just the ones still needing attention. Returns each with an id for the other task tools.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        onlyOpen: { type: 'boolean', description: 'Only those not yet read.' },
+        hub: {
+          type: 'string',
+          description:
+            'Optional. Hub name or handle from pluggedin_list_hubs. Defaults to the open Hub, or the only Hub if there is one.',
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: 'pluggedin_mark_notification_done',
+    title: 'Mark a task done',
+    description:
+      'Mark one task in a Plugged.in Hub as completed, by the id from pluggedin_list_notifications.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Task id.' },
+        hub: {
+          type: 'string',
+          description:
+            'Optional. Hub name or handle from pluggedin_list_hubs. Defaults to the open Hub, or the only Hub if there is one.',
+        },
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+    // Changes state but loses nothing. Not idempotent: the underlying action
+    // toggles, so calling it twice puts the task back.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  },
+  {
+    name: 'pluggedin_delete_notification',
+    title: 'Delete a task',
+    description: 'Permanently delete one task from a Plugged.in Hub. This cannot be undone.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Task id.' },
+        hub: {
+          type: 'string',
+          description:
+            'Optional. Hub name or handle from pluggedin_list_hubs. Defaults to the open Hub, or the only Hub if there is one.',
+        },
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+    // The only destructive tool in the surface so far, and marked as such:
+    // Anthropic's directory rules require the hint, and a model treats a
+    // destructive tool differently.
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+  },
 ]);
 
 /** Tools whose required scope the caller holds. */
