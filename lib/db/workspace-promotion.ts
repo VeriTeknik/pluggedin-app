@@ -312,16 +312,17 @@ export async function rollbackWorkspacePromotion(db: Db): Promise<RollbackResult
       profile_snapshot: Record<string, unknown>;
     }[]) {
       if (row.action === 'deleted') {
-        const snapshot = row.profile_snapshot;
+        // Rebuilt from the whole snapshot rather than from a list of columns.
+        // A list works right up until someone adds a column to profiles, at
+        // which point the restore quietly stops being verbatim — the same drift
+        // that has already cost this migration three corrections elsewhere.
+        // jsonb_populate_record takes the row shape from the table itself, so
+        // there is no list to fall out of date. The snapshot is a SELECT * of
+        // the row as it stood, including its original project_uuid.
         await tx.execute(sql`
-          INSERT INTO profiles (uuid, name, project_uuid, created_at, language, enabled_capabilities)
-          VALUES (
-            ${row.profile_uuid},
-            ${snapshot.name as string},
-            ${row.from_project_uuid},
-            ${snapshot.created_at as string},
-            ${(snapshot.language as string) ?? null},
-            ${(snapshot.enabled_capabilities as string[]) ?? []}
+          INSERT INTO profiles
+          SELECT * FROM jsonb_populate_record(
+            NULL::profiles, ${JSON.stringify(row.profile_snapshot)}::jsonb
           )
           ON CONFLICT (uuid) DO NOTHING
         `);

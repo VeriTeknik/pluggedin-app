@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -35,6 +37,7 @@ describeIfDb('workspace promotion', () => {
   let NON_USER_DATA_TABLES: readonly string[];
   let planWorkspacePromotion: typeof import('@/lib/db/workspace-promotion').planWorkspacePromotion;
   let deleteIfStillEmpty: typeof import('@/lib/db/workspace-promotion').deleteIfStillEmpty;
+  let ONE_WORKSPACE_PER_HUB_CONSTRAINT: string;
   let verifyOneWorkspacePerHub: typeof import('@/lib/db/workspace-promotion').verifyOneWorkspacePerHub;
   let promoteWorkspacesToHubs: typeof import('@/lib/db/workspace-promotion').promoteWorkspacesToHubs;
   let enforceOneWorkspacePerHub: typeof import('@/lib/db/workspace-promotion').enforceOneWorkspacePerHub;
@@ -47,6 +50,7 @@ describeIfDb('workspace promotion', () => {
       NON_USER_DATA_TABLES,
       planWorkspacePromotion,
       deleteIfStillEmpty,
+      ONE_WORKSPACE_PER_HUB_CONSTRAINT,
       verifyOneWorkspacePerHub,
       promoteWorkspacesToHubs,
       enforceOneWorkspacePerHub,
@@ -68,10 +72,17 @@ describeIfDb('workspace promotion', () => {
     await db.execute(sql`TRUNCATE users CASCADE`);
     await db.execute(sql`TRUNCATE workspace_promotions`);
     // The invariant is added by a later step, so tests that build pre-migration
-    // state — several Workspaces under one Hub — need it absent.
-    await db.execute(
-      sql`ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_project_uuid_unique`
-    );
+    // state — several Workspaces under one Hub — need it absent. Dropped by
+    // shape rather than by name: a test that renames the constant would
+    // otherwise leave a stray constraint behind and every later test would fail
+    // for a reason that has nothing to do with what it asserts.
+    const { rows: stray } = await db.execute(sql`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'profiles'::regclass AND contype = 'u'
+    `);
+    for (const { conname } of stray as { conname: string }[]) {
+      await db.execute(sql`ALTER TABLE profiles DROP CONSTRAINT ${sql.identifier(conname)}`);
+    }
   });
 
   /** A user with no projects. Each test gets its own so they cannot interfere. */
@@ -478,6 +489,61 @@ describeIfDb('workspace promotion', () => {
       });
     });
 
+    /**
+     * The first version listed the columns it restored by hand. That is the
+     * same shape as the table list that has already drifted three times: it is
+     * correct today and silently stops being correct the moment someone adds a
+     * column to profiles. Asserting the whole row means the test fails then,
+     * rather than the restore quietly losing a field.
+     */
+    it('brings a deleted Workspace back verbatim, every column', async () => {
+      const userId = await makeUser();
+      const { projectUuid } = await makeHub(userId, 'Hub');
+      const leftover = await addWorkspace(projectUuid, 'Leftover');
+      // Non-default values, so a restore that fell back to column defaults
+      // would show up rather than coincidentally matching.
+      await db.execute(sql`
+        UPDATE profiles
+        SET language = 'tr', enabled_capabilities = '{TOOLS_MANAGEMENT}'::profile_capability[]
+        WHERE uuid = ${leftover}
+      `);
+      const before = (await db.execute(sql`SELECT * FROM profiles WHERE uuid = ${leftover}`)).rows[0];
+
+      await promoteWorkspacesToHubs(db);
+      expect(await profileRow(leftover)).toBeUndefined();
+      await rollbackWorkspacePromotion(db);
+
+      const after = (await db.execute(sql`SELECT * FROM profiles WHERE uuid = ${leftover}`)).rows[0];
+      expect(after).toEqual(before);
+    });
+
+    /**
+     * The concern this answers is not today's columns, it is tomorrow's. A
+     * restore that names its columns passes every test written against the
+     * current schema and starts losing data the day someone adds one — silently,
+     * because both the before and after rows would carry the new column's
+     * default. So the column is added here, for real, and has to survive.
+     */
+    it('restores a column that did not exist when this code was written', async () => {
+      await db.execute(sql`ALTER TABLE profiles ADD COLUMN nickname text`);
+      try {
+        const userId = await makeUser();
+        const { projectUuid } = await makeHub(userId, 'Hub');
+        const leftover = await addWorkspace(projectUuid, 'Leftover');
+        await db.execute(sql`UPDATE profiles SET nickname = 'kept' WHERE uuid = ${leftover}`);
+
+        await promoteWorkspacesToHubs(db);
+        await rollbackWorkspacePromotion(db);
+
+        const { rows } = await db.execute(
+          sql`SELECT nickname FROM profiles WHERE uuid = ${leftover}`
+        );
+        expect((rows[0] as { nickname: string | null }).nickname).toBe('kept');
+      } finally {
+        await db.execute(sql`ALTER TABLE profiles DROP COLUMN IF EXISTS nickname`);
+      }
+    });
+
     it('restores the docs it repointed', async () => {
       const userId = await makeUser();
       const { projectUuid } = await makeHub(userId, 'Hub');
@@ -604,6 +670,41 @@ describeIfDb('workspace promotion', () => {
       `);
 
       expect(await deleteIfStillEmpty(db, workspace)).toBe(false);
+    });
+  });
+
+  /**
+   * The constraint name is written in three places that cannot import from each
+   * other: db/schema.ts, this module's constant, and the migration SQL, which is
+   * a frozen historical record by design. Centralising it is therefore not
+   * available; noticing when they diverge is. Renaming one and not the others
+   * would leave enforceOneWorkspacePerHub adding a second constraint under a
+   * different name, and --verify reporting an invariant that is not the one the
+   * schema declares.
+   */
+  describe('the name of the invariant', () => {
+    it('is the same string in the schema, the migration and this module', async () => {
+      const [schemaSource, migrationSource] = await Promise.all([
+        readFile(join(process.cwd(), 'db/schema.ts'), 'utf8'),
+        readFile(join(process.cwd(), 'drizzle/0102_one_workspace_per_hub.sql'), 'utf8'),
+      ]);
+
+      expect(schemaSource).toContain(`unique('${ONE_WORKSPACE_PER_HUB_CONSTRAINT}')`);
+      expect(migrationSource).toContain(`ADD CONSTRAINT "${ONE_WORKSPACE_PER_HUB_CONSTRAINT}"`);
+    });
+
+    it('is the name the database actually ends up with', async () => {
+      const userId = await makeUser();
+      await makeHub(userId, 'Hub');
+
+      await enforceOneWorkspacePerHub(db);
+
+      const { rows } = await db.execute(sql`
+        SELECT conname FROM pg_constraint WHERE conrelid = 'profiles'::regclass AND contype = 'u'
+      `);
+      expect((rows as { conname: string }[]).map((r) => r.conname)).toEqual([
+        ONE_WORKSPACE_PER_HUB_CONSTRAINT,
+      ]);
     });
   });
 
