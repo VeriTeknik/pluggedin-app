@@ -63,7 +63,6 @@ import { safeLocalStorage } from '@/lib/storage-utils';
 import { Code } from '@/types/code';
 
 import { NotificationBell } from './notification-bell';
-import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
 
@@ -184,7 +183,6 @@ export default function SidebarLayout({
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
               <ProjectSwitcher />
-              <ProfileSwitcher />
             </div>
           </SidebarHeader>
           <SidebarContent>

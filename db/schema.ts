@@ -187,6 +187,17 @@ export const users = pgTable('users', {
   two_fa_secret: text('two_fa_secret'),
   two_fa_backup_codes: text('two_fa_backup_codes'),
   // Workspace UI visibility flag for gradual deprecation
+  /**
+   * No longer read by anything: the Workspaces UI is gone and every Hub holds
+   * exactly one Workspace, enforced by profiles_project_uuid_unique.
+   *
+   * Kept rather than dropped because it is the companion to the promotion's
+   * rollback — undoing that restores several Workspaces under one Hub, and the
+   * users who had them would need this back to reach them. Drop it once the
+   * promotion is considered final and the rollback path is retired.
+   * The 70 users who had it set are recorded in
+   * /home/pluggedin/backups/users-with-workspace-ui-20260814.txt on the box.
+   */
   show_workspace_ui: boolean('show_workspace_ui').default(false).notNull(),
 },
   (table) => ({

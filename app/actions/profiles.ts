@@ -8,33 +8,13 @@ import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
-import { requireWorkspaceUI,withAuth, withProfileAuth, withProjectAuth } from '@/lib/auth-helpers';
+import { withAuth, withProfileAuth, withProjectAuth } from '@/lib/auth-helpers';
 import { Profile } from '@/types/profile';
 
 // Validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
 const nameSchema = z.string().min(1).max(100);
 
-export async function createProfile(currentProjectUuid: string, name: string) {
-  // Validate inputs
-  const validatedProjectUuid = uuidSchema.parse(currentProjectUuid);
-  const validatedName = nameSchema.parse(name);
-
-  // First check if workspace UI is enabled
-  await requireWorkspaceUI();
-
-  return withProjectAuth(validatedProjectUuid, async (session, project) => {
-    const profile = await db
-      .insert(profilesTable)
-      .values({
-        name: validatedName,
-        project_uuid: validatedProjectUuid,
-      })
-      .returning();
-
-    return profile[0];
-  });
-}
 
 export async function getProfile(profileUuid: string) {
   const profile = await db
@@ -215,28 +195,6 @@ export async function setProfileActive(
   });
 }
 
-export async function updateProfileName(profileUuid: string, newName: string) {
-  // Check if user has workspace UI enabled
-  const session = await requireWorkspaceUI();
-
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
-
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
-  }
-
-  const updatedProfile = await db
-    .update(profilesTable)
-    .set({ name: newName })
-    .where(eq(profilesTable.uuid, profileUuid))
-    .returning();
-
-  return updatedProfile[0];
-}
 
 export async function updateProfile(profileUuid: string, data: Partial<Profile>) {
   // Validate input
@@ -254,31 +212,6 @@ export async function updateProfile(profileUuid: string, data: Partial<Profile>)
   });
 }
 
-export async function deleteProfile(profileUuid: string) {
-  // Check if user has workspace UI enabled
-  const session = await requireWorkspaceUI();
-
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
-
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
-  }
-
-  // Check if this is the last profile
-  const profileCount = await db.select().from(profilesTable);
-
-  if (profileCount.length === 1) {
-    throw new Error('Cannot delete the last profile');
-  }
-
-  await db.delete(profilesTable).where(eq(profilesTable.uuid, profileUuid));
-
-  return { success: true };
-}
 
 export async function setActiveProfile(profileUuid: string) {
   const profile = await db

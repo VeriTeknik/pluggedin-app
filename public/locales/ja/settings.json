@@ -144,20 +144,6 @@
       "deleteWarning": "プロジェクトを削除すると元に戻すことはできません。注意してください。",
       "deleteButton": "プロジェクトを削除"
     },
-    "workspace": {
-      "title": "現在のワークスペース",
-      "description": "現在のワークスペース設定を管理します",
-      "loading": "プロフィールを読み込み中...",
-      "namePlaceholder": "プロフィール名",
-      "updateSuccess": "プロフィール名が正常に更新されました",
-      "updateError": "プロフィール名の更新に失敗しました",
-      "deleteConfirm": "このプロフィールを削除してもよろしいですか？この操作は元に戻せません。",
-      "deleteSuccess": "プロフィールが正常に削除されました",
-      "deleteError": "ワークスペースの削除に失敗しました",
-      "dangerZone": "危険ゾーン",
-      "deleteWarning": "ワークスペースを削除すると元に戻すことはできません。注意してください。",
-      "deleteButton": "ワークスペースを削除"
-    },
     "appearance": {
       "title": "外観",
       "description": "アプリケーションの外観をカスタマイズします",

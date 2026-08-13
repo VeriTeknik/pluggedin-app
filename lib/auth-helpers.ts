@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { Session } from 'next-auth';
 
 import { db } from '@/db';
-import { projectsTable, users } from '@/db/schema';
+import { projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 type AuthenticatedFunction<T> = (session: Session & { user: { id: string } }) => Promise<T>;
@@ -68,30 +68,6 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
   return fn(authenticatedSession);
 }
 
-/**
- * Higher-order function that verifies workspace UI is enabled for the current user
- * @returns The authenticated session or throws an auth error
- */
-export async function requireWorkspaceUI(): Promise<Session & { user: { id: string } }> {
-  const session = await getAuthSession();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized - you must be logged in to perform this action');
-  }
-
-  // Check if workspace UI is enabled for this user
-  const [user] = await db
-    .select({ show_workspace_ui: users.show_workspace_ui })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-
-  if (!user?.show_workspace_ui) {
-    throw new Error('Workspace management is not enabled for this account');
-  }
-
-  return session as Session & { user: { id: string } };
-}
 
 type ProjectAuthenticatedFunction<T> = (
   session: Session & { user: { id: string } },
