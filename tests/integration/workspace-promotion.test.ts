@@ -34,6 +34,7 @@ describeIfDb('workspace promotion', () => {
   let PROFILE_SCOPED_TABLES: readonly string[];
   let NON_USER_DATA_TABLES: readonly string[];
   let planWorkspacePromotion: typeof import('@/lib/db/workspace-promotion').planWorkspacePromotion;
+  let deleteIfStillEmpty: typeof import('@/lib/db/workspace-promotion').deleteIfStillEmpty;
   let verifyOneWorkspacePerHub: typeof import('@/lib/db/workspace-promotion').verifyOneWorkspacePerHub;
   let promoteWorkspacesToHubs: typeof import('@/lib/db/workspace-promotion').promoteWorkspacesToHubs;
   let enforceOneWorkspacePerHub: typeof import('@/lib/db/workspace-promotion').enforceOneWorkspacePerHub;
@@ -45,6 +46,7 @@ describeIfDb('workspace promotion', () => {
       PROFILE_SCOPED_TABLES,
       NON_USER_DATA_TABLES,
       planWorkspacePromotion,
+      deleteIfStillEmpty,
       verifyOneWorkspacePerHub,
       promoteWorkspacesToHubs,
       enforceOneWorkspacePerHub,
@@ -171,7 +173,13 @@ describeIfDb('workspace promotion', () => {
         .map((r) => r.table_name)
         .filter((t) => !NON_USER_DATA_TABLES.includes(t));
 
-      expect([...PROFILE_SCOPED_TABLES].sort()).toEqual(live.sort());
+      // Subset, not equality: the constant deliberately lists tables a database
+      // built from drizzle/ does not have, because production carries four the
+      // migration chain never creates. What must not happen is a table in the
+      // live schema that nobody has looked at — that one would change what
+      // "empty" means, and empty decides deletion.
+      const unreviewed = live.filter((t) => !PROFILE_SCOPED_TABLES.includes(t));
+      expect(unreviewed).toEqual([]);
     });
   });
 
@@ -552,6 +560,50 @@ describeIfDb('workspace promotion', () => {
       await rollbackWorkspacePromotion(db);
 
       expect(await projectRow(projectUuid)).toMatchObject({ active_profile_uuid: secondary });
+    });
+  });
+
+  /**
+   * The counts that decide deletion are taken at the start of the run, and every
+   * profile-scoped table cascades on profile deletion. On a live system a row
+   * written between the count and the DELETE would be destroyed by that cascade
+   * without appearing anywhere — the worst shape a bug can take here.
+   *
+   * So the delete re-checks emptiness itself. Either the new row is visible and
+   * the Workspace is promoted instead, or the writer blocks on the parent row's
+   * key-share lock and fails loudly rather than losing the write.
+   */
+  describe('a Workspace that stops being empty mid-run', () => {
+    it('is not deleted on the strength of a stale count', async () => {
+      const userId = await makeUser();
+      const { projectUuid } = await makeHub(userId, 'Hub');
+      const workspace = await addWorkspace(projectUuid, 'Counted as empty');
+      await addServer(workspace, 'Arrived after the count', 'arrived');
+
+      expect(await deleteIfStillEmpty(db, workspace)).toBe(false);
+      expect(await profileRow(workspace)).toBeDefined();
+    });
+
+    it('is still deleted when it really is empty', async () => {
+      const userId = await makeUser();
+      const { projectUuid } = await makeHub(userId, 'Hub');
+      const workspace = await addWorkspace(projectUuid, 'Genuinely empty');
+
+      expect(await deleteIfStillEmpty(db, workspace)).toBe(true);
+      expect(await profileRow(workspace)).toBeUndefined();
+    });
+
+    it('checks every profile-scoped table, not just the obvious ones', async () => {
+      const userId = await makeUser();
+      const { projectUuid } = await makeHub(userId, 'Hub');
+      const workspace = await addWorkspace(projectUuid, 'Holds one audit row');
+      // audit_logs was missing from the hand-picked list that shipped first.
+      await db.execute(sql`
+        INSERT INTO audit_logs (profile_uuid, type, action)
+        VALUES (${workspace}, 'PROFILE_ACTION', 'test')
+      `);
+
+      expect(await deleteIfStillEmpty(db, workspace)).toBe(false);
     });
   });
 

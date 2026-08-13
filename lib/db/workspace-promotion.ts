@@ -37,10 +37,19 @@ export type PromotionResult = {
 };
 
 /**
- * Every table keyed on a profile. Emptiness is decided across all of them, and
- * emptiness decides deletion, so a short list here deletes data.
+ * Every table keyed on a profile that has been looked at and accounted for.
  *
- * Kept honest by a test that compares this against information_schema.
+ * This is NOT what the code counts — see profileScopedTables, which asks the
+ * database. It is a tripwire: a test asserts the live schema holds nothing
+ * outside this list, so a table added later fails a test instead of silently
+ * changing what "empty" means. Emptiness decides deletion, and a table missed
+ * here would have deleted data.
+ *
+ * It deliberately lists more than a database built from drizzle/ will have.
+ * Production carries four tables the migration chain does not create —
+ * log_settings, notification_settings, syslog_settings and
+ * user_server_favorites — so a hardcoded list cannot be used for counting
+ * without breaking on one schema or the other.
  */
 export const PROFILE_SCOPED_TABLES: readonly string[] = [
   'agents',
@@ -92,17 +101,77 @@ type SecondaryWorkspace = {
 };
 
 /**
+ * The tables to count, asked of the database rather than remembered.
+ *
+ * A hardcoded list has drifted three times now: picked by hand, grepped out of
+ * db/schema.ts, and — found while testing this — short by the four tables
+ * production has that drizzle/ does not create. Every one of those failures
+ * looked the same from outside: a Workspace reported empty when it was not.
+ */
+async function profileScopedTables(tx: Executor): Promise<string[]> {
+  const { rows } = await tx.execute(sql`
+    SELECT c.table_name
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+    WHERE c.table_schema = 'public'
+      AND t.table_type = 'BASE TABLE'
+      AND c.column_name = 'profile_uuid'
+    ORDER BY c.table_name
+  `);
+  return (rows as { table_name: string }[])
+    .map((row) => row.table_name)
+    .filter((table) => !NON_USER_DATA_TABLES.includes(table));
+}
+
+/** `count(*) + count(*) + …` across every profile-scoped table, for `s.uuid`. */
+async function usageExpression(tx: Executor) {
+  const tables = await profileScopedTables(tx);
+  return sql.join(
+    tables.map(
+      (table) => sql`(SELECT count(*) FROM ${sql.identifier(table)} WHERE profile_uuid = s.uuid)`
+    ),
+    sql` + `
+  );
+}
+
+/**
+ * Deletes a Workspace only if it is still empty at the moment of deletion.
+ *
+ * The counts that decide deletion are taken once, at the start of the run, and
+ * every profile-scoped table cascades when a profile is deleted. On a live
+ * system a row written between the count and the DELETE would be destroyed by
+ * that cascade, leaving no trace anywhere. Re-checking inside the DELETE closes
+ * it: a row committed before this statement is visible and the delete does
+ * nothing, and a writer racing after it blocks on the parent's key-share lock
+ * and then fails loudly rather than losing the write.
+ *
+ * Returns false if the Workspace turned out not to be empty; the caller
+ * promotes it instead.
+ */
+export async function deleteIfStillEmpty(tx: Executor, profileUuid: string): Promise<boolean> {
+  const tables = await profileScopedTables(tx);
+  const stillEmpty = sql.join(
+    tables.map(
+      (table) =>
+        sql`NOT EXISTS (SELECT 1 FROM ${sql.identifier(table)} WHERE profile_uuid = ${profileUuid})`
+    ),
+    sql` AND `
+  );
+
+  const { rows } = await tx.execute(sql`
+    DELETE FROM profiles WHERE uuid = ${profileUuid} AND ${stillEmpty} RETURNING uuid
+  `);
+  return rows.length > 0;
+}
+
+/**
  * Secondary Workspaces, with how many rows each holds across every
  * profile-scoped table. "Secondary" is every profile that is not the oldest in
  * its project, matching docs/ops/workspace-collapse-survey.sql.
  */
 async function findSecondaryWorkspaces(tx: Executor): Promise<SecondaryWorkspace[]> {
-  const used = sql.join(
-    PROFILE_SCOPED_TABLES.map(
-      (table) => sql`(SELECT count(*) FROM ${sql.identifier(table)} WHERE profile_uuid = s.uuid)`
-    ),
-    sql` + `
-  );
+  const used = await usageExpression(tx);
 
   const { rows } = await tx.execute(sql`
     WITH primary_profile AS (
@@ -350,7 +419,7 @@ export async function promoteWorkspacesToHubs(db: Db): Promise<PromotionResult> 
         )
       ).rows[0] as { active_profile_uuid: string | null };
 
-      if (workspace.used === 0) {
+      if (workspace.used === 0 && (await deleteIfStillEmpty(tx, workspace.uuid))) {
         await tx.execute(sql`
           INSERT INTO workspace_promotions
             (profile_uuid, action, from_project_uuid, to_project_uuid,
@@ -358,11 +427,13 @@ export async function promoteWorkspacesToHubs(db: Db): Promise<PromotionResult> 
           VALUES (${workspace.uuid}, 'deleted', ${workspace.project_uuid}, NULL,
                   ${previousSelection.active_profile_uuid}, ${JSON.stringify(snapshot)}::jsonb)
         `);
-        await tx.execute(sql`DELETE FROM profiles WHERE uuid = ${workspace.uuid}`);
         await repointHubSelection(tx, workspace.project_uuid, workspace.uuid);
         result.deleted.push(workspace.uuid);
         continue;
       }
+
+      // Either it held data all along, or it stopped being empty between the
+      // count and here. Promoting is right in both cases and loses nothing.
 
       const hubName = await nameForNewHub(tx, workspace);
 
