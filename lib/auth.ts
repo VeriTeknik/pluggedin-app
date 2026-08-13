@@ -383,7 +383,6 @@ export const authOptions: NextAuthOptions = {
         session.user.emailVerified = token.emailVerified; // This should be Date | null
         session.user.username = token.username ?? null;
         session.user.is_admin = token.is_admin ?? false;
-        session.user.show_workspace_ui = token.show_workspace_ui ?? false;
       } else {
          console.warn('Session callback: Token is missing!'); // Log if token is missing
       }
@@ -392,7 +391,7 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, trigger, session }) {
       // Define common user fields to fetch from database
-      const userFieldsToFetch = { username: true, is_admin: true, show_workspace_ui: true, password_changed_at: true } as const;
+      const userFieldsToFetch = { username: true, is_admin: true, password_changed_at: true } as const;
 
       // Initial sign in or user object available
       if (user) {
@@ -402,7 +401,7 @@ export const authOptions: NextAuthOptions = {
        token.picture = user.image ?? null;
        token.emailVerified = user.emailVerified;
 
-       // Fetch username, is_admin, show_workspace_ui, and password_changed_at from DB during initial sign-in
+       // Fetch username, is_admin and password_changed_at from DB during initial sign-in
        try {
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, user.id),
@@ -411,14 +410,12 @@ export const authOptions: NextAuthOptions = {
           // Ensure null is assigned if dbUser or dbUser.username is null/undefined
           token.username = dbUser?.username ?? null;
           token.is_admin = dbUser?.is_admin ?? false;
-          token.show_workspace_ui = dbUser?.show_workspace_ui ?? false;
           // Store password change timestamp for session invalidation
           token.passwordChangedAt = dbUser?.password_changed_at?.getTime() ?? null;
        } catch (error) {
           console.error('Error fetching user details in JWT callback:', error);
           token.username = null; // Fallback to null on error
           token.is_admin = false; // Fallback to false on error
-          token.show_workspace_ui = false; // Fallback to false on error
           token.passwordChangedAt = null; // Fallback to null on error
        }
 
@@ -432,13 +429,10 @@ export const authOptions: NextAuthOptions = {
             // Ensure session.username is compatible with token.username (string | null)
             token.username = session.username ?? null;
           }
-          if (session?.show_workspace_ui !== undefined) {
-            token.show_workspace_ui = session.show_workspace_ui ?? false;
-          }
        }
 
-       // If token exists but username, is_admin, show_workspace_ui, or passwordChangedAt is missing (e.g., old token), try fetching it
-       if (token.id && (token.username === undefined || token.is_admin === undefined || token.show_workspace_ui === undefined || token.passwordChangedAt === undefined)) {
+       // If token exists but username, is_admin or passwordChangedAt is missing (e.g., old token), try fetching it
+       if (token.id && (token.username === undefined || token.is_admin === undefined || token.passwordChangedAt === undefined)) {
           try {
             const dbUser = await db.query.users.findFirst({
               where: eq(users.id, token.id as string),
@@ -447,14 +441,12 @@ export const authOptions: NextAuthOptions = {
             // Ensure null is assigned if dbUser or dbUser.username is null/undefined
             token.username = dbUser?.username ?? null;
             token.is_admin = dbUser?.is_admin ?? false;
-            token.show_workspace_ui = dbUser?.show_workspace_ui ?? false;
             token.passwordChangedAt = dbUser?.password_changed_at?.getTime() ?? null;
             token.userValidationTs = Date.now();
           } catch (error) {
             console.error('Error fetching user details in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
             token.is_admin = false; // Fallback to false on error
-            token.show_workspace_ui = false; // Fallback to false on error
             token.passwordChangedAt = null; // Fallback to null on error
           }
        }
@@ -533,7 +525,6 @@ declare module 'next-auth' {
       image?: string | null; // Match JWT type
       emailVerified?: Date | null;
       is_admin?: boolean;
-      show_workspace_ui?: boolean;
     };
   }
 }
@@ -547,7 +538,6 @@ declare module 'next-auth/jwt' {
     picture?: string | null;
     emailVerified?: Date | null;
     is_admin?: boolean;
-    show_workspace_ui?: boolean;
     userValidationTs?: number;
   }
 }

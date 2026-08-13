@@ -144,20 +144,6 @@
       "deleteWarning": "Zodra u een project verwijdert, is er geen weg terug. Wees voorzichtig.",
       "deleteButton": "Project verwijderen"
     },
-    "workspace": {
-      "title": "Huidige Werkruimte",
-      "description": "Beheer uw huidige werkruimte-instellingen",
-      "loading": "Profiel laden...",
-      "namePlaceholder": "Profielnaam",
-      "updateSuccess": "Profielnaam succesvol bijgewerkt",
-      "updateError": "Bijwerken profielnaam mislukt",
-      "deleteConfirm": "Weet u zeker dat u dit profiel wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-      "deleteSuccess": "Profiel succesvol verwijderd",
-      "deleteError": "Verwijderen werkruimte mislukt",
-      "dangerZone": "Gevarenzone",
-      "deleteWarning": "Zodra u een werkruimte verwijdert, is er geen weg terug. Wees voorzichtig.",
-      "deleteButton": "Werkruimte verwijderen"
-    },
     "appearance": {
       "title": "Uiterlijk",
       "description": "Pas het uiterlijk van de applicatie aan",

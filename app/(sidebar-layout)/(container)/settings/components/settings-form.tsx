@@ -45,7 +45,6 @@ import { safeLocalStorage, safeSessionStorage } from '@/lib/storage-utils';
 
 import { type ConnectedAccount, removeConnectedAccount, removePassword, setPassword } from '../actions';
 import { AppearanceSection } from './appearance-section';
-import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
 import { LoginMethodsCard } from './login-methods-card';
 import { ProfileSocialSection } from './profile-social-section';
@@ -610,9 +609,6 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         onConfirm={handleRemovePassword}
         isLoading={isRemovingPassword}
       />
-
-      {/* Current Workspace Section */}
-      <CurrentProfileSection />
 
       {/* Current Project Section */}
       <CurrentProjectSection />

@@ -144,20 +144,6 @@
       "deleteWarning": "一旦删除项目，将无法恢复。请谨慎操作。",
       "deleteButton": "删除项目"
     },
-    "workspace": {
-      "title": "当前工作区",
-      "description": "管理您当前的工作区设置",
-      "loading": "正在加载配置文件...",
-      "namePlaceholder": "配置文件名称",
-      "updateSuccess": "配置文件名称更新成功",
-      "updateError": "更新配置文件名称失败",
-      "deleteConfirm": "您确定要删除此配置文件吗？此操作无法撤销。",
-      "deleteSuccess": "配置文件删除成功",
-      "deleteError": "删除工作区失败",
-      "dangerZone": "危险区域",
-      "deleteWarning": "一旦删除工作区，将无法恢复。请谨慎操作。",
-      "deleteButton": "删除工作区"
-    },
     "appearance": {
       "title": "外观",
       "description": "自定义应用程序的外观",
