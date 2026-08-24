@@ -149,7 +149,11 @@ fi
 if [ "$DRY_RUN" -eq 0 ]; then
   RUNNING_IMAGE_ID=$(docker inspect pluggedin-app --format '{{.Image}}' 2>/dev/null || true)
   if [ -n "$RUNNING_IMAGE_ID" ]; then
-    for tag in live; do
+    # Array rather than a literal list: there is one tag today, but the intent
+    # is "every tag compose resolves", and a bare `for tag in live` trips
+    # SC2043 while quietly inviting the next person to add a second one badly.
+    COMPOSE_TAGS=(live)
+    for tag in "${COMPOSE_TAGS[@]}"; do
       ref="ghcr.io/veriteknik/pluggedin-app:${tag}"
       if ! docker image inspect "$ref" >/dev/null 2>&1; then
         docker tag "$RUNNING_IMAGE_ID" "$ref"
