@@ -116,10 +116,26 @@ fi
 BEFORE=$(free_gb)
 log "disk before: ${BEFORE}G free"
 
+# Record what the compose-referenced tags point at BEFORE pruning, so a tag the
+# prune strips can be put back on the same image rather than on a guess.
+COMPOSE_TAGS=(live)
+TAG_SNAPSHOT=()
+for tag in "${COMPOSE_TAGS[@]}"; do
+  ref="ghcr.io/veriteknik/pluggedin-app:${tag}"
+  if id_before=$(docker image inspect "$ref" --format '{{.Id}}' 2>/dev/null); then
+    TAG_SNAPSHOT+=("${ref}=${id_before}")
+  fi
+done
+
 run() { if [ "$DRY_RUN" -eq 1 ]; then echo "    would run: $*"; else "$@"; fi; }
 
 log "system daemon — removing unused images older than ${SYSTEM_KEEP}"
-docker ps --format '  in use: {{.Image}}' | sort -u
+# Informational, so it stays outside run(): during a dry run the point is to see
+# which images are actually protected, and "would run: docker ps" shows nothing
+# useful. It must not be able to abort the script either — a caller without
+# docker access should still be able to read a dry run.
+docker ps --format '  in use: {{.Image}}' 2>/dev/null | sort -u \
+  || log "(could not list running containers — no docker access)"
 run docker image   prune -af --filter "until=${SYSTEM_KEEP}"
 run docker builder prune -af --filter "until=${SYSTEM_KEEP}"
 
@@ -142,25 +158,29 @@ else
   log "no ${RUNNER_USER} user — skipping the rootless daemon"
 fi
 
-# Re-assert the tags the compose file resolves. Pruning can strip a tag from a
-# still-protected image (see the header), which leaves the running stack fine
-# and the next deploy broken — the worst shape for a failure, because nothing
-# looks wrong until someone deploys.
-if [ "$DRY_RUN" -eq 0 ]; then
-  RUNNING_IMAGE_ID=$(docker inspect pluggedin-app --format '{{.Image}}' 2>/dev/null || true)
-  if [ -n "$RUNNING_IMAGE_ID" ]; then
-    # Array rather than a literal list: there is one tag today, but the intent
-    # is "every tag compose resolves", and a bare `for tag in live` trips
-    # SC2043 while quietly inviting the next person to add a second one badly.
-    COMPOSE_TAGS=(live)
-    for tag in "${COMPOSE_TAGS[@]}"; do
-      ref="ghcr.io/veriteknik/pluggedin-app:${tag}"
-      if ! docker image inspect "$ref" >/dev/null 2>&1; then
-        docker tag "$RUNNING_IMAGE_ID" "$ref"
-        log "re-tagged ${ref} onto the running image (prune had dropped the tag)"
+# Restore any tag the prune stripped off an image it otherwise kept (see the
+# header). RESTORE is the operative word: the mapping is captured before
+# pruning and put back exactly as it was.
+#
+# An earlier version re-pointed the tag at whatever container happened to be
+# running. That is subtly wrong and was caught in review: during a rollback the
+# running container is deliberately NOT the release :live names, so the cleanup
+# job would have quietly rewritten deployment state to agree with the rollback,
+# and the next `IMAGE_TAG=live` deploy would ship the rolled-back image. A
+# cleanup task must never decide what :live means — it may only put back what
+# it disturbed.
+if [ "$DRY_RUN" -eq 0 ] && [ ${#TAG_SNAPSHOT[@]} -gt 0 ]; then
+  for entry in "${TAG_SNAPSHOT[@]}"; do
+    ref="${entry%%=*}"; was="${entry#*=}"
+    if ! docker image inspect "$ref" >/dev/null 2>&1; then
+      if docker image inspect "$was" >/dev/null 2>&1; then
+        docker tag "$was" "$ref"
+        log "restored ${ref} -> ${was} (prune had dropped the tag)"
+      else
+        log "WARNING: ${ref} was dropped and its image ${was} is gone; deploys using that tag will fail"
       fi
-    done
-  fi
+    fi
+  done
 fi
 
 AFTER=$(free_gb)
