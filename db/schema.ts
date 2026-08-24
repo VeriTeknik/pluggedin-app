@@ -187,6 +187,17 @@ export const users = pgTable('users', {
   two_fa_secret: text('two_fa_secret'),
   two_fa_backup_codes: text('two_fa_backup_codes'),
   // Workspace UI visibility flag for gradual deprecation
+  /**
+   * No longer read by anything: the Workspaces UI is gone and every Hub holds
+   * exactly one Workspace, enforced by profiles_project_uuid_unique.
+   *
+   * Kept rather than dropped because it is the companion to the promotion's
+   * rollback — undoing that restores several Workspaces under one Hub, and the
+   * users who had them would need this back to reach them. Drop it once the
+   * promotion is considered final and the rollback path is retired.
+   * The 70 users who had it set are recorded in
+   * /home/pluggedin/backups/users-with-workspace-ui-20260814.txt on the box.
+   */
   show_workspace_ui: boolean('show_workspace_ui').default(false).notNull(),
 },
   (table) => ({
@@ -289,8 +300,40 @@ export const profilesTable = pgTable(
   },
   (table) => ({ // Use object syntax for indexes
     profilesProjectUuidIdx: index('profiles_project_uuid_idx').on(table.project_uuid),
+    profilesOneWorkspacePerHub: unique('profiles_project_uuid_unique').on(table.project_uuid),
+    // One Workspace per Hub. This is what lets the connector resolve a profile
+    // from a granted Hub with exactly one answer, instead of preferring
+    // active_profile_uuid and falling back — a heuristic that once landed the
+    // connector and the browser on different Workspaces.
   })
 );
+
+/**
+ * What promoting Workspaces to Hubs did, so it can be undone.
+ *
+ * Deliberately carries no foreign keys: it records profiles that were deleted
+ * and projects that were created, so the rows it points at may not exist. A
+ * cascade here would erase the only record of what happened.
+ */
+export const workspacePromotionsTable = pgTable('workspace_promotions', {
+  id: serial('id').primaryKey(),
+  profile_uuid: uuid('profile_uuid').notNull(),
+  /** 'promoted' | 'deleted' */
+  action: text('action').notNull(),
+  from_project_uuid: uuid('from_project_uuid').notNull(),
+  /** null when the Workspace was empty and deleted rather than promoted. */
+  to_project_uuid: uuid('to_project_uuid'),
+  /**
+   * What the original Hub had selected before this Workspace left it.
+   * projects.active_profile_uuid has no foreign key, so a Workspace moving out
+   * leaves it dangling — and it is what the web UI reads to decide which
+   * Workspace you are looking at. Promotion repoints it; rollback puts it back.
+   */
+  from_project_active_profile_uuid: uuid('from_project_active_profile_uuid'),
+  /** Enough of the profile row to recreate it verbatim. */
+  profile_snapshot: jsonb('profile_snapshot').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 // Relations for projectsTable
 export const projectsRelations = relations(projectsTable, ({ one, many }) => ({

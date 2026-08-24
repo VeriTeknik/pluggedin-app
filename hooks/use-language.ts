@@ -1,27 +1,22 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
 import debounce from 'lodash/debounce';
+import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/hooks/use-auth';
 import { isRTL, type Locale } from '@/i18n/config';
+import { safeLocalStorage } from '@/lib/storage-utils';
 
 class LanguageStorage {
   private static readonly LANGUAGE_KEY = 'pluggedin_language';
-  
+
   static getStoredLanguage(): string | null {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-    return localStorage.getItem(this.LANGUAGE_KEY);
+    return safeLocalStorage.getItem(this.LANGUAGE_KEY);
   }
 
   static setStoredLanguage(language: string): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.setItem(this.LANGUAGE_KEY, language);
+    safeLocalStorage.setItem(this.LANGUAGE_KEY, language);
   }
 }
 

@@ -59,10 +59,10 @@ import { useCodes } from '@/hooks/use-codes';
 import { useProjects } from '@/hooks/use-projects';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
+import { safeLocalStorage } from '@/lib/storage-utils';
 import { Code } from '@/types/code';
 
 import { NotificationBell } from './notification-bell';
-import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
 
@@ -94,38 +94,26 @@ export default function SidebarLayout({
   const { t } = useTranslation();
 
   // State for sidebar expansion
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(SIDEBAR_STATE_KEY);
-      return saved !== null ? JSON.parse(saved) : true;
-    }
-    return true;
-  });
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() =>
+    safeLocalStorage.getJSON(SIDEBAR_STATE_KEY, true)
+  );
 
   // Load sidebar state from localStorage on mount
   useEffect(() => {
     setMounted(true);
-    try {
-      const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
-      if (savedState !== null) {
-        setSidebarExpanded(savedState === 'true');
-      }
-    } catch (error) {
-      console.error('Failed to load sidebar state from localStorage:', error);
+    const savedState = safeLocalStorage.getItem(SIDEBAR_STATE_KEY);
+    if (savedState !== null) {
+      setSidebarExpanded(savedState === 'true');
     }
   }, []);
 
   // Save sidebar state to localStorage when it changes
   useEffect(() => {
     if (mounted) {
-      try {
-        localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(sidebarExpanded));
+      safeLocalStorage.setJSON(SIDEBAR_STATE_KEY, sidebarExpanded);
 
-        // Also update via cookie to ensure the sidebar.tsx component picks it up
-        document.cookie = `sidebar:state=${sidebarExpanded}; path=/; max-age=${60 * 60 * 24 * 7}`;
-      } catch (error) {
-        console.error('Failed to save sidebar state to localStorage:', error);
-      }
+      // Also update via cookie to ensure the sidebar.tsx component picks it up
+      document.cookie = `sidebar:state=${sidebarExpanded}; path=/; max-age=${60 * 60 * 24 * 7}`;
     }
   }, [sidebarExpanded, mounted]);
 
@@ -195,7 +183,6 @@ export default function SidebarLayout({
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
               <ProjectSwitcher />
-              <ProfileSwitcher />
             </div>
           </SidebarHeader>
           <SidebarContent>

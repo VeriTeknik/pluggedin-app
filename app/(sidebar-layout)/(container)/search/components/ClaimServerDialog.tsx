@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { safeLocalStorage } from '@/lib/storage-utils';
 
 interface ClaimServerDialogProps {
   open: boolean;
@@ -50,7 +51,7 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
       checkGitHub();
       
       // Check if we're returning from OAuth flow
-      const savedState = localStorage.getItem('claim_server_state');
+      const savedState = safeLocalStorage.getItem('claim_server_state');
       if (savedState) {
         try {
           const state = JSON.parse(savedState);
@@ -60,11 +61,11 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
           }
           // Clean up saved state if it's older than 5 minutes
           if (Date.now() - state.timestamp > 5 * 60 * 1000) {
-            localStorage.removeItem('claim_server_state');
+            safeLocalStorage.removeItem('claim_server_state');
           }
         } catch (e) {
           console.error('Error restoring claim state:', e);
-          localStorage.removeItem('claim_server_state');
+          safeLocalStorage.removeItem('claim_server_state');
         }
       }
     }
@@ -81,7 +82,7 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
       returnUrl: window.location.pathname + window.location.search,
       timestamp: Date.now()
     };
-    localStorage.setItem('claim_server_state', JSON.stringify(claimState));
+    safeLocalStorage.setJSON('claim_server_state', claimState);
     
     // Get GitHub client ID based on environment
     const getGitHubClientId = () => {

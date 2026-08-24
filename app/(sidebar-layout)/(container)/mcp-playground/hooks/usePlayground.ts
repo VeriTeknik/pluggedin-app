@@ -26,6 +26,7 @@ import { McpServerStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { notifications } from '@/lib/notification-helper';
+import { safeLocalStorage } from '@/lib/storage-utils';
 import { McpServer } from '@/types/mcp-server';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
@@ -797,7 +798,7 @@ export function usePlayground() {
 
       try {
         // Check localStorage for session hint
-        const sessionHint = localStorage.getItem(`playground-session-${profileUuid}`);
+        const sessionHint = safeLocalStorage.getItem(`playground-session-${profileUuid}`);
         if (!sessionHint) {
           setSessionRestored(true);
           return;
@@ -868,7 +869,7 @@ export function usePlayground() {
         } else {
           // Restoration failed, clear localStorage
           addLog('error', `Session restoration failed: ${restoreResult.error || 'Unknown error'}`);
-          localStorage.removeItem(`playground-session-${profileUuid}`);
+          safeLocalStorage.removeItem(`playground-session-${profileUuid}`);
           
           toast({
             title: 'Session Lost',
@@ -878,11 +879,11 @@ export function usePlayground() {
         }
       } else {
         // Clear localStorage if server session doesn't exist
-        localStorage.removeItem(`playground-session-${profileUuid}`);
+        safeLocalStorage.removeItem(`playground-session-${profileUuid}`);
       }
       } catch (error) {
         console.error('Error restoring session:', error);
-        localStorage.removeItem(`playground-session-${profileUuid}`);
+        safeLocalStorage.removeItem(`playground-session-${profileUuid}`);
       } finally {
         setSessionRestored(true);
         // Clear the mutex flag in finally block to ensure it's always cleared
@@ -896,9 +897,9 @@ export function usePlayground() {
   // Effect to store session hint in localStorage when session becomes active
   useEffect(() => {
     if (isSessionActive && profileUuid) {
-      localStorage.setItem(`playground-session-${profileUuid}`, 'active');
+      safeLocalStorage.setItem(`playground-session-${profileUuid}`, 'active');
     } else if (!isSessionActive && profileUuid) {
-      localStorage.removeItem(`playground-session-${profileUuid}`);
+      safeLocalStorage.removeItem(`playground-session-${profileUuid}`);
     }
   }, [isSessionActive, profileUuid]);
 

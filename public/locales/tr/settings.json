@@ -144,20 +144,6 @@
       "deleteWarning": "Bir projeyi sildikten sonra geri dönüş yoktur. Lütfen dikkatli olun.",
       "deleteButton": "Projeyi Sil"
     },
-    "workspace": {
-      "title": "Mevcut Çalışma Alanı",
-      "description": "Mevcut çalışma alanı ayarlarınızı yönetin",
-      "loading": "Profil Yükleniyor...",
-      "namePlaceholder": "Profil adı",
-      "updateSuccess": "Profil adı başarıyla güncellendi",
-      "updateError": "Profil adı güncellenirken hata oluştu",
-      "deleteConfirm": "Bu profili silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
-      "deleteSuccess": "Profil başarıyla silindi",
-      "deleteError": "Çalışma alanı silinirken hata oluştu",
-      "dangerZone": "Tehlikeli Bölge",
-      "deleteWarning": "Bir çalışma alanını sildikten sonra geri dönüş yoktur. Lütfen dikkatli olun.",
-      "deleteButton": "Çalışma Alanını Sil"
-    },
     "appearance": {
       "title": "Görünüm",
       "description": "Uygulama görünümünü özelleştirin",

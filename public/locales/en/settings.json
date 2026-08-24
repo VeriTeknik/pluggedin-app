@@ -144,20 +144,6 @@
       "deleteWarning": "Once you delete a project, there is no going back. Please be careful.",
       "deleteButton": "Delete Project"
     },
-    "workspace": {
-      "title": "Current Workspace",
-      "description": "Manage your Current Workspace settings",
-      "loading": "Loading Profile...",
-      "namePlaceholder": "Profile name",
-      "updateSuccess": "Profile name updated successfully",
-      "updateError": "Failed to update profile name",
-      "deleteConfirm": "Are you sure you want to delete this profile? This action cannot be undone.",
-      "deleteSuccess": "Profile deleted successfully",
-      "deleteError": "Failed to delete workspace",
-      "dangerZone": "Danger Zone",
-      "deleteWarning": "Once you delete a workspace, there is no going back. Please be careful.",
-      "deleteButton": "Delete Workspace"
-    },
     "appearance": {
       "title": "Appearance",
       "description": "Customize the appearance of the application",
