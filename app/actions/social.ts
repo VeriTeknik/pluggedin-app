@@ -3,6 +3,7 @@
 // Consolidated imports
 import { and, desc, eq, ilike, sql } from 'drizzle-orm'; 
 import { revalidatePath } from 'next/cache';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
@@ -20,9 +21,22 @@ import { getAuthSession } from '@/lib/auth';
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import type { PublicUser } from '@/lib/public-user';
 import { PUBLIC_USER_COLUMNS, publicUserSelection, toPublicUser } from '@/lib/public-user';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 
 // Additional validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
+
+/**
+ * The auth helpers deny an anonymous caller by redirecting, which they signal
+ * by throwing. That has to reach Next so the browser actually lands on /login;
+ * the broad `catch` blocks in this file would otherwise turn it into a generic
+ * "an error occurred" result and strand the user where they were.
+ */
+function rethrowIfRedirect(error: unknown): void {
+  if (isRedirectError(error)) {
+    throw error;
+  }
+}
 
 /** Upper bound on any caller-supplied list size, so a single call cannot pull the whole table. */
 const MAX_LIST_LIMIT = 100;
@@ -195,6 +209,7 @@ export async function reserveUsername(userId: string, username: string): Promise
     }
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error in reserveUsername:', error);
     return {
       success: false,
@@ -285,6 +300,7 @@ export async function updateUserSocial(
     };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error updating user social data:', error);
     return {
       success: false,
@@ -695,10 +711,13 @@ export async function shareMcpServer(
     if (!server || server.profile_uuid !== validatedProfileUuid) {
       return { success: false, error: 'Server not found' };
     }
-    const serverTemplate = customTemplate || await createShareableTemplate({
+    // Sanitise whatever we are about to store. `customTemplate` comes straight
+    // from the client - the share wizard lets the owner edit it - so it cannot
+    // be trusted to have had its credentials removed.
+    const serverTemplate = sanitizeServerTemplate(customTemplate || await createShareableTemplate({
       ...server,
       config: server.config as Record<string, any> | null
-    });
+    }));
     const existingShare = await db.query.sharedMcpServersTable.findFirst({
       where: and(
         eq(sharedMcpServersTable.profile_uuid, profileUuid),
@@ -733,6 +752,7 @@ export async function shareMcpServer(
     };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error sharing MCP server:', error);
     return {
       success: false,
@@ -795,7 +815,9 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
       title: sharedServerData.title,
       description: sharedServerData.description,
       is_public: sharedServerData.is_public,
-      template: sharedServerData.template,
+      // Shares created before templates were sanitised on write still hold the
+      // owner's connection details, so scrub on the way out too.
+      template: sanitizeServerTemplate(sharedServerData.template),
       created_at: sharedServerData.created_at,
       updated_at: sharedServerData.updated_at,
       profile_username: sharedByName, // Use determined name
@@ -923,6 +945,7 @@ export async function unshareServer(
     return { success: true };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error unsharing server:', error);
     return {
       success: false,
@@ -969,6 +992,7 @@ export async function shareCollection(
     };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error sharing collection:', error);
     return {
       success: false,
@@ -1032,6 +1056,7 @@ export async function updateSharedCollection(
     };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error updating shared collection:', error);
     return {
       success: false,
@@ -1137,6 +1162,7 @@ export async function unshareCollection(
     return { success: true };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error unsharing collection:', error);
     return {
       success: false,
@@ -1183,6 +1209,7 @@ export async function shareEmbeddedChat(
     };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error sharing embedded chat:', error);
     return {
       success: false,
@@ -1248,6 +1275,7 @@ export async function updateEmbeddedChat(
     };
     });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error updating embedded chat:', error);
     return {
       success: false,

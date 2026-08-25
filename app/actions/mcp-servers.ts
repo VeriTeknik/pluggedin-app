@@ -19,6 +19,7 @@ import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { mcpServerOperations } from '@/lib/mcp/metrics';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import { formatRateLimitError,rateLimitServerAction, ServerActionRateLimits } from '@/lib/server-action-rate-limiter';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
 import { 
   createMcpServerSchema, 
@@ -881,20 +882,23 @@ export async function importSharedServer(
  *
  * The connection fields - command, args, env, url, transport and
  * streamableHTTPOptions - are encrypted at rest because they carry the server's
- * credentials. They are left out entirely by default so that publishing a share
- * can never republish them. The share wizard asks for them explicitly via
- * `includeOwnerSecrets` so the owner can review and redact before publishing;
- * that path re-reads the server under an ownership check rather than decrypting
- * whatever ciphertext the caller passed in, since this is a public server action.
+ * credentials. They are left out entirely by default. The share wizard asks for
+ * them via `includeConnectionFields` so the owner can review the install recipe
+ * before publishing; that path re-reads the server under an ownership check
+ * rather than decrypting whatever ciphertext the caller passed in, since this is
+ * a public server action.
+ *
+ * Either way the result goes through `sanitizeServerTemplate`, so what comes
+ * back is structure - command, args, env keys - with the values redacted.
  *
  * @param server The original MCP server
- * @param options.includeOwnerSecrets Include the owner's decrypted connection
- *   fields. Requires an authenticated session that owns `server.uuid`.
+ * @param options.includeConnectionFields Include the connection structure.
+ *   Requires an authenticated session that owns `server.uuid`.
  * @returns A sanitized version for sharing
  */
 export async function createShareableTemplate(
   server: McpServer,
-  options: { includeOwnerSecrets?: boolean } = {}
+  options: { includeConnectionFields?: boolean } = {}
 ): Promise<any> {
   // Create template with basic server information (non-sensitive fields)
   const template: any = {
@@ -908,7 +912,7 @@ export async function createShareableTemplate(
     updated_at: (server as any).updated_at,
   };
 
-  if (options.includeOwnerSecrets) {
+  if (options.includeConnectionFields) {
     const storedServer = await withServerAuth(
       server.uuid,
       async (_session, ownedServer) => ownedServer
@@ -952,44 +956,6 @@ export async function createShareableTemplate(
     // If there's an error, continue without the sharedBy information
   }
   
-  // Sanitize the database URL if present in command or args
-  if (template.command) {
-    template.command = sanitizeDatabaseUrl(template.command);
-  }
-  
-  if (template.args && Array.isArray(template.args)) {
-    template.args = template.args.map((arg: string) => sanitizeDatabaseUrl(arg));
-  }
-
-  // Replace sensitive env variables with placeholders
-  const sanitizedEnv: Record<string, string> = {};
-  if (template.env && typeof template.env === 'object') {
-    Object.keys(template.env).forEach(key => {
-      // Assume environment variables are sensitive and replace with placeholders
-      if (key.toLowerCase().includes('key') || 
-          key.toLowerCase().includes('token') || 
-          key.toLowerCase().includes('secret') || 
-          key.toLowerCase().includes('password') || 
-          key.toLowerCase().includes('auth')) {
-        sanitizedEnv[key] = '<YOUR_SECRET_HERE>';
-      } else {
-        // For non-sensitive keys, check if the value looks like a URL with credentials
-        const value = template.env[key];
-        if (typeof value === 'string') {
-          sanitizedEnv[key] = sanitizeDatabaseUrl(value);
-        } else {
-          sanitizedEnv[key] = value;
-        }
-      }
-    });
-    template.env = sanitizedEnv;
-  }
-  
-  // Clear any API keys or tokens in the URL
-  if (template.url) {
-    template.url = sanitizeDatabaseUrl(template.url);
-  }
-  
   // Fetch and include custom instructions if they exist
   try {
     const customInstructions = await db.query.customInstructionsTable.findFirst({
@@ -1004,48 +970,7 @@ export async function createShareableTemplate(
     // Continue without custom instructions if there's an error
   }
   
-  return template;
+  // Structure survives; the values in it do not.
+  return sanitizeServerTemplate(template);
 }
 
-/**
- * Sanitize a database URL or any URL with credentials
- * Replaces usernames, passwords, API keys, etc. with placeholders
- * 
- * @param text The text that might contain sensitive URLs
- * @returns Sanitized text with credentials replaced by placeholders
- */
-function sanitizeDatabaseUrl(text: string): string {
-  if (!text) return text;
-  
-  // Replace postgres connections: postgresql://username:password@host:port/database
-  text = text.replace(
-    /(postgresql:\/\/[^:]+):([^@]+)@([^\/]+\/[^\s]+)/gi, 
-    '$1:<YOUR_PASSWORD>@$3'
-  );
-  
-  // Replace mongodb connections: mongodb://username:password@host:port/database
-  text = text.replace(
-    /(mongodb:\/\/[^:]+):([^@]+)@([^\/]+\/[^\s]+)/gi, 
-    '$1:<YOUR_PASSWORD>@$3'
-  );
-  
-  // Replace mysql connections: mysql://username:password@host:port/database
-  text = text.replace(
-    /(mysql:\/\/[^:]+):([^@]+)@([^\/]+\/[^\s]+)/gi, 
-    '$1:<YOUR_PASSWORD>@$3'
-  );
-  
-  // Replace URLs with API keys in them: https://api.example.com?api_key=abcd1234
-  text = text.replace(
-    /([\?&](?:api_key|access_token|token|key|auth|apikey)=)([^&\s]+)/gi,
-    '$1<YOUR_API_KEY>'
-  );
-  
-  // Replace any other URL with basic auth: https://username:password@example.com
-  text = text.replace(
-    /(https?:\/\/[^:]+):([^@]+)@/gi,
-    '$1:<YOUR_PASSWORD>@'
-  );
-  
-  return text;
-}

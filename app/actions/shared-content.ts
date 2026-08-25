@@ -11,6 +11,7 @@ import {
   sharedMcpServersTable,
   users,
 } from '@/db/schema';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 import { SearchIndex } from '@/types/search';
 
 const usernameSchema = z.string().min(1).max(30);
@@ -96,8 +97,9 @@ export async function getFormattedSharedServersForUser(
       const avgRating = 0;
       const ratingCount = 0;
 
-      // Parse the template JSON
-      const template = sharedServer.template as any;
+      // Parse the template JSON. Shares stored before templates were sanitised
+      // on write still hold the owner's connection details.
+      const template = sanitizeServerTemplate(sharedServer.template) as any;
 
       formattedResults[sharedServer.uuid] = {
         name: sharedServer.title,
@@ -158,7 +160,7 @@ export async function getTopCommunitySharedServers(limit: number = 6): Promise<S
 
     const formattedResults: SearchIndex = {};
     for (const { sharedServer, user } of sharedServers) {
-      const template = sharedServer.template as any;
+      const template = sanitizeServerTemplate(sharedServer.template) as any;
       formattedResults[sharedServer.uuid] = {
         name: sharedServer.title,
         description: sharedServer.description || '',

@@ -142,10 +142,11 @@ export function ShareServerDialog({
       setIsLoadingPreview(true);
       try {
         // Always generate a fresh template when opening the dialog. The owner
-        // reviews and redacts the connection fields here before sharing, so
-        // ask for them explicitly - they are not in the default template.
+        // reviews the install recipe here before sharing, so ask for the
+        // connection structure explicitly - it is not in the default template.
+        // Values come back redacted; what is shared is whatever is set here.
         const templateData = await createShareableTemplate(server, {
-          includeOwnerSecrets: true,
+          includeConnectionFields: true,
         });
         setServerData(templateData);
       } catch (error) {

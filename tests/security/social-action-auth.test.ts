@@ -98,6 +98,8 @@ let selectResults: Map<unknown, any>;
 let selectProjections: any[];
 /** Arguments passed to the terminal `.limit()` of each select chain. */
 let selectLimits: number[];
+/** Values passed to every insert/update in a test. */
+let writtenValues: any[];
 
 function signedInAs(userId: string | null) {
   mockedGetAuthSession.mockResolvedValue(
@@ -125,6 +127,7 @@ beforeEach(() => {
   selectResults = new Map();
   selectProjections = [];
   selectLimits = [];
+  writtenValues = [];
 
   mockedDb.query = {
     users: {
@@ -171,8 +174,14 @@ beforeEach(() => {
 
   const writeChain = (result: any = []) => {
     const chain: any = {
-      values: vi.fn(() => chain),
-      set: vi.fn(() => chain),
+      values: vi.fn((v: any) => {
+        writtenValues.push(v);
+        return chain;
+      }),
+      set: vi.fn((v: any) => {
+        writtenValues.push(v);
+        return chain;
+      }),
       where: vi.fn(() => chain),
       returning: vi.fn(() => Promise.resolve(result)),
       then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
@@ -253,12 +262,12 @@ describe('updateUserSocial identity', () => {
     });
   });
 
-  it('refuses an anonymous caller', async () => {
+  it('redirects an anonymous caller to login', async () => {
     signedInAs(null);
 
-    const result = await updateUserSocial(OWNER_ID, { is_public: true });
-
-    expect(result.success).toBe(false);
+    await expect(updateUserSocial(OWNER_ID, { is_public: true })).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT'),
+    });
     expect(mockedDb.update).not.toHaveBeenCalled();
   });
 
@@ -320,13 +329,13 @@ describe('reserveUsername identity', () => {
     });
   });
 
-  it('refuses an anonymous caller even when the username is free', async () => {
+  it('redirects an anonymous caller to login even when the username is free', async () => {
     signedInAs(null);
     usernameIsFree(OWNER_ID);
 
-    const result = await reserveUsername(OWNER_ID, 'newname');
-
-    expect(result.success).toBe(false);
+    await expect(reserveUsername(OWNER_ID, 'newname')).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT'),
+    });
     expect(mockedDb.update).not.toHaveBeenCalled();
   });
 
@@ -479,13 +488,13 @@ describe('shareMcpServer ownership', () => {
     mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue(null);
   });
 
-  it('refuses an anonymous caller', async () => {
+  it('redirects an anonymous caller to login instead of swallowing it', async () => {
     signedInAs(null);
     profileOwnedBy(OWNER_ID);
 
-    const result = await shareMcpServer(PROFILE_UUID, SERVER_UUID, 'title');
-
-    expect(result.success).toBe(false);
+    await expect(shareMcpServer(PROFILE_UUID, SERVER_UUID, 'title')).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT'),
+    });
     expect(mockedDb.insert).not.toHaveBeenCalled();
   });
 
@@ -523,6 +532,85 @@ describe('shareMcpServer ownership', () => {
 
     expect(result.success).toBe(true);
     expect(mockedDb.insert).toHaveBeenCalled();
+  });
+});
+
+describe('shared MCP server template handling', () => {
+  const SECRETS = ['ghp_liveVictimToken', 'sk-live-secret', 'live-header-token'];
+
+  const dirtyTemplate = {
+    name: 'srv',
+    type: 'STDIO',
+    command: 'npx',
+    args: ['-y', '@victim/server'],
+    env: { GITHUB_PAT: 'ghp_liveVictimToken', API_KEY: 'sk-live-secret' },
+    streamableHTTPOptions: { headers: { Authorization: 'Bearer live-header-token' } },
+  };
+
+  it('sanitises a caller-supplied customTemplate before persisting it', async () => {
+    signedInAs(OWNER_ID);
+    profileOwnedBy(OWNER_ID);
+    mockedDb.query.mcpServersTable.findFirst.mockResolvedValue({
+      uuid: SERVER_UUID,
+      profile_uuid: PROFILE_UUID,
+      name: 'srv',
+      config: null,
+    });
+    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue(null);
+
+    await shareMcpServer(PROFILE_UUID, SERVER_UUID, 'title', undefined, true, dirtyTemplate);
+
+    const serialized = JSON.stringify(writtenValues);
+    expect(serialized).not.toBe('[]');
+    for (const secret of SECRETS) {
+      expect(serialized).not.toContain(secret);
+    }
+  });
+
+  it('sanitises a legacy template on the way out of a public share', async () => {
+    signedInAs(null);
+    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
+      uuid: SHARED_UUID,
+      profile_uuid: PROFILE_UUID,
+      server_uuid: SERVER_UUID,
+      title: 'public share',
+      description: null,
+      is_public: true,
+      // Stored before templates were sanitised on write.
+      template: dirtyTemplate,
+      created_at: new Date(),
+      updated_at: new Date(),
+      server: null,
+      profile: { name: 'p', uuid: PROFILE_UUID, project: { user: { username: 'victim', name: 'Victim' } } },
+    });
+
+    const serialized = JSON.stringify(await getSharedMcpServer(SHARED_UUID));
+
+    for (const secret of SECRETS) {
+      expect(serialized).not.toContain(secret);
+    }
+  });
+
+  it('keeps the install recipe intact on a public share', async () => {
+    signedInAs(null);
+    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
+      uuid: SHARED_UUID,
+      profile_uuid: PROFILE_UUID,
+      server_uuid: SERVER_UUID,
+      title: 'public share',
+      description: null,
+      is_public: true,
+      template: dirtyTemplate,
+      created_at: new Date(),
+      updated_at: new Date(),
+      server: null,
+      profile: { name: 'p', uuid: PROFILE_UUID, project: { user: { username: 'victim', name: 'Victim' } } },
+    });
+
+    const result: any = await getSharedMcpServer(SHARED_UUID);
+
+    expect(result.template.command).toBe('npx');
+    expect(Object.keys(result.template.env)).toEqual(['GITHUB_PAT', 'API_KEY']);
   });
 });
 
@@ -660,13 +748,13 @@ describe.each(MUTATIONS)('%s profile ownership', (_name, callAction) => {
     });
   });
 
-  it('refuses an anonymous caller and writes nothing', async () => {
+  it('redirects an anonymous caller to login and writes nothing', async () => {
     signedInAs(null);
     profileOwnedBy(OWNER_ID);
 
-    const result = await callAction();
-
-    expect(result.success).toBe(false);
+    await expect(callAction()).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT'),
+    });
     expect(mockedDb.insert).not.toHaveBeenCalled();
     expect(mockedDb.update).not.toHaveBeenCalled();
     expect(mockedDb.delete).not.toHaveBeenCalled();

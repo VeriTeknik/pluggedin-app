@@ -108,12 +108,12 @@ describe('createShareableTemplate default output', () => {
   });
 });
 
-describe('createShareableTemplate with owner secrets requested', () => {
+describe('createShareableTemplate with connection fields requested', () => {
   it('refuses an anonymous caller', async () => {
     getAuthSession.mockResolvedValue(null as any);
 
     await expect(
-      createShareableTemplate(encryptedServer, { includeOwnerSecrets: true })
+      createShareableTemplate(encryptedServer, { includeConnectionFields: true })
     ).rejects.toThrow();
   });
 
@@ -139,7 +139,7 @@ describe('createShareableTemplate with owner secrets requested', () => {
     });
 
     await expect(
-      createShareableTemplate(encryptedServer, { includeOwnerSecrets: true })
+      createShareableTemplate(encryptedServer, { includeConnectionFields: true })
     ).rejects.toThrow(/access/i);
   });
 
@@ -168,10 +168,45 @@ describe('createShareableTemplate with owner secrets requested', () => {
     const { decryptServerData } = vi.mocked(await import('@/lib/encryption'));
     const template = await createShareableTemplate(
       { ...encryptedServer, command_encrypted: 'someone-elses-ciphertext' } as any,
-      { includeOwnerSecrets: true }
+      { includeConnectionFields: true }
     );
 
     expect(decryptServerData).toHaveBeenCalledWith(expect.objectContaining({ name: 'stored-name' }));
     expect(template.command).toBeDefined();
+  });
+
+  it('gives the owner the structure with placeholders, not raw credentials', async () => {
+    getAuthSession.mockResolvedValue({ user: { id: 'owner' }, expires: '2099-01-01' } as any);
+    mockedDb.query.users.findFirst.mockResolvedValue({ id: 'owner' });
+    mockedDb.select = vi.fn(() => {
+      const chain: any = {
+        from: vi.fn(() => chain),
+        where: vi.fn(() => chain),
+        innerJoin: vi.fn(() => chain),
+        limit: vi.fn(() => chain),
+        then: (resolve: any, reject: any) =>
+          Promise.resolve([
+            {
+              server: encryptedServer,
+              profile: { uuid: PROFILE_UUID, project_uuid: 'project-1' },
+              project: { uuid: 'project-1', user_id: 'owner' },
+            },
+          ]).then(resolve, reject),
+      };
+      return chain;
+    });
+
+    const template = await createShareableTemplate(encryptedServer, {
+      includeConnectionFields: true,
+    });
+
+    // Structure the importer needs survives...
+    expect(template.command).toBe('npx');
+    expect(Object.keys(template.env)).toEqual(['GITHUB_PAT', 'HOME_DIR']);
+    // ...the credentials do not.
+    const serialized = JSON.stringify(template);
+    for (const secret of SECRETS) {
+      expect(serialized).not.toContain(secret);
+    }
   });
 });
