@@ -14,7 +14,7 @@ import {
   serverInstallationsTable,
   users
 } from '@/db/schema';
-import { withProfileAuth } from '@/lib/auth-helpers';
+import { withProfileAuth, withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { mcpServerOperations } from '@/lib/mcp/metrics';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
@@ -878,42 +878,51 @@ export async function importSharedServer(
 /**
  * Create a shareable template from an MCP server by removing sensitive information
  * but preserving structure with placeholders
- *  
+ *
+ * The connection fields - command, args, env, url, transport and
+ * streamableHTTPOptions - are encrypted at rest because they carry the server's
+ * credentials. They are left out entirely by default so that publishing a share
+ * can never republish them. The share wizard asks for them explicitly via
+ * `includeOwnerSecrets` so the owner can review and redact before publishing;
+ * that path re-reads the server under an ownership check rather than decrypting
+ * whatever ciphertext the caller passed in, since this is a public server action.
+ *
  * @param server The original MCP server
+ * @param options.includeOwnerSecrets Include the owner's decrypted connection
+ *   fields. Requires an authenticated session that owns `server.uuid`.
  * @returns A sanitized version for sharing
  */
-export async function createShareableTemplate(server: McpServer): Promise<any> {
-  // Cast server to any to access encrypted fields
-  const serverAny = server as any;
-  
-  // First, ensure we have decrypted data to work with
-  let decryptedServer = server;
-  
-  // Check if server has encrypted fields and decrypt them if necessary
-  if (serverAny.command_encrypted || serverAny.args_encrypted || serverAny.env_encrypted || serverAny.url_encrypted) {
-    const { decryptServerData } = await import('@/lib/encryption');
-    decryptedServer = decryptServerData(serverAny);
-  }
-  
+export async function createShareableTemplate(
+  server: McpServer,
+  options: { includeOwnerSecrets?: boolean } = {}
+): Promise<any> {
   // Create template with basic server information (non-sensitive fields)
   const template: any = {
-    uuid: decryptedServer.uuid,
-    name: decryptedServer.name,
-    description: decryptedServer.description,
-    type: decryptedServer.type,
-    source: decryptedServer.source,
-    transport: (decryptedServer as any).transport,
-    streamableHTTPOptions: (decryptedServer as any).streamableHTTPOptions,
-    status: decryptedServer.status,
-    created_at: decryptedServer.created_at,
-    updated_at: (decryptedServer as any).updated_at,
-    // Add the decrypted sensitive fields so they can be edited in the dialog
-    command: decryptedServer.command,
-    args: decryptedServer.args,
-    env: decryptedServer.env,
-    url: decryptedServer.url,
+    uuid: server.uuid,
+    name: server.name,
+    description: server.description,
+    type: server.type,
+    source: server.source,
+    status: server.status,
+    created_at: server.created_at,
+    updated_at: (server as any).updated_at,
   };
-  
+
+  if (options.includeOwnerSecrets) {
+    const storedServer = await withServerAuth(
+      server.uuid,
+      async (_session, ownedServer) => ownedServer
+    );
+    const decryptedServer = decryptServerData(storedServer as any);
+
+    template.transport = (decryptedServer as any).transport;
+    template.streamableHTTPOptions = (decryptedServer as any).streamableHTTPOptions;
+    template.command = decryptedServer.command;
+    template.args = decryptedServer.args;
+    template.env = decryptedServer.env;
+    template.url = decryptedServer.url;
+  }
+
   // Add metadata about the source server
   template.originalServerUuid = server.uuid;
   
@@ -973,8 +982,8 @@ export async function createShareableTemplate(server: McpServer): Promise<any> {
         }
       }
     });
+    template.env = sanitizedEnv;
   }
-  template.env = sanitizedEnv;
   
   // Clear any API keys or tokens in the URL
   if (template.url) {

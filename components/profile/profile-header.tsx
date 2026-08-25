@@ -1,15 +1,12 @@
 // Removed Profile import
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-// Import User type (assuming it's defined or imported from schema)
-import { users } from '@/db/schema'; 
+import type { PublicUser } from '@/lib/public-user';
 
 import { FollowButton } from './follow-button';
 import { ProfileStats } from './profile-stats';
 
-type User = typeof users.$inferSelect;
-
 export interface ProfileHeaderProps { // Export interface
-  user: User; // Use the full User type
+  user: PublicUser; // Public columns only - never the raw users row
   currentUserId?: string | null; // Changed from currentUserProfile
   isFollowing: boolean;
   followerCount: number;

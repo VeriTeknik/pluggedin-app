@@ -500,6 +500,12 @@ export async function queryGutIntuition(
   topK?: number
 ): Promise<MemoryResult> {
   try {
+    // Gut patterns are cross-profile collective data (no profile scoping
+    // needed), but querying them runs an embedding call on caller-supplied
+    // text, so we still require an authenticated session - same as
+    // queryCBPPatterns below.
+    await requireAuthUserId();
+
     const parsed = queryGutSchema.parse({ query, topK });
     return queryIntuition(parsed.query, parsed.topK);
   } catch (error) {

@@ -17,10 +17,55 @@ type User = typeof users.$inferSelect;
 type LanguageCode = typeof languageEnum.enumValues[number]; 
 
 import { getAuthSession } from '@/lib/auth';
-import { withAuth } from '@/lib/auth-helpers';
+import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
+import type { PublicUser } from '@/lib/public-user';
+import { PUBLIC_USER_COLUMNS, publicUserSelection, toPublicUser } from '@/lib/public-user';
 
 // Additional validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
+
+/** Upper bound on any caller-supplied list size, so a single call cannot pull the whole table. */
+const MAX_LIST_LIMIT = 100;
+
+function clampLimit(limit: number): number {
+  if (!Number.isFinite(limit)) {
+    return 10;
+  }
+  return Math.min(Math.max(1, Math.trunc(limit)), MAX_LIST_LIMIT);
+}
+
+/** The session user's id, or undefined for an anonymous caller. */
+async function getCurrentUserId(): Promise<string | undefined> {
+  const session = await getAuthSession();
+  return session?.user?.id;
+}
+
+/**
+ * Whether the caller may see a user's follower/following list. Public profiles
+ * are browsable anonymously; a private one is only visible to its owner.
+ */
+async function canViewUserSocialGraph(userId: string): Promise<boolean> {
+  const currentUserId = await getCurrentUserId();
+  if (currentUserId === userId) {
+    return true;
+  }
+
+  const target = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: PUBLIC_USER_COLUMNS,
+  });
+
+  return target?.is_public === true;
+}
+
+/** Whether the caller owns `profileUuid`. False for anonymous callers. */
+async function viewerOwnsProfile(profileUuid: string): Promise<boolean> {
+  const currentUserId = await getCurrentUserId();
+  if (!currentUserId) {
+    return false;
+  }
+  return userOwnsProfile(currentUserId, profileUuid);
+}
 
 // Validation schema for username
 const usernameSchema = z.string()
@@ -47,6 +92,7 @@ export async function checkUsernameAvailability(username: string): Promise<Usern
     // Check if username exists in the users table
     const existingUser = await db.query.users.findFirst({
       where: eq(users.username, username),
+      columns: { id: true },
     });
     return {
       available: !existingUser,
@@ -67,8 +113,15 @@ export async function checkUsernameAvailability(username: string): Promise<Usern
  * @param username The username to reserve
  * @returns Success status or error information
  */
-export async function reserveUsername(userId: string, username: string): Promise<{ success: boolean; user?: typeof users.$inferSelect; error?: string }> {
+export async function reserveUsername(userId: string, username: string): Promise<{ success: boolean; user?: PublicUser; error?: string }> {
   try {
+    // `userId` arrives from the client: a caller may only claim a username for
+    // themselves, never for another account.
+    return await withAuth(async (session) => {
+    if (session.user.id !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
     // First verify the user exists
     const existingUser = await db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -131,7 +184,7 @@ export async function reserveUsername(userId: string, username: string): Promise
 
       return {
         success: true,
-        user: updatedUser
+        user: toPublicUser(updatedUser)
       };
     } catch (updateError) {
       console.error('Error updating username:', updateError);
@@ -140,6 +193,7 @@ export async function reserveUsername(userId: string, username: string): Promise
         error: 'Database error while updating username'
       };
     }
+    });
   } catch (error) {
     console.error('Error in reserveUsername:', error);
     return {
@@ -173,8 +227,15 @@ export async function updateUserSocial(
     avatar_url?: string;
     language?: string; // Added language
   }
-): Promise<{ success: boolean; user?: User; error?: string }> {
+): Promise<{ success: boolean; user?: PublicUser; error?: string }> {
   try {
+    // `userId` arrives from the client: without this check anyone could flip
+    // another account's `is_public` flag and rewrite its bio.
+    return await withAuth(async (session) => {
+    if (session.user.id !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
     // Update the users table directly
     // Use Omit to exclude language initially, then add it back if valid
     const updateData: Partial<Omit<User, 'language'>> & { updated_at: Date } = { 
@@ -220,8 +281,9 @@ export async function updateUserSocial(
     
     return {
       success: true,
-      user: updatedUser
+      user: toPublicUser(updatedUser)
     };
+    });
   } catch (error) {
     console.error('Error updating user social data:', error);
     return {
@@ -236,15 +298,15 @@ export async function updateUserSocial(
  * @param username The username to look up
  * @returns The user data if the user exists and visibility rules allow access
  */
-export async function getUserByUsername(username: string): Promise<User | null> {
+export async function getUserByUsername(username: string): Promise<PublicUser | null> {
   try {
-    // Get the session to check if the requester is authorized
-    const session = await getAuthSession();
-    const currentUserId = session?.user?.id;
+    const currentUserId = await getCurrentUserId();
 
-    // First, get the user without any visibility filters
+    // Never the bare `users` row: it also holds password, two_fa_secret,
+    // two_fa_backup_codes, last_login_ip and email.
     const user = await db.query.users.findFirst({
       where: eq(users.username, username),
+      columns: PUBLIC_USER_COLUMNS,
     });
 
     // If no user exists with this username, return null
@@ -252,15 +314,12 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       return null;
     }
 
-    // If the user exists, check visibility rules:
-    // 1. The profile is public, OR
-    // 2. The requester is the profile owner, OR
-    // 3. The requester is authenticated
-    if (user.is_public || currentUserId === user.id || currentUserId) {
-      return user;
+    // Visibility: public profiles are world-readable, a private one is only
+    // ever returned to its owner. Merely being logged in grants nothing.
+    if (user.is_public || currentUserId === user.id) {
+      return toPublicUser(user);
     }
 
-    // If none of the visibility rules pass, return null
     return null;
   } catch (error) {
     console.error('Error getting user by username:', error);
@@ -274,19 +333,19 @@ export async function getUserByUsername(username: string): Promise<User | null> 
  * @param limit The maximum number of results to return
  * @returns An array of matching public users
  */
-export async function searchUsers(query: string, limit: number = 10): Promise<User[]> {
+export async function searchUsers(query: string, limit: number = 10): Promise<PublicUser[]> {
   try {
     // Search users directly by username
     const results = await db
-      .select()
+      .select(publicUserSelection)
       .from(users)
       .where(and(
         ilike(users.username, `%${query}%`), // Search username
         eq(users.is_public, true) // Only return public users
       ))
-      .limit(limit);
+      .limit(clampLimit(limit));
 
-    return results;
+    return results.map(toPublicUser);
   } catch (error) {
     console.error('Error searching users:', error); // Corrected log message
     return [];
@@ -462,7 +521,10 @@ export async function getSharedMcpServers(
   includePrivate: boolean = false
 ): Promise<SharedMcpServer[]> {
   try {
-    const whereClause = includePrivate
+    // `includePrivate` is caller-supplied, so it only counts once we know the
+    // caller actually owns the profile whose shares they are asking for.
+    const canSeePrivate = includePrivate && (await viewerOwnsProfile(profileUuid));
+    const whereClause = canSeePrivate
       ? eq(sharedMcpServersTable.profile_uuid, profileUuid)
       : and(
           eq(sharedMcpServersTable.profile_uuid, profileUuid),
@@ -470,7 +532,7 @@ export async function getSharedMcpServers(
         );
     const sharedServers = await db.query.sharedMcpServersTable.findMany({
       where: whereClause,
-      limit,
+      limit: clampLimit(limit),
       with: {
         server: {
           columns: {
@@ -511,7 +573,9 @@ export async function getSharedCollections(
   includePrivate: boolean = false
 ): Promise<SharedCollection[]> {
   try {
-    const whereClause = includePrivate
+    // Same rule as getSharedMcpServers: only the profile owner sees private shares.
+    const canSeePrivate = includePrivate && (await viewerOwnsProfile(profileUuid));
+    const whereClause = canSeePrivate
       ? eq(sharedCollectionsTable.profile_uuid, profileUuid)
       : and(
           eq(sharedCollectionsTable.profile_uuid, profileUuid),
@@ -519,7 +583,7 @@ export async function getSharedCollections(
         );
     const sharedCollections = await db.query.sharedCollectionsTable.findMany({
       where: whereClause,
-      limit,
+      limit: clampLimit(limit),
       orderBy: (collections: any) => [desc(collections.created_at)], // Added explicit type
     });
     return sharedCollections as unknown as SharedCollection[];
@@ -546,17 +610,21 @@ export async function getSharedCollections(
 export async function getFollowers(
   userId: string,
   limit: number = 10
-): Promise<User[]> {
+): Promise<PublicUser[]> {
   try {
+    if (!(await canViewUserSocialGraph(userId))) {
+      return [];
+    }
+
     const followersData = await db
-      .select({ followerUser: users }) // Select the user data directly
+      .select(publicUserSelection) // Public columns only - never the bare users row
       .from(followersTable)
       .innerJoin(users, eq(followersTable.follower_user_id, users.id)) // Join users table
       .where(eq(followersTable.followed_user_id, userId)) // Filter by followed user
       .orderBy(desc(followersTable.created_at))
-      .limit(limit);
+      .limit(clampLimit(limit));
 
-    return followersData.map((f: { followerUser: User }) => f.followerUser); // Added explicit type
+    return followersData.map(toPublicUser);
   } catch (error) {
     console.error('Error getting followers:', error);
     return [];
@@ -572,18 +640,22 @@ export async function getFollowers(
 export async function getFollowing(
   userId: string,
   limit: number = 10
-): Promise<User[]> { // Return User array
+): Promise<PublicUser[]> {
   try {
+    if (!(await canViewUserSocialGraph(userId))) {
+      return [];
+    }
+
     // Explicitly join followersTable with users table
     const followingData = await db
-      .select({ followedUser: users }) // Select the user data directly
+      .select(publicUserSelection) // Public columns only - never the bare users row
       .from(followersTable)
       .innerJoin(users, eq(followersTable.followed_user_id, users.id)) // Join users table
       .where(eq(followersTable.follower_user_id, userId)) // Filter by the follower user
       .orderBy(desc(followersTable.created_at)) // Order by follow date
-      .limit(limit);
+      .limit(clampLimit(limit));
 
-    return followingData.map((f: { followedUser: User }) => f.followedUser); // Added explicit type
+    return followingData.map(toPublicUser);
   } catch (error) {
     console.error('Error getting following:', error);
     return [];
@@ -610,10 +682,17 @@ export async function shareMcpServer(
   customTemplate?: any
 ): Promise<{ success: boolean; sharedServer?: SharedMcpServer; error?: string }> {
   try {
+    const validatedProfileUuid = uuidSchema.parse(profileUuid);
+    const validatedServerUuid = uuidSchema.parse(serverUuid);
+
+    // The caller must own the profile they are sharing under, and the server
+    // must live under that same profile - otherwise any serverUuid in the
+    // system could be republished by anyone who learns it.
+    return await withProfileAuth(validatedProfileUuid, async () => {
     const server = await db.query.mcpServersTable.findFirst({
-      where: eq(mcpServersTable.uuid, serverUuid),
+      where: eq(mcpServersTable.uuid, validatedServerUuid),
     });
-    if (!server) {
+    if (!server || server.profile_uuid !== validatedProfileUuid) {
       return { success: false, error: 'Server not found' };
     }
     const serverTemplate = customTemplate || await createShareableTemplate({
@@ -652,6 +731,7 @@ export async function shareMcpServer(
       success: true,
       sharedServer: finalSharedServer as unknown as SharedMcpServer
     };
+    });
   } catch (error) {
     console.error('Error sharing MCP server:', error);
     return {
@@ -679,8 +759,8 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
           with: {
             project: {
               with: {
-                user: { // Select necessary user fields
-                  columns: { username: true, email: true, name: true }
+                user: { // Public attribution fields only - never email
+                  columns: { username: true, name: true }
                 }
               }
             }
@@ -694,10 +774,18 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
       return null;
     }
 
+    // A private share, and its template, belongs to the owner alone.
+    if (
+      !sharedServerData.is_public &&
+      !(await viewerOwnsProfile(sharedServerData.profile_uuid))
+    ) {
+      return null;
+    }
+
     // Determine the display name
     const user = sharedServerData.profile?.project?.user;
     const profile = sharedServerData.profile;
-    const sharedByName = user?.username || user?.email || profile?.name || 'Unknown User';
+    const sharedByName = user?.username || user?.name || profile?.name || 'Unknown User';
 
     // Construct the final object without nested profile/project/user
     const result = {
@@ -861,6 +949,9 @@ export async function shareCollection(
   isPublic: boolean = true
 ): Promise<{ success: boolean; sharedCollection?: SharedCollection; error?: string }> {
   try {
+    // profileUuid arrives from the client; verify the session owns it before
+    // writing anything under it (same pattern as unshareServer above).
+    return await withProfileAuth(uuidSchema.parse(profileUuid), async () => {
     const [sharedCollection] = await db.insert(sharedCollectionsTable)
       .values({ profile_uuid: profileUuid, title, description, content, is_public: isPublic })
       .returning();
@@ -876,6 +967,7 @@ export async function shareCollection(
       success: true,
       sharedCollection: sharedCollection as unknown as SharedCollection
     };
+    });
   } catch (error) {
     console.error('Error sharing collection:', error);
     return {
@@ -904,6 +996,9 @@ export async function updateSharedCollection(
   }
 ): Promise<{ success: boolean; sharedCollection?: SharedCollection; error?: string }> {
   try {
+    // profileUuid arrives from the client; verify the session owns it before
+    // writing anything under it (same pattern as unshareServer above).
+    return await withProfileAuth(uuidSchema.parse(profileUuid), async () => {
     const existingCollection = await db.query.sharedCollectionsTable.findFirst({
       where: and(
         eq(sharedCollectionsTable.uuid, sharedCollectionUuid),
@@ -935,6 +1030,7 @@ export async function updateSharedCollection(
       success: true,
       sharedCollection: updatedCollection as unknown as SharedCollection
     };
+    });
   } catch (error) {
     console.error('Error updating shared collection:', error);
     return {
@@ -1015,6 +1111,9 @@ export async function unshareCollection(
   sharedCollectionUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // profileUuid arrives from the client; verify the session owns it before
+    // writing anything under it (same pattern as unshareServer above).
+    return await withProfileAuth(uuidSchema.parse(profileUuid), async () => {
     const sharedCollection = await db.query.sharedCollectionsTable.findFirst({
       where: and(
         eq(sharedCollectionsTable.uuid, sharedCollectionUuid),
@@ -1036,6 +1135,7 @@ export async function unshareCollection(
       revalidatePath(`/to/${associatedUsername}`);
     }
     return { success: true };
+    });
   } catch (error) {
     console.error('Error unsharing collection:', error);
     return {
@@ -1063,6 +1163,9 @@ export async function shareEmbeddedChat(
   isPublic: boolean = true
 ): Promise<{ success: boolean; embeddedChat?: EmbeddedChat; error?: string }> {
   try {
+    // profileUuid arrives from the client; verify the session owns it before
+    // writing anything under it (same pattern as unshareServer above).
+    return await withProfileAuth(uuidSchema.parse(profileUuid), async () => {
     const [embeddedChat] = await db.insert(embeddedChatsTable)
       .values({ profile_uuid: profileUuid, title, description, settings, is_public: isPublic, is_active: true })
       .returning();
@@ -1078,6 +1181,7 @@ export async function shareEmbeddedChat(
       success: true,
       embeddedChat: embeddedChat as unknown as EmbeddedChat
     };
+    });
   } catch (error) {
     console.error('Error sharing embedded chat:', error);
     return {
@@ -1107,6 +1211,9 @@ export async function updateEmbeddedChat(
   }
 ): Promise<{ success: boolean; embeddedChat?: EmbeddedChat; error?: string }> {
   try {
+    // profileUuid arrives from the client; verify the session owns it before
+    // writing anything under it (same pattern as unshareServer above).
+    return await withProfileAuth(uuidSchema.parse(profileUuid), async () => {
     const existingChat = await db.query.embeddedChatsTable.findFirst({
       where: and(
         eq(embeddedChatsTable.uuid, embeddedChatUuid),
@@ -1139,6 +1246,7 @@ export async function updateEmbeddedChat(
       success: true,
       embeddedChat: updatedChat as unknown as EmbeddedChat
     };
+    });
   } catch (error) {
     console.error('Error updating embedded chat:', error);
     return {
@@ -1188,6 +1296,13 @@ export async function isServerShared(
   serverUuid: string
 ): Promise<{ isShared: boolean; server?: SharedMcpServer }> {
   try {
+    // Only the profile owner asks this question - it drives their own share
+    // dialog - and the answer must never carry the stored template, which can
+    // hold the server's connection details.
+    if (!(await viewerOwnsProfile(profileUuid))) {
+      return { isShared: false };
+    }
+
     const sharedServer = await db.query.sharedMcpServersTable.findFirst({
       where: and(
         eq(sharedMcpServersTable.profile_uuid, profileUuid),
@@ -1197,7 +1312,16 @@ export async function isServerShared(
     if (sharedServer) {
       return {
         isShared: true,
-        server: sharedServer as unknown as SharedMcpServer
+        server: {
+          uuid: sharedServer.uuid,
+          profile_uuid: sharedServer.profile_uuid,
+          server_uuid: sharedServer.server_uuid,
+          title: sharedServer.title,
+          description: sharedServer.description,
+          is_public: sharedServer.is_public,
+          created_at: sharedServer.created_at,
+          updated_at: sharedServer.updated_at,
+        } as unknown as SharedMcpServer
       };
     }
     return { isShared: false };

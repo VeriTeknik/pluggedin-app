@@ -3,10 +3,8 @@ import { Metadata } from 'next';
 import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
 import { ProfileHeader } from '@/components/profile/profile-header';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
-import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
-
-type User = typeof users.$inferSelect;
+import type { PublicUser } from '@/lib/public-user';
 
 // --- Non-async Presentation Component ---
 function UserProfileDisplay({
@@ -18,7 +16,7 @@ function UserProfileDisplay({
   followingCount,
   isOwner,
 }: {
-  user: User;
+  user: PublicUser;
   username: string;
   currentUserId: string | undefined;
   currentlyFollowing: boolean;
