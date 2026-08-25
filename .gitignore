@@ -81,3 +81,8 @@ z_reports/
 CLAUDE.md
 # Sentry Config File
 .env.sentry-build-plugin
+
+# deepsec scanning workspace. Its own .gitignore excludes reports/runs, but
+# deliberately tracks INFO.md — a threat model naming this app's weak spots.
+# That is fine in a private repo; this one is public. Ignore the lot.
+.deepsec/
