@@ -141,8 +141,13 @@ export function ShareServerDialog({
 
       setIsLoadingPreview(true);
       try {
-        // Always generate a fresh template when opening the dialog
-        const templateData = await createShareableTemplate(server);
+        // Always generate a fresh template when opening the dialog. The owner
+        // reviews the install recipe here before sharing, so ask for the
+        // connection structure explicitly - it is not in the default template.
+        // Values come back redacted; what is shared is whatever is set here.
+        const templateData = await createShareableTemplate(server, {
+          includeConnectionFields: true,
+        });
         setServerData(templateData);
       } catch (error) {
         console.error("Error loading template data:", error);

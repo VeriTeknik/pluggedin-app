@@ -9,6 +9,7 @@ import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
 import { RateLimiters } from '@/lib/rate-limiter';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 
 // Cache TTL in minutes for each source
@@ -318,8 +319,10 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
     });
 
     for (const { sharedServer, profile, user } of resultsWithJoins) {
-      // We'll use the template field which contains the sanitized MCP server data
-      const template = sharedServer.template as Record<string, any>;
+      // We'll use the template field which contains the sanitized MCP server
+      // data. Re-sanitise: shares stored before the write path was fixed still
+      // hold the owner's connection details.
+      const template = sanitizeServerTemplate(sharedServer.template) as Record<string, any>;
 
       if (!template) continue;
 

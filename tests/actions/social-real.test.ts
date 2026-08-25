@@ -17,6 +17,33 @@ vi.mock('@/app/actions/audit-logger', () => ({
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => ({ delete: vi.fn() })),
+}));
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn(() => {
+    const error: any = new Error('NEXT_REDIRECT');
+    error.digest = 'NEXT_REDIRECT;replace;/login;307;';
+    throw error;
+  }),
+}));
+
+const SESSION_USER_ID = 'test-user-id';
+
+/**
+ * withAuth re-checks that the session user exists; it is the only users
+ * lookup that passes a callback as `where`. Everything else passes a drizzle
+ * expression, so this lets a test script the real lookups without the session
+ * probe eating one of them.
+ */
+function usersFindFirst(handler: (args: any) => any) {
+  (mockedDb.query.users.findFirst as any).mockImplementation(async (args: any) => {
+    if (typeof args?.where === 'function') {
+      return { id: SESSION_USER_ID };
+    }
+    return handler(args);
+  });
+}
 
 const mockedDb = vi.mocked(db);
 
@@ -112,11 +139,13 @@ describe('Social Actions (Real Functions)', () => {
   });
 
   describe('getUserByUsername', () => {
-    it('should return user when found and public', async () => {
+    it('should return a public user without their auth columns', async () => {
       const mockUser = {
         id: 'user-123',
         username: 'testuser',
         email: 'test@example.com',
+        password: 'hashed-secret',
+        two_fa_secret: 'JBSWY3DPEHPK3PXP',
         name: 'Test User',
         is_public: true,
       };
@@ -125,7 +154,11 @@ describe('Social Actions (Real Functions)', () => {
 
       const result = await getUserByUsername('testuser');
 
-      expect(result).toEqual(mockUser);
+      expect(result?.id).toBe('user-123');
+      expect(result?.username).toBe('testuser');
+      expect(result).not.toHaveProperty('email');
+      expect(result).not.toHaveProperty('password');
+      expect(result).not.toHaveProperty('two_fa_secret');
     });
 
     it('should return null when user not found', async () => {
@@ -136,11 +169,11 @@ describe('Social Actions (Real Functions)', () => {
       expect(result).toBeNull();
     });
 
-    it('should return user for private user when authenticated', async () => {
+    it('should not return a private user to an authenticated non-owner', async () => {
       const mockUser = {
         id: 'different-user-id',
         username: 'privateuser',
-        email: 'private@example.com', 
+        email: 'private@example.com',
         name: 'Private User',
         is_public: false,
       };
@@ -149,47 +182,70 @@ describe('Social Actions (Real Functions)', () => {
 
       const result = await getUserByUsername('privateuser');
 
-      // Since getAuthSession returns a valid user, this private user should be accessible
-      expect(result).toEqual(mockUser);
+      // Being signed in is not a licence to read someone else's private profile.
+      expect(result).toBeNull();
+    });
+
+    it('should return a private user to its owner', async () => {
+      const mockUser = {
+        id: SESSION_USER_ID,
+        username: 'privateuser',
+        name: 'Private User',
+        is_public: false,
+      };
+
+      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
+
+      const result = await getUserByUsername('privateuser');
+
+      expect(result?.id).toBe(SESSION_USER_ID);
     });
   });
 
   describe('reserveUsername', () => {
     it('should successfully reserve available username', async () => {
-      const mockUser = { id: 'user-123', username: null };
-      const updatedUser = { id: 'user-123', username: 'newuser' };
-      
-      mockedDb.query.users.findFirst
-        .mockResolvedValueOnce(mockUser) // For user existence check
-        .mockResolvedValueOnce(null); // For username availability check
-      
-      const result = await reserveUsername('user-123', 'newuser');
+      // `columns` narrows the availability lookup; the existence check does not.
+      usersFindFirst((args) =>
+        args?.columns ? null : { id: SESSION_USER_ID, username: null }
+      );
+
+      const result = await reserveUsername(SESSION_USER_ID, 'newuser');
 
       expect(result.success).toBe(true);
       expect(result.user).toBeDefined();
     });
 
     it('should fail when user not found', async () => {
-      mockedDb.query.users.findFirst.mockResolvedValue(null);
+      usersFindFirst(() => null);
 
-      const result = await reserveUsername('nonexistent', 'newuser');
+      const result = await reserveUsername(SESSION_USER_ID, 'newuser');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('User not found');
     });
 
     it('should fail when username is taken', async () => {
-      const mockUser = { id: 'user-123', username: null };
-      const existingUser = { id: 'other-user', username: 'takenuser' };
-      
-      mockedDb.query.users.findFirst
-        .mockResolvedValueOnce(mockUser) // For user existence check
-        .mockResolvedValueOnce(existingUser); // For username availability check
+      usersFindFirst((args) =>
+        args?.columns
+          ? { id: 'other-user' }
+          : { id: SESSION_USER_ID, username: null }
+      );
 
-      const result = await reserveUsername('user-123', 'takenuser');
+      const result = await reserveUsername(SESSION_USER_ID, 'takenuser');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Username is already taken');
+    });
+
+    it('should refuse to claim a username for another user', async () => {
+      usersFindFirst((args) =>
+        args?.columns ? null : { id: 'someone-else', username: null }
+      );
+
+      const result = await reserveUsername('someone-else', 'newuser');
+
+      expect(result.success).toBe(false);
+      expect(mockedDb.update).not.toHaveBeenCalled();
     });
   });
 
