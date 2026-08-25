@@ -15,6 +15,24 @@ const REDACTED_PASSWORD = '<YOUR_PASSWORD>';
 const REDACTED_API_KEY = '<YOUR_API_KEY>';
 
 /**
+ * What a parameter or flag has to be called for its value to count as a
+ * credential. One definition drives both the query-string rule and the
+ * command-line rule, so the two cannot drift apart.
+ *
+ * The strong terms match as substrings, which catches `client_secret`,
+ * `refresh_token` and `x-auth-token`. A bare `key` has to be the whole name -
+ * matching it as a substring would redact `monkey` and `keyspace`.
+ */
+const CREDENTIAL_NAME = String.raw`(?:key|[\w-]*(?:token|secret|password|passwd|auth|credential|api[-_]?key|access[-_]?key)[\w-]*)`;
+
+/** `?client_secret=live-value` */
+const CREDENTIAL_QUERY_PARAM = new RegExp(String.raw`([?&]${CREDENTIAL_NAME}=)([^&\s]+)`, 'gi');
+/** `--client-secret=live-value` or `--client-secret live-value` */
+const CREDENTIAL_FLAG_INLINE = new RegExp(String.raw`(--${CREDENTIAL_NAME}[=\s])(\S+)`, 'gi');
+/** `--client-secret`, with the value in the next argv entry */
+const CREDENTIAL_FLAG_EXACT = new RegExp(String.raw`^--${CREDENTIAL_NAME}$`, 'i');
+
+/**
  * Mask credentials embedded in a connection string: database URLs with inline
  * passwords, HTTP basic auth, and api keys carried as query parameters.
  */
@@ -27,21 +45,14 @@ export function sanitizeConnectionString(text: string): string {
     `$1:${REDACTED_PASSWORD}@$3`
   );
 
-  // https://api.example.com?api_key=abcd1234
-  text = text.replace(
-    /([?&](?:api_key|access_token|token|key|auth|apikey)=)([^&\s]+)/gi,
-    `$1${REDACTED_API_KEY}`
-  );
+  // A credential carried as a query parameter
+  text = text.replace(CREDENTIAL_QUERY_PARAM, `$1${REDACTED_API_KEY}`);
 
   // https://user:password@example.com
   text = text.replace(/(https?:\/\/[^:]+):([^@]+)@/gi, `$1:${REDACTED_PASSWORD}@`);
 
-  // A credential passed inline as a command-line flag: keep the flag itself,
-  // replace whatever value follows it.
-  text = text.replace(
-    /(--[\w-]*(?:token|key|secret|password|auth)[\w-]*[=\s])(\S+)/gi,
-    `$1${REDACTED_VALUE}`
-  );
+  // A credential passed as a command-line flag: keep the flag, replace the value
+  text = text.replace(CREDENTIAL_FLAG_INLINE, `$1${REDACTED_VALUE}`);
 
   return text;
 }
@@ -63,9 +74,19 @@ export function sanitizeServerTemplate<T>(template: T): T {
   }
 
   if (Array.isArray(sanitized.args)) {
-    sanitized.args = sanitized.args.map((arg: unknown) =>
+    const args = sanitized.args.map((arg: unknown) =>
       typeof arg === 'string' ? sanitizeConnectionString(arg) : arg
     );
+
+    // `--client-secret live-value` splits the flag and its value across two
+    // entries, so the per-string pass above cannot see the pairing.
+    for (let i = 0; i < args.length - 1; i++) {
+      if (typeof args[i] === 'string' && CREDENTIAL_FLAG_EXACT.test(args[i])) {
+        args[i + 1] = REDACTED_VALUE;
+      }
+    }
+
+    sanitized.args = args;
   }
 
   if (typeof sanitized.url === 'string') {

@@ -18,8 +18,44 @@ describe('sanitizeConnectionString', () => {
     expect(sanitized).toContain('db.example.com');
   });
 
-  it('masks api keys carried in query strings', () => {
-    expect(sanitizeConnectionString('https://api.example.com/mcp?api_key=live-abc123')).not.toContain('live-abc123');
+  it.each([
+    'api_key',
+    'apiKey',
+    'apikey',
+    'access_key',
+    'key',
+    'token',
+    'access_token',
+    'refresh_token',
+    'secret',
+    'client_secret',
+    'password',
+    'auth',
+    'x-auth-token',
+    'credential',
+  ])('masks a credential carried as the %s query parameter', (param) => {
+    const sanitized = sanitizeConnectionString(`https://api.example.com/mcp?${param}=live-abc123`);
+
+    expect(sanitized).not.toContain('live-abc123');
+    expect(sanitized).toContain(param);
+  });
+
+  it.each(['version', 'monkey', 'keyspace', 'format'])(
+    'leaves the innocuous %s query parameter alone',
+    (param) => {
+      const url = `https://api.example.com/mcp?${param}=2`;
+
+      expect(sanitizeConnectionString(url)).toBe(url);
+    }
+  );
+
+  it('masks a credential in a later query parameter, not just the first', () => {
+    const sanitized = sanitizeConnectionString(
+      'https://api.example.com/mcp?version=2&client_secret=live-abc123'
+    );
+
+    expect(sanitized).not.toContain('live-abc123');
+    expect(sanitized).toContain('version=2');
   });
 
   it('leaves an innocuous string alone', () => {
@@ -92,6 +128,24 @@ describe('sanitizeServerTemplate', () => {
     const sanitized = sanitizeServerTemplate(legacyTemplate);
 
     expect(sanitized.args.join(' ')).not.toContain('tok-live-abcdef');
+  });
+
+  it.each(['--token', '--api-key', '--client-secret', '--password', '--auth-header'])(
+    'redacts a credential passed as the %s flag',
+    (flag) => {
+      const sanitized: any = sanitizeServerTemplate({
+        args: [flag, 'live-flag-value', `${flag}=live-inline-value`],
+      });
+
+      expect(sanitized.args.join(' ')).not.toContain('live-flag-value');
+      expect(sanitized.args.join(' ')).not.toContain('live-inline-value');
+    }
+  );
+
+  it('leaves an ordinary flag and its value alone', () => {
+    const sanitized: any = sanitizeServerTemplate({ args: ['--port', '8080', '--verbose'] });
+
+    expect(sanitized.args).toEqual(['--port', '8080', '--verbose']);
   });
 
   it('leaks nothing when serialized', () => {
