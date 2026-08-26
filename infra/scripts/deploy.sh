@@ -62,7 +62,13 @@ chmod 0700 "$RUNTIME_DIR"
 #    --input-type/--output-type are mandatory here: sops infers format from
 #    the file extension, and `.sops` is not a format it knows, so it falls
 #    back to JSON and dies on the first `#` comment in the dotenv payload.
+#    The 0400 below means a *second* deploy cannot redirect into this path -
+#    not even as its owner - so make it writable first. `chmod`, not `rm`:
+#    these files are bind-mounted into pluggedin-app, postgres and traefik,
+#    and replacing the inode would leave those mounts pointing at a deleted
+#    file until every container is recreated.
 log "decrypting secrets"
+chmod u+w "$SECRETS_DECRYPTED" 2>/dev/null || true
 sops --decrypt --input-type dotenv --output-type dotenv \
   "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
 chmod 0400 "$SECRETS_DECRYPTED"
@@ -81,6 +87,9 @@ extract_secret() {
     log "WARN: ${key} missing from secrets.env (skipping ${dest})"
     return
   fi
+  # Same reason as the secrets file above: 0400 from the previous run would
+  # otherwise make this redirect fail.
+  chmod u+w "$dest" 2>/dev/null || true
   printf '%s' "$value" > "$dest"
   chmod 0400 "$dest"
 }
