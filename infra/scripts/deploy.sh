@@ -63,16 +63,20 @@ install_secret_file() {
   local src="$1" dest="$2"
   SECRET_FILES+=("$dest")
   chmod u+w "$dest" 2>/dev/null || true
-  cat "$src" > "$dest"
+  # `|| copy_status=$?` is load-bearing: under `set -e` a failing cat would
+  # otherwise exit here, before KEEP_TMP is set, and the trap would delete the
+  # very temp file this is meant to preserve.
+  local copy_status=0
+  cat "$src" > "$dest" || copy_status=$?
   # A file's *contents* cannot be replaced atomically - only its name can, via
   # rename - and rename is out here because the inode is bind-mounted into
   # running containers. The write window therefore cannot be removed, only made
-  # detectable: if the copy came up short (a full tmpfs being the realistic
-  # cause) fail loudly and keep the good copy for recovery, rather than leaving
-  # a silently truncated secret behind for the next container start to read.
-  if [ "$(wc -c < "$src")" != "$(wc -c < "$dest")" ]; then
+  # detectable: if the copy failed or came up short (a full tmpfs being the
+  # realistic cause) fail loudly and keep the good copy for recovery, rather
+  # than leaving a truncated secret for the next container start to read.
+  if [ "$copy_status" != "0" ] || [ "$(wc -c < "$src")" != "$(wc -c < "$dest")" ]; then
     KEEP_TMP=1
-    die "short write to ${dest} - intact copy kept at ${src}"
+    die "failed to write ${dest} (copy exit ${copy_status}) - intact copy kept at ${src}"
   fi
   chmod 0400 "$dest"
 }
