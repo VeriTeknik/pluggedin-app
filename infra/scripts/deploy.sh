@@ -40,6 +40,35 @@ done
 log() { printf '[deploy %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '[deploy] FATAL: %s\n' "$*" >&2; exit 1; }
 
+# Staging files created by this run, removed on any exit.
+#
+# Every stage-then-rename below writes a temp file, marks it read-only, then
+# renames it over the destination. Interrupt the script between those last two
+# steps and the temp file survives read-only. Under a FIXED name that is the
+# same trap the destinations themselves used to be: the next run's redirect or
+# `cp` opens an existing unwritable file and dies with "Permission denied",
+# wedging every future deploy. Verified: both `>` and `cp` fail against an
+# existing 0444 file.
+#
+# mktemp gives each run a unique name, so a leftover can never block a later
+# run — which also covers SIGKILL, where the trap does not fire and the only
+# residue is garbage on tmpfs. The trap keeps the normal cases tidy.
+# `rm` unlinks via the directory, so mode 0400/0444 does not obstruct cleanup.
+#
+# Cleanup hangs off EXIT alone. A bare `trap cleanup_tmp INT` would run the
+# handler and then RESUME the script, which would carry on with its staging
+# files already deleted — worse than not trapping at all. The signal traps
+# therefore only force an exit, and the EXIT trap does the removal once.
+TMP_FILES=()
+cleanup_tmp() {
+  if [ "${#TMP_FILES[@]}" -gt 0 ]; then
+    rm -f "${TMP_FILES[@]}"
+  fi
+}
+trap cleanup_tmp EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # 1. Preflight
 command -v sops >/dev/null || die "sops not installed"
 command -v age >/dev/null  || die "age not installed"
@@ -62,10 +91,21 @@ chmod 0700 "$RUNTIME_DIR"
 #    --input-type/--output-type are mandatory here: sops infers format from
 #    the file extension, and `.sops` is not a format it knows, so it falls
 #    back to JSON and dies on the first `#` comment in the dotenv payload.
+#
+#    Write via a temp file and rename rather than redirecting onto the
+#    destination. The destination is left mode 0400, so on every deploy after
+#    the first the redirect opens an existing read-only file and dies with
+#    "Permission denied" — the script only ever worked on a host where the
+#    file did not exist yet. rename(2) replaces the target regardless of its
+#    mode (it needs write permission on the directory, not the file) and is
+#    atomic, so a concurrent reader never sees a half-written secrets file.
 log "decrypting secrets"
+secrets_tmp="$(mktemp "${SECRETS_DECRYPTED}.XXXXXX")"
+TMP_FILES+=("$secrets_tmp")
 sops --decrypt --input-type dotenv --output-type dotenv \
-  "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
-chmod 0400 "$SECRETS_DECRYPTED"
+  "$SECRETS_ENCRYPTED" > "$secrets_tmp"
+chmod 0400 "$secrets_tmp"
+mv -f "$secrets_tmp" "$SECRETS_DECRYPTED"
 
 # 3a. Project specific secrets out of the env file into single-line files
 #     under /run/sops/, because Traefik and a few other services consume
@@ -81,8 +121,14 @@ extract_secret() {
     log "WARN: ${key} missing from secrets.env (skipping ${dest})"
     return
   fi
-  printf '%s' "$value" > "$dest"
-  chmod 0400 "$dest"
+  # Same temp-then-rename reason as the secrets file above: $dest is left
+  # mode 0400, so redirecting onto it fails on every re-deploy.
+  local tmp
+  tmp="$(mktemp "${dest}.XXXXXX")"
+  TMP_FILES+=("$tmp")
+  printf '%s' "$value" > "$tmp"
+  chmod 0400 "$tmp"
+  mv -f "$tmp" "$dest"
 }
 
 extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
@@ -118,9 +164,13 @@ staged=0
 for src in "${INFRA_DIR}"/traefik/dynamic/*.yml; do
   [ -f "$src" ] || continue
   base="$(basename "$src")"
-  cp "$src" "${TRAEFIK_DYNAMIC_DIR}/.${base}.tmp"
-  chmod 0444 "${TRAEFIK_DYNAMIC_DIR}/.${base}.tmp"
-  mv -f "${TRAEFIK_DYNAMIC_DIR}/.${base}.tmp" "${TRAEFIK_DYNAMIC_DIR}/${base}"
+  # Same unique-temp reason as the secrets files: a fixed `.${base}.tmp` left
+  # behind read-only makes the next run's `cp` fail with "Permission denied".
+  dyn_tmp="$(mktemp "${TRAEFIK_DYNAMIC_DIR}/.${base}.XXXXXX")"
+  TMP_FILES+=("$dyn_tmp")
+  cp "$src" "$dyn_tmp"
+  chmod 0444 "$dyn_tmp"
+  mv -f "$dyn_tmp" "${TRAEFIK_DYNAMIC_DIR}/${base}"
   staged=$((staged + 1))
 done
 [ "$staged" -gt 0 ] || die "no dynamic config staged — Traefik would start with no middlewares"
