@@ -116,3 +116,33 @@ export function sanitizeServerTemplate<T>(template: T): T {
 
   return sanitized as T;
 }
+
+/**
+ * Strip credentials from a shared collection's `content`.
+ *
+ * `content` is client-supplied jsonb. The share dialog builds it as
+ * `{ servers: [...templates] }` from templates that carry the owner's
+ * decrypted command, args, env and url, and nothing sanitized it on the way
+ * in. Like `sanitizeServerTemplate`, this runs on the write path so nothing
+ * unsanitized is stored, and on the read paths so collections shared before
+ * this existed are covered without a backfill.
+ *
+ * Anything that is not a list of servers is returned unchanged: `content` has
+ * no enforced schema, and dropping unrecognised shapes would silently destroy
+ * collections rather than protect them.
+ */
+export function sanitizeCollectionContent<T>(content: T): T {
+  if (!content || typeof content !== 'object') {
+    return content;
+  }
+
+  const servers = (content as { servers?: unknown }).servers;
+  if (!Array.isArray(servers)) {
+    return content;
+  }
+
+  return {
+    ...(content as object),
+    servers: servers.map((server) => sanitizeServerTemplate(server)),
+  } as T;
+}
