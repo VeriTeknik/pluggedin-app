@@ -343,7 +343,8 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
 
       // Determine the display name for 'shared_by' - Use username from users table first, then fallback
       const sharedByName = user?.username || 'Unknown User';
-      const profileUrl = user?.username ? `/to/${user.username}` : null;
+      // Public profile pages were removed; attribution keeps the name only.
+      const profileUrl = null;
 
       results[serverKey] = {
         name: sharedServer.title,

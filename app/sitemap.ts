@@ -1,8 +1,8 @@
-import { and, eq, isNotNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { MetadataRoute } from 'next';
 
 import { db } from '@/db';
-import { blogPostsTable, BlogPostStatus, users } from '@/db/schema';
+import { blogPostsTable, BlogPostStatus } from '@/db/schema';
 
 // At Next.js build time the database isn't reachable in every environment
 // — most importantly inside `pnpm build` running in our docker image, where
@@ -19,25 +19,20 @@ async function loadDynamicSitemapEntries() {
         published_at: true,
       },
     });
-    const publicUsers = await db
-      .select({ username: users.username, updated_at: users.updated_at })
-      .from(users)
-      .where(and(isNotNull(users.username), eq(users.is_public, true)))
-      .limit(50_000);
-    return { blogPosts, publicUsers };
+    return { blogPosts };
   } catch (err) {
     console.warn(
       '[sitemap] DB lookup failed (returning only static routes):',
       err instanceof Error ? err.message : err,
     );
-    return { blogPosts: [], publicUsers: [] };
+    return { blogPosts: [] };
   }
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://plugged.in';
   const currentDate = new Date();
-  const { blogPosts, publicUsers } = await loadDynamicSitemapEntries();
+  const { blogPosts } = await loadDynamicSitemapEntries();
 
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -135,13 +130,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  // Public user profile routes
-  const userRoutes: MetadataRoute.Sitemap = publicUsers.map((user) => ({
-    url: `${baseUrl}/to/${encodeURIComponent(user.username!)}`,
-    lastModified: user.updated_at || currentDate,
-    changeFrequency: 'weekly' as const,
-    priority: 0.6,
-  }));
-
-  return [...staticRoutes, ...blogRoutes, ...userRoutes];
+  return [...staticRoutes, ...blogRoutes];
 }

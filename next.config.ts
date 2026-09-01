@@ -42,6 +42,18 @@ const nextConfig: NextConfig = {
         destination: '/blog/why-autonomy-is-essential-for-ai-agents',
         permanent: true,
       },
+      // Public profile pages were removed. These URLs were in the sitemap and
+      // may have been shared, so send them home rather than returning 404.
+      {
+        source: '/to',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/to/:path*',
+        destination: '/',
+        permanent: true,
+      },
     ];
   },
   env: {
