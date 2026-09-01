@@ -143,6 +143,24 @@ export async function getDocumentVersionsFor(userId: string, documentId: string,
   }
 }
 
+/**
+ * Whether `projectUuid` belongs to `userId`.
+ *
+ * Document reads are scoped by `user_id`, so a foreign project simply matches
+ * nothing. Anything scoped by *project alone* is different — ragService keys
+ * both its storage stats and its retrieval on the project — and naming someone
+ * else's project reaches their data. One helper, so the rule cannot be applied
+ * to one such call and forgotten on the next.
+ */
+async function ownsProject(userId: string, projectUuid: string): Promise<boolean> {
+  const project = await db.query.projectsTable.findFirst({
+    where: and(eq(projectsTable.uuid, projectUuid), eq(projectsTable.user_id, userId)),
+    columns: { uuid: true },
+  });
+
+  return !!project;
+}
+
 /** Per-workspace storage ceiling. */
 export const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
 
@@ -182,15 +200,8 @@ export async function getProjectStorageUsageFor(
   projectUuid?: string
 ): Promise<ProjectStorageUsage> {
   try {
-    if (projectUuid) {
-      const project = await db.query.projectsTable.findFirst({
-        where: and(eq(projectsTable.uuid, projectUuid), eq(projectsTable.user_id, userId)),
-        columns: { uuid: true },
-      });
-
-      if (!project) {
-        return emptyUsage('Project not found');
-      }
+    if (projectUuid && !(await ownsProject(userId, projectUuid))) {
+      return emptyUsage('Project not found');
     }
 
     const condition = projectUuid
@@ -302,6 +313,13 @@ export async function askKnowledgeBaseFor(userId: string, query: string, project
   error?: string
 }> {
   try {
+    // The retrieval below is scoped by this identifier and nothing else, so a
+    // project the caller does not own would answer out of that tenant's
+    // documents.
+    if (projectUuid && !(await ownsProject(userId, projectUuid))) {
+      return { success: false, error: 'Project not found' };
+    }
+
     // For now, we'll use the RAG service directly since the MCP tool
     // is designed for external access. In production, this would integrate
     // with the MCP infrastructure
