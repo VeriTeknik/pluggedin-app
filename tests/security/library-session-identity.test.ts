@@ -86,4 +86,20 @@ describe('library actions derive identity from the session', () => {
     expect(usage.success).toBe(false);
     expect(queries.getProjectStorageUsageFor).not.toHaveBeenCalled();
   });
+
+  it('returns the failure shape when the session store itself fails', async () => {
+    // The wrappers replaced implementations that caught everything. If a
+    // session-store or adapter failure escapes instead, a document read turns
+    // into a rejected server action rather than `{ success: false }` / null.
+    getServerSession.mockRejectedValue(new Error('session store unreachable'));
+
+    await expect(getDocs()).resolves.toMatchObject({ success: false });
+    await expect(getDocByUuid('doc-uuid')).resolves.toBeNull();
+    await expect(getDocumentVersions('doc-uuid')).resolves.toMatchObject({
+      success: false,
+    });
+    await expect(getProjectStorageUsage()).resolves.toMatchObject({ success: false });
+
+    expect(queries.getDocsFor).not.toHaveBeenCalled();
+  });
 });

@@ -129,28 +129,46 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
  * The implementations live in lib/library/queries.ts for callers that have
  * already established an identity of their own.
  */
+/**
+ * The session user, or null.
+ *
+ * These wrappers replaced implementations that caught everything, so a
+ * session-store or adapter failure has to keep producing the documented
+ * failure shape rather than turning a document read into a rejected server
+ * action.
+ */
+async function sessionUserId(): Promise<string | null> {
+  try {
+    const session = await getServerSession(authOptions);
+    return session?.user?.id ?? null;
+  } catch (error) {
+    console.error('Failed to resolve the session:', error);
+    return null;
+  }
+}
+
 export async function getDocs(projectUuid?: string): Promise<DocListResponse> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = await sessionUserId();
+  if (!userId) {
     return { success: false, error: 'Authentication required' };
   }
-  return getDocsFor(session.user.id, projectUuid);
+  return getDocsFor(userId, projectUuid);
 }
 
 export async function getDocByUuid(docUuid: string, projectUuid?: string): Promise<Doc | null> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = await sessionUserId();
+  if (!userId) {
     return null;
   }
-  return getDocByUuidFor(session.user.id, docUuid, projectUuid);
+  return getDocByUuidFor(userId, docUuid, projectUuid);
 }
 
 export async function getDocumentVersions(documentId: string, projectUuid?: string) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = await sessionUserId();
+  if (!userId) {
     return { success: false, error: 'Authentication required' };
   }
-  return getDocumentVersionsFor(session.user.id, documentId, projectUuid);
+  return getDocumentVersionsFor(userId, documentId, projectUuid);
 }
 
 
@@ -196,8 +214,8 @@ export async function trackDocumentView(profileUuid: string, docUuid: string) {
 
 // Helper function: Calculate project storage usage
 export async function getProjectStorageUsage(projectUuid?: string) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = await sessionUserId();
+  if (!userId) {
     return {
       success: false,
       fileStorage: 0,
@@ -208,7 +226,7 @@ export async function getProjectStorageUsage(projectUuid?: string) {
     };
   }
 
-  return getProjectStorageUsageFor(session.user.id, projectUuid);
+  return getProjectStorageUsageFor(userId, projectUuid);
 }
 
 // Zod schema for upload metadata validation

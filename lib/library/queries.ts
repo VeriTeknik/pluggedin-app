@@ -211,7 +211,7 @@ export async function getProjectStorageUsageFor(
       try {
         const ragStats = await ragService.getStorageStats(projectUuid);
 
-        if (ragStats.success && ragStats.estimatedStorageMb) {
+        if (ragStats.success && typeof ragStats.estimatedStorageMb === 'number') {
           ragStorage = Math.round(ragStats.estimatedStorageMb * 1024 * 1024);
           ragStorageAvailable = true;
         } else {

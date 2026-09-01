@@ -43,7 +43,9 @@ export async function GET(
     // Extract uuid from params and projectUuid from query
     const { uuid } = await params;
     const { searchParams } = new URL(request.url);
-    const projectUuid = searchParams.get('projectUuid') || authenticatedProjectUuid;
+    // An API key is issued for one project. Letting the query parameter win
+    // would let a key scoped to one project read documents from another.
+    const projectUuid = authenticatedProjectUuid ?? searchParams.get('projectUuid');
 
     // Get the document using the authenticated user's ID and project UUID
     // This ensures users can only access documents within their own project

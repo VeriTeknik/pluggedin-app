@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const findFirst = vi.fn();
 const getStorageStats = vi.fn(async () => ({ success: true, estimatedStorageMb: 5 }));
@@ -20,10 +20,19 @@ const OWNER = 'owner-user-id';
 const OTHER = 'other-user-id';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 
+const ORIGINAL_ENABLE_RAG = process.env.ENABLE_RAG;
+
 beforeEach(() => {
   vi.clearAllMocks();
   getStorageStats.mockResolvedValue({ success: true, estimatedStorageMb: 5 });
   process.env.ENABLE_RAG = 'true';
+});
+
+// ENABLE_RAG is process-wide; leaving it set leaks into every later test in
+// this worker.
+afterAll(() => {
+  if (ORIGINAL_ENABLE_RAG === undefined) delete process.env.ENABLE_RAG;
+  else process.env.ENABLE_RAG = ORIGINAL_ENABLE_RAG;
 });
 
 /**
@@ -58,5 +67,18 @@ describe('getProjectStorageUsageFor scopes the project to the caller', () => {
     expect(result.success).toBe(true);
     expect(findFirst).not.toHaveBeenCalled();
     expect(getStorageStats).not.toHaveBeenCalled();
+  });
+
+  it('treats a successful zero-byte RAG result as available', async () => {
+    // A new project validly has no RAG storage yet. Reading 0 as "unavailable"
+    // reports a false warning and hides that RAG is working.
+    findFirst.mockResolvedValue({ uuid: PROJECT, user_id: OWNER });
+    getStorageStats.mockResolvedValue({ success: true, estimatedStorageMb: 0 });
+
+    const result = await getProjectStorageUsageFor(OWNER, PROJECT);
+
+    expect(result.ragStorage).toBe(0);
+    expect(result.ragStorageAvailable).toBe(true);
+    expect(result.warnings).toBeUndefined();
   });
 });
