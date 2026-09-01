@@ -8,13 +8,56 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { db } from '@/db';
-import { McpServerType, profilesTable } from '@/db/schema';
+import { McpServerType, profilesTable, projectsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
+import { withProfileAuth } from '@/lib/auth-helpers';
 import { createBubblewrapConfig } from '@/lib/mcp/client-wrapper';
+import {
+  addServerLog,
+  clearPartialServerLog,
+  clearServerLogsFor,
+  readServerLogs,
+  setPartialServerLog,
+} from '@/lib/mcp/server-logs';
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
+
+/**
+ * withProfileAuth redirects an anonymous caller to /login by throwing a Next
+ * redirect error. Every action here answers with a { success, error } shape, so
+ * each catch has to let that one through rather than reporting it as a failure.
+ */
+function rethrowIfRedirect(error: unknown): void {
+  if (isRedirectError(error)) {
+    throw error;
+  }
+}
+
+/**
+ * withProfileAuth signals a foreign profile by throwing, but every action here
+ * answers with a { success, error } shape and the playground hook reads it. So
+ * the refusal is converted, while a redirect — how the helper turns away an
+ * anonymous caller — is let through untouched.
+ */
+async function withOwnedProfile<T>(
+  profileUuid: string,
+  fn: () => Promise<T>
+): Promise<T | { success: false; error: string }> {
+  try {
+    return await withProfileAuth(profileUuid, fn);
+  } catch (error) {
+    rethrowIfRedirect(error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unauthorized',
+    };
+  }
+}
+
 import { ensureLogDirectories } from './log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from './mcp-server-logger'; // Correct path alias
 import { getMcpServers } from './mcp-servers'; // Correct path alias
@@ -106,58 +149,8 @@ function safeProcessContent(content: any): string {
 }
 
 // Store server logs by profile
-const serverLogsByProfile: Map<string, Array<{level: string, message: string, timestamp: Date}>> = new Map();
 
 // Helper function to add a log for a profile - exported for use in mcp-server-logger
-export async function addServerLogForProfile(profileUuid: string, level: string, message: string) {
-  const logs = serverLogsByProfile.get(profileUuid) || [];
-
-  // Create the new log entry
-  const newLog = { level, message, timestamp: new Date() };
-
-  // Add the log to the array with performance optimizations
-  logs.push(newLog);
-
-  // Limit to maximum 2000 logs to prevent memory leaks
-  const MAX_LOGS_IN_MEMORY = 2000;
-  if (logs.length > MAX_LOGS_IN_MEMORY) {
-    // More efficient splice - remove in bigger chunks to reduce array manipulation
-    // Remove 20% of the logs when we hit the limit instead of just 1 at a time
-    const removeCount = Math.floor(MAX_LOGS_IN_MEMORY * 0.2);
-    logs.splice(0, removeCount);
-  }
-
-  serverLogsByProfile.set(profileUuid, logs);
-
-  // Handle console logs (MCP:INFO, etc.) and add them to the logs
-  if (message.includes('[MCP:')) {
-    const match = message.match(/\[MCP:(INFO|ERROR|WARN|DEBUG)\]\s+(.*)/i);
-    if (match) {
-      const mcpLevel = match[1].toLowerCase();
-      const mcpMessage = match[2];
-
-      // Check for duplicates in the last ~20 logs rather than the whole array
-      // This is more efficient while still catching most duplicates
-      const recentLogs = logs.slice(-20);
-      const recentDuplicate = recentLogs.some(existingLog => {
-        if (existingLog.level === mcpLevel && existingLog.message === mcpMessage) {
-          const timeDiff = Math.abs(new Date().getTime() - existingLog.timestamp.getTime());
-          return timeDiff < 100; // Increased window to 100ms to catch more duplicates
-        }
-        return false;
-      });
-
-      // Only add if it's not a duplicate
-      if (!recentDuplicate) {
-        logs.push({
-          level: mcpLevel,
-          message: mcpMessage,
-          timestamp: new Date()
-        });
-      }
-    }
-  }
-}
 
 // Initialize chat model based on provider
 function initChatModel(config: {
@@ -236,6 +229,7 @@ if (!process.listenerCount('beforeExit')) {
 
 // Get playground session status for a profile
 export async function getPlaygroundSessionStatus(profileUuid: string) {
+  return withOwnedProfile(profileUuid, async () => {
   try {
     const session = activeSessions.get(profileUuid);
     
@@ -268,10 +262,12 @@ export async function getPlaygroundSessionStatus(profileUuid: string) {
       needsRestore: false
     };
   }
+  });
 }
 
 // Restore a lost session by recreating it from saved settings
 export async function restorePlaygroundSession(profileUuid: string) {
+  return withOwnedProfile(profileUuid, async () => {
   try {
     // Check if session already exists
     const existingSession = activeSessions.get(profileUuid);
@@ -327,7 +323,7 @@ export async function restorePlaygroundSession(profileUuid: string) {
     );
 
     if (result.success) {
-      await addServerLogForProfile(
+      await addServerLog(
         profileUuid,
         'info',
         `Session restored from saved settings: ${llmConfig.provider} ${llmConfig.model}, ${activeServerUuids.length} servers`
@@ -353,6 +349,7 @@ export async function restorePlaygroundSession(profileUuid: string) {
       error: error instanceof Error ? error.message : 'Unknown error during session restoration'
     };
   }
+  });
 }
 
 // Update playground session model/LLM configuration
@@ -367,6 +364,7 @@ export async function updatePlaygroundSessionModel(
     streaming?: boolean;
   }
 ) {
+  return withOwnedProfile(profileUuid, async () => {
   try {
     const session = activeSessions.get(profileUuid);
     
@@ -436,7 +434,7 @@ Be transparent about which sources you use and why. When you have both context a
     };
     
     // Log the model update
-    await addServerLogForProfile(
+    await addServerLog(
       profileUuid,
       'info',
       `Model switched to ${llmConfig.provider} ${llmConfig.model} - Agent recreated with new LLM`
@@ -453,6 +451,7 @@ Be transparent about which sources you use and why. When you have both context a
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+  });
 }
 
 // Get or create a playground session for a profile
@@ -468,6 +467,7 @@ export async function getOrCreatePlaygroundSession(
     streaming?: boolean;
   }
 ) {
+  return withOwnedProfile(profileUuid, async () => {
   // If session exists and is active, return it
   const existingSession = activeSessions.get(profileUuid);
   if (existingSession) {
@@ -478,7 +478,7 @@ export async function getOrCreatePlaygroundSession(
 
   try {
     // Clear any existing logs for this profile
-    serverLogsByProfile.set(profileUuid, []);
+    clearServerLogsFor(profileUuid);
 
     // Ensure log directories exist
     await ensureLogDirectories();
@@ -634,7 +634,7 @@ export async function getOrCreatePlaygroundSession(
 
       // Log any failed servers
       if (failedServers.length > 0) {
-        await addServerLogForProfile(
+        await addServerLog(
           profileUuid,
           'warn',
           `Some MCP servers failed to initialize: ${failedServers.join(', ')}. Continuing with available servers.`
@@ -746,7 +746,7 @@ Be transparent about which sources you use and why. When you have both context a
       console.error('Failed to initialize MCP servers:', error);
       // Use the improved error message from progressive initialization if available
       const errorMessage = error instanceof Error ? error.message : 'Unknown error during server initialization';
-      await addServerLogForProfile(
+      await addServerLog(
         profileUuid,
         'error',
         `Failed to initialize MCP servers: ${errorMessage}`
@@ -770,12 +770,14 @@ Be transparent about which sources you use and why. When you have both context a
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+  });
 }
 
 // Function to get server logs with optimized performance
 export async function getServerLogs(profileUuid: string) {
+  return withOwnedProfile(profileUuid, async () => {
   try {
-    const logs = serverLogsByProfile.get(profileUuid) || [];
+    const logs = readServerLogs(profileUuid);
 
     // Check for partial/streaming messages
     const hasPartialMessage = logs.some(log =>
@@ -801,6 +803,7 @@ export async function getServerLogs(profileUuid: string) {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+  });
 }
 
 // Execute a query against the playground agent
@@ -808,6 +811,7 @@ export async function executePlaygroundQuery(
   profileUuid: string,
   query: string
 ) {
+  return withOwnedProfile(profileUuid, async () => {
   const session = activeSessions.get(profileUuid);
   if (!session) {
     return {
@@ -853,14 +857,14 @@ User question: ${query}
 Please answer the user's question using both the provided context and your available tools as appropriate. Use the context for background understanding and tools for current data or actions.`;
         
         // Log RAG usage
-        await addServerLogForProfile(
+        await addServerLog(
           profileUuid,
           'info',
           `[RAG] Retrieved workspace context: ${ragResult.context.slice(0, 100)}${ragResult.context.length > 100 ? '...' : ''}`
         );
       } else {
         // Log RAG failure but continue with original query
-        await addServerLogForProfile(
+        await addServerLog(
           profileUuid,
           'warn',
           `[RAG] No context found in workspace: ${ragResult.error || 'No documents available'}`
@@ -881,7 +885,7 @@ Please answer the user's question using both the provided context and your avail
       : profileUuid;
     
     if (session.messages.length > MAX_AGENT_MESSAGES) {
-      await addServerLogForProfile(
+      await addServerLog(
         profileUuid,
         'info',
         `[MEMORY] Creating new agent thread due to message limit (${session.messages.length} messages)`
@@ -900,7 +904,7 @@ Please answer the user's question using both the provided context and your avail
               currentAiMessage += token;
 
               // Log token for debugging
-              await addServerLogForProfile(
+              await addServerLog(
                 profileUuid,
                 'info',
                 `[STREAMING] Token: ${token.slice(0, 20)}${token.length > 20 ? '...' : ''}`
@@ -916,11 +920,11 @@ Please answer the user's question using both the provided context and your avail
                   isPartial: true // Mark as partial for UI handling
                 };
 
-                serverLogsByProfile.set(profileUuid + '_partial', [{
+                setPartialServerLog(profileUuid, {
                   level: 'streaming',
                   message: JSON.stringify(partialMessage),
                   timestamp: new Date()
-                }]);
+                });
 
                 isFirstToken = false;
               } else {
@@ -932,16 +936,16 @@ Please answer the user's question using both the provided context and your avail
                   isPartial: true
                 };
 
-                serverLogsByProfile.set(profileUuid + '_partial', [{
+                setPartialServerLog(profileUuid, {
                   level: 'streaming',
                   message: JSON.stringify(partialMessage),
                   timestamp: new Date()
-                }]);
+                });
               }
             },
             handleToolStart: async (tool: any) => {
               // Tool çalıştırılmaya başladığında loglara ekliyoruz
-              await addServerLogForProfile(
+              await addServerLog(
                 profileUuid,
                 'info',
                 `[TOOL] Starting: ${tool.name}`
@@ -953,7 +957,7 @@ Please answer the user's question using both the provided context and your avail
             },
             handleToolEnd: async (output: any) => {
               // Tool çalışması bittiğinde loglara ekliyoruz
-              await addServerLogForProfile(
+              await addServerLog(
                 profileUuid,
                 'info',
                 `[TOOL] Completed: ${output?.name || 'unknown'}`
@@ -965,7 +969,7 @@ Please answer the user's question using both the provided context and your avail
     );
 
     // Clean up streaming state
-    serverLogsByProfile.delete(profileUuid + '_partial');
+    clearPartialServerLog(profileUuid);
 
     // Process the result
     let result: string;
@@ -1046,7 +1050,7 @@ Please answer the user's question using both the provided context and your avail
       session.messages = allMessages.slice(allMessages.length - MAX_SESSION_MESSAGES);
       
       // Log that we trimmed messages
-      await addServerLogForProfile(
+      await addServerLog(
         profileUuid,
         'info',
         `[MEMORY] Trimmed session messages from ${allMessages.length} to ${MAX_SESSION_MESSAGES}`
@@ -1074,7 +1078,7 @@ Please answer the user's question using both the provided context and your avail
     
     
     // Log the detailed error
-    await addServerLogForProfile(
+    await addServerLog(
       profileUuid,
       'error',
       `[PLAYGROUND] Query execution failed: ${errorMessage}${errorDetails}`
@@ -1085,10 +1089,12 @@ Please answer the user's question using both the provided context and your avail
       error: errorMessage + errorDetails
     };
   }
+  });
 }
 
 // End a playground session for a profile
 export async function endPlaygroundSession(profileUuid: string) {
+  return withOwnedProfile(profileUuid, async () => {
   const session = activeSessions.get(profileUuid);
   if (session) {
     try {
@@ -1105,22 +1111,52 @@ export async function endPlaygroundSession(profileUuid: string) {
   }
 
   return { success: true }; // Session doesn't exist, so consider it ended
+  });
 }
 
 // Query RAG API for relevant context
+/**
+ * `ragIdentifier` is a project uuid, and ragService keys its retrieval on that
+ * alone — so with no session and no ownership check this returned context
+ * built from any tenant's documents to anyone who asked.
+ *
+ * Note this export has no caller anywhere in the repo. It is guarded rather
+ * than deleted because removing a public action is a product decision, not a
+ * security one.
+ */
 export async function queryRag(query: string, ragIdentifier: string) {
-  const { ragService } = await import('@/lib/rag-service');
-  return ragService.queryForContext(query, ragIdentifier);
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    const project = await db.query.projectsTable.findFirst({
+      where: and(eq(projectsTable.uuid, ragIdentifier), eq(projectsTable.user_id, session.user.id)),
+      columns: { uuid: true },
+    });
+
+    if (!project) {
+      return { success: false, error: 'Project not found' };
+    }
+
+    const { ragService } = await import('@/lib/rag-service');
+    return ragService.queryForContext(query, ragIdentifier);
+  } catch (error) {
+    rethrowIfRedirect(error);
+    console.error('Error querying RAG:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 // Clear server logs for a profile
 export async function clearServerLogs(profileUuid: string) {
+  return withOwnedProfile(profileUuid, async () => {
   try {
-    // Clear the server logs from memory
-    serverLogsByProfile.set(profileUuid, []);
-    
-    // Also clear any partial streaming logs
-    serverLogsByProfile.delete(profileUuid + '_partial');
+    clearServerLogsFor(profileUuid);
     
     return { success: true };
   } catch (error) {
@@ -1130,4 +1166,5 @@ export async function clearServerLogs(profileUuid: string) {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+  });
 }

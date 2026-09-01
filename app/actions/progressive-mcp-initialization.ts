@@ -3,9 +3,8 @@
 // Import necessary types from the library - Remove Stdio/SseServerParameters
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
+import { addServerLog } from '@/lib/mcp/server-logs';
 import { validateTimeouts } from '@/lib/timeout-validator';
-
-import { addServerLogForProfile } from './mcp-playground'; // Relative import
 
 // Interface for server initialization status
 export interface ServerInitStatus {
@@ -58,7 +57,7 @@ async function initializeOneServer(
     statusEntry.status = 'skipped';
     statusEntry.error = 'Skipped due to failed health check';
     statusEntry.endTime = Date.now();
-    await addServerLogForProfile(
+    await addServerLog(
       context.profileUuid,
       'warn',
       `[MCP] Skipping initialization for ${serverName} due to failed health check.`
@@ -81,7 +80,7 @@ async function initializeOneServer(
 
     statusEntry.status = 'success';
     statusEntry.endTime = Date.now();
-    await addServerLogForProfile(
+    await addServerLog(
       context.profileUuid,
       'info',
       `[MCP] Successfully initialized server: ${serverName}`
@@ -121,14 +120,14 @@ async function performServerHealthChecks(
         clearTimeout(timeoutId);
         results[serverName] = response.ok;
 
-        await addServerLogForProfile(
+        await addServerLog(
           profileUuid,
           'info',
           `Health check for ${serverName}: ${response.ok ? 'OK' : `Failed (Status: ${response.status})`}`
         );
       } catch (error: any) {
         results[serverName] = false;
-        await addServerLogForProfile(
+        await addServerLog(
           profileUuid,
           'warn',
           `Health check for ${serverName} failed: ${error.name === 'AbortError' ? 'Timeout' : error.message}`
@@ -166,7 +165,7 @@ async function initializeSingleServer(
   for (let attempt = 0; attempt <= maxRetries; attempt++) { // <= maxRetries means initial try + retries
     try {
       if (attempt > 0) {
-        await addServerLogForProfile(
+        await addServerLog(
           profileUuid,
           'info',
           `Retry attempt ${attempt}/${maxRetries} for server "${serverName}"`
@@ -201,7 +200,7 @@ async function initializeSingleServer(
 
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      await addServerLogForProfile(
+      await addServerLog(
         profileUuid,
         'warn',
         `Initialization attempt ${attempt + 1} failed for "${serverName}": ${lastError.message}`
@@ -303,9 +302,9 @@ export async function progressivelyInitializeMcpServers(
     // Perform health checks if not skipped
     let healthResults: Record<string, boolean> = {};
     if (!skipHealthChecks) {
-      await addServerLogForProfile(profileUuid, 'info', '[MCP] Performing pre-initialization health checks...');
+      await addServerLog(profileUuid, 'info', '[MCP] Performing pre-initialization health checks...');
       healthResults = await performServerHealthChecks(mcpServersConfig, profileUuid);
-      await addServerLogForProfile(profileUuid, 'info', '[MCP] Health checks completed.');
+      await addServerLog(profileUuid, 'info', '[MCP] Health checks completed.');
     } else {
       // Assume all healthy if skipped
       Object.keys(mcpServersConfig).forEach(name => healthResults[name] = true);
