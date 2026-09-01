@@ -92,7 +92,7 @@ const DANGEROUS_HEADERS = [
 /**
  * Check if an IP address is in a private range
  */
-function isPrivateIP(ip: string): boolean {
+export function isPrivateIP(ip: string): boolean {
   const parts = ip.split('.').map(Number);
   if (parts.length !== 4) return false;
   
@@ -111,6 +111,30 @@ function isPrivateIP(ip: string): boolean {
   if (parts[0] === 0) return true;
   
   return false;
+}
+
+/**
+ * Whether a resolved address is one we must not connect to, IPv4 or IPv6.
+ *
+ * Validating the hostname string is not enough on its own: a name the caller
+ * controls can simply be pointed at 127.0.0.1 or into RFC 1918 space, so
+ * whatever DNS actually returns has to be checked too.
+ */
+export function isPrivateAddress(address: string): boolean {
+  const ip = address.toLowerCase();
+
+  // ::ffff:10.0.0.1 and friends carry an IPv4 address inside an IPv6 one.
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(ip);
+  if (mapped) return isPrivateIP(mapped[1]);
+
+  if (ip.includes(':')) {
+    if (ip === '::' || ip === '::1') return true;         // unspecified, loopback
+    if (/^f[cd][0-9a-f]{2}:/.test(ip)) return true;       // fc00::/7 unique local
+    if (/^fe[89ab][0-9a-f]:/.test(ip)) return true;       // fe80::/10 link-local
+    return false;
+  }
+
+  return isPrivateIP(ip);
 }
 
 /**

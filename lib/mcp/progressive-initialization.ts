@@ -12,10 +12,12 @@
  */
 
 // Import necessary types from the library - Remove Stdio/SseServerParameters
+import dns from 'node:dns/promises';
+
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
 import { addServerLogForProfile } from '@/app/actions/mcp-playground';
-import { validateMcpUrl } from '@/lib/security/validators';
+import { isPrivateAddress, validateMcpUrl } from '@/lib/security/validators';
 import { validateTimeouts } from '@/lib/timeout-validator';
 
 // Interface for server initialization status
@@ -135,6 +137,31 @@ async function performServerHealthChecks(
         return;
       }
 
+      // The hostname passing is not enough: a name the caller controls can be
+      // pointed straight at loopback or RFC 1918 space, so check what DNS
+      // actually returns. This is still resolve-then-connect, so it does not
+      // close a rebind between the two, but it removes the trivial case.
+      try {
+        const addresses = await dns.lookup(urlCheck.parsedUrl!.hostname, { all: true });
+        if (addresses.some((entry) => isPrivateAddress(entry.address))) {
+          results[serverName] = false;
+          await addServerLogForProfile(
+            profileUuid,
+            'warn',
+            `Health check for ${serverName} skipped: host resolves to a private address`
+          );
+          return;
+        }
+      } catch (_error) {
+        results[serverName] = false;
+        await addServerLogForProfile(
+          profileUuid,
+          'warn',
+          `Health check for ${serverName} skipped: host could not be resolved`
+        );
+        return;
+      }
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout for health check
@@ -142,6 +169,9 @@ async function performServerHealthChecks(
         const response = await fetch(config.url, {
           method: 'HEAD', // Use HEAD for efficiency
           signal: controller.signal,
+          // A public url can redirect into the private network, and fetch
+          // follows redirects by default. The check only needs the first hop.
+          redirect: 'manual',
         });
 
         clearTimeout(timeoutId);

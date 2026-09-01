@@ -7,7 +7,10 @@ const convertMcpToLangchainTools = vi.fn(async () => ({ tools: [], cleanup: asyn
 const addServerLogForProfile = vi.fn(async () => {});
 const fetchSpy = vi.fn(async () => ({ ok: true, status: 200 }));
 
+const lookup = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
+
 vi.mock('@h1deya/langchain-mcp-tools', () => ({ convertMcpToLangchainTools }));
+vi.mock('node:dns/promises', () => ({ default: { lookup }, lookup }));
 vi.mock('@/app/actions/mcp-playground', () => ({ addServerLogForProfile }));
 
 vi.stubGlobal('fetch', fetchSpy);
@@ -17,6 +20,7 @@ const { progressivelyInitializeMcpServers } = await import('@/lib/mcp/progressiv
 beforeEach(() => {
   vi.clearAllMocks();
   fetchSpy.mockResolvedValue({ ok: true, status: 200 } as never);
+  lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
 });
 
 /** A mention in a comment is not a reference. */
@@ -41,14 +45,19 @@ function walk(dir: string): string[] {
  * Its only caller builds the config server-side from the database, so it never
  * needed to be an endpoint at all.
  */
-describe('the MCP initializer is not an HTTP endpoint', () => {
+describe('the config-taking initializer is not an HTTP endpoint', () => {
   it('is not declared in a use-server module', () => {
     const src = fs.readFileSync('lib/mcp/progressive-initialization.ts', 'utf8');
 
     expect(/^['"]use server['"]/.test(src.trimStart())).toBe(false);
   });
 
-  it('no server-action module reaches the process spawner', () => {
+  it('no server-action module calls the process spawner itself', () => {
+    // Deliberately a direct check, not a transitive one. app/actions/mcp-playground.ts
+    // *does* reach the spawner through this module, and must: that is the whole
+    // feature. What matters is that the function taking an `mcpServersConfig`
+    // from its caller is not itself an endpoint, so the config crossing the
+    // network boundary is a list of server uuids rather than a command line.
     const offenders = walk('app/actions').filter((file) =>
       /convertMcpToLangchainTools/.test(stripComments(fs.readFileSync(file, 'utf8')))
     );
@@ -94,6 +103,27 @@ describe('the health check does not probe the private network', () => {
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://mcp.example.com/sse',
       expect.objectContaining({ method: 'HEAD' })
+    );
+  });
+
+  it('refuses a public hostname that resolves to a private address', async () => {
+    // Validating the hostname string is not enough: a name the attacker
+    // controls can simply be pointed at 127.0.0.1 or 10.0.0.0/8.
+    lookup.mockResolvedValue([{ address: '169.254.169.254', family: 4 }]);
+
+    await run('https://totally-public.example.com/sse');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not follow redirects', async () => {
+    // An initially public url can redirect into the private network, and fetch
+    // follows redirects by default.
+    await run('https://mcp.example.com/sse');
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mcp.example.com/sse',
+      expect.objectContaining({ redirect: 'manual' })
     );
   });
 });
