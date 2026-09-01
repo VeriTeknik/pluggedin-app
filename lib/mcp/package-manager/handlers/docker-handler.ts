@@ -78,6 +78,7 @@ export class DockerHandler extends BasePackageHandler {
     try {
       // Check if the Docker image exists locally
       const { stdout } = await execFileAsync('docker', ['images', '-q', packageName], {
+        env: { ...inheritableChildEnv(), PATH: approvedChildPath() },
         timeout: 5000, // Quick check
       });
       
@@ -101,6 +102,7 @@ export class DockerHandler extends BasePackageHandler {
       // Remove any containers that were created for this server
       const containerName = `mcp-${serverUuid}`;
       await execFileAsync('docker', ['rm', '-f', containerName], {
+        env: { ...inheritableChildEnv(), PATH: approvedChildPath() },
         timeout: 10000,
       });
     } catch (error) {
@@ -123,6 +125,7 @@ export class DockerHandler extends BasePackageHandler {
     // This is approximate since Docker images are shared across containers
     try {
       const { stdout } = await execFileAsync('docker', ['images', '--format', 'table {{.Size}}'], {
+        env: { ...inheritableChildEnv(), PATH: approvedChildPath() },
         timeout: 5000,
       });
       
@@ -151,6 +154,7 @@ export class DockerHandler extends BasePackageHandler {
     for (const packageName of packages) {
       try {
         await execFileAsync('docker', ['pull', packageName], {
+          env: { ...inheritableChildEnv(), PATH: approvedChildPath() },
           timeout: PackageManagerConfig.PROCESS_TIMEOUT_MS,
         });
         this.log('Pre-warmed Docker image', { packageName });

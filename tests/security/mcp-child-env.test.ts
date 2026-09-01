@@ -157,3 +157,38 @@ describe('approvedChildPath', () => {
     expect(approvedChildPath()).not.toContain('/attacker/controlled/dir');
   });
 });
+
+describe('every child spawn in lib/mcp bounds its environment', () => {
+  /**
+   * A source-level invariant, deliberately. The previous rounds of this fix
+   * were swept with `grep '\.\.\.process\.env'`, which finds the environment
+   * being spread in — but Node inherits the full parent environment when the
+   * `env` option is simply *absent*, and absence is not greppable that way.
+   * Four docker calls leaked through exactly that gap.
+   */
+  it('passes an explicit env to every exec/spawn call', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+
+    const walk = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const full = path.join(dir, e.name);
+        return e.isDirectory() ? walk(full) : full.endsWith('.ts') ? [full] : [];
+      });
+
+    const offenders: string[] = [];
+    for (const file of walk('lib/mcp')) {
+      const src = fs.readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/(execFileAsync|execAsync|execFile|spawn)\s*\(/g)) {
+        const window = src.slice(m.index ?? 0, (m.index ?? 0) + 700);
+        const end = window.indexOf(');');
+        const call = window.slice(0, end > 0 ? end : 300);
+        if (!call.includes('env:')) {
+          offenders.push(`${file}:${src.slice(0, m.index).split('\n').length}`);
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+});
