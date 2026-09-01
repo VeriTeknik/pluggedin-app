@@ -192,3 +192,32 @@ describe('every child spawn in lib/mcp bounds its environment', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('approvedChildPath is platform-aware', () => {
+  const realPlatform = process.platform;
+  const setPlatform = (p: string) =>
+    Object.defineProperty(process, 'platform', { value: p, configurable: true });
+
+  afterEach(() => setPlatform(realPlatform));
+
+  it('uses the POSIX delimiter and system directories on Linux', async () => {
+    setPlatform('linux');
+    const { approvedChildPath } = await import('@/lib/mcp/child-env');
+
+    const p = approvedChildPath();
+
+    expect(p).toContain(':');
+    expect(p).toContain('/usr/bin');
+  });
+
+  it('uses the Windows delimiter and omits the POSIX system directories', async () => {
+    setPlatform('win32');
+    const { approvedChildPath } = await import('@/lib/mcp/child-env');
+
+    const p = approvedChildPath(['C:\\tools\\bin']);
+
+    expect(p).toContain(';');
+    expect(p.split(';')).toContain('C:\\tools\\bin');
+    expect(p.split(';')).not.toContain('/usr/bin');
+  });
+});

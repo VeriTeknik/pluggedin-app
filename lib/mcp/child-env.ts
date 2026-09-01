@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 
 /**
@@ -95,13 +97,25 @@ export function inheritableChildEnv(): NodeJS.ProcessEnv & { NODE_ENV: string } 
  * process happens to carry.
  */
 export function approvedChildPath(extraDirs: string[] = []): string {
-  return [
+  const isWindows = process.platform === 'win32';
+
+  const dirs = [
     ...extraDirs,
     PackageManagerConfig.NODEJS_BIN_DIR,
     PackageManagerConfig.PYTHON_BIN_DIR,
     PackageManagerConfig.DOCKER_BIN_DIR,
-    '/usr/local/bin',
-    '/usr/bin',
-    '/bin',
-  ].filter(Boolean).join(':');
+    // POSIX system directories, meaningless on Windows.
+    ...(isWindows ? [] : ['/usr/local/bin', '/usr/bin', '/bin']),
+    // On Windows there is no equivalent fixed set to enumerate, and a child
+    // that cannot resolve its own binary is worse than a broad PATH. PATH is
+    // not itself a secret — the point of this module is withholding the
+    // credentials in process.env, and those stay withheld either way. The
+    // deployment target is a Linux container; Windows is a development host.
+    ...(isWindows && process.env.PATH ? [process.env.PATH] : []),
+  ];
+
+  // Explicit posix/win32 delimiters rather than the ambient `path.delimiter`:
+  // that one is fixed when the module loads, so it describes the host rather
+  // than the branch above, and the two can disagree under test.
+  return dirs.filter(Boolean).join(isWindows ? path.win32.delimiter : path.posix.delimiter);
 }
