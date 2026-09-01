@@ -1,18 +1,27 @@
 'use server';
 
-import { and, desc, eq, isNull, sum } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
+import { getServerSession } from 'next-auth';
 import * as path from 'path';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { docsTable, documentVersionsTable } from '@/db/schema';
+import { docsTable } from '@/db/schema';
+import { authOptions } from '@/lib/auth';
+import {
+  getDocByUuidFor,
+  getDocsFor,
+  getDocumentVersionsFor,
+  getProjectStorageUsageFor,
+  WORKSPACE_STORAGE_LIMIT,
+} from '@/lib/library/queries';
 import { isRagSupported } from '@/lib/rag/constants';
 import { extractTextFromFile } from '@/lib/rag/text-extract';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
-import { buildSecurePath, validatePathComponent, getSecureBaseUploadDir } from '@/lib/secure-path-builder';
+import { buildSecurePath, getSecureBaseUploadDir,validatePathComponent } from '@/lib/secure-path-builder';
 import type {
   Doc,
   DocDeleteResponse,
@@ -111,91 +120,40 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   return { userDir, filePath, relativePath };
 }
 
-// Workspace storage limit: 100 MB
-const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
-
-export async function getDocs(userId: string, projectUuid?: string): Promise<DocListResponse> {
-  try {
-    let docs;
-
-    if (projectUuid) {
-      // Get documents specifically for this project
-      docs = await db.query.docsTable.findMany({
-        where: and(
-          eq(docsTable.user_id, userId),
-          eq(docsTable.project_uuid, projectUuid)
-        ),
-        orderBy: [desc(docsTable.created_at)],
-      });
-    } else {
-      // Fallback: get all documents for user
-      docs = await db.query.docsTable.findMany({
-        where: eq(docsTable.user_id, userId),
-        orderBy: [desc(docsTable.created_at)],
-      });
-    }
-
-    return {
-      success: true,
-      docs: docs.map(doc => ({
-        ...doc,
-        source: doc.source as 'upload' | 'ai_generated' | 'api',
-        visibility: doc.visibility as 'private' | 'workspace' | 'public',
-        created_at: new Date(doc.created_at),
-        updated_at: new Date(doc.updated_at),
-      })),
-    };
-  } catch (error) {
-    console.error('Error fetching docs:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch documents',
-    };
+/**
+ * Document reads for browser callers.
+ *
+ * These take no user id. Every export here is a public HTTP endpoint, so a
+ * `userId` parameter would let any caller name whose documents to read — which
+ * is what getDocs -> getDocumentVersions allowed, all the way to content_diff.
+ * The implementations live in lib/library/queries.ts for callers that have
+ * already established an identity of their own.
+ */
+export async function getDocs(projectUuid?: string): Promise<DocListResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { success: false, error: 'Authentication required' };
   }
+  return getDocsFor(session.user.id, projectUuid);
 }
 
-export async function getDocByUuid(userId: string, docUuid: string, projectUuid?: string): Promise<Doc | null> {
-  try {
-    // Check if user owns the document directly OR if it's a project-level document
-    let doc;
-
-    if (projectUuid) {
-      // If projectUuid is provided, look for documents that either:
-      // 1. Belong to the user directly in this project
-      // 2. Are project-level documents (profile_uuid is NULL) in this project
-      doc = await db.query.docsTable.findFirst({
-        where: and(
-          eq(docsTable.uuid, docUuid),
-          eq(docsTable.project_uuid, projectUuid),
-          eq(docsTable.user_id, userId)
-        ),
-      });
-    } else {
-      // If no projectUuid, just check user ownership
-      doc = await db.query.docsTable.findFirst({
-        where: and(
-          eq(docsTable.uuid, docUuid),
-          eq(docsTable.user_id, userId)
-        ),
-      });
-    }
-
-    if (!doc) {
-      return null;
-    }
-
-    return {
-      ...doc,
-      source: doc.source as 'upload' | 'ai_generated' | 'api',
-      visibility: doc.visibility as 'private' | 'workspace' | 'public',
-      created_at: new Date(doc.created_at),
-      updated_at: new Date(doc.updated_at),
-    };
-  } catch (error) {
-    console.error('Error fetching doc:', error);
+export async function getDocByUuid(docUuid: string, projectUuid?: string): Promise<Doc | null> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
     return null;
   }
+  return getDocByUuidFor(session.user.id, docUuid, projectUuid);
 }
+
+export async function getDocumentVersions(documentId: string, projectUuid?: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { success: false, error: 'Authentication required' };
+  }
+  return getDocumentVersionsFor(session.user.id, documentId, projectUuid);
+}
+
+
 
 // Track document view - separate action for UI components to call
 export async function trackDocumentView(profileUuid: string, docUuid: string) {
@@ -235,121 +193,22 @@ export async function trackDocumentView(profileUuid: string, docUuid: string) {
 }
 
 // Helper function: Get document versions
-export async function getDocumentVersions(userId: string, documentId: string, projectUuid?: string) {
-  try {
-    // First verify the user has access to this document
-    const doc = await getDocByUuid(userId, documentId, projectUuid);
-
-    if (!doc) {
-      return {
-        success: false,
-        error: 'Document not found or access denied',
-      };
-    }
-
-    // Fetch version history
-    const versions = await db
-      .select()
-      .from(documentVersionsTable)
-      .where(eq(documentVersionsTable.document_id, documentId))
-      .orderBy(desc(documentVersionsTable.version_number));
-
-    return {
-      success: true,
-      versions: versions.map(v => ({
-        versionNumber: v.version_number,
-        createdAt: v.created_at,
-        createdByModel: v.created_by_model,
-        changeSummary: v.change_summary,
-        contentDiff: v.content_diff,
-      })),
-    };
-  } catch (error) {
-    console.error('Error fetching document versions:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch document versions',
-    };
-  }
-}
 
 // Helper function: Calculate project storage usage
-export async function getProjectStorageUsage(
-  userId: string,
-  projectUuid?: string
-): Promise<{
-  success: boolean;
-  fileStorage: number;
-  ragStorage: number;
-  totalUsage: number;
-  limit: number;
-  ragStorageAvailable?: boolean;
-  warnings?: string[];
-  error?: string
-}> {
-  try {
-    // Calculate total file size for the project
-    // Build condition explicitly for better query optimization
-    const condition = projectUuid
-      ? and(
-          eq(docsTable.project_uuid, projectUuid),
-          eq(docsTable.user_id, userId)
-        )
-      : eq(docsTable.user_id, userId);
-
-    const result = await db
-      .select({ totalSize: sum(docsTable.file_size) })
-      .from(docsTable)
-      .where(condition);
-
-    const fileStorage = Number(result[0]?.totalSize) || 0;
-
-    // Get RAG storage if RAG is enabled
-    let ragStorage = 0;
-    let ragStorageAvailable = false;
-    const warnings: string[] = [];
-
-    if (process.env.ENABLE_RAG === 'true' && projectUuid) {
-      try {
-        // Use just the projectUuid for RAG storage stats
-        const ragStats = await ragService.getStorageStats(projectUuid);
-
-        if (ragStats.success && ragStats.estimatedStorageMb) {
-          // Convert MB to bytes
-          ragStorage = Math.round(ragStats.estimatedStorageMb * 1024 * 1024);
-          ragStorageAvailable = true;
-        } else {
-          warnings.push('RAG storage statistics unavailable');
-        }
-      } catch (error) {
-        console.warn('Failed to fetch RAG storage stats:', error);
-        warnings.push('Unable to retrieve RAG storage data');
-        // Continue with file storage only if RAG stats fail
-      }
-    }
-
-    const totalUsage = fileStorage + ragStorage;
-
-    return {
-      success: true,
-      fileStorage,
-      ragStorage,
-      totalUsage,
-      limit: WORKSPACE_STORAGE_LIMIT,
-      ragStorageAvailable,
-      warnings: warnings.length > 0 ? warnings : undefined,
-    };
-  } catch (error) {
-    console.error('Error calculating project storage usage:', error);
+export async function getProjectStorageUsage(projectUuid?: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
     return {
       success: false,
       fileStorage: 0,
       ragStorage: 0,
       totalUsage: 0,
       limit: WORKSPACE_STORAGE_LIMIT,
-      error: error instanceof Error ? error.message : 'Failed to calculate storage usage',
+      error: 'Authentication required',
     };
   }
+
+  return getProjectStorageUsageFor(session.user.id, projectUuid);
 }
 
 // Zod schema for upload metadata validation
@@ -485,7 +344,7 @@ async function validateProjectStorageLimit(
   projectUuid: string | undefined,
   newFileSize: number
 ): Promise<void> {
-  const storageResult = await getProjectStorageUsage(userId, projectUuid);
+  const storageResult = await getProjectStorageUsageFor(userId, projectUuid);
   
   if (!storageResult.success) {
     throw new Error(storageResult.error || 'Failed to check workspace storage');
@@ -587,7 +446,7 @@ export async function reindexDocument(
     }
 
     // Get the document record
-    const doc = await getDocByUuid(userId, docUuid, projectUuid);
+    const doc = await getDocByUuidFor(userId, docUuid, projectUuid);
     if (!doc) {
       return { success: false, error: 'Document not found' };
     }
@@ -744,7 +603,7 @@ export async function deleteDoc(
 ): Promise<DocDeleteResponse> {
   try {
     // Get the doc first to get file path and verify ownership
-    const doc = await getDocByUuid(userId, docUuid, projectUuid);
+    const doc = await getDocByUuidFor(userId, docUuid, projectUuid);
     if (!doc) {
       return {
         success: false,

@@ -363,8 +363,10 @@ export const DocumentPreview = memo(function DocumentPreview({
 
         if (abortController.signal.aborted) return;
 
+        // No user id: the action derives it from the session. Passing
+        // doc.user_id from client state is what let a caller read any user's
+        // document history.
         const response = await getDocumentVersions(
-          doc.user_id,
           doc.uuid,
           currentProject?.uuid
         );

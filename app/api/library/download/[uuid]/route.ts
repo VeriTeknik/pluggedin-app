@@ -2,10 +2,10 @@ import { readFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
 
-import { getDocByUuid } from '@/app/actions/library';
 import { authenticateApiKey } from '@/app/api/auth';
 import { ErrorResponses } from '@/lib/api-errors';
 import { getAuthSession } from '@/lib/auth';
+import { getDocByUuidFor } from '@/lib/library/queries';
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +54,7 @@ export async function GET(
       authenticatedProjectUuid
     });
     
-    const doc = await getDocByUuid(userId, uuid, projectUuid || undefined);
+    const doc = await getDocByUuidFor(userId, uuid, projectUuid || undefined);
     
     console.log('[Download] Document result:', doc ? 'Found' : 'Not found');
     if (doc) {

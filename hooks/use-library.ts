@@ -30,7 +30,7 @@ export function useLibrary() {
       if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
-      return await getDocs(session.user.id, currentProject?.uuid);
+      return await getDocs(currentProject?.uuid);
     }
   );
 
@@ -45,7 +45,7 @@ export function useLibrary() {
       if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
-      return await getProjectStorageUsage(session.user.id, currentProject?.uuid);
+      return await getProjectStorageUsage(currentProject?.uuid);
     }
   );
 

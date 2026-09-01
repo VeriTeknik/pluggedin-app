@@ -14,13 +14,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { mockDb, actions } = vi.hoisted(() => ({
   mockDb: { select: vi.fn(), update: vi.fn() },
   actions: {
-    getDocs: vi.fn(),
-    getDocByUuid: vi.fn(),
+    getDocsFor: vi.fn(),
+    getDocByUuidFor: vi.fn(),
     askKnowledgeBase: vi.fn(),
   },
 }));
 
 vi.mock('@/db', () => ({ db: mockDb }));
+// The connector now reads through lib/library/queries; app/actions/library
+// keeps only the session-deriving wrappers, which the connector must not use.
+vi.mock('@/lib/library/queries', () => actions);
 vi.mock('@/app/actions/library', () => actions);
 
 process.env.NEXTAUTH_SECRET = 'connector-library-test-secret';
@@ -65,8 +68,8 @@ function payloadOf(outcome: Awaited<ReturnType<typeof dispatchAuthenticated>>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  actions.getDocs.mockResolvedValue({ success: true, docs: [] });
-  actions.getDocByUuid.mockResolvedValue(null);
+  actions.getDocsFor.mockResolvedValue({ success: true, docs: [] });
+  actions.getDocByUuidFor.mockResolvedValue(null);
   actions.askKnowledgeBase.mockResolvedValue({ success: true, answer: 'because', sources: [] });
 });
 
@@ -79,14 +82,14 @@ describe('the Hub always reaches the action', () => {
     // The second argument is what stops the action falling back to every
     // document the user owns. Asserting only on the output would pass while
     // that fallback ran.
-    expect(actions.getDocs).toHaveBeenCalledWith('user-1', HUB_A);
+    expect(actions.getDocsFor).toHaveBeenCalledWith('user-1', HUB_A);
   });
 
   it('passes it to getDocByUuid and to askKnowledgeBase too', async () => {
     grantedHubs([{ uuid: HUB_A, name: 'Acme' }]);
 
     await dispatchAuthenticated(call('pluggedin_get_document', { id: 'doc-1' }), identity());
-    expect(actions.getDocByUuid).toHaveBeenCalledWith('user-1', 'doc-1', HUB_A);
+    expect(actions.getDocByUuidFor).toHaveBeenCalledWith('user-1', 'doc-1', HUB_A);
 
     await dispatchAuthenticated(call('pluggedin_ask_knowledge_base', { query: 'why' }), identity());
     expect(actions.askKnowledgeBase).toHaveBeenCalledWith('user-1', 'why', HUB_A);
@@ -103,7 +106,7 @@ describe('the Hub always reaches the action', () => {
     );
 
     expect(result.isError).toBe(true);
-    expect(actions.getDocs).not.toHaveBeenCalled();
+    expect(actions.getDocsFor).not.toHaveBeenCalled();
   });
 
   it('refuses an ungranted Hub named explicitly', async () => {
@@ -119,7 +122,7 @@ describe('the Hub always reaches the action', () => {
     );
 
     expect(result.isError).toBe(true);
-    expect(actions.getDocs).not.toHaveBeenCalled();
+    expect(actions.getDocsFor).not.toHaveBeenCalled();
   });
 
   it('refuses a handle minted for another token', async () => {
@@ -131,7 +134,7 @@ describe('the Hub always reaches the action', () => {
     );
 
     expect(result.isError).toBe(true);
-    expect(actions.getDocs).not.toHaveBeenCalled();
+    expect(actions.getDocsFor).not.toHaveBeenCalled();
   });
 });
 
@@ -147,7 +150,7 @@ describe('choosing the Hub', () => {
       identity({ grantedProjectUuids: [HUB_A, HUB_B], defaultProjectUuid: HUB_B })
     );
 
-    expect(actions.getDocs).toHaveBeenCalledWith('user-1', HUB_B);
+    expect(actions.getDocsFor).toHaveBeenCalledWith('user-1', HUB_B);
   });
 
   it('ignores a remembered default that is no longer granted', async () => {
@@ -160,7 +163,7 @@ describe('choosing the Hub', () => {
       identity({ grantedProjectUuids: [HUB_A], defaultProjectUuid: HUB_B })
     );
 
-    expect(actions.getDocs).toHaveBeenCalledWith('user-1', HUB_A);
+    expect(actions.getDocsFor).toHaveBeenCalledWith('user-1', HUB_A);
   });
 
   it('asks rather than guessing when several are granted and none is open', async () => {
@@ -180,14 +183,14 @@ describe('choosing the Hub', () => {
     // not point at them.
     expect(result.isError).toBe(true);
     expect(result.text).toContain('pluggedin_open_hub');
-    expect(actions.getDocs).not.toHaveBeenCalled();
+    expect(actions.getDocsFor).not.toHaveBeenCalled();
   });
 });
 
 describe('what is handed to the model', () => {
   it('reports documents without file paths or internal ids', async () => {
     grantedHubs([{ uuid: HUB_A, name: 'Acme' }]);
-    actions.getDocs.mockResolvedValue({
+    actions.getDocsFor.mockResolvedValue({
       success: true,
       docs: [
         {
@@ -220,7 +223,7 @@ describe('what is handed to the model', () => {
 
   it('answers a missing document the same way as an unreadable one', async () => {
     grantedHubs([{ uuid: HUB_A, name: 'Acme' }]);
-    actions.getDocByUuid.mockResolvedValue(null);
+    actions.getDocByUuidFor.mockResolvedValue(null);
 
     const result = payloadOf(
       await dispatchAuthenticated(call('pluggedin_get_document', { id: 'nope' }), identity())
@@ -252,6 +255,6 @@ describe('grants that outlived their Hubs', () => {
     expect(result.isError).toBe(true);
     expect(result.text).toContain('no longer exist');
     expect(result.text).not.toContain('pluggedin_open_hub');
-    expect(actions.getDocs).not.toHaveBeenCalled();
+    expect(actions.getDocsFor).not.toHaveBeenCalled();
   });
 });
