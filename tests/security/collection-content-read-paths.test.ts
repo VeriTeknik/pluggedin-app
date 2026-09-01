@@ -47,16 +47,36 @@ describe('every collection read path sanitizes content', () => {
    * command/args/env/url. The scan named two endpoints; there are five reads.
    * This is the check that catches the sixth.
    */
-  it('no file queries sharedCollectionsTable without sanitizing', () => {
-    const offenders = ['app', 'lib']
-      .flatMap((dir) => walk(dir))
-      .filter((file) => {
-        const src = fs.readFileSync(file, 'utf8');
-        return (
-          /db\.query\.sharedCollectionsTable\.find/.test(src) &&
-          !/sanitizeCollectionContent/.test(src)
-        );
-      });
+  it('every query whose row is returned is sanitized', () => {
+    // Checking the file as a whole would let a new unsanitized read into
+    // app/actions/social.ts pass, because that file already mentions the
+    // sanitizer for its other paths. Each query site is judged on its own
+    // enclosing top-level block instead, and only the ones that hand the row
+    // back need the sanitizer.
+    const QUERY = /(?:const|let)\s+(\w+)\s*=\s*await\s+db\.query\.sharedCollectionsTable\.find\w*\(/g;
+
+    const offenders: string[] = [];
+
+    for (const file of ['app', 'lib'].flatMap((dir) => walk(dir))) {
+      const src = fs.readFileSync(file, 'utf8');
+      if (!/db\.query\.sharedCollectionsTable\.find/.test(src)) continue;
+
+      // Top-level declarations start at column 0 and end at a `}` in column 0.
+      for (const block of src.split(/\n(?=})/)) {
+        for (const m of block.matchAll(QUERY)) {
+          const variable = m[1];
+          const after = block.slice(m.index ?? 0);
+
+          // Does this block hand the queried row back to its caller?
+          const returned = new RegExp(`return[^;]*\\b${variable}\\b`, 's').test(after);
+          if (!returned) continue;
+
+          if (!/sanitizeCollectionContent/.test(after)) {
+            offenders.push(`${file}#${variable}`);
+          }
+        }
+      }
+    }
 
     expect(offenders).toEqual([]);
   });

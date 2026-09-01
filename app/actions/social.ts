@@ -784,6 +784,7 @@ export async function getSharedCollection(sharedCollectionUuid: string): Promise
               with: {
                 user: {
                   columns: {
+                    id: true,
                     name: true,
                     username: true
                   }
@@ -797,7 +798,12 @@ export async function getSharedCollection(sharedCollectionUuid: string): Promise
 
     // Looked up by uuid alone, so without this a collection the owner kept
     // private is readable — content included — by anyone holding its uuid.
-    if (!collection || !collection.is_public) {
+    // The owner still gets their own: /collections/[uuid] calls this with no
+    // authorization context and renders notFound() on null.
+    if (!collection) {
+      return null;
+    }
+    if (!collection.is_public && !(await viewerOwnsProfile(collection.profile_uuid))) {
       return null;
     }
 
