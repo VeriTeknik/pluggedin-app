@@ -40,6 +40,47 @@ done
 log() { printf '[deploy %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '[deploy] FATAL: %s\n' "$*" >&2; exit 1; }
 
+# Secret files are written through a temp file and their mode is relaxed only
+# for the copy. This trap is the backstop: whatever happens - a failed decrypt,
+# a full tmpfs, a Ctrl-C between the chmod and the write - temps go away and
+# every file we touched ends up back at 0400.
+TMP_FILES=()
+SECRET_FILES=()
+KEEP_TMP=0
+cleanup() {
+  if [ "$KEEP_TMP" = "0" ] && [ ${#TMP_FILES[@]} -gt 0 ]; then
+    rm -f "${TMP_FILES[@]}" 2>/dev/null || true
+  fi
+  if [ ${#SECRET_FILES[@]} -gt 0 ]; then chmod 0400 "${SECRET_FILES[@]}" 2>/dev/null || true; fi
+}
+trap cleanup EXIT
+
+# Copy $1's contents into $2 without replacing $2's inode: these files are
+# bind-mounted into pluggedin-app, postgres and traefik, and a new inode would
+# leave the running mounts pointing at a deleted file. The previous run left $2
+# at 0400 - not writable even by its owner - so the mode has to come off first.
+install_secret_file() {
+  local src="$1" dest="$2"
+  SECRET_FILES+=("$dest")
+  chmod u+w "$dest" 2>/dev/null || true
+  # `|| copy_status=$?` is load-bearing: under `set -e` a failing cat would
+  # otherwise exit here, before KEEP_TMP is set, and the trap would delete the
+  # very temp file this is meant to preserve.
+  local copy_status=0
+  cat "$src" > "$dest" || copy_status=$?
+  # A file's *contents* cannot be replaced atomically - only its name can, via
+  # rename - and rename is out here because the inode is bind-mounted into
+  # running containers. The write window therefore cannot be removed, only made
+  # detectable: if the copy failed or came up short (a full tmpfs being the
+  # realistic cause) fail loudly and keep the good copy for recovery, rather
+  # than leaving a truncated secret for the next container start to read.
+  if [ "$copy_status" != "0" ] || [ "$(wc -c < "$src")" != "$(wc -c < "$dest")" ]; then
+    KEEP_TMP=1
+    die "failed to write ${dest} (copy exit ${copy_status}) - intact copy kept at ${src}"
+  fi
+  chmod 0400 "$dest"
+}
+
 # 1. Preflight
 command -v sops >/dev/null || die "sops not installed"
 command -v age >/dev/null  || die "age not installed"
@@ -62,10 +103,16 @@ chmod 0700 "$RUNTIME_DIR"
 #    --input-type/--output-type are mandatory here: sops infers format from
 #    the file extension, and `.sops` is not a format it knows, so it falls
 #    back to JSON and dies on the first `#` comment in the dotenv payload.
+#    Decrypt into a temp file rather than straight into the mounted path. `>`
+#    truncates before sops runs, so decrypting in place would empty the stack's
+#    live secrets file on any sops failure - a wrong age key would take the
+#    secrets with it. On success install_secret_file copies it into place.
 log "decrypting secrets"
+secrets_tmp="$(mktemp "${RUNTIME_DIR}/.secrets.env.XXXXXX")"
+TMP_FILES+=("$secrets_tmp")
 sops --decrypt --input-type dotenv --output-type dotenv \
-  "$SECRETS_ENCRYPTED" > "$SECRETS_DECRYPTED"
-chmod 0400 "$SECRETS_DECRYPTED"
+  "$SECRETS_ENCRYPTED" > "$secrets_tmp"
+install_secret_file "$secrets_tmp" "$SECRETS_DECRYPTED"
 
 # 3a. Project specific secrets out of the env file into single-line files
 #     under /run/sops/, because Traefik and a few other services consume
@@ -81,8 +128,12 @@ extract_secret() {
     log "WARN: ${key} missing from secrets.env (skipping ${dest})"
     return
   fi
-  printf '%s' "$value" > "$dest"
-  chmod 0400 "$dest"
+  # Same temp-then-install dance as the secrets file above.
+  local tmp
+  tmp="$(mktemp "${RUNTIME_DIR}/.$(basename "$dest").XXXXXX")"
+  TMP_FILES+=("$tmp")
+  printf '%s' "$value" > "$tmp"
+  install_secret_file "$tmp" "$dest"
 }
 
 extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
