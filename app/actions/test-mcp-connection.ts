@@ -3,7 +3,8 @@
 import { z } from 'zod';
 
 import { McpServerType } from '@/db/schema';
-import { validateHeaders } from '@/lib/security/validators';
+import { requireAuthUserId } from '@/lib/require-auth';
+import { validateCommand, validateCommandArgs, validateHeaders } from '@/lib/security/validators';
 
 const testConfigSchema = z.object({
   name: z.string().min(1),
@@ -107,6 +108,18 @@ function checkForCorsNetworkError(error: unknown): { corsIssue?: boolean; corsDe
 }
 
 export async function testMcpConnection(config: TestConfig): Promise<TestResult> {
+  // Every sibling action in this codebase requires a session; this one had no
+  // auth check at all while spawning a child process from caller input.
+  try {
+    await requireAuthUserId();
+  } catch {
+    return {
+      success: false,
+      messageKey: 'mcpServers.test.authRequired',
+      details: { error: 'Authentication required' },
+    };
+  }
+
   try {
     // Validate input
     const validated = testConfigSchema.parse(config);
@@ -420,15 +433,41 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
     // For STDIO servers
     if (validated.command && validated.type === McpServerType.STDIO) {
+      // The command reaches a child process below, so it goes through the same
+      // allowlist every other STDIO path uses. This file previously imported
+      // only validateHeaders and interpolated the command into a shell string.
+      const commandCheck = validateCommand(validated.command);
+      if (!commandCheck.valid) {
+        return {
+          success: false,
+          messageKey: 'mcpServers.test.invalidConfig',
+          details: { error: commandCheck.error },
+        };
+      }
+      if (validated.args) {
+        const argsCheck = validateCommandArgs(validated.args);
+        if (!argsCheck.valid) {
+          return {
+            success: false,
+            messageKey: 'mcpServers.test.invalidConfig',
+            details: { error: argsCheck.error },
+          };
+        }
+      }
+
       // Check if the command exists
-      const { exec } = await import('child_process');
+      const { execFile } = await import('child_process');
       const { promisify } = await import('util');
-      const execPromise = promisify(exec);
+      const execFileAsync = promisify(execFile);
 
       try {
-        // Try to check if the command is available
-        const checkCommand = validated.command === 'npx' ? 'npx --version' : `which ${validated.command}`;
-        await execPromise(checkCommand);
+        // argv, never a shell: `which ${command}` through exec() was a command
+        // injection sink for any caller who could reach this action.
+        if (validated.command === 'npx') {
+          await execFileAsync('npx', ['--version']);
+        } else {
+          await execFileAsync('which', [validated.command]);
+        }
 
         // If it's npx with a package, we can't easily verify without installing
         if (validated.command === 'npx' && validated.args?.[0]) {

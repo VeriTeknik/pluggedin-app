@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testMcpConnection } from '@/app/actions/test-mcp-connection';
+
+// testMcpConnection spawns a child process, so it now requires a session.
+vi.mock('next-auth', () => ({ getServerSession: vi.fn(async () => ({ user: { id: 'test-user' } })) }));
+vi.mock('@/lib/auth', () => ({ authOptions: {}, getAuthSession: vi.fn() }));
 import { McpServerType } from '@/db/schema';
 
 // Mock fetch globally
