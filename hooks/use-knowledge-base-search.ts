@@ -80,11 +80,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
     setError(null);
 
     try {
-      const result = await askKnowledgeBase(
-        session.user.id,
-        searchQuery,
-        projectUuidToUse
-      );
+      const result = await askKnowledgeBase(searchQuery, projectUuidToUse);
 
       if (result.success && result.answer) {
         setAnswer(result.answer);

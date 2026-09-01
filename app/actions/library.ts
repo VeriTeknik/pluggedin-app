@@ -11,16 +11,17 @@ import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
 import {
+  askKnowledgeBaseFor,
   getDocByUuidFor,
   getDocsFor,
   getDocumentVersionsFor,
   getProjectStorageUsageFor,
+  updateDocRagIdFor,
   WORKSPACE_STORAGE_LIMIT,
 } from '@/lib/library/queries';
 import { isRagSupported } from '@/lib/rag/constants';
 import { extractTextFromFile } from '@/lib/rag/text-extract';
 import { ragService } from '@/lib/rag-service';
-import { sanitizeToPlainText } from '@/lib/sanitization';
 import { buildSecurePath, getSecureBaseUploadDir,validatePathComponent } from '@/lib/secure-path-builder';
 import type {
   Doc,
@@ -402,7 +403,7 @@ async function processRagUpload(
     );
 
     if (result.success) {
-      await updateDocRagId(docRecord.uuid, docRecord.uuid, userId);
+      await updateDocRagIdFor(userId, docRecord.uuid, docRecord.uuid);
       ragService.invalidateStorageCache(projectUuid);
       return { ragProcessed: true, ragError: undefined };
     } else {
@@ -418,31 +419,13 @@ async function processRagUpload(
 // Function to update document with RAG document ID after upload completion
 export async function updateDocRagId(
   docUuid: string,
-  ragDocumentId: string,
-  userId: string
+  ragDocumentId: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    await db
-      .update(docsTable)
-      .set({ 
-        rag_document_id: ragDocumentId,
-        updated_at: new Date()
-      })
-      .where(
-        and(
-          eq(docsTable.uuid, docUuid),
-          eq(docsTable.user_id, userId)
-        )
-      );
-
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to update document RAG ID:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, error: 'Authentication required' };
   }
+  return updateDocRagIdFor(userId, docUuid, ragDocumentId);
 }
 
 /**
@@ -497,7 +480,7 @@ export async function reindexDocument(
     );
 
     if (result.success) {
-      await updateDocRagId(doc.uuid, doc.uuid, userId);
+      await updateDocRagIdFor(userId, doc.uuid, doc.uuid);
       ragService.invalidateStorageCache(ragIdentifier);
       return { success: true };
     } else {
@@ -695,246 +678,15 @@ export async function deleteDoc(
     };
   }
 }
-export async function askKnowledgeBase(userId: string, query: string, projectUuid?: string): Promise<{
-  success: boolean;
-  answer?: string;
-  sources?: string[];
-  documentIds?: string[];
-  documents?: Array<{
-    id: string;
-    name: string;
-    relevance?: number;
-    model?: {
-      name: string;
-      provider: string;
-    };
-    source?: string;
-    isUnresolved?: boolean;
-  }>;
-  error?: string
-}> {
-  'use server';
-
-  try {
-    // For now, we'll use the RAG service directly since the MCP tool
-    // is designed for external access. In production, this would integrate
-    // with the MCP infrastructure
-    const ragIdentifier = projectUuid || userId;
-    const result = await ragService.queryForResponse(ragIdentifier, query);
-
-    if (result.success && result.response) {
-      // Fetch document names and metadata if we have document IDs
-      let documents: Array<{
-        id: string;
-        name: string;
-        relevance?: number;
-        model?: {
-          name: string;
-          provider: string;
-        };
-        source?: string;
-      }> = [];
-      if (result.documentIds && result.documentIds.length > 0) {
-        try {
-          // First, get all user documents
-          const docs = await db
-            .select({
-              uuid: docsTable.uuid,
-              name: docsTable.name,
-              file_name: docsTable.file_name,
-              rag_document_id: docsTable.rag_document_id,
-              source: docsTable.source,
-              ai_metadata: docsTable.ai_metadata
-            })
-            .from(docsTable)
-            .where(
-              and(
-                eq(docsTable.user_id, userId),
-                projectUuid ? eq(docsTable.project_uuid, projectUuid) : undefined
-              )
-            );
-
-          // Get RAG document list for filename-based fallback matching
-          const ragDocumentMap: Map<string, string> = new Map();
-          let ragServicePartiallyAvailable = false;
-
-          try {
-            const ragDocsResult = await ragService.getDocuments(ragIdentifier);
-            if (ragDocsResult.success && ragDocsResult.documents) {
-              // Create a map of RAG document ID to filename
-              ragDocsResult.documents.forEach(([filename, docId]) => {
-                ragDocumentMap.set(docId, filename);
-              });
-            } else if (!ragDocsResult.success) {
-              // Document listing failed but search may still work
-              console.warn('RAG document listing unavailable:', ragDocsResult.error);
-              ragServicePartiallyAvailable = true;
-            }
-          } catch (ragError) {
-            // Log error but continue with search
-            console.error('Failed to fetch RAG document list for fallback, continuing with search:', ragError);
-            ragServicePartiallyAvailable = true;
-            // Search results will show with document IDs instead of names
-          }
-
-          // Map RAG document IDs to document names with metadata
-          const mappedDocs = result.documentIds
-            .map((ragId, index) => {
-              // First try direct RAG ID match
-              let doc = docs.find(d => d.rag_document_id === ragId);
-
-              // If not found, try filename-based matching
-              if (!doc && ragDocumentMap.has(ragId)) {
-                const ragFilename = ragDocumentMap.get(ragId);
-                if (ragFilename) {
-                  // Try to match by file_name or by name
-                  doc = docs.find(d =>
-                    d.file_name === ragFilename ||
-                    d.name === ragFilename ||
-                    // Also try matching the filename part of file_name (after timestamp-)
-                    (d.file_name && d.file_name.includes('-') &&
-                     d.file_name.substring(d.file_name.indexOf('-') + 1) === ragFilename)
-                  );
-
-                  if (doc) {
-                    console.log(`Matched document by filename: ${ragFilename} -> ${doc.name}`);
-                    // Update the document's RAG ID for future queries
-                    updateDocRagId(doc.uuid, ragId, userId).catch(err =>
-                      console.error(`Failed to update RAG ID for ${doc!.uuid}:`, err)
-                    );
-                  }
-                }
-              }
-
-              // Calculate relevance score (simulated based on order, in production this would come from RAG)
-              // Documents are typically returned in order of relevance
-              const relevance = Math.max(100 - (index * 15), 60); // Start at 100%, decrease by 15% per position, min 60%
-
-              if (!doc) {
-                // Try to get a better display name from RAG document map
-                const ragFilename = ragDocumentMap.get(ragId);
-                let displayName: string;
-
-                if (ragFilename) {
-                  // Use the filename if available
-                  displayName = ragFilename.length > 50
-                    ? ragFilename.substring(0, 47) + '...'
-                    : ragFilename;
-                } else {
-                  // Fallback to truncated ID
-                  displayName = ragId.length > 20
-                    ? `Document ${ragId.substring(0, 8)}...${ragId.substring(ragId.length - 4)}`
-                    : `Document ${ragId}`;
-                }
-
-                console.warn(`Document not found for RAG ID: ${ragId}${ragFilename ? ` (${ragFilename})` : ''}${ragServicePartiallyAvailable ? ' (RAG service partially unavailable)' : ''}`);
-
-                // Adjust display name if RAG service is partially unavailable
-                if (ragServicePartiallyAvailable && !ragFilename) {
-                  displayName = `Document (service temporarily limited)`;
-                }
-
-                return {
-                  id: ragId, // Use RAG ID as fallback
-                  name: sanitizeToPlainText(displayName),
-                  relevance,
-                  source: 'unknown' as const,
-                  isUnresolved: true // Mark as unresolved for UI handling
-                };
-              }
-
-              // Sanitize document name to prevent XSS
-              const sanitizedName = sanitizeToPlainText(doc.name);
-
-              return {
-                id: doc.uuid,
-                name: sanitizedName,
-                relevance,
-                model: doc.ai_metadata?.model ? {
-                  name: sanitizeToPlainText(doc.ai_metadata.model.name || 'Unknown'),
-                  provider: sanitizeToPlainText(doc.ai_metadata.model.provider || 'Unknown')
-                } : undefined,
-                source: doc.source || 'upload',
-                isUnresolved: false // Explicitly mark as resolved
-              };
-            });
-
-          // Include all documents (both matched and unmatched)
-          documents = mappedDocs;
-        } catch (dbError) {
-          console.error('Error fetching document names:', dbError);
-          // Continue without document names if DB query fails
-        }
-      }
-
-      // Track RAG document retrievals
-      if (projectUuid && result.documentIds && result.documentIds.length > 0) {
-        try {
-          // Get the active profile for this project
-          const { projectsTable, mcpActivityTable } = await import('@/db/schema');
-          const project = await db.query.projectsTable.findFirst({
-            where: eq(projectsTable.uuid, projectUuid),
-            with: {
-              activeProfile: true
-            }
-          });
-
-          if (project?.activeProfile?.uuid) {
-            const profileUuid = project.activeProfile.uuid;
-            // Track each document retrieval via RAG with error aggregation
-            let failedTracking = 0;
-            const trackingPromises = documents.map(async (doc) => {
-              try {
-                await db.insert(mcpActivityTable).values({
-                  profile_uuid: profileUuid,
-                  server_uuid: null,
-                  external_id: null,
-                  source: 'PLUGGEDIN',
-                  action: 'document_rag_query',
-                  item_name: doc.id,
-                });
-              } catch (err) {
-                failedTracking++;
-                console.error(`Failed to track RAG access for ${doc.id}:`, err);
-              }
-            });
-            await Promise.all(trackingPromises);
-
-            // Log aggregate failures for monitoring
-            if (failedTracking > 0) {
-              console.warn(`Analytics tracking: ${failedTracking}/${documents.length} RAG document access events failed to track`);
-            }
-
-            // Invalidate analytics cache for this profile after tracking all documents
-            const { analyticsCache } = await import('@/lib/analytics-cache');
-            analyticsCache.invalidateProfile(profileUuid);
-          }
-        } catch (trackingError) {
-          console.error('Failed to track RAG document access:', trackingError);
-          // Continue even if tracking fails
-        }
-      }
-
-      return {
-        success: true,
-        answer: result.response,
-        sources: result.sources || [],
-        documentIds: result.documentIds || [],
-        documents
-      };
-    }
-
-    return {
-      success: false,
-      error: result.error || 'Failed to get response from knowledge base'
-    };
-  } catch (error) {
-    console.error('Error querying knowledge base:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
+export async function askKnowledgeBase(
+  query: string,
+  projectUuid?: string
+): ReturnType<typeof askKnowledgeBaseFor> {
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, error: 'Authentication required' };
   }
+  return askKnowledgeBaseFor(userId, query, projectUuid);
 }
 
 /**
@@ -1003,7 +755,7 @@ export async function manualRepairDocumentRagIds(
 
         if (ragDocId) {
           console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
-          const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+          const updateResult = await updateDocRagIdFor(userId, doc.uuid, ragDocId);
           if (updateResult.success) {
             repairedList.push(doc.name);
           } else {
@@ -1017,7 +769,7 @@ export async function manualRepairDocumentRagIds(
               const freshRagDocId = findMatchingRagDocument(doc, freshResult.documents);
               if (freshRagDocId) {
                 console.log(`Found matching RAG document on retry for ${doc.name}: ${freshRagDocId}`);
-                const updateResult = await updateDocRagId(doc.uuid, freshRagDocId, userId);
+                const updateResult = await updateDocRagIdFor(userId, doc.uuid, freshRagDocId);
                 if (updateResult.success) {
                   repairedList.push(doc.name);
                 } else {
@@ -1245,7 +997,7 @@ export async function repairMissingRagDocumentIds(
           console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
 
           // Update the document with the found RAG ID
-          const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+          const updateResult = await updateDocRagIdFor(userId, doc.uuid, ragDocId);
           return updateResult.success;
         } else {
           // If not found in pre-fetched list, try individual lookup
@@ -1257,7 +1009,7 @@ export async function repairMissingRagDocumentIds(
               const freshRagDocId = findMatchingRagDocument(doc, freshResult.documents);
               if (freshRagDocId) {
                 console.log(`Found matching RAG document on retry for ${doc.name}: ${freshRagDocId}`);
-                const updateResult = await updateDocRagId(doc.uuid, freshRagDocId, userId);
+                const updateResult = await updateDocRagIdFor(userId, doc.uuid, freshRagDocId);
                 return updateResult.success;
               }
             }

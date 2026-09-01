@@ -16,7 +16,7 @@ const { mockDb, actions } = vi.hoisted(() => ({
   actions: {
     getDocsFor: vi.fn(),
     getDocByUuidFor: vi.fn(),
-    askKnowledgeBase: vi.fn(),
+    askKnowledgeBaseFor: vi.fn(),
   },
 }));
 
@@ -70,7 +70,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   actions.getDocsFor.mockResolvedValue({ success: true, docs: [] });
   actions.getDocByUuidFor.mockResolvedValue(null);
-  actions.askKnowledgeBase.mockResolvedValue({ success: true, answer: 'because', sources: [] });
+  actions.askKnowledgeBaseFor.mockResolvedValue({ success: true, answer: 'because', sources: [] });
 });
 
 describe('the Hub always reaches the action', () => {
@@ -85,14 +85,14 @@ describe('the Hub always reaches the action', () => {
     expect(actions.getDocsFor).toHaveBeenCalledWith('user-1', HUB_A);
   });
 
-  it('passes it to getDocByUuid and to askKnowledgeBase too', async () => {
+  it('passes it to getDocByUuidFor and to askKnowledgeBaseFor too', async () => {
     grantedHubs([{ uuid: HUB_A, name: 'Acme' }]);
 
     await dispatchAuthenticated(call('pluggedin_get_document', { id: 'doc-1' }), identity());
     expect(actions.getDocByUuidFor).toHaveBeenCalledWith('user-1', 'doc-1', HUB_A);
 
     await dispatchAuthenticated(call('pluggedin_ask_knowledge_base', { query: 'why' }), identity());
-    expect(actions.askKnowledgeBase).toHaveBeenCalledWith('user-1', 'why', HUB_A);
+    expect(actions.askKnowledgeBaseFor).toHaveBeenCalledWith('user-1', 'why', HUB_A);
   });
 
   it('never calls an action when no Hub could be resolved', async () => {

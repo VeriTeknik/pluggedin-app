@@ -14,7 +14,7 @@
  * them, and everything sent crosses a trust boundary.
  */
 
-import { askKnowledgeBase } from '@/app/actions/library';
+import { askKnowledgeBaseFor } from '@/lib/library/queries';
 import { getDocByUuidFor, getDocsFor } from '@/lib/library/queries';
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
@@ -88,7 +88,7 @@ export async function askKnowledge(
   const resolved = await requireGrantedHub(identity, params.hub);
   if (!resolved.ok) return failure(resolved.message);
 
-  const result = await askKnowledgeBase(identity.userId, query, resolved.hub);
+  const result = await askKnowledgeBaseFor(identity.userId, query, resolved.hub);
   if (!result.success) return failure(result.error ?? 'The knowledge base could not answer.');
 
   return text({
