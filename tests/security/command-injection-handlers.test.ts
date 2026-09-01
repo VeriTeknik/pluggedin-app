@@ -81,3 +81,33 @@ describe('package manager handlers never hand a package name to a shell', () => 
     expect(execFile).not.toHaveBeenCalled();
   });
 });
+
+describe('package manager handlers give the child a usable PATH', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['pnpm', '@/lib/mcp/package-manager/handlers/pnpm-handler'],
+    ['uv', '@/lib/mcp/package-manager/handlers/uv-handler'],
+    ['docker', '@/lib/mcp/package-manager/handlers/docker-handler'],
+  ])('%s handler', async (_name, mod) => {
+    const handlerModule: any = await import(mod);
+    const HandlerClass = Object.values(handlerModule).find(
+      (v: any) => typeof v === 'function' && /Handler$/.test(v.name)
+    ) as any;
+
+    await new HandlerClass()
+      .install({ packageName: 'some-package', serverUuid: '11111111-1111-4111-8111-111111111111' })
+      .catch(() => undefined);
+
+    expect(execFile.mock.calls.length).toBeGreaterThan(0);
+    for (const call of execFile.mock.calls) {
+      const opts = call[2] as any;
+      // Dropping the host environment without restoring PATH means execFile
+      // cannot resolve pnpm/uv/docker at all.
+      expect(opts?.env?.PATH, 'child env must carry a PATH').toBeTruthy();
+      expect(opts.env.PATH).toContain('/usr/bin');
+    }
+  });
+});

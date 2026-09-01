@@ -136,3 +136,23 @@ describe('inheritableChildEnv NODE_ENV', () => {
     expect(inheritableChildEnv().NODE_ENV).toBeDefined();
   });
 });
+
+describe('approvedChildPath', () => {
+  it('includes the configured interpreter directories and the system paths', async () => {
+    const { approvedChildPath } = await import('@/lib/mcp/child-env');
+    const { PackageManagerConfig } = await import('@/lib/mcp/package-manager/config');
+
+    const p = approvedChildPath();
+
+    expect(p).toContain(PackageManagerConfig.NODEJS_BIN_DIR);
+    expect(p).toContain(PackageManagerConfig.PYTHON_BIN_DIR);
+    expect(p).toContain('/usr/bin');
+  });
+
+  it('does not simply reuse the host PATH', async () => {
+    const { approvedChildPath } = await import('@/lib/mcp/child-env');
+    process.env.PATH = '/attacker/controlled/dir:/usr/bin';
+
+    expect(approvedChildPath()).not.toContain('/attacker/controlled/dir');
+  });
+});

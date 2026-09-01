@@ -2,7 +2,7 @@ import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import { promisify } from 'util';
 
-import { inheritableChildEnv } from '@/lib/mcp/child-env';
+import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
 
@@ -120,6 +120,8 @@ export class UvHandler extends BasePackageHandler {
           cwd: installDir,
           env: {
             ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
             UV_PROJECT_ENVIRONMENT: venvDir,
           },
@@ -140,6 +142,8 @@ export class UvHandler extends BasePackageHandler {
           cwd: installDir,
           env: {
             ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
             UV_PROJECT_ENVIRONMENT: venvDir,
             VIRTUAL_ENV: venvDir,
@@ -171,6 +175,8 @@ export class UvHandler extends BasePackageHandler {
             cwd: installDir,
             env: {
               ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
               UV_PROJECT_ENVIRONMENT: venvDir,
               VIRTUAL_ENV: venvDir,
             },
@@ -222,6 +228,8 @@ export class UvHandler extends BasePackageHandler {
           cwd: installDir,
           env: {
             ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
             UV_PROJECT_ENVIRONMENT: venvDir,
             VIRTUAL_ENV: venvDir,
           },
@@ -285,6 +293,8 @@ export class UvHandler extends BasePackageHandler {
         cwd: baseLayerDir,
         env: {
           ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
           UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
           UV_PROJECT_ENVIRONMENT: venvDir,
         },
@@ -298,6 +308,8 @@ export class UvHandler extends BasePackageHandler {
           cwd: baseLayerDir,
           env: {
             ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
             UV_PROJECT_ENVIRONMENT: venvDir,
             VIRTUAL_ENV: venvDir,

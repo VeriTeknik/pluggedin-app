@@ -1,3 +1,5 @@
+import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+
 /**
  * The environment a spawned child may inherit from this process.
  *
@@ -81,4 +83,25 @@ export function inheritableChildEnv(): NodeJS.ProcessEnv & { NODE_ENV: string } 
   }
 
   return inherited;
+}
+
+/**
+ * PATH for a spawned child, built from approved directories only.
+ *
+ * The allowlist above deliberately omits PATH so that callers set it
+ * explicitly — but a child with no PATH cannot resolve its own binary, so
+ * every caller that drops the host environment needs this. Reusing the host
+ * PATH would let a child resolve commands from whatever directories this
+ * process happens to carry.
+ */
+export function approvedChildPath(extraDirs: string[] = []): string {
+  return [
+    ...extraDirs,
+    PackageManagerConfig.NODEJS_BIN_DIR,
+    PackageManagerConfig.PYTHON_BIN_DIR,
+    PackageManagerConfig.DOCKER_BIN_DIR,
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+  ].filter(Boolean).join(':');
 }

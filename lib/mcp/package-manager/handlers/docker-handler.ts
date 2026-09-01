@@ -2,7 +2,7 @@ import { execFile } from 'child_process';
 import fs from 'fs';
 import { promisify } from 'util';
 
-import { inheritableChildEnv } from '@/lib/mcp/child-env';
+import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { buildSecurePath } from '@/lib/secure-path-builder';
 import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
 
@@ -51,6 +51,8 @@ export class DockerHandler extends BasePackageHandler {
         timeout: PackageManagerConfig.PROCESS_TIMEOUT_MS,
         env: {
           ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
           ...options.env,
         },
       });
