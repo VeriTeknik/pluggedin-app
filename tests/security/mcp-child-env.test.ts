@@ -29,7 +29,7 @@ const server: any = {
 };
 
 /** Snapshot every variable this file touches, so the suite leaves env as it found it. */
-const TOUCHED = [...Object.keys(PLANTED), 'TZ', 'HTTP_PROXY', 'HTTPS_PROXY'];
+const TOUCHED = [...Object.keys(PLANTED), 'TZ', 'PATH', 'HTTP_PROXY', 'HTTPS_PROXY'];
 let saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -52,7 +52,8 @@ function envOf(cfg: any): Record<string, string> {
   return cfg.env ?? cfg.finalEnv ?? {};
 }
 
-describe.each([
+// Both builders return null off Linux, so their assertions only mean anything there.
+describe.skipIf(process.platform !== 'linux').each([
   ['bubblewrap', createBubblewrapConfig],
   ['firejail', createFirejailConfig],
 ])('%s child environment', (_name, build) => {
