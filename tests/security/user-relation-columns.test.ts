@@ -72,9 +72,18 @@ describe('the users relation is never pulled in whole', () => {
   it('has no unrestricted `user: true` include anywhere', () => {
     const offenders = ['app', 'lib']
       .flatMap((dir) => walk(dir))
-      .filter((file) => /\buser:\s*true\b/.test(fs.readFileSync(file, 'utf8')));
+      .filter((file) => /\buser\s*:\s*true\b/.test(fs.readFileSync(file, 'utf8')));
 
     expect(offenders).toEqual([]);
+  });
+
+  it('is not fooled by whitespace around the colon', () => {
+    // TypeScript accepts `{ user : true }`, so a reformat must not slip past.
+    const pattern = /\buser\s*:\s*true\b/;
+
+    expect(pattern.test('with: { user : true }')).toBe(true);
+    expect(pattern.test('with: { user:true }')).toBe(true);
+    expect(pattern.test('with: { user: { columns: PUBLIC_USER_COLUMNS } }')).toBe(false);
   });
 
   it('asks for only the public columns of the owner', async () => {
