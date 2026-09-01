@@ -28,13 +28,24 @@ const server: any = {
   env: {},
 };
 
+/** Snapshot every variable this file touches, so the suite leaves env as it found it. */
+const TOUCHED = [...Object.keys(PLANTED), 'TZ', 'HTTP_PROXY', 'HTTPS_PROXY'];
+let saved: Record<string, string | undefined> = {};
+
 beforeEach(() => {
+  saved = Object.fromEntries(TOUCHED.map((k) => [k, process.env[k]]));
   Object.assign(process.env, PLANTED);
   process.env.TZ = 'Europe/Istanbul';
 });
 
 afterEach(() => {
-  for (const k of Object.keys(PLANTED)) delete process.env[k];
+  for (const k of TOUCHED) {
+    if (saved[k] === undefined) {
+      delete process.env[k];
+    } else {
+      process.env[k] = saved[k];
+    }
+  }
 });
 
 function envOf(cfg: any): Record<string, string> {
@@ -85,5 +96,43 @@ describe.each([
 
     expect(env.MY_TOKEN).toBe('user-supplied');
     expect(env.NODE_ENV).toBe('development');
+  });
+});
+
+describe('inheritableChildEnv', () => {
+  it('strips credentials from proxy URLs', async () => {
+    const { inheritableChildEnv } = await import('@/lib/mcp/child-env');
+    process.env.HTTPS_PROXY = 'http://proxyuser:proxypass@proxy.internal:3128';
+
+    const env = inheritableChildEnv();
+
+    expect(env.HTTPS_PROXY).toBeDefined();
+    expect(env.HTTPS_PROXY).not.toContain('proxypass');
+    expect(env.HTTPS_PROXY).not.toContain('proxyuser');
+    expect(env.HTTPS_PROXY).toContain('proxy.internal:3128');
+  });
+
+  it('withholds a proxy value it cannot parse rather than forwarding it', async () => {
+    const { inheritableChildEnv } = await import('@/lib/mcp/child-env');
+    process.env.HTTP_PROXY = 'not a url';
+
+    expect(inheritableChildEnv()).not.toHaveProperty('HTTP_PROXY');
+  });
+
+  it('carries no application secret', async () => {
+    const { inheritableChildEnv } = await import('@/lib/mcp/child-env');
+
+    const serialized = JSON.stringify(inheritableChildEnv());
+    for (const value of Object.values(PLANTED)) {
+      expect(serialized).not.toContain(value);
+    }
+  });
+});
+
+describe('inheritableChildEnv NODE_ENV', () => {
+  it('always carries NODE_ENV, which spawn options require', async () => {
+    const { inheritableChildEnv } = await import('@/lib/mcp/child-env');
+
+    expect(inheritableChildEnv().NODE_ENV).toBeDefined();
   });
 });

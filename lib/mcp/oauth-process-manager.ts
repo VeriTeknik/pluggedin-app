@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { inheritableChildEnv } from '@/lib/mcp/child-env';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
@@ -95,7 +96,10 @@ export class OAuthProcessManager extends EventEmitter {
       // Spawn the OAuth process with isolated HOME and shell: false for security
       const childProcess = spawn(command, args, {
         env: {
-          ...process.env,
+          // Allowlist, not the whole environment: this process holds the app's
+          // secrets and the spawned mcp-remote is a user-chosen binary.
+          ...inheritableChildEnv(),
+          PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin',
           ...env,
           // Use isolated HOME directory to isolate .mcp-auth
           HOME: oauthHome,

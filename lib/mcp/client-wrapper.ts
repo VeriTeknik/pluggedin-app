@@ -22,6 +22,7 @@ import path from 'path';
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
+import { inheritableChildEnv } from '@/lib/mcp/child-env';
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
@@ -181,51 +182,6 @@ async function isCommandAvailable(command: string): Promise<boolean> {
 }
 
 // Add this function to handle bubblewrap configuration
-/**
- * Host environment variables a spawned MCP server may inherit.
- *
- * Everything else is withheld. This process carries the whole secret set —
- * NEXTAUTH_SECRET, DATABASE_URL, POSTGRES_PASSWORD, the Kubernetes service
- * account token, every model-provider key — because docker-compose preloads
- * /run/secrets/app.env via `NODE_OPTIONS: -r dotenv/config`, so they are in
- * process.env for real, not placeholders. An MCP server is a process the user
- * chose; spreading process.env into it hands those secrets to whoever
- * configured the server, and bubblewrap shares the network by default, so
- * getting them out is trivial.
- *
- * PATH, HOME and the interpreter settings are deliberately absent: the callers
- * construct those explicitly and those values must win.
- */
-const INHERITABLE_CHILD_ENV_VARS = [
-  'TZ',
-  'LANG',
-  'LANGUAGE',
-  'LC_ALL',
-  'LC_CTYPE',
-  'TERM',
-  'HTTP_PROXY',
-  'HTTPS_PROXY',
-  'NO_PROXY',
-  'http_proxy',
-  'https_proxy',
-  'no_proxy',
-  'NODE_EXTRA_CA_CERTS',
-  'SSL_CERT_FILE',
-  'SSL_CERT_DIR',
-] as const;
-
-/** The allowlisted slice of this process's environment, for a spawned child. */
-function inheritableChildEnv(): Record<string, string> {
-  const inherited: Record<string, string> = {};
-  for (const key of INHERITABLE_CHILD_ENV_VARS) {
-    const value = process.env[key];
-    if (value !== undefined) {
-      inherited[key] = value;
-    }
-  }
-  return inherited;
-}
-
 export function createBubblewrapConfig(
   serverConfig: McpServer
 ): FirejailConfig | null {
@@ -768,11 +724,23 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         env: {
           // Allowlisted host vars only - this process holds the app's secrets
           ...inheritableChildEnv(),
+          // PATH is built from approved directories only, on every platform:
+          // appending the host PATH would let a child resolve commands from
+          // whatever directories this process happens to have, and would leave
+          // non-Linux hosts with no PATH at all once the spread was removed.
+          PATH: [
+            process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local/bin'),
+            PackageManagerConfig.NODEJS_BIN_DIR,
+            PackageManagerConfig.PYTHON_BIN_DIR,
+            PackageManagerConfig.DOCKER_BIN_DIR,
+            '/usr/local/bin',
+            '/usr/bin',
+            '/bin',
+          ].join(':'),
           // Only add Linux-specific paths on Linux systems
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux
             // Use dynamic home directory detection
-            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local/bin')}:${process.env.PATH}`, // Prepend local bin
             HOME: process.env.FIREJAIL_USER_HOME ?? serverOAuthHome,
             UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? actualHome}/.local/uv`,
             PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')}/lib/python`,

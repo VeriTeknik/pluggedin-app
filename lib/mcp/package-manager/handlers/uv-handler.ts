@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import { promisify } from 'util';
 
+import { inheritableChildEnv } from '@/lib/mcp/child-env';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
 
@@ -118,7 +119,7 @@ export class UvHandler extends BasePackageHandler {
         await execFileAsync('uv', ['venv'], {
           cwd: installDir,
           env: {
-            ...process.env,
+            ...inheritableChildEnv(),
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
             UV_PROJECT_ENVIRONMENT: venvDir,
           },
@@ -138,7 +139,7 @@ export class UvHandler extends BasePackageHandler {
         {
           cwd: installDir,
           env: {
-            ...process.env,
+            ...inheritableChildEnv(),
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
             UV_PROJECT_ENVIRONMENT: venvDir,
             VIRTUAL_ENV: venvDir,
@@ -169,7 +170,7 @@ export class UvHandler extends BasePackageHandler {
           {
             cwd: installDir,
             env: {
-              ...process.env,
+              ...inheritableChildEnv(),
               UV_PROJECT_ENVIRONMENT: venvDir,
               VIRTUAL_ENV: venvDir,
             },
@@ -220,7 +221,7 @@ export class UvHandler extends BasePackageHandler {
         {
           cwd: installDir,
           env: {
-            ...process.env,
+            ...inheritableChildEnv(),
             UV_PROJECT_ENVIRONMENT: venvDir,
             VIRTUAL_ENV: venvDir,
           },
@@ -283,7 +284,7 @@ export class UvHandler extends BasePackageHandler {
       await execFileAsync('uv', ['venv'], {
         cwd: baseLayerDir,
         env: {
-          ...process.env,
+          ...inheritableChildEnv(),
           UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
           UV_PROJECT_ENVIRONMENT: venvDir,
         },
@@ -296,7 +297,7 @@ export class UvHandler extends BasePackageHandler {
         await execFileAsync('uv', ['pip', 'install', packageName], {
           cwd: baseLayerDir,
           env: {
-            ...process.env,
+            ...inheritableChildEnv(),
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
             UV_PROJECT_ENVIRONMENT: venvDir,
             VIRTUAL_ENV: venvDir,

@@ -16,9 +16,9 @@ import {
 } from './dispatch';
 import {
   isNotification,
+  JSONRPC,
   jsonRpcError,
   jsonRpcResult,
-  JSONRPC,
   parseJsonRpc,
 } from './protocol';
 
