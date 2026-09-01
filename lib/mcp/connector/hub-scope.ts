@@ -27,18 +27,30 @@
  * like it worked.
  */
 
-import { inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { projectsTable } from '@/db/schema';
+import { profilesTable, projectsTable } from '@/db/schema';
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
 import { readHubHandle } from './handles';
 
 declare const grantedHubBrand: unique symbol;
+declare const hubProfileBrand: unique symbol;
 
 /** A project uuid proven to be in this token's granted set. */
 export type GrantedHub = string & { readonly [grantedHubBrand]: 'GrantedHub' };
+
+/**
+ * A profile uuid reached *through* a granted Hub.
+ *
+ * Some tables hang off profiles rather than projects — notifications and
+ * clipboard entries do — and a Hub can hold several profiles. Branding the
+ * result separately keeps the two uuids from being used interchangeably: a
+ * GrantedHub is not a profile, and a profile obtained any other way has not
+ * been through the Hub check.
+ */
+export type HubProfile = string & { readonly [hubProfileBrand]: 'HubProfile' };
 
 export type HubResolution =
   | { ok: true; hub: GrantedHub; name: string }
@@ -117,4 +129,65 @@ export async function requireGrantedHub(
     message:
       'Several Hubs are available and none is open. Call pluggedin_open_hub first, or pass one as the `hub` argument.',
   };
+}
+
+/**
+ * The active profile of a granted Hub.
+ *
+ * Kept behind requireGrantedHub rather than taking a project uuid directly, so
+ * there is no way to reach a profile without having proved the Hub first. The
+ * lookup is scoped to the Hub, so a profile belonging to another project cannot
+ * be returned even if one were named.
+ */
+export async function requireHubProfile(
+  identity: ConnectorIdentity,
+  argument?: unknown
+): Promise<
+  { ok: true; hub: GrantedHub; name: string; profile: HubProfile } | { ok: false; message: string }
+> {
+  const resolved = await requireGrantedHub(identity, argument);
+  if (!resolved.ok) return resolved;
+
+  // The project records which profile is active, and the web UI reads exactly
+  // that (app/actions/profiles.ts). Taking the oldest instead would point the
+  // connector at a different profile than the browser, so the same user would
+  // see one set of tasks in the UI and another through Claude — with nothing
+  // to indicate why.
+  //
+  // Still validated against the Hub: active_profile_uuid is a plain column with
+  // no guarantee it still points inside this project.
+  const project = await db
+    .select({ active: projectsTable.active_profile_uuid })
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, resolved.hub))
+    .limit(1);
+
+  const active = project[0]?.active;
+  if (active) {
+    const confirmed = await db
+      .select({ uuid: profilesTable.uuid })
+      .from(profilesTable)
+      .where(and(eq(profilesTable.uuid, active), eq(profilesTable.project_uuid, resolved.hub)))
+      .limit(1);
+    if (confirmed.length > 0) {
+      return { ...resolved, profile: confirmed[0].uuid as HubProfile };
+    }
+  }
+
+  // No active profile recorded, or it has moved out of this Hub. Oldest first
+  // is then the stable choice — the same one the app creates by default.
+  const rows = await db
+    .select({ uuid: profilesTable.uuid })
+    .from(profilesTable)
+    .where(eq(profilesTable.project_uuid, resolved.hub))
+    .orderBy(profilesTable.created_at)
+    .limit(1);
+
+  if (rows.length === 0) {
+    // A Hub with no profile cannot hold notifications or clipboard entries, so
+    // saying which Hub is empty is more use than a generic failure.
+    return { ok: false, message: `Hub "${resolved.name}" has no profile to read from.` };
+  }
+
+  return { ...resolved, profile: rows[0].uuid as HubProfile };
 }
