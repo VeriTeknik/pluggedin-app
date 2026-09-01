@@ -13,11 +13,13 @@
  */
 
 /**
- * npm (`@scope/name`), PyPI (`name`, `name.sub`) and Docker image references
- * (`registry/host:port/path`, `image:tag`) share this shape: alphanumerics plus
- * `. _ - / : @` and nothing else. No whitespace, no quotes, no metacharacters.
+ * npm (`@scope/name`, and `name@version` - the `@` recurs, which is what
+ * `@smithery/cli@latest` needs), PyPI (`name`, `name.sub`) and Docker image
+ * references (`registry/host:port/path`, `image:tag`) share this shape:
+ * alphanumerics plus `. _ - / : @` and nothing else. No whitespace, no quotes,
+ * no metacharacters.
  */
-const PACKAGE_NAME_PATTERN = /^[a-zA-Z0-9@][a-zA-Z0-9._\-/:]*$/;
+const PACKAGE_NAME_PATTERN = /^[a-zA-Z0-9@][a-zA-Z0-9._\-/:@]*$/;
 
 /** Semver ranges, dist-tags and Docker tags: `1.2.3`, `^2.0.0`, `latest`, `20-alpine`. */
 const PACKAGE_VERSION_PATTERN = /^[a-zA-Z0-9~^><=*][a-zA-Z0-9._\-+]*$/;
