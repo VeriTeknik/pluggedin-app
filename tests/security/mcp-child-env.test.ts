@@ -229,3 +229,39 @@ describe('approvedChildPath is platform-aware', () => {
     expect(p.split(';')).not.toContain('/usr/bin');
   });
 });
+
+describe('approvedChildPath is the only PATH builder', () => {
+  it('includes the per-user local bin directory by default', async () => {
+    const { approvedChildPath } = await import('@/lib/mcp/child-env');
+    const os = await import('node:os');
+    const path = await import('node:path');
+
+    const expected = process.env.FIREJAIL_LOCAL_BIN ?? path.join(os.homedir(), '.local', 'bin');
+
+    expect(approvedChildPath().split(path.delimiter)).toContain(expected);
+  });
+
+  it('leaves no inline PATH construction in lib/mcp', async () => {
+    const fs = await import('node:fs');
+    const p = await import('node:path');
+
+    const walk = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const full = p.join(dir, e.name);
+        return e.isDirectory() ? walk(full) : full.endsWith('.ts') ? [full] : [];
+      });
+
+    // Four separate PATH strings existed here, each with its own `:` join and
+    // its own idea of which directories count. Fixing them one at a time is
+    // how the last three review rounds went.
+    const offenders: string[] = [];
+    for (const file of walk('lib/mcp')) {
+      const src = fs.readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/(?<![A-Z_])PATH:\s*(`|\[)/g)) {
+        offenders.push(`${file}:${src.slice(0, m.index).split('\n').length}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+});

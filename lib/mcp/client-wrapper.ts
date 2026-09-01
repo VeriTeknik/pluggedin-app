@@ -22,7 +22,7 @@ import path from 'path';
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
-import { inheritableChildEnv } from '@/lib/mcp/child-env';
+import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
@@ -322,7 +322,7 @@ export function createBubblewrapConfig(
     // Allowlisted host vars first: everything below deliberately overrides them
     ...inheritableChildEnv(),
     // Sensible defaults - include interpreter paths from config
-    PATH: `${paths.localBin}:${pnpmPath}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
+    PATH: approvedChildPath([paths.localBin, pnpmPath]),
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -472,7 +472,7 @@ export function createFirejailConfig(
     // Allowlisted host vars first: everything below deliberately overrides them
     ...inheritableChildEnv(),
     // Sensible defaults, adjust user/home if needed - include interpreter paths from config
-    PATH: `${paths.localBin}:${pnpmPathFirejail}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
+    PATH: approvedChildPath([paths.localBin, pnpmPathFirejail]),
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -728,15 +728,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           // appending the host PATH would let a child resolve commands from
           // whatever directories this process happens to have, and would leave
           // non-Linux hosts with no PATH at all once the spread was removed.
-          PATH: [
+          PATH: approvedChildPath([
             process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local/bin'),
-            PackageManagerConfig.NODEJS_BIN_DIR,
-            PackageManagerConfig.PYTHON_BIN_DIR,
-            PackageManagerConfig.DOCKER_BIN_DIR,
-            '/usr/local/bin',
-            '/usr/bin',
-            '/bin',
-          ].join(':'),
+          ]),
           // Only add Linux-specific paths on Linux systems
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux

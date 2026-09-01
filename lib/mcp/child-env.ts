@@ -1,3 +1,4 @@
+import os from 'os';
 import path from 'path';
 
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
@@ -101,6 +102,10 @@ export function approvedChildPath(extraDirs: string[] = []): string {
 
   const dirs = [
     ...extraDirs,
+    // The per-user bin directory the sandbox builders bind and rely on. It was
+    // only in their inline PATH strings, so anything that replaced PATH
+    // downstream silently dropped it.
+    process.env.FIREJAIL_LOCAL_BIN ?? path.join(os.homedir(), '.local', 'bin'),
     PackageManagerConfig.NODEJS_BIN_DIR,
     PackageManagerConfig.PYTHON_BIN_DIR,
     PackageManagerConfig.DOCKER_BIN_DIR,
