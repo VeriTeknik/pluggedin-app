@@ -101,7 +101,7 @@ export function useLibrary() {
         formData.append('uploadMethod', data.uploadMethod);
       }
 
-      const result = await createDoc(session.user.id, currentProject.uuid, formData);
+      const result = await createDoc(formData, currentProject.uuid);
 
       if (result.success) {
         // Optimistically update both caches
@@ -165,7 +165,7 @@ export function useLibrary() {
         throw new Error('Not authenticated');
       }
 
-      const result = await deleteDoc(session.user.id, docUuid, currentProject?.uuid);
+      const result = await deleteDoc(docUuid, currentProject?.uuid);
       
       if (result.success) {
         // Optimistically update both caches
@@ -219,7 +219,7 @@ export function useLibrary() {
         throw new Error('Not authenticated');
       }
 
-      const result = await reindexDocument(session.user.id, docUuid, currentProject?.uuid);
+      const result = await reindexDocument(docUuid, currentProject?.uuid);
 
       if (result.success) {
         // Refresh storage stats since chunk counts may have changed

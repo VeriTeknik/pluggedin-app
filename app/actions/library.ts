@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
+import { withProfileAuth } from '@/lib/auth-helpers';
 import {
   askKnowledgeBaseFor,
   getDocByUuidFor,
@@ -178,6 +179,10 @@ export async function getDocumentVersions(documentId: string, projectUuid?: stri
 export async function trackDocumentView(profileUuid: string, docUuid: string) {
   'use server';
   try {
+    // profileUuid arrives from the client, and this writes an activity row
+    // under it — so ownership is verified before anything is recorded.
+    await withProfileAuth(profileUuid, async () => undefined);
+
     // Validate UUID formats
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -433,10 +438,14 @@ export async function updateDocRagId(
  * Deletes existing chunks/vectors first, then re-extracts text and re-embeds.
  */
 export async function reindexDocument(
-  userId: string,
   docUuid: string,
   projectUuid?: string
 ): Promise<{ success: boolean; error?: string }> {
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, error: 'Authentication required' };
+  }
+
   try {
     if (process.env.ENABLE_RAG !== 'true') {
       return { success: false, error: 'RAG is not enabled' };
@@ -496,10 +505,14 @@ export async function reindexDocument(
 }
 
 export async function createDoc(
-  userId: string,
-  projectUuid: string | undefined,
-  formData: FormData
+  formData: FormData,
+  projectUuid?: string
 ): Promise<DocUploadResponse> {
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, error: 'Authentication required' };
+  }
+
   try {
     // Validate that projectUuid is provided
     if (!projectUuid) {
@@ -598,10 +611,14 @@ export async function createDoc(
 }
 
 export async function deleteDoc(
-  userId: string,
   docUuid: string,
   projectUuid?: string
 ): Promise<DocDeleteResponse> {
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, error: 'Authentication required' };
+  }
+
   try {
     // Get the doc first to get file path and verify ownership
     const doc = await getDocByUuidFor(userId, docUuid, projectUuid);
@@ -693,7 +710,6 @@ export async function askKnowledgeBase(
  * Manual repair function with detailed feedback for fixing document-RAG ID mismatches
  */
 export async function manualRepairDocumentRagIds(
-  userId: string,
   projectUuid?: string
 ): Promise<{
   success: boolean;
@@ -708,6 +724,11 @@ export async function manualRepairDocumentRagIds(
   error?: string;
 }> {
   'use server';
+
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, error: 'Authentication required' };
+  }
 
   try {
     // Get the project UUID or use user ID as identifier
@@ -935,12 +956,16 @@ function findMatchingRagDocument(
  * Implements batching and rate limiting to avoid service overload
  */
 export async function repairMissingRagDocumentIds(
-  userId: string,
   projectUuid?: string,
   batchSize: number = 10,
   maxConcurrency: number = 3
 ): Promise<{ success: boolean; repaired: number; failed: number; error?: string }> {
   'use server';
+
+  const userId = await sessionUserId();
+  if (!userId) {
+    return { success: false, repaired: 0, failed: 0, error: 'Authentication required' };
+  }
 
   try {
     // Find AI-generated documents without rag_document_id
