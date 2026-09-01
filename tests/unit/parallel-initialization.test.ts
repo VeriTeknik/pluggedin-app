@@ -17,7 +17,7 @@ vi.mock('@/app/actions/mcp-playground', () => ({
 
 describe('Parallel Initialization - Mixed Transport Types', () => {
   it('should initialize STDIO and STREAMABLE_HTTP servers in parallel', async () => {
-    const { progressivelyInitializeMcpServers } = await import('@/app/actions/progressive-mcp-initialization');
+    const { progressivelyInitializeMcpServers } = await import('@/lib/mcp/progressive-initialization');
 
     const mcpServersConfig = {
       'stdio-server': {
@@ -64,7 +64,7 @@ describe('Parallel Initialization - Mixed Transport Types', () => {
 
   it('should isolate failures - one server failure should not affect others', async () => {
     const { convertMcpToLangchainTools } = await import('@h1deya/langchain-mcp-tools');
-    const { progressivelyInitializeMcpServers } = await import('@/app/actions/progressive-mcp-initialization');
+    const { progressivelyInitializeMcpServers } = await import('@/lib/mcp/progressive-initialization');
 
     // Mock to fail for failing-server, succeed for working-server
     (convertMcpToLangchainTools as any).mockImplementation((config: any) => {
@@ -117,7 +117,7 @@ describe('Parallel Initialization - Mixed Transport Types', () => {
 
   it('should respect overall timeout', async () => {
     const { convertMcpToLangchainTools } = await import('@h1deya/langchain-mcp-tools');
-    const { progressivelyInitializeMcpServers } = await import('@/app/actions/progressive-mcp-initialization');
+    const { progressivelyInitializeMcpServers } = await import('@/lib/mcp/progressive-initialization');
 
     // Mock server to take longer than timeout
     convertMcpToLangchainTools.mockImplementationOnce(() => {

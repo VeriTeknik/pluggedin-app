@@ -1,11 +1,22 @@
-'use server';
+/**
+ * Progressive MCP server initialization.
+ *
+ * This deliberately does NOT carry the `'use server'` directive and must not
+ * move back under app/actions. Every export in such a module is a public POST
+ * endpoint, and this one takes an `mcpServersConfig` and hands it to
+ * convertMcpToLangchainTools, which spawns `command` with `args` as a child
+ * process — arbitrary command execution for anyone who can reach the endpoint.
+ *
+ * Its caller, executePlaygroundQuery, builds the config server-side from the
+ * database, so this was never something a client needed to invoke.
+ */
 
 // Import necessary types from the library - Remove Stdio/SseServerParameters
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
+import { addServerLogForProfile } from '@/app/actions/mcp-playground';
+import { validateMcpUrl } from '@/lib/security/validators';
 import { validateTimeouts } from '@/lib/timeout-validator';
-
-import { addServerLogForProfile } from './mcp-playground'; // Relative import
 
 // Interface for server initialization status
 export interface ServerInitStatus {
@@ -109,6 +120,21 @@ async function performServerHealthChecks(
     // Only check WebSocket (SSE) servers with a URL
     // Skip health checks for Streamable HTTP servers as they may require special auth handling
     if (config.type === 'SSE' && config.url) {
+      // The url reaches fetch, and fetch follows redirects. Without this the
+      // health check is a probe of whatever the server can reach — cloud
+      // metadata, internal admin panels, neighbouring containers — with the
+      // answer handed back through the server log.
+      const urlCheck = validateMcpUrl(config.url);
+      if (!urlCheck.valid) {
+        results[serverName] = false;
+        await addServerLogForProfile(
+          profileUuid,
+          'warn',
+          `Health check for ${serverName} skipped: ${urlCheck.error}`
+        );
+        return;
+      }
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout for health check
