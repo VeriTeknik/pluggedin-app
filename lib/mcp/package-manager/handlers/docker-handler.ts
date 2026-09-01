@@ -1,19 +1,37 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
-import path from 'path';
 import { promisify } from 'util';
 
-import { PackageManagerConfig } from '../config';
 import { buildSecurePath } from '@/lib/secure-path-builder';
+import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
+
+import { PackageManagerConfig } from '../config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
-const execAsync = promisify(exec);
+// argv execution, never a shell: the package name and version come out of a
+// user-supplied args array, so a shell here is a command-injection sink.
+const execFileAsync = promisify(execFile);
 
 export class DockerHandler extends BasePackageHandler {
   protected packageManagerName = 'docker';
   
   async install(options: InstallOptions): Promise<PackageInfo> {
     const { serverUuid, packageName, version } = options;
+
+    // The name and version come out of a user-supplied args array. argv
+    // execution above already keeps them away from a shell; this keeps a
+    // malformed value out of the filesystem-path builders too, and fails the
+    // install before anything is spawned.
+    const nameCheck = validatePackageName(packageName);
+    if (!nameCheck.valid) {
+      throw new Error(`Invalid package name: ${nameCheck.error}`);
+    }
+    if (version !== undefined) {
+      const versionCheck = validatePackageVersion(version);
+      if (!versionCheck.valid) {
+        throw new Error(`Invalid package version: ${versionCheck.error}`);
+      }
+    }
     
     this.log('Installing Docker container', { serverUuid, packageName, version });
     
@@ -26,10 +44,9 @@ export class DockerHandler extends BasePackageHandler {
     
     try {
       // Pull the Docker image
-      const pullCommand = `docker pull ${containerTag}`;
-      this.log('Pulling Docker image', { command: pullCommand });
+      this.log('Pulling Docker image', { containerTag });
       
-      await execAsync(pullCommand, {
+      await execFileAsync('docker', ['pull', containerTag], {
         timeout: PackageManagerConfig.PROCESS_TIMEOUT_MS,
         env: {
           ...process.env,
@@ -57,7 +74,7 @@ export class DockerHandler extends BasePackageHandler {
   async isInstalled(serverUuid: string, packageName: string): Promise<boolean> {
     try {
       // Check if the Docker image exists locally
-      const { stdout } = await execAsync(`docker images -q ${packageName}`, {
+      const { stdout } = await execFileAsync('docker', ['images', '-q', packageName], {
         timeout: 5000, // Quick check
       });
       
@@ -80,7 +97,7 @@ export class DockerHandler extends BasePackageHandler {
     try {
       // Remove any containers that were created for this server
       const containerName = `mcp-${serverUuid}`;
-      await execAsync(`docker rm -f ${containerName}`, {
+      await execFileAsync('docker', ['rm', '-f', containerName], {
         timeout: 10000,
       });
     } catch (error) {
@@ -102,7 +119,7 @@ export class DockerHandler extends BasePackageHandler {
     // For Docker, we estimate based on container images
     // This is approximate since Docker images are shared across containers
     try {
-      const { stdout } = await execAsync('docker images --format "table {{.Size}}"', {
+      const { stdout } = await execFileAsync('docker', ['images', '--format', 'table {{.Size}}'], {
         timeout: 5000,
       });
       
@@ -130,7 +147,7 @@ export class DockerHandler extends BasePackageHandler {
     
     for (const packageName of packages) {
       try {
-        await execAsync(`docker pull ${packageName}`, {
+        await execFileAsync('docker', ['pull', packageName], {
           timeout: PackageManagerConfig.PROCESS_TIMEOUT_MS,
         });
         this.log('Pre-warmed Docker image', { packageName });

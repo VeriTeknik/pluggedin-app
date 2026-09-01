@@ -351,7 +351,19 @@ export function validateCommandArgs(args: string[]): { valid: boolean; error?: s
         error: 'Argument too long: maximum 4096 characters allowed'
       };
     }
-    
+
+    // Mirrors the check validateCommand() applies to the command itself.
+    // It was missing here, and args are where the danger actually was: the
+    // package managers lift a "package name" straight out of this array, so a
+    // metacharacter in an arg reached a shell while the command field was
+    // guarded. Newlines are included - they separate shell statements too.
+    if (/[;&|`$(){}[\]<>\n\r]/.test(arg)) {
+      return {
+        valid: false,
+        error: `Argument contains dangerous characters: ${arg}`
+      };
+    }
+
     sanitizedArgs.push(arg);
   }
   

@@ -2,8 +2,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { z } from 'zod';
 
-import { PackageManagerConfig } from '../config';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
+
+import { PackageManagerConfig } from '../config';
 
 const serverUuidSchema = z.string().uuid('Invalid server UUID provided to package handler.');
 

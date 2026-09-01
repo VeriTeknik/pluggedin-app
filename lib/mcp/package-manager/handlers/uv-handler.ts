@@ -1,13 +1,16 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
-import path from 'path';
 import { promisify } from 'util';
 
-import { PackageManagerConfig } from '../config';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
+import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
+
+import { PackageManagerConfig } from '../config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
-const execAsync = promisify(exec);
+// argv execution, never a shell: the package name and version come out of a
+// user-supplied args array, so a shell here is a command-injection sink.
+const execFileAsync = promisify(execFile);
 
 export class UvHandler extends BasePackageHandler {
   protected packageManagerName = 'uv';
@@ -86,6 +89,21 @@ export class UvHandler extends BasePackageHandler {
 
   async install(options: InstallOptions): Promise<PackageInfo> {
     const { serverUuid, packageName, version } = options;
+
+    // The name and version come out of a user-supplied args array. argv
+    // execution above already keeps them away from a shell; this keeps a
+    // malformed value out of the filesystem-path builders too, and fails the
+    // install before anything is spawned.
+    const nameCheck = validatePackageName(packageName);
+    if (!nameCheck.valid) {
+      throw new Error(`Invalid package name: ${nameCheck.error}`);
+    }
+    if (version !== undefined) {
+      const versionCheck = validatePackageVersion(version);
+      if (!versionCheck.valid) {
+        throw new Error(`Invalid package version: ${versionCheck.error}`);
+      }
+    }
     const installDir = this.getServerInstallDir(serverUuid);
     const venvDir = buildSecurePath(installDir, '.venv');
 
@@ -97,7 +115,7 @@ export class UvHandler extends BasePackageHandler {
     try {
       // Create virtual environment if it doesn't exist
       if (!(await this.fileExists(venvDir))) {
-        await execAsync('uv venv', {
+        await execFileAsync('uv', ['venv'], {
           cwd: installDir,
           env: {
             ...process.env,
@@ -114,8 +132,9 @@ export class UvHandler extends BasePackageHandler {
       const packageSpec = version ? `${packageName}==${version}` : packageName;
       
       // Install package using uv
-      const { stdout, stderr } = await execAsync(
-        `uv pip install ${packageSpec}`,
+      const { stdout, stderr } = await execFileAsync(
+        'uv',
+        ['pip', 'install', packageSpec],
         {
           cwd: installDir,
           env: {
@@ -143,8 +162,10 @@ export class UvHandler extends BasePackageHandler {
       // Get installed version
       let installedVersion = version;
       try {
-        const { stdout: versionOutput } = await execAsync(
-          `uv pip show ${packageName} | grep Version`,
+        // `| grep Version` needed a shell; filter in JS instead.
+        const { stdout: versionOutput } = await execFileAsync(
+          'uv',
+          ['pip', 'show', packageName],
           {
             cwd: installDir,
             env: {
@@ -193,8 +214,9 @@ export class UvHandler extends BasePackageHandler {
     }
     
     try {
-      const { stdout } = await execAsync(
-        `uv pip show ${packageName}`,
+      const { stdout } = await execFileAsync(
+        'uv',
+        ['pip', 'show', packageName],
         {
           cwd: installDir,
           env: {
@@ -258,7 +280,7 @@ export class UvHandler extends BasePackageHandler {
     
     // Create base virtual environment
     if (!(await this.fileExists(venvDir))) {
-      await execAsync('uv venv', {
+      await execFileAsync('uv', ['venv'], {
         cwd: baseLayerDir,
         env: {
           ...process.env,
@@ -271,7 +293,7 @@ export class UvHandler extends BasePackageHandler {
     // Install packages
     for (const packageName of packages) {
       try {
-        await execAsync(`uv pip install ${packageName}`, {
+        await execFileAsync('uv', ['pip', 'install', packageName], {
           cwd: baseLayerDir,
           env: {
             ...process.env,

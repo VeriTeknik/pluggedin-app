@@ -1,19 +1,37 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
-import path from 'path';
 import { promisify } from 'util';
 
-import { PackageManagerConfig } from '../config';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
+import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
+
+import { PackageManagerConfig } from '../config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
-const execAsync = promisify(exec);
+// argv execution, never a shell: the package name and version come out of a
+// user-supplied args array, so a shell here is a command-injection sink.
+const execFileAsync = promisify(execFile);
 
 export class PnpmHandler extends BasePackageHandler {
   protected packageManagerName = 'pnpm';
   
   async install(options: InstallOptions): Promise<PackageInfo> {
     const { serverUuid, packageName, version } = options;
+
+    // The name and version come out of a user-supplied args array. argv
+    // execution above already keeps them away from a shell; this keeps a
+    // malformed value out of the filesystem-path builders too, and fails the
+    // install before anything is spawned.
+    const nameCheck = validatePackageName(packageName);
+    if (!nameCheck.valid) {
+      throw new Error(`Invalid package name: ${nameCheck.error}`);
+    }
+    if (version !== undefined) {
+      const versionCheck = validatePackageVersion(version);
+      if (!versionCheck.valid) {
+        throw new Error(`Invalid package version: ${versionCheck.error}`);
+      }
+    }
     const installDir = this.getServerInstallDir(serverUuid);
     
     this.log('Installing package', { serverUuid, packageName, version, installDir });
@@ -39,7 +57,7 @@ export class PnpmHandler extends BasePackageHandler {
     
     try {
       // Install package using pnpm
-      const { stdout, stderr } = await execAsync(`pnpm add ${packageSpec}`, {
+      const { stdout, stderr } = await execFileAsync('pnpm', ['add', packageSpec], {
         cwd: installDir,
         env: {
           ...process.env,
@@ -207,7 +225,7 @@ export class PnpmHandler extends BasePackageHandler {
     
     for (const packageName of packages) {
       try {
-        await execAsync(`pnpm add ${packageName}`, {
+        await execFileAsync('pnpm', ['add', packageName], {
           cwd: tempDir,
           env: {
             ...process.env,
