@@ -36,10 +36,6 @@ vi.mock('next/navigation', () => ({
 const {
   updateUserSocial,
   reserveUsername,
-  getUserByUsername,
-  searchUsers,
-  getFollowers,
-  getFollowing,
   shareMcpServer,
   getSharedMcpServer,
   getSharedMcpServers,
@@ -195,59 +191,6 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// #2 — getUserByUsername
-// ---------------------------------------------------------------------------
-describe('getUserByUsername visibility', () => {
-  it('returns a public profile to an anonymous visitor', async () => {
-    signedInAs(null);
-    mockedDb.query.users.findFirst.mockResolvedValue(fullUserRow({ is_public: true }));
-
-    const result = await getUserByUsername('victim');
-
-    expect(result?.username).toBe('victim');
-  });
-
-  it('does not return a private profile to a logged-in non-owner', async () => {
-    signedInAs(ATTACKER_ID);
-    mockedDb.query.users.findFirst.mockResolvedValue(fullUserRow({ is_public: false }));
-
-    const result = await getUserByUsername('victim');
-
-    expect(result).toBeNull();
-  });
-
-  it('returns a private profile to its owner', async () => {
-    signedInAs(OWNER_ID);
-    mockedDb.query.users.findFirst.mockResolvedValue(fullUserRow({ is_public: false }));
-
-    const result = await getUserByUsername('victim');
-
-    expect(result?.id).toBe(OWNER_ID);
-  });
-
-  it('asks the database only for public columns', async () => {
-    signedInAs(null);
-    mockedDb.query.users.findFirst.mockResolvedValue(fullUserRow());
-
-    await getUserByUsername('victim');
-
-    const call = mockedDb.query.users.findFirst.mock.calls.at(-1)?.[0];
-    expect(Object.keys(call.columns).sort()).toEqual([...PUBLIC_USER_COLUMN_NAMES].sort());
-  });
-
-  it('strips auth columns even if the row arrives wide', async () => {
-    signedInAs(null);
-    mockedDb.query.users.findFirst.mockResolvedValue(fullUserRow());
-
-    const serialized = JSON.stringify(await getUserByUsername('victim'));
-
-    expect(serialized).not.toContain('hashedpassword');
-    expect(serialized).not.toContain('JBSWY3DPEHPK3PXP');
-    expect(serialized).not.toContain('victim@example.com');
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Self-service writes that took a caller-supplied userId
 // ---------------------------------------------------------------------------
 describe('updateUserSocial identity', () => {
@@ -368,108 +311,6 @@ describe('reserveUsername identity', () => {
     expect(serialized).not.toContain('hashedpassword');
     expect(serialized).not.toContain('JBSWY3DPEHPK3PXP');
     expect(serialized).not.toContain('victim@example.com');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// #1 — getFollowers / getFollowing
-// ---------------------------------------------------------------------------
-describe.each([
-  ['getFollowers', (...args: any[]) => (getFollowers as any)(...args)],
-  ['getFollowing', (...args: any[]) => (getFollowing as any)(...args)],
-])('%s column projection and visibility', (_name, callAction) => {
-  function targetUser(overrides: Record<string, any> = {}) {
-    mockedDb.query.users.findFirst.mockImplementation(async (args: any) => {
-      if (typeof args?.where === 'function') {
-        const session = await mockedGetAuthSession();
-        return session?.user?.id ? { id: session.user.id } : null;
-      }
-      return fullUserRow(overrides);
-    });
-  }
-
-  it('never selects the whole users table', async () => {
-    signedInAs(null);
-    targetUser({ is_public: true });
-    selectResults.set(followersTable, []);
-
-    await callAction(OWNER_ID);
-
-    const joinProjection = selectProjections.find((p) => p && !('profile' in p));
-    expect(Object.values(joinProjection ?? {})).not.toContain(users);
-    expect(Object.keys(joinProjection ?? {}).sort()).toEqual(
-      [...PUBLIC_USER_COLUMN_NAMES].sort()
-    );
-  });
-
-  it('serves a public user\'s list to an anonymous visitor', async () => {
-    signedInAs(null);
-    targetUser({ is_public: true });
-    selectResults.set(followersTable, [
-      { id: 'f1', username: 'follower', name: null, bio: null, avatar_url: null, image: null, is_public: true, created_at: new Date() },
-    ]);
-
-    const result = await callAction(OWNER_ID);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].username).toBe('follower');
-  });
-
-  it('withholds a private user\'s list from a non-owner', async () => {
-    signedInAs(ATTACKER_ID);
-    targetUser({ is_public: false });
-    selectResults.set(followersTable, [fullUserRow({ id: 'f1' })]);
-
-    const result = await callAction(OWNER_ID);
-
-    expect(result).toEqual([]);
-  });
-
-  it('serves a private user\'s list to the owner', async () => {
-    signedInAs(OWNER_ID);
-    targetUser({ is_public: false });
-    selectResults.set(followersTable, [
-      { id: 'f1', username: 'follower', name: null, bio: null, avatar_url: null, image: null, is_public: true, created_at: new Date() },
-    ]);
-
-    const result = await callAction(OWNER_ID);
-
-    expect(result).toHaveLength(1);
-  });
-
-  it('clamps a caller-supplied limit', async () => {
-    signedInAs(null);
-    targetUser({ is_public: true });
-    selectResults.set(followersTable, []);
-
-    await callAction(OWNER_ID, 100000);
-
-    expect(Math.max(...selectLimits)).toBeLessThanOrEqual(100);
-  });
-
-  it('leaks no secret even if the driver returns wide rows', async () => {
-    signedInAs(null);
-    targetUser({ is_public: true });
-    selectResults.set(followersTable, [fullUserRow({ id: 'f1' })]);
-
-    const serialized = JSON.stringify(await callAction(OWNER_ID));
-
-    expect(serialized).not.toContain('hashedpassword');
-    expect(serialized).not.toContain('JBSWY3DPEHPK3PXP');
-    expect(serialized).not.toContain('victim@example.com');
-  });
-});
-
-describe('searchUsers column projection', () => {
-  it('never selects the whole users table', async () => {
-    selectResults.set(users, []);
-
-    await searchUsers('vic');
-
-    expect(Object.values(selectProjections[0] ?? {})).not.toContain(users);
-    expect(Object.keys(selectProjections[0] ?? {}).sort()).toEqual(
-      [...PUBLIC_USER_COLUMN_NAMES].sort()
-    );
   });
 });
 

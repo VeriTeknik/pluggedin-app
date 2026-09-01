@@ -135,13 +135,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  // Public user profile routes
-  const userRoutes: MetadataRoute.Sitemap = publicUsers.map((user) => ({
-    url: `${baseUrl}/to/${encodeURIComponent(user.username!)}`,
-    lastModified: user.updated_at || currentDate,
-    changeFrequency: 'weekly' as const,
-    priority: 0.6,
-  }));
-
-  return [...staticRoutes, ...blogRoutes, ...userRoutes];
+  return [...staticRoutes, ...blogRoutes];
 }

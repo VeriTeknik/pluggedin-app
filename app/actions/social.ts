@@ -1,7 +1,7 @@
 'use server';
 
 // Consolidated imports
-import { and, desc, eq, ilike, sql } from 'drizzle-orm'; 
+import { and, desc, eq } from 'drizzle-orm'; 
 import { revalidatePath } from 'next/cache';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { logAuditEvent } from '@/app/actions/audit-logger';
 import { createShareableTemplate } from '@/app/actions/mcp-servers';
 import { db } from '@/db';
 // Ensure languageEnum is imported correctly from schema
-import { embeddedChatsTable, followersTable, languageEnum, mcpServersTable, profilesTable, projectsTable, sharedCollectionsTable, sharedMcpServersTable, users } from '@/db/schema'; 
+import { embeddedChatsTable, languageEnum, mcpServersTable, profilesTable, projectsTable, sharedCollectionsTable, sharedMcpServersTable, users } from '@/db/schema'; 
 import { EmbeddedChat, SharedCollection, SharedMcpServer, UsernameAvailability } from '@/types/social';
 // We'll likely need the User type more often
 type User = typeof users.$inferSelect;
@@ -20,7 +20,7 @@ type LanguageCode = typeof languageEnum.enumValues[number];
 import { getAuthSession } from '@/lib/auth';
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import type { PublicUser } from '@/lib/public-user';
-import { PUBLIC_USER_COLUMNS, publicUserSelection, toPublicUser } from '@/lib/public-user';
+import { toPublicUser } from '@/lib/public-user';
 import { sanitizeServerTemplate } from '@/lib/server-template';
 
 // Additional validation schemas
@@ -54,23 +54,6 @@ async function getCurrentUserId(): Promise<string | undefined> {
   return session?.user?.id;
 }
 
-/**
- * Whether the caller may see a user's follower/following list. Public profiles
- * are browsable anonymously; a private one is only visible to its owner.
- */
-async function canViewUserSocialGraph(userId: string): Promise<boolean> {
-  const currentUserId = await getCurrentUserId();
-  if (currentUserId === userId) {
-    return true;
-  }
-
-  const target = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: PUBLIC_USER_COLUMNS,
-  });
-
-  return target?.is_public === true;
-}
 
 /** Whether the caller owns `profileUuid`. False for anonymous callers. */
 async function viewerOwnsProfile(profileUuid: string): Promise<boolean> {
@@ -194,7 +177,6 @@ export async function reserveUsername(userId: string, username: string): Promise
 
       // Revalidate paths
       revalidatePath('/settings');
-      revalidatePath(`/to/${username}`);
 
       return {
         success: true,
@@ -291,7 +273,6 @@ export async function updateUserSocial(
     // Revalidate paths
     revalidatePath('/settings');
     if (updatedUser.username) {
-      revalidatePath(`/to/${updatedUser.username}`);
     }
     
     return {
@@ -309,219 +290,12 @@ export async function updateUserSocial(
   }
 }
 
-/**
- * Get a user by username (formerly getProfileByUsername)
- * @param username The username to look up
- * @returns The user data if the user exists and visibility rules allow access
- */
-export async function getUserByUsername(username: string): Promise<PublicUser | null> {
-  try {
-    const currentUserId = await getCurrentUserId();
 
-    // Never the bare `users` row: it also holds password, two_fa_secret,
-    // two_fa_backup_codes, last_login_ip and email.
-    const user = await db.query.users.findFirst({
-      where: eq(users.username, username),
-      columns: PUBLIC_USER_COLUMNS,
-    });
 
-    // If no user exists with this username, return null
-    if (!user) {
-      return null;
-    }
 
-    // Visibility: public profiles are world-readable, a private one is only
-    // ever returned to its owner. Merely being logged in grants nothing.
-    if (user.is_public || currentUserId === user.id) {
-      return toPublicUser(user);
-    }
 
-    return null;
-  } catch (error) {
-    console.error('Error getting user by username:', error);
-    return null;
-  }
-}
 
-/**
- * Search for users by username (formerly searchProfiles)
- * @param query The search query
- * @param limit The maximum number of results to return
- * @returns An array of matching public users
- */
-export async function searchUsers(query: string, limit: number = 10): Promise<PublicUser[]> {
-  try {
-    // Search users directly by username
-    const results = await db
-      .select(publicUserSelection)
-      .from(users)
-      .where(and(
-        ilike(users.username, `%${query}%`), // Search username
-        eq(users.is_public, true) // Only return public users
-      ))
-      .limit(clampLimit(limit));
 
-    return results.map(toPublicUser);
-  } catch (error) {
-    console.error('Error searching users:', error); // Corrected log message
-    return [];
-  }
-}
-
-/**
- * Get the number of followers for a user (formerly getFollowerCount)
- * @param userId The ID of the user
- * @returns The follower count
- */
-export async function getUserFollowerCount(userId: string): Promise<number> {
-  try {
-    const result = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(followersTable)
-      .where(eq(followersTable.followed_user_id, userId)); // Use followed_user_id
-    return result[0]?.count || 0;
-  } catch (error) {
-    console.error('Error getting follower count:', error);
-    return 0;
-  }
-}
-
-/**
- * Get the number of users a user is following (formerly getFollowingCount)
- * @param userId The ID of the user
- * @returns The following count
- */
-export async function getUserFollowingCount(userId: string): Promise<number> {
-  try {
-    const result = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(followersTable)
-      .where(eq(followersTable.follower_user_id, userId)); // Use follower_user_id
-    return result[0]?.count || 0;
-  } catch (error) {
-    console.error('Error getting following count:', error);
-    return 0;
-  }
-}
-
-/**
- * Follow a user (formerly followProfile)
- * @param followerUserId The ID of the follower user
- * @param followedUserId The ID of the user to follow
- * @returns Success status and error message if applicable
- */
-export async function followUser(
-  followerUserId: string,
-  followedUserId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Check if users exist (optional but good practice)
-    const followerExists = await db.query.users.findFirst({ where: eq(users.id, followerUserId) });
-    const followedExists = await db.query.users.findFirst({ where: eq(users.id, followedUserId) });
-    if (!followerExists || !followedExists) {
-      return { success: false, error: 'User not found' };
-    }
-    if (followerUserId === followedUserId) {
-       return { success: false, error: 'Cannot follow yourself' };
-    }
-
-    const existingFollow = await db.query.followersTable.findFirst({
-      where: and(
-        eq(followersTable.follower_user_id, followerUserId), // Use user IDs
-        eq(followersTable.followed_user_id, followedUserId)  // Use user IDs
-      ),
-    });
-    if (existingFollow) {
-      return { success: false, error: 'Already following this user' };
-    }
-    await db.insert(followersTable).values({
-      follower_user_id: followerUserId, // Use user IDs
-      followed_user_id: followedUserId, // Use user IDs
-    });
-    // Update logging if needed (log against user ID)
-    // await logAuditEvent({ userId: followerUserId, type: 'USER', action: 'FOLLOW_USER', metadata: { followedUserId } });
-    // Revalidate relevant user pages
-    const followerUsername = followerExists.username;
-    const followedUsername = followedExists.username;
-    if (followerUsername) revalidatePath(`/to/${followerUsername}`);
-    if (followedUsername) revalidatePath(`/to/${followedUsername}`);
-    return { success: true };
-  } catch (error) {
-    console.error('Error following user:', error); // Corrected log message
-    return {
-      success: false,
-      error: 'An error occurred while trying to follow the user' // Corrected error message
-    };
-  }
-}
-
-/**
- * Unfollow a user (formerly unfollowProfile)
- * @param followerUserId The ID of the follower user
- * @param followedUserId The ID of the user to unfollow
- * @returns Success status and error message if applicable
- */
-export async function unfollowUser(
-  followerUserId: string,
-  followedUserId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const deleted = await db
-      .delete(followersTable)
-      .where(
-        and(
-          eq(followersTable.follower_user_id, followerUserId), // Use user IDs
-          eq(followersTable.followed_user_id, followedUserId)  // Use user IDs
-        )
-      )
-      .returning(); // Check if a row was actually deleted
-
-    if (deleted.length === 0) {
-       // Optional: return error if they weren't following in the first place
-       // return { success: false, error: 'Not following this user' };
-    }
-    
-    // Update logging if needed
-    // await logAuditEvent({ userId: followerUserId, type: 'USER', action: 'UNFOLLOW_USER', metadata: { followedUserId } });
-    // Revalidate relevant user pages
-    const followerUser = await db.query.users.findFirst({ where: eq(users.id, followerUserId), columns: { username: true } });
-    const followedUser = await db.query.users.findFirst({ where: eq(users.id, followedUserId), columns: { username: true } });
-    if (followerUser?.username) revalidatePath(`/to/${followerUser.username}`);
-    if (followedUser?.username) revalidatePath(`/to/${followedUser.username}`);
-    return { success: true };
-  } catch (error) {
-    console.error('Error unfollowing user:', error); // Corrected log message
-    return {
-      success: false,
-      error: 'An error occurred while trying to unfollow the user' // Corrected error message
-    };
-  }
-}
-
-/**
- * Check if a user is following another user (formerly isFollowing)
- * @param followerUserId The ID of the follower user
- * @param followedUserId The ID of the user being followed
- * @returns True if following, false otherwise
- */
-export async function isFollowingUser(
-  followerUserId: string,
-  followedUserId: string
-): Promise<boolean> {
-   if (followerUserId === followedUserId) return false; // Cannot follow self
-  try {
-    const existingFollow = await db.query.followersTable.findFirst({
-      where: and(
-        eq(followersTable.follower_user_id, followerUserId), // Use user IDs
-        eq(followersTable.followed_user_id, followedUserId)  // Use user IDs
-      ),
-    });
-    return !!existingFollow;
-  } catch (error) {
-    console.error('Error checking follow status:', error);
-    return false;
-  }
-}
 
 /**
  * Get shared MCP servers for a profile
@@ -617,66 +391,7 @@ export async function getSharedCollections(
  * @returns An array of embedded chats
  */
 // Note: Sharing is still tied to profiles in this refactor. Adjust if needed.
-/**
- * Get followers for a user (formerly getFollowers)
- * @param userId The ID of the user
- * @param limit The maximum number of results to return
- * @returns An array of follower users
- */
-export async function getFollowers(
-  userId: string,
-  limit: number = 10
-): Promise<PublicUser[]> {
-  try {
-    if (!(await canViewUserSocialGraph(userId))) {
-      return [];
-    }
 
-    const followersData = await db
-      .select(publicUserSelection) // Public columns only - never the bare users row
-      .from(followersTable)
-      .innerJoin(users, eq(followersTable.follower_user_id, users.id)) // Join users table
-      .where(eq(followersTable.followed_user_id, userId)) // Filter by followed user
-      .orderBy(desc(followersTable.created_at))
-      .limit(clampLimit(limit));
-
-    return followersData.map(toPublicUser);
-  } catch (error) {
-    console.error('Error getting followers:', error);
-    return [];
-  }
-}
-
-/**
- * Get users that a user is following (formerly getFollowing)
- * @param userId The ID of the user
- * @param limit The maximum number of results to return
- * @returns An array of followed users
- */
-export async function getFollowing(
-  userId: string,
-  limit: number = 10
-): Promise<PublicUser[]> {
-  try {
-    if (!(await canViewUserSocialGraph(userId))) {
-      return [];
-    }
-
-    // Explicitly join followersTable with users table
-    const followingData = await db
-      .select(publicUserSelection) // Public columns only - never the bare users row
-      .from(followersTable)
-      .innerJoin(users, eq(followersTable.followed_user_id, users.id)) // Join users table
-      .where(eq(followersTable.follower_user_id, userId)) // Filter by the follower user
-      .orderBy(desc(followersTable.created_at)) // Order by follow date
-      .limit(clampLimit(limit));
-
-    return followingData.map(toPublicUser);
-  } catch (error) {
-    console.error('Error getting following:', error);
-    return [];
-  }
-}
 
 /**
  * Share an MCP server to the user's profile
@@ -743,7 +458,6 @@ export async function shareMcpServer(
     if (isPublic) {
        const associatedUsername = await getUsernameForProfile(profileUuid);
        if (associatedUsername) {
-         revalidatePath(`/to/${associatedUsername}`);
        }
     }
     return {
@@ -939,7 +653,6 @@ export async function unshareServer(
     // Revalidate paths
     const associatedUsername = await getUsernameForProfile(sharedServer.profile_uuid);
     if (associatedUsername) {
-      revalidatePath(`/to/${associatedUsername}`);
     }
     
     return { success: true };
@@ -983,7 +696,6 @@ export async function shareCollection(
     if (isPublic) {
        const associatedUsername = await getUsernameForProfile(profileUuid);
        if (associatedUsername) {
-         revalidatePath(`/to/${associatedUsername}`);
        }
     }
     return {
@@ -1048,7 +760,6 @@ export async function updateSharedCollection(
     // Revalidate paths
     const associatedUsername = await getUsernameForProfile(profileUuid);
     if (associatedUsername) {
-      revalidatePath(`/to/${associatedUsername}`);
     }
     return {
       success: true,
@@ -1157,7 +868,6 @@ export async function unshareCollection(
     // Revalidate paths
     const associatedUsername = await getUsernameForProfile(profileUuid);
     if (associatedUsername) {
-      revalidatePath(`/to/${associatedUsername}`);
     }
     return { success: true };
     });
@@ -1200,7 +910,6 @@ export async function shareEmbeddedChat(
     if (isPublic) {
        const associatedUsername = await getUsernameForProfile(profileUuid);
        if (associatedUsername) {
-         revalidatePath(`/to/${associatedUsername}`);
        }
     }
     return {
@@ -1267,7 +976,6 @@ export async function updateEmbeddedChat(
     // Revalidate paths
     const associatedUsername = await getUsernameForProfile(profileUuid);
     if (associatedUsername) {
-      revalidatePath(`/to/${associatedUsername}`);
     }
     return {
       success: true,

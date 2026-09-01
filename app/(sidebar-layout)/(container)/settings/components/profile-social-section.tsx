@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { checkUsernameAvailability, reserveUsername, updateUserSocial } from '@/app/actions/social';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -229,35 +228,6 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
               onCheckedChange={handleTogglePublic}
               disabled={isUpdatingPublic || !username}
             />
-          </div>
-
-          {/* Profile URL */}
-          <div className="pt-4">
-            <Label className="text-sm">{t('settings.profile.profileUrl.title')}</Label>
-            {user.username ? (
-              <div className="mt-2 flex items-center gap-2">
-                <a
-                  href={`/to/${user.username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group inline-flex items-center hover:opacity-80 transition-opacity"
-                  title={t('settings.profile.profileUrl.copyTooltip')}
-                >
-                  <div className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-md text-sm text-foreground font-mono">
-                    plugged.in/to/{user.username}
-                  </div>
-                </a>
-                {isPublic && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Check className="h-3 w-3 mr-1" /> {t('settings.connectedAccounts.connected')}
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              <div className="mt-2 p-3 bg-amber-100 dark:bg-amber-950/30 rounded-md text-sm text-amber-800 dark:text-amber-300">
-                {t('settings.profile.profileUrl.setUsername')}
-              </div>
-            )}
           </div>
         </div>
       </CardContent>

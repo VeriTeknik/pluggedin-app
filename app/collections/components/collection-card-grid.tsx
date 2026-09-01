@@ -74,12 +74,9 @@ export function CollectionCardGrid({
                 <Users className="h-3 w-3 mr-1" />
                 Shared by:{' '}
                 {collection.profile?.project?.user?.username ? (
-                  <Link 
-                    href={`/to/${collection.profile.project.user.username}`}
-                    className="hover:underline ml-1"
-                  >
+                  <span className="ml-1">
                     {collection.profile.project.user.name}
-                  </Link>
+                  </span>
                 ) : (
                   <span className="ml-1">Unknown</span>
                 )}

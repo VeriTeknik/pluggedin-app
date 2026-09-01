@@ -113,7 +113,7 @@ export async function getFormattedSharedServersForUser(
         rating: avgRating,
         ratingCount: ratingCount,
         shared_by: validatedUsername,
-        shared_by_profile_url: `/to/${validatedUsername}`,
+        shared_by_profile_url: null,
         // Required fields from McpIndex
         githubUrl: null,
         package_name: null,
@@ -173,7 +173,7 @@ export async function getTopCommunitySharedServers(limit: number = 6): Promise<S
         rating: undefined, // Not fetched here for performance
         ratingCount: undefined,
         shared_by: user?.username || 'Unknown User',
-        shared_by_profile_url: user?.username ? `/to/${user.username}` : null,
+        shared_by_profile_url: null,
         githubUrl: null,
         package_name: null,
         github_stars: null,
