@@ -180,20 +180,17 @@ export const trackServerInstallation = async (input: {
     }
 
     // Create notification for the server owner if it's a shared server
-    if (input.source === McpServerSource.COMMUNITY && input.externalId) {
+    // Wizard-created community servers carry a GitHub-style external id
+    // ("io.github.owner/repo"), not a uuid, and have no shared-server record to
+    // notify against. Testing that here rather than bailing out inside the block
+    // matters: the bare `return` this replaces exited the whole action, so a
+    // successful installation answered `undefined` instead of { success: true }.
+    const isSharedServerUuid =
+      !!input.externalId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.externalId);
+
+    if (input.source === McpServerSource.COMMUNITY && isSharedServerUuid) {
       try {
-        // For community servers created from the wizard, the external_id is like "io.github.owner/repo"
-        // This is not a UUID, so we can't use it to look up a shared server record.
-        // Shared server records are only created when a user explicitly shares their server.
-        // Therefore, we should skip notification creation for wizard-created community servers.
-        
-        // Only try to find shared server if externalId looks like a UUID
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(input.externalId)) {
-          // This is not a shared server UUID, skip notification
-          return;
-        }
-        
         // Get the shared server details
         const { sharedMcpServersTable } = await import('@/db/schema');
         const { eq } = await import('drizzle-orm');

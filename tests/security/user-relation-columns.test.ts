@@ -7,11 +7,18 @@ import { PUBLIC_USER_COLUMNS } from '@/lib/public-user';
 
 const findFirst = vi.fn();
 const findMany = vi.fn();
+const accountsFindFirst = vi.fn(async () => undefined);
+const getAuthSession = vi.fn(async () => null as unknown);
 
 vi.mock('@/db', () => ({
-  db: { query: { sharedMcpServersTable: { findFirst, findMany } } },
+  db: {
+    query: {
+      sharedMcpServersTable: { findFirst, findMany },
+      accounts: { findFirst: accountsFindFirst },
+    },
+  },
 }));
-vi.mock('@/lib/auth', () => ({ getAuthSession: vi.fn(async () => null) }));
+vi.mock('@/lib/auth', () => ({ getAuthSession }));
 vi.mock('@/lib/registry/pluggedin-registry-client', () => ({ PluggedinRegistryClient: class {} }));
 vi.mock('./registry-servers', () => ({ verifyGitHubOwnership: vi.fn() }));
 
@@ -42,6 +49,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   findFirst.mockResolvedValue(rowWithFullOwner(true));
   findMany.mockResolvedValue([rowWithFullOwner(true)]);
+  getAuthSession.mockResolvedValue(null);
+  accountsFindFirst.mockResolvedValue(undefined);
 });
 
 function walk(dir: string): string[] {
@@ -102,5 +111,44 @@ describe('getCommunityServer does not serve private shares', () => {
     const result = await getCommunityServer('share-uuid');
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe('claimCommunityServer does not accept private shares', () => {
+  /**
+   * getCommunityServer was gated on is_public, but the claim flow one function
+   * below still looked a share up by uuid alone. An authenticated caller
+   * holding a private share uuid could submit it, read its template and walk
+   * the claim/migration flow — private shares are not community servers.
+   */
+  const claim = async () => {
+    const { claimCommunityServer } = await import('@/app/actions/community-servers');
+    return claimCommunityServer({
+      communityServerUuid: '11111111-1111-4111-8111-111111111111',
+      repositoryUrl: 'https://github.com/me/mine',
+    } as never);
+  };
+
+  beforeEach(() => {
+    getAuthSession.mockResolvedValue({ user: { id: 'claimer' } });
+  });
+
+  it('stops before reading the claimer credentials for a private share', async () => {
+    findFirst.mockResolvedValue({ ...rowWithFullOwner(false), server: {} });
+
+    const result = await claim();
+
+    // Asserting only on `success: false` would pass for any later crash too,
+    // so pin where the flow stopped: the GitHub-token lookup is the next step.
+    expect(result.success).toBe(false);
+    expect(accountsFindFirst).not.toHaveBeenCalled();
+  });
+
+  it('gets past that point for a public share', async () => {
+    findFirst.mockResolvedValue({ ...rowWithFullOwner(true), server: {} });
+
+    await claim();
+
+    expect(accountsFindFirst).toHaveBeenCalled();
   });
 });

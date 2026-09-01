@@ -348,7 +348,10 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       }
     });
 
-    if (!communityServer) {
+    // A private share is not a community server. Without this the claim flow
+    // accepted any share uuid, exposing its template and letting the caller
+    // walk the claim/migration steps against something never published.
+    if (!communityServer || !communityServer.is_public) {
       return { success: false, error: 'Community server not found' };
     }
 
