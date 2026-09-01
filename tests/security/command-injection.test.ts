@@ -38,30 +38,51 @@ const LEGITIMATE_ARGS = [
   'https://example.com/sse',
 ];
 
-describe('validateCommandArgs shell metacharacters', () => {
-  it.each(INJECTION_PAYLOADS)('rejects %j', (payload) => {
-    const result = validateCommandArgs([payload]);
+/**
+ * Args are handed to the spawned process as argv - StdioClientTransport, and
+ * the bubblewrap/firejail wrappers, all pass arrays and there is no `shell:
+ * true` anywhere on the path. So a metacharacter in an arg is not dangerous,
+ * and it is routinely legitimate: every Smithery-style server passes its
+ * settings as `--config '{"KEY":"value"}'`.
+ *
+ * The value that was dangerous is the *package name* the installer lifts out of
+ * args, and that is validated by grammar in validatePackageName. Blanket-
+ * rejecting metacharacters across all args protects nothing extra and breaks
+ * real configurations - which it did, in production, for about half an hour.
+ */
+const REAL_WORLD_ARGS: string[][] = [
+  ['-y', '@smithery/cli@latest', 'run', '@21st-dev/magic-mcp', '--config', '{"TWENTY_FIRST_API_KEY":"k"}'],
+  ['-y', '@modelcontextprotocol/server-filesystem', '$USERPROFILE/proj'],
+  ['-y', '@modelcontextprotocol/server-postgres', 'postgresql://u:p@h:5432/db'],
+  ['-y', '@modelcontextprotocol/server-filesystem', '/Users/someone/My Documents'],
+  ['--config', '{}'],
+];
 
-    expect(result.valid).toBe(false);
-    expect(result.sanitizedArgs).toBeUndefined();
-  });
+describe('validateCommandArgs', () => {
+  it.each(REAL_WORLD_ARGS.map((a, i) => [i, a] as const))(
+    'accepts real-world server args #%i',
+    (_i, args) => {
+      const result = validateCommandArgs(args);
 
-  it('rejects a payload hidden behind legitimate leading flags', () => {
-    const result = validateCommandArgs(['-y', '--silent', 'evil; touch /tmp/PWNED #']);
-
-    expect(result.valid).toBe(false);
-  });
+      expect(result.valid).toBe(true);
+      expect(result.sanitizedArgs).toEqual(args);
+    }
+  );
 
   it.each(LEGITIMATE_ARGS)('still accepts %j', (arg) => {
-    const result = validateCommandArgs([arg]);
-
-    expect(result.valid).toBe(true);
-    expect(result.sanitizedArgs).toEqual([arg]);
+    expect(validateCommandArgs([arg]).valid).toBe(true);
   });
 
   it('keeps rejecting null bytes and overlong args', () => {
     expect(validateCommandArgs(['a\0b']).valid).toBe(false);
     expect(validateCommandArgs(['x'.repeat(4097)]).valid).toBe(false);
+  });
+
+  it('passes an injection payload through - it is stopped at the package name', () => {
+    // Not a gap: the payload cannot become a shell statement because nothing on
+    // this path uses a shell, and validatePackageName rejects it below.
+    expect(validateCommandArgs([INJECTION_PAYLOADS[0]]).valid).toBe(true);
+    expect(validatePackageName(INJECTION_PAYLOADS[0]).valid).toBe(false);
   });
 });
 
@@ -78,6 +99,12 @@ describe('validatePackageName', () => {
     'pkg_underscore',
     'ghcr.io/veriteknik/pluggedin-app',
     'node:20-alpine',
+    // Version specifiers: the `@` recurs, and these are the shapes actually
+    // stored in production - rejecting them broke live servers once already.
+    '@smithery/cli@latest',
+    '@21st-dev/magic-mcp',
+    'express@4.18.2',
+    '@modelcontextprotocol/server-filesystem@0.6.2',
   ])('accepts %j', (name) => {
     expect(validatePackageName(name).valid).toBe(true);
   });

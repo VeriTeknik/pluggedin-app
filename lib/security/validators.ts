@@ -352,17 +352,17 @@ export function validateCommandArgs(args: string[]): { valid: boolean; error?: s
       };
     }
 
-    // Mirrors the check validateCommand() applies to the command itself.
-    // It was missing here, and args are where the danger actually was: the
-    // package managers lift a "package name" straight out of this array, so a
-    // metacharacter in an arg reached a shell while the command field was
-    // guarded. Newlines are included - they separate shell statements too.
-    if (/[;&|`$(){}[\]<>\n\r]/.test(arg)) {
-      return {
-        valid: false,
-        error: `Argument contains dangerous characters: ${arg}`
-      };
-    }
+    // Deliberately no shell-metacharacter check here. Args are handed to the
+    // spawned process as argv - StdioClientTransport and the bubblewrap/firejail
+    // wrappers all pass arrays, and nothing on the path uses a shell - so a
+    // metacharacter in an arg is inert, and it is routinely legitimate:
+    // `--config '{"KEY":"value"}'` is how most servers take their settings.
+    //
+    // The value that *was* dangerous is the package name the installer lifts
+    // out of these args and passes to pnpm/uv/docker. That is validated by
+    // grammar in lib/security/package-name.ts, at the point of use. Rejecting
+    // metacharacters across every arg protects nothing beyond that and breaks
+    // real configurations.
 
     sanitizedArgs.push(arg);
   }
