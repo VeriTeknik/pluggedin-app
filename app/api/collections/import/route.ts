@@ -136,7 +136,20 @@ export async function POST(request: Request) {
 
     // Import each server from the collection
     const importedServers = [];
-    for (const [serverName, serverConfig] of Object.entries(collection.content)) {
+    // `content` is { servers: [...] } — the shape the share dialog writes and
+    // the collection page reads. Iterating the object itself yielded a single
+    // entry named "servers" whose value was the array, so every import created
+    // one bogus server and no real ones.
+    const sharedServers: any[] = Array.isArray((collection.content as any)?.servers)
+      ? (collection.content as any).servers
+      : [];
+
+    for (const serverConfig of sharedServers) {
+      const serverName = (serverConfig as any)?.name;
+      if (!serverName) {
+        continue;
+      }
+
       // Check if server already exists in this profile
       const existingServer = await db.query.mcpServersTable.findFirst({
         where: and(
