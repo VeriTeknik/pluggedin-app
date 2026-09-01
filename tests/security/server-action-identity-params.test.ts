@@ -77,10 +77,17 @@ function bodyAt(src: string, from: number): string {
   return src.slice(from);
 }
 
-/** Parameter list of the declaration at `from`, by balanced parentheses. */
-function paramsAt(src: string, from: number): string {
+/**
+ * Parameter list of the declaration at `from`, by balanced parentheses.
+ *
+ * The search is bounded to `limit`. Unbounded, a declaration with no
+ * parentheses of its own — `export const f = async userId => ...` — picks up
+ * the next parenthesis anywhere in the file and reports a different
+ * declaration's parameters as its own.
+ */
+function paramsAt(src: string, from: number, limit = src.length): string {
   const open = src.indexOf('(', from);
-  if (open === -1) return '';
+  if (open === -1 || open >= limit) return '';
   let depth = 0;
   for (let i = open; i < src.length; i++) {
     if (src[i] === '(') depth++;
@@ -89,7 +96,67 @@ function paramsAt(src: string, from: number): string {
   return '';
 }
 
-type Action = { id: string; params: string; body: string };
+/** End of the initializer starting at `from`: the `;` that closes it. */
+function initializerEnd(src: string, from: number): number {
+  let depth = 0;
+  for (let i = from; i < src.length; i++) {
+    const c = src[i];
+    if (c === '(' || c === '{' || c === '[') depth++;
+    else if (c === ')' || c === '}' || c === ']') depth--;
+    else if (c === ';' && depth <= 0) return i;
+  }
+  return src.length;
+}
+
+/**
+ * The arrow function an initializer resolves to, whether it is the initializer
+ * itself or the callback handed to a wrapper.
+ *
+ * `export const x = withAnalytics(schema, async (profileUuid) => {…})` is a
+ * server action whose guard, if any, lives in that callback. Reading the
+ * wrapper call instead means reading whatever brace comes next in the file —
+ * which is the next export, so an unguarded action inherits its neighbour's
+ * guard.
+ */
+function arrowAt(src: string, from: number, end: number): { params: string; body: string } | null {
+  const at = src.indexOf('=>', from);
+  if (at === -1 || at >= end) return null;
+
+  // Parameters: `(a, b)` immediately before the arrow, or a bare identifier.
+  let i = at - 1;
+  while (i >= from && /\s/.test(src[i])) i--;
+
+  let params: string;
+  if (src[i] === ')') {
+    let depth = 0;
+    let j = i;
+    for (; j >= from; j--) {
+      if (src[j] === ')') depth++;
+      else if (src[j] === '(' && --depth === 0) break;
+    }
+    if (j < from) return null;
+    params = src.slice(j + 1, i);
+  } else {
+    const wordEnd = i + 1;
+    while (i >= from && /[\w$]/.test(src[i])) i--;
+    params = src.slice(i + 1, wordEnd);
+    if (!params) return null;
+  }
+
+  // Body: a braced block, or the expression up to the end of the initializer.
+  let k = at + 2;
+  while (k < end && /\s/.test(src[k])) k++;
+  if (src[k] !== '{') return { params, body: src.slice(k, end) };
+
+  let depth = 0;
+  for (let j = k; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}' && --depth === 0) return { params, body: src.slice(k, j + 1) };
+  }
+  return { params, body: src.slice(k, end) };
+}
+
+type Action = { id: string; params: string; body: string; wrapper?: string };
 
 function exportedActions(file: string, code: string): Action[] {
   const found: Action[] = [];
@@ -100,10 +167,21 @@ function exportedActions(file: string, code: string): Action[] {
   }
 
   // `export const x = async (...) => {}` and `export const x = wrapper(schema, fn)`
-  for (const m of code.matchAll(/export\s+const\s+(\w+)\s*=\s*([\s\S]{0,200}?)(?:=>|\()/g)) {
-    const start = m.index ?? 0;
-    const params = paramsAt(code, start);
-    found.push({ id: `${file}#${m[1]}`, params, body: bodyAt(code, start) });
+  for (const m of code.matchAll(/export\s+const\s+(\w+)\s*(?::[^=;]*)?=\s*/g)) {
+    const start = (m.index ?? 0) + m[0].length;
+    const end = initializerEnd(code, start);
+    const id = `${file}#${m[1]}`;
+
+    // `wrapper(schema, callback)` — the guard lives in the wrapper, while the
+    // parameters and body worth reading live in the callback.
+    const wrapper = /^([\w$]+)\s*\(/.exec(code.slice(start, end))?.[1];
+
+    const arrow = arrowAt(code, start, end);
+    if (arrow) {
+      found.push({ id, params: arrow.params, body: arrow.body, wrapper });
+    } else {
+      found.push({ id, params: paramsAt(code, start, end), body: code.slice(start, end), wrapper });
+    }
   }
 
   return found;
@@ -116,7 +194,8 @@ function exportedActions(file: string, code: string): Action[] {
  * report every function in app/actions/social.ts as unguarded.
  */
 function localGuardNames(code: string): Set<string> {
-  const decl = /(?:async\s+)?function\s+(\w+)\s*\(|const\s+(\w+)\s*=\s*(?:async\s*)?\(/g;
+  const decl =
+    /(?:async\s+)?function\s+(\w+)\s*(?:<[^>()]*>)?\s*\(|const\s+(\w+)\s*=\s*(?:async\s*)?\(/g;
   const bodies = new Map<string, string>();
 
   for (const m of code.matchAll(decl)) {
@@ -145,10 +224,14 @@ function localGuardNames(code: string): Set<string> {
   return guards;
 }
 
-function isGuarded(body: string, localGuards: Set<string>): boolean {
-  if (AUTH_REFERENCE.test(body)) return true;
+function isGuarded(action: Action, localGuards: Set<string>): boolean {
+  // Built by a wrapper that authenticates: the wrapper is the guard, and the
+  // identity the callback receives comes from it rather than from the caller.
+  if (action.wrapper && localGuards.has(action.wrapper)) return true;
+
+  if (AUTH_REFERENCE.test(action.body)) return true;
   for (const name of localGuards) {
-    if (new RegExp(`\\b${name}\\s*\\(`).test(body)) return true;
+    if (new RegExp(`\\b${name}\\s*\\(`).test(action.body)) return true;
   }
   return false;
 }
@@ -166,7 +249,7 @@ function unguardedIdentityActions(): string[] {
 
     for (const action of exportedActions(file, code)) {
       if (!IDENTITY_PARAM.test(action.params)) continue;
-      if (isGuarded(action.body, localGuards)) continue;
+      if (isGuarded(action, localGuards)) continue;
       offenders.push(action.id);
     }
   }
@@ -217,6 +300,77 @@ describe('server actions taking a caller-supplied identity', () => {
     expect(unguarded.map((a) => a.id)).toEqual(['f.ts#open']);
   });
 
+  it('sees a single-parameter arrow action, which needs no parentheses', () => {
+    // `async userId => ...` is valid and takes an identity. If the parser only
+    // looks for `(`, it walks past this declaration into the next one and the
+    // action never reaches the baseline at all.
+    const code = `
+      export const leak = async userId => { return userId; };
+      export function helper() { return 1; }
+    `;
+    const leak = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#leak');
+
+    expect(leak).toBeDefined();
+    expect(IDENTITY_PARAM.test(leak!.params)).toBe(true);
+    expect(AUTH_REFERENCE.test(leak!.body)).toBe(false);
+  });
+
+  it('reads a wrapped action from its own callback, not a later export', () => {
+    // `export const x = wrapper(schema, fn)` — the body has to come from `fn`.
+    // Taking the next `{` in the file instead lands in whatever is declared
+    // below, so an unguarded action inherits its neighbour's guard.
+    const code = `
+      export const wrapped = withAnalytics(schema, async (profileUuid: string) => {
+        return profileUuid;
+      });
+      export async function guardedLater(x: string) {
+        await requireAuthUserId();
+        return x;
+      }
+    `;
+    const wrapped = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#wrapped');
+
+    expect(wrapped).toBeDefined();
+    expect(IDENTITY_PARAM.test(wrapped!.params)).toBe(true);
+    expect(AUTH_REFERENCE.test(wrapped!.body)).toBe(false);
+  });
+
+  it('still sees the guard when the wrapped callback has one', () => {
+    const code = `
+      export const wrapped = withAnalytics(schema, async (profileUuid: string) => {
+        await requireAuthUserId();
+        return profileUuid;
+      });
+      export async function open(userId: string) { return userId; }
+    `;
+    const wrapped = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#wrapped');
+
+    expect(AUTH_REFERENCE.test(wrapped!.body)).toBe(true);
+  });
+
+  it('counts an authenticating wrapper as the callback\'s guard', () => {
+    // app/actions/memory.ts#createProfileAction authenticates and then derives
+    // the profile from the session, so its callback's `profileUuid` is not
+    // caller-supplied at all. Reading only the callback body would report every
+    // action built this way as unguarded.
+    const code = `
+      function createProfileAction(schema, handler) {
+        return async (input) => {
+          const userId = await requireAuthUserId();
+          return handler(schema.parse(input), await getActiveProfileUuid(userId));
+        };
+      }
+      export const scoreAction = createProfileAction(Schema, async (_p, profileUuid) => {
+        return score(profileUuid);
+      });
+    `;
+    const guards = localGuardNames(code);
+    const action = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#scoreAction');
+
+    expect(IDENTITY_PARAM.test(action!.params)).toBe(true);
+    expect(isGuarded(action!, guards)).toBe(true);
+  });
+
   it('accepts either quoting of the directive', () => {
     expect(/^['"]use server['"]/.test(`'use server';`)).toBe(true);
     expect(/^['"]use server['"]/.test(`"use server";`)).toBe(true);
@@ -234,7 +388,7 @@ describe('server actions taking a caller-supplied identity', () => {
     const action = exportedActions('f.ts', code).find((a) => a.id.endsWith('#readThing'))!;
 
     expect(guards.has('viewerOwnsProfile')).toBe(true);
-    expect(isGuarded(action.body, guards)).toBe(true);
+    expect(isGuarded(action, guards)).toBe(true);
   });
 
   it('follows a chain of local helpers to the session, not just one hop', () => {
@@ -247,7 +401,7 @@ describe('server actions taking a caller-supplied identity', () => {
     const action = exportedActions('f.ts', code).find((a) => a.id.endsWith('#readThing'))!;
 
     expect(guards.has('canView')).toBe(true);
-    expect(isGuarded(action.body, guards)).toBe(true);
+    expect(isGuarded(action, guards)).toBe(true);
   });
 
   it('takes the function body, not a braced return type', () => {
