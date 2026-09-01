@@ -17,8 +17,13 @@ import { describe, expect, it } from 'vitest';
  * guarded action as covering its unguarded neighbours, which is precisely the
  * regression this is meant to catch.
  */
+/**
+ * A guard has to be *called*. Matching the bare identifier let an action named
+ * like a guard, or a local binding that merely shares the name, read as
+ * guarded.
+ */
 const AUTH_REFERENCE =
-  /requireAuthUserId|withAuth|withProjectAuth|withProfileAuth|withServerAuth|getAuthSession|createProfileAction|getServerSession|requireAdmin/;
+  /\b(?:requireAuthUserId|withAuth|withProjectAuth|withProfileAuth|withServerAuth|getAuthSession|createProfileAction|getServerSession|requireAdmin)\s*\(/;
 
 const IDENTITY_PARAM = /\b(userId|user_id|profileUuid|profile_uuid|projectUuid|project_uuid)\b/;
 
@@ -72,9 +77,9 @@ function bodyAt(src: string, from: number): string {
   let depth = 0;
   for (let j = open; j < src.length; j++) {
     if (src[j] === '{') depth++;
-    else if (src[j] === '}' && --depth === 0) return src.slice(from, j + 1);
+    else if (src[j] === '}' && --depth === 0) return src.slice(open, j + 1);
   }
-  return src.slice(from);
+  return src.slice(open);
 }
 
 /**
@@ -108,6 +113,46 @@ function initializerEnd(src: string, from: number): number {
   return src.length;
 }
 
+/** Index of the first non-whitespace character at or after `i`. */
+function skipWs(src: string, i: number, end: number): number {
+  while (i < end && /\s/.test(src[i])) i++;
+  return i;
+}
+
+/** Index of the `)` closing the `(` at `open`, or -1. */
+function matchParen(src: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '(') depth++;
+    else if (src[i] === ')' && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/** A braced block starting at `k`, or the expression up to `end`. */
+function blockFrom(src: string, k: number, end: number): string {
+  if (src[k] !== '{') return src.slice(k, end);
+  let depth = 0;
+  for (let j = k; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}' && --depth === 0) return src.slice(k, j + 1);
+  }
+  return src.slice(k, end);
+}
+
+/** Offsets of each top-level argument inside the call whose `(` is at `open`. */
+function argumentStarts(src: string, open: number, close: number): number[] {
+  const starts = [open + 1];
+  let depth = 0;
+  for (let i = open + 1; i < close; i++) {
+    const c = src[i];
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') depth--;
+    else if (c === ',' && depth === 0) starts.push(i + 1);
+  }
+  return starts;
+}
+
 /**
  * The arrow function an initializer resolves to, whether it is the initializer
  * itself or the callback handed to a wrapper.
@@ -117,43 +162,55 @@ function initializerEnd(src: string, from: number): number {
  * wrapper call instead means reading whatever brace comes next in the file —
  * which is the next export, so an unguarded action inherits its neighbour's
  * guard.
+ *
+ * The parameter list is matched as a whole by parenthesis balance rather than
+ * by searching for the first `=>`. A parameter can be function-typed —
+ * `(onDone: () => void, userId: string) => …` — and its arrow comes first.
  */
 function arrowAt(src: string, from: number, end: number): { params: string; body: string } | null {
-  const at = src.indexOf('=>', from);
-  if (at === -1 || at >= end) return null;
+  let i = skipWs(src, from, end);
+  if (src.startsWith('async', i) && /[\s(]/.test(src[i + 5] ?? '')) {
+    i = skipWs(src, i + 5, end);
+  }
 
-  // Parameters: `(a, b)` immediately before the arrow, or a bare identifier.
-  let i = at - 1;
-  while (i >= from && /\s/.test(src[i])) i--;
+  if (src[i] === '(') {
+    const close = matchParen(src, i);
+    if (close === -1 || close >= end) return null;
 
-  let params: string;
-  if (src[i] === ')') {
-    let depth = 0;
-    let j = i;
-    for (; j >= from; j--) {
-      if (src[j] === ')') depth++;
-      else if (src[j] === '(' && --depth === 0) break;
+    const k = skipWs(src, close + 1, end);
+    if (!src.startsWith('=>', k)) return null;
+
+    return {
+      params: src.slice(i + 1, close),
+      body: blockFrom(src, skipWs(src, k + 2, end), end),
+    };
+  }
+
+  let wordEnd = i;
+  while (wordEnd < end && /[\w$]/.test(src[wordEnd])) wordEnd++;
+  if (wordEnd === i) return null;
+
+  const k = skipWs(src, wordEnd, end);
+
+  // `userId => …`
+  if (src.startsWith('=>', k)) {
+    return {
+      params: src.slice(i, wordEnd),
+      body: blockFrom(src, skipWs(src, k + 2, end), end),
+    };
+  }
+
+  // `wrapper(schema, callback)` — the callback is one of the arguments.
+  if (src[k] === '(') {
+    const close = matchParen(src, k);
+    if (close === -1 || close > end) return null;
+    for (const argStart of argumentStarts(src, k, close)) {
+      const inner = arrowAt(src, argStart, close);
+      if (inner) return inner;
     }
-    if (j < from) return null;
-    params = src.slice(j + 1, i);
-  } else {
-    const wordEnd = i + 1;
-    while (i >= from && /[\w$]/.test(src[i])) i--;
-    params = src.slice(i + 1, wordEnd);
-    if (!params) return null;
   }
 
-  // Body: a braced block, or the expression up to the end of the initializer.
-  let k = at + 2;
-  while (k < end && /\s/.test(src[k])) k++;
-  if (src[k] !== '{') return { params, body: src.slice(k, end) };
-
-  let depth = 0;
-  for (let j = k; j < src.length; j++) {
-    if (src[j] === '{') depth++;
-    else if (src[j] === '}' && --depth === 0) return { params, body: src.slice(k, j + 1) };
-  }
-  return { params, body: src.slice(k, end) };
+  return null;
 }
 
 type Action = { id: string; params: string; body: string; wrapper?: string };
@@ -274,6 +331,7 @@ describe('server actions taking a caller-supplied identity', () => {
     // detector; the diff is then reviewed like any other change.
     if (process.env.UPDATE_UNGUARDED_BASELINE) {
       fs.writeFileSync(BASELINE_PATH, `${JSON.stringify(actual, null, 2)}\n`);
+      return; // the file on disk is now the baseline; comparing the stale copy would fail
     }
 
     expect(actual).toEqual([...KNOWN_UNGUARDED].sort());
@@ -406,6 +464,61 @@ describe('server actions taking a caller-supplied identity', () => {
     expect(IDENTITY_PARAM.test(find(direct, 'leak')!.params)).toBe(true);
     expect(IDENTITY_PARAM.test(find(wrappedPlain, 'alsoLeak')!.params)).toBe(true);
     expect(IDENTITY_PARAM.test(find(wrappedArrowType, 'thirdLeak')!.params)).toBe(true);
+  });
+
+  it('takes the initializer arrow, not one inside a parameter type', () => {
+    // The first `=>` in this declaration belongs to the `onDone` parameter's
+    // own type. Taking it makes the parameter list read as `()` and the
+    // identity disappears.
+    const code = `
+      export const leak = async (onDone: () => void, userId: string) => {
+        return userId;
+      };
+    `;
+    const action = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#leak');
+
+    expect(IDENTITY_PARAM.test(action!.params)).toBe(true);
+  });
+
+  it('does not read a guard out of the action\'s own name', () => {
+    // `bodyAt` used to slice from the declaration, signature included, and the
+    // auth pattern matched bare identifiers. An action merely *named* like a
+    // guard therefore looked guarded.
+    const code = `
+      export async function getAuthSessionSummary(userId: string) {
+        return userId;
+      }
+    `;
+    const action = exportedActions('f.ts', code).find(
+      (a) => a.id === 'f.ts#getAuthSessionSummary'
+    );
+
+    expect(IDENTITY_PARAM.test(action!.params)).toBe(true);
+    expect(isGuarded(action!, new Set())).toBe(false);
+  });
+
+  it('does not read a guard out of a local binding', () => {
+    const code = `
+      export async function leak(userId: string) {
+        const requireAuthUserId = 'not a call';
+        return requireAuthUserId + userId;
+      }
+    `;
+    const action = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#leak');
+
+    expect(isGuarded(action!, new Set())).toBe(false);
+  });
+
+  it('still sees a real guard call', () => {
+    const code = `
+      export async function guarded(userId: string) {
+        await requireAuthUserId();
+        return userId;
+      }
+    `;
+    const action = exportedActions('f.ts', code).find((a) => a.id === 'f.ts#guarded');
+
+    expect(isGuarded(action!, new Set())).toBe(true);
   });
 
   it('accepts either quoting of the directive', () => {
