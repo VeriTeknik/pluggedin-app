@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import { promisify } from 'util';
 
+import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
 
@@ -60,7 +61,9 @@ export class PnpmHandler extends BasePackageHandler {
       const { stdout, stderr } = await execFileAsync('pnpm', ['add', packageSpec], {
         cwd: installDir,
         env: {
-          ...process.env,
+          ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
           PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
           NODE_LINKER: 'isolated',
           PACKAGE_IMPORT_METHOD: 'clone', // For CoW filesystems
@@ -228,7 +231,9 @@ export class PnpmHandler extends BasePackageHandler {
         await execFileAsync('pnpm', ['add', packageName], {
           cwd: tempDir,
           env: {
-            ...process.env,
+            ...inheritableChildEnv(),
+          // PATH is not in the allowlist; without it execFile cannot find the binary
+          PATH: approvedChildPath(),
             PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
             NODE_LINKER: 'isolated',
           },

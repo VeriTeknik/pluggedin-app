@@ -12,8 +12,8 @@
  * inconsistency the tests catch.
  */
 
-import { TOOL_SCOPES } from '@/lib/oauth/provider/scopes';
 import type { Scope } from '@/lib/oauth/provider/scopes';
+import { TOOL_SCOPES } from '@/lib/oauth/provider/scopes';
 
 export interface ToolDefinition {
   name: string;

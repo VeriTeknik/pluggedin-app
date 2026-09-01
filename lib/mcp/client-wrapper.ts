@@ -22,10 +22,11 @@ import path from 'path';
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
+import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
-import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
@@ -318,8 +319,10 @@ export function createBubblewrapConfig(
 
   // Construct the final environment
   const finalEnv = {
+    // Allowlisted host vars first: everything below deliberately overrides them
+    ...inheritableChildEnv(),
     // Sensible defaults - include interpreter paths from config
-    PATH: `${paths.localBin}:${pnpmPath}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
+    PATH: approvedChildPath([paths.localBin, pnpmPath]),
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -333,8 +336,6 @@ export function createBubblewrapConfig(
     // PNPM specific
     PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
     NODE_ENV: 'production',
-    // Inherit parent process env
-    ...(process.env as Record<string, string>),
     // Apply server-specific env vars
     ...(serverConfig.env || {}),
   };
@@ -468,8 +469,10 @@ export function createFirejailConfig(
 
   // Construct the final environment, prioritizing serverConfig.env
   const finalEnv = {
+    // Allowlisted host vars first: everything below deliberately overrides them
+    ...inheritableChildEnv(),
     // Sensible defaults, adjust user/home if needed - include interpreter paths from config
-    PATH: `${paths.localBin}:${pnpmPathFirejail}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
+    PATH: approvedChildPath([paths.localBin, pnpmPathFirejail]),
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -483,8 +486,6 @@ export function createFirejailConfig(
     // PNPM specific
     PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
     NODE_ENV: 'production',
-    // Inherit parent process env (like PATH, etc.)
-    ...(process.env as Record<string, string>),
     // Apply server-specific env vars, overriding inherited ones
     ...(serverConfig.env || {}),
   };
@@ -721,13 +722,19 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         command: transformedCommand,
         args: transformedArgs,
         env: {
-          // Start with parent process env
-          ...(process.env as Record<string, string>),
+          // Allowlisted host vars only - this process holds the app's secrets
+          ...inheritableChildEnv(),
+          // PATH is built from approved directories only, on every platform:
+          // appending the host PATH would let a child resolve commands from
+          // whatever directories this process happens to have, and would leave
+          // non-Linux hosts with no PATH at all once the spread was removed.
+          PATH: approvedChildPath([
+            process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local/bin'),
+          ]),
           // Only add Linux-specific paths on Linux systems
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux
             // Use dynamic home directory detection
-            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local/bin')}:${process.env.PATH}`, // Prepend local bin
             HOME: process.env.FIREJAIL_USER_HOME ?? serverOAuthHome,
             UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? actualHome}/.local/uv`,
             PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')}/lib/python`,

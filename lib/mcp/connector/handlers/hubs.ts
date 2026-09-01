@@ -18,10 +18,9 @@ import { db } from '@/db';
 import { oauthAccessTokensTable, projectsTable } from '@/db/schema';
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
-import { toolFailure as failure, toolText as text, type ToolResult } from '../tool-result';
-
 import { mintHubHandle } from '../handles';
 import { requireGrantedHub } from '../hub-scope';
+import { toolFailure as failure, type ToolResult,toolText as text } from '../tool-result';
 
 export async function listHubs(identity: ConnectorIdentity): Promise<ToolResult> {
   if (identity.grantedProjectUuids.length === 0) {

@@ -1,3 +1,5 @@
+import { approvedChildPath } from '@/lib/mcp/child-env';
+
 import { PackageManagerConfig } from './config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './handlers/base-handler';
 import { DockerHandler } from './handlers/docker-handler';
@@ -328,18 +330,18 @@ export class PackageManager {
       const handler = this.handlers.get('pnpm') as PnpmHandler;
       const installDir = handler['getServerInstallDir'](serverUuid);
       env.NODE_PATH = `${installDir}/node_modules`;
-      env.PATH = `${installDir}/node_modules/.bin:${process.env.PATH}`;
+      env.PATH = approvedChildPath([`${installDir}/node_modules/.bin`]);
     } else if (type === 'uv' || type === 'uvx' || type === 'pip') {
       const handler = this.handlers.get('uv') as UvHandler;
       const installDir = handler['getServerInstallDir'](serverUuid);
       const venvDir = `${installDir}/.venv`;
       env.VIRTUAL_ENV = venvDir;
-      env.PATH = `${venvDir}/bin:${process.env.PATH}`;
+      env.PATH = approvedChildPath([`${venvDir}/bin`]);
       env.PYTHONPATH = `${venvDir}/lib/python3.*/site-packages`;
     } else if (type === 'docker') {
       const handler = this.handlers.get('docker') as DockerHandler;
       const installDir = handler['getServerInstallDir'](serverUuid);
-      env.PATH = `${installDir}:${process.env.PATH}`;
+      env.PATH = approvedChildPath([installDir]);
       // Docker doesn't need special environment variables like Node.js or Python
     }
     
