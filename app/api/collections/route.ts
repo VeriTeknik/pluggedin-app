@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { sharedCollectionsTable } from '@/db/schema';
+import { sanitizeCollectionContent } from '@/lib/server-template';
 
 /**
  * @swagger
@@ -57,7 +58,9 @@ export async function GET() {
       orderBy: (collections) => [collections.created_at],
     });
 
-    return NextResponse.json(collections);
+    return NextResponse.json(
+      collections.map((c) => ({ ...c, content: sanitizeCollectionContent(c.content) }))
+    );
   } catch (error) {
     console.error('Error fetching collections:', error);
     return NextResponse.json(

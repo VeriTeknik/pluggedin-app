@@ -63,7 +63,7 @@ export async function sendNotification({
           with: {
             project: {
               with: {
-                user: true,
+                user: { columns: { id: true, email: true } },
               },
             },
           },
