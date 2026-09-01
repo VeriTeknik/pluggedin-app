@@ -119,3 +119,46 @@ describe('queryRag is scoped to a project the caller owns', () => {
     expect(queryForContext).toHaveBeenCalledWith('what do I have', 'mine');
   });
 });
+
+/**
+ * withOwnedProfile turns withProfileAuth's throw into the { success, error }
+ * shape these actions promise. Converting *every* exception would report a
+ * database outage as an authorization refusal — a wrong answer that looks
+ * like a considered one.
+ */
+describe('withOwnedProfile only converts an authorization refusal', () => {
+  it('lets an unexpected failure surface instead of calling it unauthorized', async () => {
+    profileSelect.mockRejectedValue(new Error('connection terminated unexpectedly'));
+    const m = await import('@/app/actions/mcp-playground');
+
+    await expect(m.getServerLogs(PROFILE)).rejects.toThrow(/connection terminated/);
+  });
+});
+
+/**
+ * The client finds the in-flight streaming message inside `result.logs`, but
+ * the partial is stored under a separate key, so it was never in that list and
+ * hasPartialMessage was always false. Pre-existing; surfaced by moving the
+ * store.
+ */
+describe('getServerLogs surfaces the in-flight streaming message', () => {
+  it('includes the partial entry and flags it', async () => {
+    getAuthSession.mockResolvedValue({ user: { id: OWNER } });
+    usersFindFirst.mockResolvedValue({ id: OWNER });
+    const { setPartialServerLog } = await import('@/lib/mcp/server-logs');
+    setPartialServerLog(PROFILE, {
+      level: 'streaming',
+      message: JSON.stringify({ isPartial: true, content: 'half a th' }),
+      timestamp: new Date(0),
+    });
+
+    const m = await import('@/app/actions/mcp-playground');
+    const result = (await m.getServerLogs(PROFILE)) as {
+      logs: Array<{ level: string }>;
+      hasPartialMessage: boolean;
+    };
+
+    expect(result.hasPartialMessage).toBe(true);
+    expect(result.logs.some((l) => l.level === 'streaming')).toBe(true);
+  });
+});

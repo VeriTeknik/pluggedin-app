@@ -20,6 +20,7 @@ import {
   addServerLog,
   clearPartialServerLog,
   clearServerLogsFor,
+  readPartialServerLog,
   readServerLogs,
   setPartialServerLog,
 } from '@/lib/mcp/server-logs';
@@ -51,10 +52,17 @@ async function withOwnedProfile<T>(
     return await withProfileAuth(profileUuid, fn);
   } catch (error) {
     rethrowIfRedirect(error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unauthorized',
-    };
+
+    // Only the helper's own authorization refusals become a result. Anything
+    // else — a database outage, a bug in the profile query — must keep
+    // propagating: reporting it as "unauthorized" would be a wrong answer
+    // dressed as a considered one.
+    const message = error instanceof Error ? error.message : '';
+    if (/^(Profile not found|Unauthorized)/.test(message)) {
+      return { success: false, error: message };
+    }
+
+    throw error;
   }
 }
 
@@ -777,7 +785,11 @@ Be transparent about which sources you use and why. When you have both context a
 export async function getServerLogs(profileUuid: string) {
   return withOwnedProfile(profileUuid, async () => {
   try {
-    const logs = readServerLogs(profileUuid);
+    // The in-flight streaming entry lives under its own key, and the client
+    // looks for it inside `logs` — so it has to be part of the list, not just
+    // signalled by the flag.
+    const partial = readPartialServerLog(profileUuid);
+    const logs = partial ? [...readServerLogs(profileUuid), partial] : readServerLogs(profileUuid);
 
     // Check for partial/streaming messages
     const hasPartialMessage = logs.some(log =>

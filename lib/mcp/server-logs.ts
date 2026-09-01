@@ -86,3 +86,8 @@ export function setPartialServerLog(profileUuid: string, entry: ServerLogEntry):
 export function clearPartialServerLog(profileUuid: string): void {
   serverLogsByProfile.delete(`${profileUuid}_partial`);
 }
+
+/** The in-flight streaming entry for a profile, if one is being written. */
+export function readPartialServerLog(profileUuid: string): ServerLogEntry | undefined {
+  return serverLogsByProfile.get(`${profileUuid}_partial`)?.[0];
+}
