@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { checkUsernameAvailability, reserveUsername, updateUserSocial, getUserFollowerCount } from '@/app/actions/social';
+import { checkUsernameAvailability, reserveUsername } from '@/app/actions/social';
 import { db } from '@/db';
-import { users } from '@/db/schema';
 
 // Mock dependencies
 vi.mock('@/db');

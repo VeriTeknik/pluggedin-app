@@ -200,14 +200,6 @@ export async function reserveUsername(userId: string, username: string): Promise
   }
 }
 
-// Helper function to get username for revalidation - May need adjustment based on profile role
-async function getUsernameForProfile(profileUuid: string): Promise<string | null> {
-   const profileData = await db.query.profilesTable.findFirst({
-       where: eq(profilesTable.uuid, profileUuid),
-       with: { project: { with: { user: { columns: { username: true } } } } }
-   });
-   return profileData?.project?.user?.username || null;
-}
 
 
 /**
@@ -455,11 +447,6 @@ export async function shareMcpServer(
       await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_SERVER', metadata: { server_uuid: serverUuid, title } });
     }
     // Revalidate paths
-    if (isPublic) {
-       const associatedUsername = await getUsernameForProfile(profileUuid);
-       if (associatedUsername) {
-       }
-    }
     return {
       success: true,
       sharedServer: finalSharedServer as unknown as SharedMcpServer
@@ -651,9 +638,6 @@ export async function unshareServer(
     }
     
     // Revalidate paths
-    const associatedUsername = await getUsernameForProfile(sharedServer.profile_uuid);
-    if (associatedUsername) {
-    }
     
     return { success: true };
     });
@@ -693,11 +677,6 @@ export async function shareCollection(
       .returning();
     await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_COLLECTION', metadata: { title } });
     // Revalidate paths
-    if (isPublic) {
-       const associatedUsername = await getUsernameForProfile(profileUuid);
-       if (associatedUsername) {
-       }
-    }
     return {
       success: true,
       sharedCollection: sharedCollection as unknown as SharedCollection
@@ -758,9 +737,6 @@ export async function updateSharedCollection(
       .returning();
     await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UPDATE_SHARED_COLLECTION', metadata: { collection_uuid: sharedCollectionUuid } });
     // Revalidate paths
-    const associatedUsername = await getUsernameForProfile(profileUuid);
-    if (associatedUsername) {
-    }
     return {
       success: true,
       sharedCollection: updatedCollection as unknown as SharedCollection
@@ -866,9 +842,6 @@ export async function unshareCollection(
       .where(eq(sharedCollectionsTable.uuid, sharedCollectionUuid));
     await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UNSHARE_COLLECTION', metadata: { shared_collection_uuid: sharedCollectionUuid } });
     // Revalidate paths
-    const associatedUsername = await getUsernameForProfile(profileUuid);
-    if (associatedUsername) {
-    }
     return { success: true };
     });
   } catch (error) {
@@ -907,11 +880,6 @@ export async function shareEmbeddedChat(
       .returning();
     await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_EMBEDDED_CHAT', metadata: { title } });
     // Revalidate paths
-    if (isPublic) {
-       const associatedUsername = await getUsernameForProfile(profileUuid);
-       if (associatedUsername) {
-       }
-    }
     return {
       success: true,
       embeddedChat: embeddedChat as unknown as EmbeddedChat
@@ -974,9 +942,6 @@ export async function updateEmbeddedChat(
       .returning();
     await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UPDATE_EMBEDDED_CHAT', metadata: { embedded_chat_uuid: embeddedChatUuid } });
     // Revalidate paths
-    const associatedUsername = await getUsernameForProfile(profileUuid);
-    if (associatedUsername) {
-    }
     return {
       success: true,
       embeddedChat: updatedChat as unknown as EmbeddedChat
