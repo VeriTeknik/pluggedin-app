@@ -24,8 +24,8 @@ import path from 'path';
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
-import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
+import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
@@ -181,6 +181,51 @@ async function isCommandAvailable(command: string): Promise<boolean> {
 }
 
 // Add this function to handle bubblewrap configuration
+/**
+ * Host environment variables a spawned MCP server may inherit.
+ *
+ * Everything else is withheld. This process carries the whole secret set —
+ * NEXTAUTH_SECRET, DATABASE_URL, POSTGRES_PASSWORD, the Kubernetes service
+ * account token, every model-provider key — because docker-compose preloads
+ * /run/secrets/app.env via `NODE_OPTIONS: -r dotenv/config`, so they are in
+ * process.env for real, not placeholders. An MCP server is a process the user
+ * chose; spreading process.env into it hands those secrets to whoever
+ * configured the server, and bubblewrap shares the network by default, so
+ * getting them out is trivial.
+ *
+ * PATH, HOME and the interpreter settings are deliberately absent: the callers
+ * construct those explicitly and those values must win.
+ */
+const INHERITABLE_CHILD_ENV_VARS = [
+  'TZ',
+  'LANG',
+  'LANGUAGE',
+  'LC_ALL',
+  'LC_CTYPE',
+  'TERM',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+  'NODE_EXTRA_CA_CERTS',
+  'SSL_CERT_FILE',
+  'SSL_CERT_DIR',
+] as const;
+
+/** The allowlisted slice of this process's environment, for a spawned child. */
+function inheritableChildEnv(): Record<string, string> {
+  const inherited: Record<string, string> = {};
+  for (const key of INHERITABLE_CHILD_ENV_VARS) {
+    const value = process.env[key];
+    if (value !== undefined) {
+      inherited[key] = value;
+    }
+  }
+  return inherited;
+}
+
 export function createBubblewrapConfig(
   serverConfig: McpServer
 ): FirejailConfig | null {
@@ -318,6 +363,8 @@ export function createBubblewrapConfig(
 
   // Construct the final environment
   const finalEnv = {
+    // Allowlisted host vars first: everything below deliberately overrides them
+    ...inheritableChildEnv(),
     // Sensible defaults - include interpreter paths from config
     PATH: `${paths.localBin}:${pnpmPath}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
     HOME: paths.userHome,
@@ -333,8 +380,6 @@ export function createBubblewrapConfig(
     // PNPM specific
     PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
     NODE_ENV: 'production',
-    // Inherit parent process env
-    ...(process.env as Record<string, string>),
     // Apply server-specific env vars
     ...(serverConfig.env || {}),
   };
@@ -468,6 +513,8 @@ export function createFirejailConfig(
 
   // Construct the final environment, prioritizing serverConfig.env
   const finalEnv = {
+    // Allowlisted host vars first: everything below deliberately overrides them
+    ...inheritableChildEnv(),
     // Sensible defaults, adjust user/home if needed - include interpreter paths from config
     PATH: `${paths.localBin}:${pnpmPathFirejail}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
     HOME: paths.userHome,
@@ -483,8 +530,6 @@ export function createFirejailConfig(
     // PNPM specific
     PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
     NODE_ENV: 'production',
-    // Inherit parent process env (like PATH, etc.)
-    ...(process.env as Record<string, string>),
     // Apply server-specific env vars, overriding inherited ones
     ...(serverConfig.env || {}),
   };
@@ -721,8 +766,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         command: transformedCommand,
         args: transformedArgs,
         env: {
-          // Start with parent process env
-          ...(process.env as Record<string, string>),
+          // Allowlisted host vars only - this process holds the app's secrets
+          ...inheritableChildEnv(),
           // Only add Linux-specific paths on Linux systems
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux
