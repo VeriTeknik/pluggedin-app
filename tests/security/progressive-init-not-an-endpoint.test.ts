@@ -126,4 +126,15 @@ describe('the health check does not probe the private network', () => {
       expect.objectContaining({ redirect: 'manual' })
     );
   });
+
+  it('counts a redirect as reachable without following it', async () => {
+    // `redirect: 'manual'` makes response.ok false for a 3xx, so a server that
+    // legitimately redirects would be marked unhealthy and skipped. The check
+    // only asks whether the endpoint is alive, and a 3xx answers that.
+    fetchSpy.mockResolvedValue({ ok: false, status: 302 } as never);
+
+    const result = await run('https://mcp.example.com/sse');
+
+    expect(result.initStatus.find((s) => s.serverName === 'probe')?.status).not.toBe('skipped');
+  });
 });

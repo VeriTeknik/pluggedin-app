@@ -175,12 +175,17 @@ async function performServerHealthChecks(
         });
 
         clearTimeout(timeoutId);
-        results[serverName] = response.ok;
+
+        // We do not follow the redirect, but a 3xx still answers the only
+        // question this check asks: is the endpoint alive? Treating it as a
+        // failure would skip every server that legitimately redirects.
+        const reachable = response.ok || (response.status >= 300 && response.status < 400);
+        results[serverName] = reachable;
 
         await addServerLogForProfile(
           profileUuid,
           'info',
-          `Health check for ${serverName}: ${response.ok ? 'OK' : `Failed (Status: ${response.status})`}`
+          `Health check for ${serverName}: ${reachable ? 'OK' : `Failed (Status: ${response.status})`}`
         );
       } catch (error: any) {
         results[serverName] = false;
