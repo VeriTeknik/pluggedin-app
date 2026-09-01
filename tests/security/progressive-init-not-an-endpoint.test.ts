@@ -137,4 +137,23 @@ describe('the health check does not probe the private network', () => {
 
     expect(result.initStatus.find((s) => s.serverName === 'probe')?.status).not.toBe('skipped');
   });
+
+  it.each([
+    ['100.64.0.1', 'carrier-grade NAT'],
+    ['224.0.0.1', 'IPv4 multicast'],
+    ['240.0.0.1', 'reserved'],
+    ['255.255.255.255', 'broadcast'],
+    ['192.0.2.1', 'TEST-NET-1'],
+    ['198.18.0.1', 'benchmarking'],
+    ['ff02::1', 'IPv6 multicast'],
+    ['::ffff:10.0.0.1', 'IPv4-mapped private'],
+  ])('refuses %s (%s)', async (address) => {
+    // Blocking only RFC 1918 and loopback leaves plenty of non-public space to
+    // aim at. Anything not globally routable is refused.
+    lookup.mockResolvedValue([{ address, family: address.includes(':') ? 6 : 4 }]);
+
+    await run('https://looks-fine.example.com/sse');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
