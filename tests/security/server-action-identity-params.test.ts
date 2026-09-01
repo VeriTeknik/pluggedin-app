@@ -77,19 +77,32 @@ function bodyAt(src: string, from: number): string {
   return src.slice(from);
 }
 
+/** Parameter list of the declaration at `from`, by balanced parentheses. */
+function paramsAt(src: string, from: number): string {
+  const open = src.indexOf('(', from);
+  if (open === -1) return '';
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '(') depth++;
+    else if (src[i] === ')' && --depth === 0) return src.slice(open + 1, i);
+  }
+  return '';
+}
+
 type Action = { id: string; params: string; body: string };
 
 function exportedActions(file: string, code: string): Action[] {
   const found: Action[] = [];
 
-  for (const m of code.matchAll(/export\s+(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/g)) {
-    found.push({ id: `${file}#${m[1]}`, params: m[1] ? m[2] : '', body: bodyAt(code, m.index ?? 0) });
+  for (const m of code.matchAll(/export\s+(?:async\s+)?function\s+(\w+)\s*\(/g)) {
+    const at = m.index ?? 0;
+    found.push({ id: `${file}#${m[1]}`, params: paramsAt(code, at), body: bodyAt(code, at) });
   }
 
   // `export const x = async (...) => {}` and `export const x = wrapper(schema, fn)`
   for (const m of code.matchAll(/export\s+const\s+(\w+)\s*=\s*([\s\S]{0,200}?)(?:=>|\()/g)) {
     const start = m.index ?? 0;
-    const params = /\(([^)]*)\)/.exec(code.slice(start, start + 400))?.[1] ?? '';
+    const params = paramsAt(code, start);
     found.push({ id: `${file}#${m[1]}`, params, body: bodyAt(code, start) });
   }
 
@@ -242,6 +255,16 @@ describe('server actions taking a caller-supplied identity', () => {
     const action = exportedActions('f.ts', code)[0];
 
     expect(action.body).toContain('requireAuthUserId');
+  });
+
+  it('reads a whole parameter list, including nested parentheses', () => {
+    const code = 'export async function h(cb: (x: number) => void, profileUuid: string) {}';
+    const action = exportedActions('f.ts', code)[0];
+
+    // A regex stopping at the first `)` would truncate at the callback type and
+    // miss the identity parameter that follows it.
+    expect(action.params).toContain('profileUuid');
+    expect(IDENTITY_PARAM.test(action.params)).toBe(true);
   });
 
   it('recognises an identity parameter', () => {
