@@ -17,6 +17,7 @@ import {
   sharedMcpServersTable
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { PUBLIC_USER_COLUMNS } from '@/lib/public-user';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
 import { verifyGitHubOwnership } from './registry-servers';
@@ -240,7 +241,7 @@ export async function getCommunityServer(uuid: string) {
           with: {
             project: {
               with: {
-                user: true
+                user: { columns: PUBLIC_USER_COLUMNS }
               }
             }
           }
@@ -248,7 +249,10 @@ export async function getCommunityServer(uuid: string) {
       }
     });
 
-    if (!server) {
+    // A share that was never made public is not a community server. The lookup
+    // is by uuid alone, so without this anyone holding a uuid could read a
+    // private share and the template it carries.
+    if (!server || !server.is_public) {
       return { success: false, error: 'Server not found' };
     }
 
@@ -335,7 +339,7 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
           with: {
             project: {
               with: {
-                user: true
+                user: { columns: PUBLIC_USER_COLUMNS }
               }
             }
           }
@@ -344,7 +348,10 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       }
     });
 
-    if (!communityServer) {
+    // A private share is not a community server. Without this the claim flow
+    // accepted any share uuid, exposing its template and letting the caller
+    // walk the claim/migration steps against something never published.
+    if (!communityServer || !communityServer.is_public) {
       return { success: false, error: 'Community server not found' };
     }
 
@@ -594,7 +601,7 @@ export async function getClaimableCommunityServers() {
           with: {
             project: {
               with: {
-                user: true
+                user: { columns: PUBLIC_USER_COLUMNS }
               }
             }
           }

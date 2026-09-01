@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { sharedCollectionsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { sanitizeCollectionContent } from '@/lib/server-template';
 
 /**
  * @swagger
@@ -90,7 +91,9 @@ export async function GET(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
-    return NextResponse.json(sortedCollections);
+    return NextResponse.json(
+      sortedCollections.map((c) => ({ ...c, content: sanitizeCollectionContent(c.content) }))
+    );
   } catch (error) {
     console.error('Error fetching shared collections:', error);
     return NextResponse.json(
