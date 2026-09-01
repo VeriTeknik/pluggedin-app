@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { sharedCollectionsTable } from '@/db/schema';
+import { sanitizeCollectionContent } from '@/lib/server-template';
 
 /**
  * @swagger
@@ -97,7 +98,9 @@ export async function GET(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
-    return NextResponse.json(sortedCollections);
+    return NextResponse.json(
+      sortedCollections.map((c) => ({ ...c, content: sanitizeCollectionContent(c.content) }))
+    );
   } catch (error) {
     console.error('Error fetching user collections:', error);
     return NextResponse.json(

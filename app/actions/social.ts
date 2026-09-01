@@ -21,7 +21,7 @@ import { getAuthSession } from '@/lib/auth';
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import type { PublicUser } from '@/lib/public-user';
 import { toPublicUser } from '@/lib/public-user';
-import { sanitizeServerTemplate } from '@/lib/server-template';
+import { sanitizeCollectionContent, sanitizeServerTemplate } from '@/lib/server-template';
 
 // Additional validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
@@ -368,7 +368,10 @@ export async function getSharedCollections(
       limit: clampLimit(limit),
       orderBy: (collections: any) => [desc(collections.created_at)], // Added explicit type
     });
-    return sharedCollections as unknown as SharedCollection[];
+    return sharedCollections.map((c: any) => ({
+      ...c,
+      content: sanitizeCollectionContent(c.content),
+    })) as unknown as SharedCollection[];
   } catch (error) {
     console.error('Error getting shared collections:', error);
     return [];
@@ -673,7 +676,13 @@ export async function shareCollection(
     // writing anything under it (same pattern as unshareServer above).
     return await withProfileAuth(uuidSchema.parse(profileUuid), async () => {
     const [sharedCollection] = await db.insert(sharedCollectionsTable)
-      .values({ profile_uuid: profileUuid, title, description, content, is_public: isPublic })
+      .values({
+        profile_uuid: profileUuid,
+        title,
+        description,
+        content: sanitizeCollectionContent(content),
+        is_public: isPublic,
+      })
       .returning();
     await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_COLLECTION', metadata: { title } });
     // Revalidate paths
@@ -729,7 +738,9 @@ export async function updateSharedCollection(
     const updateData: any = { updated_at: new Date() };
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.description !== undefined) updateData.description = updates.description;
-    if (updates.content !== undefined) updateData.content = updates.content;
+    if (updates.content !== undefined) {
+      updateData.content = sanitizeCollectionContent(updates.content);
+    }
     if (updates.isPublic !== undefined) updateData.is_public = updates.isPublic;
     const [updatedCollection] = await db.update(sharedCollectionsTable)
       .set(updateData)
@@ -784,14 +795,16 @@ export async function getSharedCollection(sharedCollectionUuid: string): Promise
       }
     });
 
-    if (!collection) {
-      console.error(`Collection not found with UUID: ${sharedCollectionUuid}`);
+    // Looked up by uuid alone, so without this a collection the owner kept
+    // private is readable — content included — by anyone holding its uuid.
+    if (!collection || !collection.is_public) {
       return null;
     }
 
     // Convert null to undefined for name field
     const modifiedCollection = {
       ...collection,
+      content: sanitizeCollectionContent(collection.content),
       profile: {
         ...collection.profile,
         project: {
