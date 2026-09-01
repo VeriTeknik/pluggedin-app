@@ -380,6 +380,34 @@ describe('server actions taking a caller-supplied identity', () => {
     expect(isGuarded(action!, guards)).toBe(true);
   });
 
+  it('sees an action whose type annotation contains an arrow', () => {
+    // `const x: (a: string) => void = …` puts a `=>` before the assignment, so
+    // a parser looking for the first `=` can start reading in the middle of
+    // the type rather than at the initializer.
+    const direct = `
+      export const leak: (u: string) => Promise<void> = async (userId: string) => {
+        return userId;
+      };
+    `;
+    const wrappedPlain = `
+      export const alsoLeak: Handler = withThing(Schema, async (profileUuid: string) => {
+        return profileUuid;
+      });
+    `;
+    const wrappedArrowType = `
+      export const thirdLeak: (i?: unknown) => Promise<void> = withThing(Schema, async (profileUuid: string) => {
+        return profileUuid;
+      });
+    `;
+
+    const find = (code: string, id: string) =>
+      exportedActions('f.ts', code).find((x) => x.id === `f.ts#${id}`);
+
+    expect(IDENTITY_PARAM.test(find(direct, 'leak')!.params)).toBe(true);
+    expect(IDENTITY_PARAM.test(find(wrappedPlain, 'alsoLeak')!.params)).toBe(true);
+    expect(IDENTITY_PARAM.test(find(wrappedArrowType, 'thirdLeak')!.params)).toBe(true);
+  });
+
   it('accepts either quoting of the directive', () => {
     expect(/^['"]use server['"]/.test(`'use server';`)).toBe(true);
     expect(/^['"]use server['"]/.test(`"use server";`)).toBe(true);
