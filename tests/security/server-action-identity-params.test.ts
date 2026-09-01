@@ -6,82 +6,242 @@ import { describe, expect, it } from 'vitest';
 /**
  * Every export in a `'use server'` file is a public HTTP endpoint, callable by
  * anyone who knows the action id. When such a function takes an identity —
- * `userId`, `profileUuid`, `projectUuid` — from its caller and the file never
+ * `userId`, `profileUuid`, `projectUuid` — from its caller and nothing in it
  * consults the session, that identity is an assertion by the attacker rather
  * than a fact.
  *
- * That exact shape produced #202 (updateUserSocial, reserveUsername) and #207,
- * and a sweep found 13 more files with the same signature. This test freezes
- * that set: a new file joining it fails, and a file leaving it must be removed
- * from the list, so the list can only shrink.
+ * That shape produced #202 (updateUserSocial, reserveUsername) and #207. This
+ * test freezes the remaining set so it can only shrink.
+ *
+ * Granularity is per export, not per file. A file-level check treats one
+ * guarded action as covering its unguarded neighbours, which is precisely the
+ * regression this is meant to catch.
  */
 const AUTH_REFERENCE =
-  /requireAuthUserId|withAuth|withProjectAuth|withProfileAuth|withServerAuth|getAuthSession|createProfileAction|getServerSession/;
+  /requireAuthUserId|withAuth|withProjectAuth|withProfileAuth|withServerAuth|getAuthSession|createProfileAction|getServerSession|requireAdmin/;
 
 const IDENTITY_PARAM = /\b(userId|user_id|profileUuid|profile_uuid|projectUuid|project_uuid)\b/;
 
+/** Comments and string bodies are not executable; a mention in one proves nothing. */
+function stripNonCode(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, ' ')
+    .replace(/`(?:\\.|[^`\\])*`/g, '``')
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\])*"/g, '""');
+}
+
+function walk(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) return walk(full);
+    return full.endsWith('.ts') || full.endsWith('.tsx') ? [full] : [];
+  });
+}
+
 /**
- * Known debt, as of 2026-09-01. Each of these takes a caller-supplied identity
- * with no session check anywhere in the file. Shrink this list; do not grow it.
+ * Body of a declaration starting at `from`, by brace matching.
+ *
+ * The opening brace is not simply the next one: a return type like
+ * `Promise<{ success: boolean }>` puts a brace before the body, and matching it
+ * reports the type as the body — which made every guarded action in
+ * app/actions/social.ts look unguarded. Skip past the parameter list, then take
+ * the first brace that is not inside angle brackets.
  */
-const KNOWN_UNGUARDED = [
-  'app/actions/analytics.ts',
-  'app/actions/custom-instructions.ts',
-  'app/actions/custom-mcp-servers.ts',
-  'app/actions/library.ts',
-  'app/actions/log-retention.ts',
-  'app/actions/mcp-playground.ts',
-  'app/actions/mcp-server-logger.ts',
-  'app/actions/mcp-server-metrics.ts',
-  'app/actions/mcp-server-user-rating.ts',
-  'app/actions/notifications.ts',
-  'app/actions/playground-settings.ts',
-  'app/actions/progressive-mcp-initialization.ts',
-  'app/actions/reviews.ts',
-].sort();
+function bodyAt(src: string, from: number): string {
+  let i = src.indexOf('(', from);
+  if (i === -1) return src.slice(from, from + 400);
 
-function unguardedIdentityActions(): string[] {
-  const dir = 'app/actions';
-  const offenders: string[] = [];
-
-  for (const name of fs.readdirSync(dir)) {
-    if (!name.endsWith('.ts')) continue;
-    const file = path.join(dir, name);
-    const src = fs.readFileSync(file, 'utf8');
-
-    if (!src.trimStart().startsWith("'use server'")) continue;
-    if (AUTH_REFERENCE.test(src)) continue;
-
-    const takesIdentity = [...src.matchAll(/^export (?:async )?function \w+\s*\(([^)]*)\)/gm)].some(
-      (m) => IDENTITY_PARAM.test(m[1])
-    );
-
-    if (takesIdentity) offenders.push(file);
+  let paren = 0;
+  for (; i < src.length; i++) {
+    if (src[i] === '(') paren++;
+    else if (src[i] === ')' && --paren === 0) { i++; break; }
   }
 
-  return offenders.sort();
+  let angle = 0;
+  let open = -1;
+  for (; i < src.length; i++) {
+    const c = src[i];
+    if (c === '<') angle++;
+    else if (c === '>') angle = Math.max(0, angle - 1);
+    else if (c === '{' && angle === 0) { open = i; break; }
+  }
+  if (open === -1) return src.slice(from, from + 400);
+
+  let depth = 0;
+  for (let j = open; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}' && --depth === 0) return src.slice(from, j + 1);
+  }
+  return src.slice(from);
 }
+
+type Action = { id: string; params: string; body: string };
+
+function exportedActions(file: string, code: string): Action[] {
+  const found: Action[] = [];
+
+  for (const m of code.matchAll(/export\s+(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/g)) {
+    found.push({ id: `${file}#${m[1]}`, params: m[1] ? m[2] : '', body: bodyAt(code, m.index ?? 0) });
+  }
+
+  // `export const x = async (...) => {}` and `export const x = wrapper(schema, fn)`
+  for (const m of code.matchAll(/export\s+const\s+(\w+)\s*=\s*([\s\S]{0,200}?)(?:=>|\()/g)) {
+    const start = m.index ?? 0;
+    const params = /\(([^)]*)\)/.exec(code.slice(start, start + 400))?.[1] ?? '';
+    found.push({ id: `${file}#${m[1]}`, params, body: bodyAt(code, start) });
+  }
+
+  return found;
+}
+
+/**
+ * Names of helpers defined in this file that themselves consult the session.
+ * A guard reached through one of these — `canViewUserSocialGraph`,
+ * `viewerOwnsProfile` — is still a guard, and treating it as absent would
+ * report every function in app/actions/social.ts as unguarded.
+ */
+function localGuardNames(code: string): Set<string> {
+  const decl = /(?:async\s+)?function\s+(\w+)\s*\(|const\s+(\w+)\s*=\s*(?:async\s*)?\(/g;
+  const bodies = new Map<string, string>();
+
+  for (const m of code.matchAll(decl)) {
+    const name = m[1] ?? m[2];
+    if (name) bodies.set(name, bodyAt(code, m.index ?? 0));
+  }
+
+  // Fixed point, not one hop: in app/actions/social.ts the chain is
+  // getFollowers -> canViewUserSocialGraph -> getCurrentUserId -> getAuthSession.
+  const guards = new Set<string>();
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const [name, body] of bodies) {
+      if (guards.has(name)) continue;
+      const reachesAuth =
+        AUTH_REFERENCE.test(body) ||
+        [...guards].some((g) => new RegExp(`\\b${g}\\s*\\(`).test(body));
+      if (reachesAuth) {
+        guards.add(name);
+        grew = true;
+      }
+    }
+  }
+
+  return guards;
+}
+
+function isGuarded(body: string, localGuards: Set<string>): boolean {
+  if (AUTH_REFERENCE.test(body)) return true;
+  for (const name of localGuards) {
+    if (new RegExp(`\\b${name}\\s*\\(`).test(body)) return true;
+  }
+  return false;
+}
+
+function unguardedIdentityActions(): string[] {
+  const offenders: string[] = [];
+
+  for (const file of walk('app/actions')) {
+    const raw = fs.readFileSync(file, 'utf8');
+    const head = raw.trimStart().slice(0, 20);
+    if (!/^['"]use server['"]/.test(head)) continue;
+
+    const code = stripNonCode(raw);
+    const localGuards = localGuardNames(code);
+
+    for (const action of exportedActions(file, code)) {
+      if (!IDENTITY_PARAM.test(action.params)) continue;
+      if (isGuarded(action.body, localGuards)) continue;
+      offenders.push(action.id);
+    }
+  }
+
+  return [...new Set(offenders)].sort();
+}
+
+/**
+ * Known debt as of 2026-09-02, one entry per exported action. Shrink this list;
+ * do not grow it. Regenerate with the test's own output when closing a file.
+ */
+const KNOWN_UNGUARDED: string[] = JSON.parse(
+  fs.readFileSync('tests/security/unguarded-actions.json', 'utf8')
+);
 
 describe('server actions taking a caller-supplied identity', () => {
   it('matches the known-unguarded list exactly', () => {
-    // Grew? A new action trusts an identity from its caller — guard it instead.
-    // Shrank? Good: delete the fixed file from KNOWN_UNGUARDED.
-    expect(unguardedIdentityActions()).toEqual(KNOWN_UNGUARDED);
+    expect(unguardedIdentityActions()).toEqual([...KNOWN_UNGUARDED].sort());
   });
 
-  it('has no entry that is already fixed', () => {
-    const current = new Set(unguardedIdentityActions());
-    const stale = KNOWN_UNGUARDED.filter((f) => !current.has(f));
+  it('treats a comment-only auth mention as unguarded', () => {
+    const code = stripNonCode(`
+      'use server';
+      // getAuthSession is not called here
+      export async function leak(profileUuid: string) { return profileUuid; }
+    `);
 
-    expect(stale, 'these are guarded now and should leave the list').toEqual([]);
+    expect(AUTH_REFERENCE.test(code)).toBe(false);
   });
 
-  it('recognises a guarded file as guarded', () => {
-    // app/actions/social.ts is the file #202 fixed; if the detector stopped
-    // seeing its auth helpers, every assertion above would silently pass.
-    const src = fs.readFileSync('app/actions/social.ts', 'utf8');
+  it('sees exported arrow actions, not only function declarations', () => {
+    const code = `export const doThing = async (profileUuid: string) => { return 1; };`;
+    const actions = exportedActions('f.ts', code);
 
-    expect(AUTH_REFERENCE.test(src)).toBe(true);
+    expect(actions.map((a) => a.id)).toContain('f.ts#doThing');
+    expect(IDENTITY_PARAM.test(actions[0].params)).toBe(true);
+  });
+
+  it('judges each export separately, not the file as a whole', () => {
+    const code = `
+      export async function guarded(profileUuid: string) { await requireAuthUserId(); }
+      export async function open(profileUuid: string) { return profileUuid; }
+    `;
+    const unguarded = exportedActions('f.ts', code).filter(
+      (a) => IDENTITY_PARAM.test(a.params) && !AUTH_REFERENCE.test(a.body)
+    );
+
+    expect(unguarded.map((a) => a.id)).toEqual(['f.ts#open']);
+  });
+
+  it('accepts either quoting of the directive', () => {
+    expect(/^['"]use server['"]/.test(`'use server';`)).toBe(true);
+    expect(/^['"]use server['"]/.test(`"use server";`)).toBe(true);
+  });
+
+  it('follows one level of indirection into a local guard helper', () => {
+    const code = `
+      async function viewerOwnsProfile(p: string) { await getAuthSession(); return true; }
+      export async function readThing(profileUuid: string) {
+        if (!(await viewerOwnsProfile(profileUuid))) return null;
+        return 1;
+      }
+    `;
+    const guards = localGuardNames(code);
+    const action = exportedActions('f.ts', code).find((a) => a.id.endsWith('#readThing'))!;
+
+    expect(guards.has('viewerOwnsProfile')).toBe(true);
+    expect(isGuarded(action.body, guards)).toBe(true);
+  });
+
+  it('follows a chain of local helpers to the session, not just one hop', () => {
+    const code = `
+      async function getCurrentUserId() { const s = await getAuthSession(); return s?.user?.id; }
+      async function canView(u: string) { return (await getCurrentUserId()) === u; }
+      export async function readThing(userId: string) { if (!(await canView(userId))) return null; return 1; }
+    `;
+    const guards = localGuardNames(code);
+    const action = exportedActions('f.ts', code).find((a) => a.id.endsWith('#readThing'))!;
+
+    expect(guards.has('canView')).toBe(true);
+    expect(isGuarded(action.body, guards)).toBe(true);
+  });
+
+  it('takes the function body, not a braced return type', () => {
+    const code = `export async function f(userId: string): Promise<{ ok: boolean }> { await requireAuthUserId(); return { ok: true }; }`;
+    const action = exportedActions('f.ts', code)[0];
+
+    expect(action.body).toContain('requireAuthUserId');
   });
 
   it('recognises an identity parameter', () => {
