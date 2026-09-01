@@ -205,7 +205,7 @@ export const trackServerInstallation = async (input: {
               with: {
                 project: {
                   with: {
-                    user: true
+                    user: { columns: { id: true, username: true } }
                   }
                 }
               }
@@ -220,7 +220,7 @@ export const trackServerInstallation = async (input: {
             with: {
               project: {
                 with: {
-                  user: true
+                  user: { columns: { id: true, username: true } }
                 }
               }
             }
