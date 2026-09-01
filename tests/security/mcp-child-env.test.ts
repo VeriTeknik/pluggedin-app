@@ -183,13 +183,21 @@ describe('every child spawn in lib/mcp bounds its environment', () => {
         const window = src.slice(m.index ?? 0, (m.index ?? 0) + 700);
         const end = window.indexOf(');');
         const call = window.slice(0, end > 0 ? end : 300);
-        if (!call.includes('env:')) {
+        // `env` as an object key, not the substring: `{ cwd: 'env:' }` must
+        // not satisfy this check.
+        if (!/[{,]\s*env\s*:/.test(call)) {
           offenders.push(`${file}:${src.slice(0, m.index).split('\n').length}`);
         }
       }
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it('is not fooled by the string "env:" appearing elsewhere in a call', () => {
+    const decoy = "execFileAsync('tool', [], { cwd: 'env:', timeout: 1 });";
+
+    expect(/[{,]\s*env\s*:/.test(decoy)).toBe(false);
   });
 });
 
