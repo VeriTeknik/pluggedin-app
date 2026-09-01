@@ -261,13 +261,22 @@ function unguardedIdentityActions(): string[] {
  * Known debt as of 2026-09-02, one entry per exported action. Shrink this list;
  * do not grow it. Regenerate with the test's own output when closing a file.
  */
-const KNOWN_UNGUARDED: string[] = JSON.parse(
-  fs.readFileSync('tests/security/unguarded-actions.json', 'utf8')
-);
+const BASELINE_PATH = 'tests/security/unguarded-actions.json';
+
+const KNOWN_UNGUARDED: string[] = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'));
 
 describe('server actions taking a caller-supplied identity', () => {
   it('matches the known-unguarded list exactly', () => {
-    expect(unguardedIdentityActions()).toEqual([...KNOWN_UNGUARDED].sort());
+    const actual = unguardedIdentityActions();
+
+    // Regenerating by hand invites transcription errors, and the list only ever
+    // shrinks legitimately. UPDATE_UNGUARDED_BASELINE=1 rewrites it from the
+    // detector; the diff is then reviewed like any other change.
+    if (process.env.UPDATE_UNGUARDED_BASELINE) {
+      fs.writeFileSync(BASELINE_PATH, `${JSON.stringify(actual, null, 2)}\n`);
+    }
+
+    expect(actual).toEqual([...KNOWN_UNGUARDED].sort());
   });
 
   it('treats a comment-only auth mention as unguarded', () => {

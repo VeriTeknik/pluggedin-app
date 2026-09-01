@@ -57,7 +57,5 @@
   "app/actions/profiles.ts#setActiveProfile",
   "app/actions/progressive-mcp-initialization.ts#progressivelyInitializeMcpServers",
   "app/actions/registry-servers.ts#getClaimableServers",
-  "app/actions/roadmap.ts#calculateVoteWeight",
-  "app/actions/social.ts#getUserFollowerCount",
-  "app/actions/social.ts#getUserFollowingCount"
+  "app/actions/roadmap.ts#calculateVoteWeight"
 ]
