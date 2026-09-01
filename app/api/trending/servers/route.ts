@@ -227,7 +227,7 @@ export async function GET(request: NextRequest) {
                 category: template?.category,
                 tags: template?.tags,
                 shared_by: user?.username || 'Unknown User',
-                shared_by_profile_url: user?.username ? `/to/${user.username}` : null,
+                shared_by_profile_url: null,
               };
             }
           }

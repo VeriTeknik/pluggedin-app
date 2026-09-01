@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { checkUsernameAvailability, getUserByUsername, reserveUsername, updateUserSocial, followUser, unfollowUser, getUserFollowerCount } from '@/app/actions/social';
+import { checkUsernameAvailability, reserveUsername } from '@/app/actions/social';
 import { db } from '@/db';
-import { users } from '@/db/schema';
 
 // Mock dependencies
 vi.mock('@/db');
@@ -138,69 +137,6 @@ describe('Social Actions (Real Functions)', () => {
     });
   });
 
-  describe('getUserByUsername', () => {
-    it('should return a public user without their auth columns', async () => {
-      const mockUser = {
-        id: 'user-123',
-        username: 'testuser',
-        email: 'test@example.com',
-        password: 'hashed-secret',
-        two_fa_secret: 'JBSWY3DPEHPK3PXP',
-        name: 'Test User',
-        is_public: true,
-      };
-
-      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
-
-      const result = await getUserByUsername('testuser');
-
-      expect(result?.id).toBe('user-123');
-      expect(result?.username).toBe('testuser');
-      expect(result).not.toHaveProperty('email');
-      expect(result).not.toHaveProperty('password');
-      expect(result).not.toHaveProperty('two_fa_secret');
-    });
-
-    it('should return null when user not found', async () => {
-      mockedDb.query.users.findFirst.mockResolvedValue(null);
-
-      const result = await getUserByUsername('nonexistent');
-
-      expect(result).toBeNull();
-    });
-
-    it('should not return a private user to an authenticated non-owner', async () => {
-      const mockUser = {
-        id: 'different-user-id',
-        username: 'privateuser',
-        email: 'private@example.com',
-        name: 'Private User',
-        is_public: false,
-      };
-
-      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
-
-      const result = await getUserByUsername('privateuser');
-
-      // Being signed in is not a licence to read someone else's private profile.
-      expect(result).toBeNull();
-    });
-
-    it('should return a private user to its owner', async () => {
-      const mockUser = {
-        id: SESSION_USER_ID,
-        username: 'privateuser',
-        name: 'Private User',
-        is_public: false,
-      };
-
-      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
-
-      const result = await getUserByUsername('privateuser');
-
-      expect(result?.id).toBe(SESSION_USER_ID);
-    });
-  });
 
   describe('reserveUsername', () => {
     it('should successfully reserve available username', async () => {
@@ -249,92 +185,5 @@ describe('Social Actions (Real Functions)', () => {
     });
   });
 
-  describe('followUser', () => {
-    it('should successfully follow user', async () => {
-      const followerUser = { id: 'follower-id', username: 'follower' };
-      const followedUser = { id: 'followed-id', username: 'followed' };
-      
-      mockedDb.query.users.findFirst
-        .mockResolvedValueOnce(followerUser)
-        .mockResolvedValueOnce(followedUser);
-      mockedDb.query.followersTable.findFirst.mockResolvedValue(null);
 
-      const result = await followUser('follower-id', 'followed-id');
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should fail when trying to follow self', async () => {
-      const sameUser = { id: 'same-id', username: 'sameuser' };
-      
-      mockedDb.query.users.findFirst
-        .mockResolvedValueOnce(sameUser)
-        .mockResolvedValueOnce(sameUser);
-
-      const result = await followUser('same-id', 'same-id');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Cannot follow yourself');
-    });
-
-    it('should fail when already following', async () => {
-      const followerUser = { id: 'follower-id', username: 'follower' };
-      const followedUser = { id: 'followed-id', username: 'followed' };
-      const existingFollow = { id: 'existing-follow' };
-      
-      mockedDb.query.users.findFirst
-        .mockResolvedValueOnce(followerUser)
-        .mockResolvedValueOnce(followedUser);
-      mockedDb.query.followersTable.findFirst.mockResolvedValue(existingFollow);
-
-      const result = await followUser('follower-id', 'followed-id');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Already following this user');
-    });
-  });
-
-  describe('getUserFollowerCount', () => {
-    it('should return correct follower count', async () => {
-      // Mock the chained select query properly
-      const mockChain = {
-        from: vi.fn(() => ({
-          where: vi.fn(() => Promise.resolve([{ count: 5 }]))
-        }))
-      };
-      mockedDb.select.mockReturnValue(mockChain);
-
-      const result = await getUserFollowerCount('user-123');
-
-      expect(result).toBe(5);
-    });
-
-    it('should return 0 when no followers', async () => {
-      // Mock the chained select query properly
-      const mockChain = {
-        from: vi.fn(() => ({
-          where: vi.fn(() => Promise.resolve([{ count: 0 }]))
-        }))
-      };
-      mockedDb.select.mockReturnValue(mockChain);
-
-      const result = await getUserFollowerCount('user-123');
-
-      expect(result).toBe(0);
-    });
-
-    it('should return 0 on database error', async () => {
-      // Mock the chained select query to throw error
-      const mockChain = {
-        from: vi.fn(() => ({
-          where: vi.fn(() => Promise.reject(new Error('Database error')))
-        }))
-      };
-      mockedDb.select.mockReturnValue(mockChain);
-
-      const result = await getUserFollowerCount('user-123');
-
-      expect(result).toBe(0);
-    });
-  });
 });

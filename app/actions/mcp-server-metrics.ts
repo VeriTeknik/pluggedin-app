@@ -236,7 +236,6 @@ export const trackServerInstallation = async (input: {
             title: 'Server Installed',
             message: `${installerName} installed your shared server "${sharedServer.title}"`,
             severity: 'SUCCESS',
-            link: `/social/servers` // Link to their shared servers page
           });
         }
       } catch (notifError) {
