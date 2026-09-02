@@ -835,7 +835,7 @@ export function usePlayground() {
           
                   // Resume log polling if session is active
         startLogPolling();
-      } else if (statusResult.needsRestore) {
+      } else if ('needsRestore' in statusResult && statusResult.needsRestore) {
         // Server session is lost but client thinks it should exist
         // Attempt to restore from saved settings
         addLog('info', 'Server session lost, attempting automatic restoration...');
