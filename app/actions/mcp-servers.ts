@@ -18,7 +18,12 @@ import {
 import { withProfileAuth, withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { mcpServerOperations } from '@/lib/mcp/metrics';
-import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
+import {
+  validateCommand,
+  validateCommandArgs,
+  validateHeaders,
+  validateMcpUrl,
+} from '@/lib/security/validators';
 import { formatRateLimitError,rateLimitServerAction, ServerActionRateLimits } from '@/lib/server-action-rate-limiter';
 import { sanitizeServerTemplate } from '@/lib/server-template';
 import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
@@ -819,7 +824,7 @@ export async function bulkImportMcpServers(
       });
   }
 
-  return { success: true, count: serverEntries.length };
+  return { success: true, count: createdServerUuids.length };
   });
 }
 
@@ -875,18 +880,35 @@ export async function importSharedServer(
       }
     }
 
-    if (serverData.args && serverData.args.length > 0) {
+    // A truthy non-array with no numeric length skipped this entirely and was
+    // then JSON-stringified into args_encrypted.
+    let sanitizedArgs: string[] = [];
+    if (serverData.args !== undefined && serverData.args !== null) {
+      if (!Array.isArray(serverData.args)) {
+        return { success: false, error: 'Arguments must be an array' };
+      }
       const argsValidation = validateCommandArgs(serverData.args);
       if (!argsValidation.valid) {
         return { success: false, error: argsValidation.error };
       }
+      sanitizedArgs = argsValidation.sanitizedArgs ?? serverData.args;
     }
 
+    // TODO: also apply validateImportedCommand / validateImportedEnv here once
+    // #220 lands them in lib/security/validators.ts — the same rules belong on
+    // this path, and it is the same class of import.
+
+    let sanitizedHeaders: Record<string, string> | undefined;
     if (type === McpServerType.STREAMABLE_HTTP && serverData.streamableHTTPOptions?.headers) {
-      const headerValidation = validateHeaders(serverData.streamableHTTPOptions.headers);
+      const headers = serverData.streamableHTTPOptions.headers;
+      if (typeof headers !== 'object' || Array.isArray(headers)) {
+        return { success: false, error: 'Headers must be an object' };
+      }
+      const headerValidation = validateHeaders(headers);
       if (!headerValidation.valid) {
         return { success: false, error: headerValidation.error };
       }
+      sanitizedHeaders = headerValidation.sanitizedHeaders;
     }
     
     // Use the template values or the original server values with appropriate defaults
@@ -895,7 +917,7 @@ export async function importSharedServer(
       description: serverData.description, // Ensure description is properly transferred
       type: serverData.type,
       command: serverData.command,
-      args: serverData.args || [],
+      args: sanitizedArgs,
       // If it's a template, use the sanitized env, otherwise use empty object
       env: isTemplate && serverData.env ? serverData.env : {}, 
       url: serverData.url,
@@ -906,6 +928,9 @@ export async function importSharedServer(
       notes: isTemplate
         ? `Imported from template shared by ${serverData.sharedBy || 'another user'} (original server ID: ${serverData.originalServerUuid || 'unknown'})`
         : `Imported from shared server originally created by ${serverData.profile_uuid}`,
+      // A header-authenticated Streamable HTTP server was validated and then
+      // inserted without the headers it needs.
+      ...(sanitizedHeaders ? { streamableHTTPOptions: { headers: sanitizedHeaders } } : {}),
     };
 
     // Encrypt sensitive fields before insertion

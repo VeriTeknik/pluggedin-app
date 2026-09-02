@@ -143,4 +143,41 @@ describe('importSharedServer validates what it is about to run', () => {
     expect(result.success).toBe(true);
     expect(insert).toHaveBeenCalled();
   });
+
+  it('refuses an unrecognised type instead of treating it as STDIO', async () => {
+    const result = await importSharedServer(PROFILE, { type: 'CUSTOM', command: 'npx' }, 'srv');
+
+    expect(result.success).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses args that are not a list', async () => {
+    // A truthy non-array with no numeric length skipped validation entirely and
+    // was then JSON-stringified into args_encrypted.
+    const result = await importSharedServer(
+      PROFILE,
+      { type: 'STDIO', command: 'npx', args: { length: 1 } },
+      'srv'
+    );
+
+    expect(result.success).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('keeps the headers a Streamable HTTP server needs', async () => {
+    // These were validated and then dropped, so a header-authenticated server
+    // imported without the authentication it requires.
+    await importSharedServer(
+      PROFILE,
+      {
+        type: 'STREAMABLE_HTTP',
+        url: 'https://mcp.example.com/mcp',
+        streamableHTTPOptions: { headers: { 'X-Api-Key': 'value' } },
+      },
+      'srv'
+    );
+
+    const written = insertValues.mock.calls[0][0] as any;
+    expect(written.streamableHTTPOptions?.headers).toEqual({ 'X-Api-Key': 'value' });
+  });
 });
