@@ -14,7 +14,8 @@
  * them, and everything sent crosses a trust boundary.
  */
 
-import { askKnowledgeBase, getDocByUuid, getDocs } from '@/app/actions/library';
+import { askKnowledgeBaseFor } from '@/lib/library/queries';
+import { getDocByUuidFor, getDocsFor } from '@/lib/library/queries';
 import type { ConnectorIdentity } from '@/lib/oauth/provider/authenticate';
 
 import type { GrantedHub } from '../hub-scope';
@@ -49,7 +50,7 @@ export async function listDocuments(
   const resolved = await requireGrantedHub(identity, params.hub);
   if (!resolved.ok) return failure(resolved.message);
 
-  const result = await getDocs(identity.userId, resolved.hub);
+  const result = await getDocsFor(identity.userId, resolved.hub);
   if (!result.success) return failure(result.error ?? 'Could not list documents.');
 
   const docs = (result.docs ?? []).map(summarise);
@@ -66,7 +67,7 @@ export async function getDocument(
   const resolved = await requireGrantedHub(identity, params.hub);
   if (!resolved.ok) return failure(resolved.message);
 
-  const doc = await getDocByUuid(identity.userId, id, resolved.hub);
+  const doc = await getDocByUuidFor(identity.userId, id, resolved.hub);
   if (!doc) {
     // The same answer whether the document does not exist or lives in a Hub
     // this token was not granted. Distinguishing them would confirm the
@@ -87,7 +88,7 @@ export async function askKnowledge(
   const resolved = await requireGrantedHub(identity, params.hub);
   if (!resolved.ok) return failure(resolved.message);
 
-  const result = await askKnowledgeBase(identity.userId, query, resolved.hub);
+  const result = await askKnowledgeBaseFor(identity.userId, query, resolved.hub);
   if (!result.success) return failure(result.error ?? 'The knowledge base could not answer.');
 
   return text({
