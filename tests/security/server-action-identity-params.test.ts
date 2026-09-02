@@ -25,7 +25,13 @@ import { describe, expect, it } from 'vitest';
 const AUTH_REFERENCE =
   /\b(?:requireAuthUserId|withAuth|withProjectAuth|withProfileAuth|withServerAuth|getAuthSession|createProfileAction|getServerSession|requireAdmin)\s*\(/;
 
-const IDENTITY_PARAM = /\b(userId|user_id|profileUuid|profile_uuid|projectUuid|project_uuid)\b/;
+/**
+ * `ragIdentifier` is a project uuid under another name — queryRag took one with
+ * no session at all and the detector did not see it, because the list only knew
+ * the obvious spellings.
+ */
+const IDENTITY_PARAM =
+  /\b(userId|user_id|profileUuid|profile_uuid|projectUuid|project_uuid|ragIdentifier)\b/;
 
 /** Comments and string bodies are not executable; a mention in one proves nothing. */
 function stripNonCode(src: string): string {

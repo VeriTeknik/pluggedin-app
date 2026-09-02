@@ -5,22 +5,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const convertMcpToLangchainTools = vi.fn(async () => ({ tools: [], cleanup: async () => {} }));
 const addServerLogForProfile = vi.fn(async () => {});
-const fetchSpy = vi.fn(async () => ({ ok: true, status: 200 }));
 
 const lookup = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
+const request = vi.fn();
 
 vi.mock('@h1deya/langchain-mcp-tools', () => ({ convertMcpToLangchainTools }));
 vi.mock('node:dns/promises', () => ({ default: { lookup }, lookup }));
+vi.mock('node:https', () => ({ default: { request }, request }));
+vi.mock('node:http', () => ({ default: { request }, request }));
 vi.mock('@/app/actions/mcp-playground', () => ({ addServerLogForProfile }));
 
-vi.stubGlobal('fetch', fetchSpy);
+/** A node:https request that answers with `status` and never touches a socket. */
+function respondWith(status: number) {
+  request.mockImplementation((_options: any, onResponse: any) => {
+    queueMicrotask(() => onResponse({ statusCode: status, resume() {} }));
+    return { on: () => {}, end: () => {}, destroy: () => {} };
+  });
+}
 
 const { progressivelyInitializeMcpServers } = await import('@/lib/mcp/progressive-initialization');
 
 beforeEach(() => {
   vi.clearAllMocks();
-  fetchSpy.mockResolvedValue({ ok: true, status: 200 } as never);
   lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+  respondWith(200);
 });
 
 /** A mention in a comment is not a reference. */
@@ -82,27 +90,27 @@ describe('the health check does not probe the private network', () => {
   it('never fetches the cloud metadata endpoint', async () => {
     await run('http://169.254.169.254/latest/meta-data/');
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('never fetches a private address', async () => {
     await run('http://10.0.0.5:8080/');
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('never fetches a non-http scheme', async () => {
     await run('file:///etc/passwd');
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('still checks a public url', async () => {
     await run('https://mcp.example.com/sse');
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://mcp.example.com/sse',
-      expect.objectContaining({ method: 'HEAD' })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'HEAD', hostname: 'mcp.example.com' }),
+      expect.any(Function)
     );
   });
 
@@ -113,25 +121,37 @@ describe('the health check does not probe the private network', () => {
 
     await run('https://totally-public.example.com/sse');
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
   });
 
-  it('does not follow redirects', async () => {
-    // An initially public url can redirect into the private network, and fetch
-    // follows redirects by default.
+  it('pins the checked address to the socket', async () => {
+    // Handing fetch the hostname would resolve it a second time when the socket
+    // opens, so a controlled name can answer differently between the check and
+    // the connection. node:https takes the address through its own `lookup`,
+    // while Host and the TLS server name stay the hostname.
     await run('https://mcp.example.com/sse');
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://mcp.example.com/sse',
-      expect.objectContaining({ redirect: 'manual' })
+    const options = request.mock.calls[0][0];
+    expect(options.hostname).toBe('mcp.example.com');
+
+    const pinned = await new Promise((resolve) =>
+      options.lookup('mcp.example.com', {}, (_e: unknown, address: string) => resolve(address))
     );
+    expect(pinned).toBe('93.184.216.34');
+  });
+
+  it('opens exactly one connection, so nothing follows a redirect', async () => {
+    respondWith(302);
+
+    await run('https://mcp.example.com/sse');
+
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it('counts a redirect as reachable without following it', async () => {
-    // `redirect: 'manual'` makes response.ok false for a 3xx, so a server that
-    // legitimately redirects would be marked unhealthy and skipped. The check
-    // only asks whether the endpoint is alive, and a 3xx answers that.
-    fetchSpy.mockResolvedValue({ ok: false, status: 302 } as never);
+    // A server that legitimately redirects must not be marked unhealthy and
+    // skipped. The check only asks whether the endpoint is alive.
+    respondWith(302);
 
     const result = await run('https://mcp.example.com/sse');
 
@@ -154,6 +174,6 @@ describe('the health check does not probe the private network', () => {
 
     await run('https://looks-fine.example.com/sse');
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
   });
 });
