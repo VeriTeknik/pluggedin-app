@@ -7,11 +7,10 @@ const dbSelect = vi.fn();
 
 vi.mock('next-auth', () => ({ getServerSession }));
 vi.mock('@/lib/auth', () => ({ authOptions: {}, getAuthSession: vi.fn() }));
-vi.mock('@/lib/auth-helpers', () => ({
-  withProfileAuth: vi.fn(async () => {
-    throw new Error('Unauthorized - you do not have access to this profile');
-  }),
-}));
+const withProfileAuth = vi.fn(async () => {
+  throw new Error('Unauthorized - you do not have access to this profile');
+});
+vi.mock('@/lib/auth-helpers', () => ({ withProfileAuth }));
 vi.mock('@/db', () => ({
   db: {
     query: {
@@ -77,5 +76,21 @@ describe('the rest of the library surface derives its identity too', () => {
     );
 
     expect(result.success).toBe(false);
+  });
+
+  it('lets the login redirect through instead of reporting it as a failure', async () => {
+    // withProfileAuth turns away an anonymous caller by throwing a Next
+    // redirect. Swallowing it in the catch leaves them on the page.
+    const redirect = Object.assign(new Error('NEXT_REDIRECT'), {
+      digest: 'NEXT_REDIRECT;replace;/login;307;',
+    });
+    withProfileAuth.mockRejectedValueOnce(redirect);
+
+    await expect(
+      lib.trackDocumentView(
+        '11111111-1111-4111-8111-111111111111',
+        '22222222-2222-4222-8222-222222222222'
+      )
+    ).rejects.toThrow('NEXT_REDIRECT');
   });
 });

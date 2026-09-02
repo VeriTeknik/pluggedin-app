@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
+
 import { withProfileAuth } from '@/lib/auth-helpers';
 import {
   askKnowledgeBaseFor,
@@ -211,6 +213,13 @@ export async function trackDocumentView(profileUuid: string, docUuid: string) {
 
     return { success: true };
   } catch (error) {
+    // withProfileAuth turns away an anonymous caller by throwing a Next
+    // redirect. Reporting that as a tracking failure would swallow the
+    // redirect and leave them on the page.
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     console.error('Failed to track document view:', error);
     return { success: false, error: 'Failed to track document view' };
   }
