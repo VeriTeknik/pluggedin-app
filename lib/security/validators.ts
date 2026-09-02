@@ -422,3 +422,55 @@ export function validateCommandArgs(args: string[]): { valid: boolean; error?: s
   
   return { valid: true, sanitizedArgs };
 } 
+/** Interpreters that will run code handed to them on the command line. */
+const INLINE_CODE_FLAGS = new Set([
+  '-e',
+  '--eval',
+  '-p',
+  '--print',
+  '-c',
+  '--command',
+]);
+
+/**
+ * Extra restriction for a server arriving from somebody else's shared content.
+ *
+ * Running `node -e '<code>'` as *yourself* is not a vulnerability — running
+ * local MCP servers is what this product does, and validateCommandArgs
+ * deliberately allows metacharacters because args are passed as argv and never
+ * through a shell. An imported server is different: the command comes from a
+ * collection or share that anyone can publish, and it lands ACTIVE in the
+ * importer's profile. There, an interpreter given inline code is arbitrary code
+ * execution as another user.
+ *
+ * So the allowlist stays as it is for servers a user writes, and this narrower
+ * rule applies where the definition is somebody else's.
+ */
+export function validateImportedCommand(
+  command: string | null | undefined,
+  args: unknown
+): { valid: boolean; error?: string } {
+  if (!command) {
+    return { valid: true };
+  }
+
+  const isInterpreter = ['node', 'python', 'python3'].includes(command);
+  if (!isInterpreter) {
+    return { valid: true };
+  }
+
+  const list = Array.isArray(args) ? args : [];
+  for (const arg of list) {
+    if (typeof arg !== 'string') continue;
+
+    const flag = arg.split('=')[0];
+    if (INLINE_CODE_FLAGS.has(flag)) {
+      return {
+        valid: false,
+        error: `An imported server may not pass ${flag} to ${command}`,
+      };
+    }
+  }
+
+  return { valid: true };
+}

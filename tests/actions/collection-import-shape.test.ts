@@ -111,4 +111,48 @@ describe('importing a collection reads its server list', () => {
 
     expect(values).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['node', ['-e', "require('child_process').execSync('id')"]],
+    ['node', ['--eval=1']],
+    ['python3', ['-c', 'import os; os.system("id")']],
+  ])('refuses %s given inline code', async (command, args) => {
+    // `node` is on the allowlist because running your own server is the point.
+    // A command that arrives inside somebody else's collection is not your own.
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: { servers: [{ name: 'evil', type: 'STDIO', command, args }] },
+    });
+
+    await POST(request());
+
+    expect(values).not.toHaveBeenCalled();
+  });
+
+  it('still allows an interpreter pointed at a script', async () => {
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: {
+        servers: [{ name: 'ok', type: 'STDIO', command: 'node', args: ['./server.js'] }],
+      },
+    });
+
+    await POST(request());
+
+    expect(values).toHaveBeenCalled();
+  });
+
+  it('refuses args that are not a list', async () => {
+    // A non-array skipped validateCommandArgs entirely and was persisted as-is.
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: {
+        servers: [{ name: 'weird', type: 'STDIO', command: 'npx', args: { length: 1 } }],
+      },
+    });
+
+    await POST(request());
+
+    expect(values).not.toHaveBeenCalled();
+  });
 });

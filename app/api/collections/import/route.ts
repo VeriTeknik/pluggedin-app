@@ -10,6 +10,7 @@ import {
   validateCommand,
   validateCommandArgs,
   validateHeaders,
+  validateImportedCommand,
   validateMcpUrl,
 } from '@/lib/security/validators';
 
@@ -128,14 +129,32 @@ function rejectUnsafeServer(serverConfig: any): string | null {
     return `unsupported server type: ${String(type)}`;
   }
 
-  if (Array.isArray(serverConfig?.args) && serverConfig.args.length > 0) {
+  // A non-array `args` used to skip validation entirely and be written as-is.
+  if (serverConfig?.args !== undefined && serverConfig.args !== null) {
+    if (!Array.isArray(serverConfig.args)) {
+      return 'arguments must be a list';
+    }
     const argsValidation = validateCommandArgs(serverConfig.args);
     if (!argsValidation.valid) {
       return argsValidation.error ?? 'invalid arguments';
     }
   }
 
-  if (serverConfig?.headers) {
+  // `node` and `python` are on the allowlist because running your own server is
+  // the point of the product. A definition that arrives inside somebody else's
+  // collection is not your own, and an interpreter handed inline code there is
+  // arbitrary code execution as the importer.
+  const importedCommand = validateImportedCommand(serverConfig?.command, serverConfig?.args);
+  if (!importedCommand.valid) {
+    return importedCommand.error ?? 'command not allowed for an imported server';
+  }
+
+  // Arrays and other truthy non-objects survive validateHeaders' Object.entries
+  // walk, and the unsanitized original was the value persisted.
+  if (serverConfig?.headers !== undefined && serverConfig.headers !== null) {
+    if (typeof serverConfig.headers !== 'object' || Array.isArray(serverConfig.headers)) {
+      return 'headers must be an object';
+    }
     const headerValidation = validateHeaders(serverConfig.headers);
     if (!headerValidation.valid) {
       return headerValidation.error ?? 'invalid headers';
