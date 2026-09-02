@@ -4,54 +4,87 @@ import { describe, expect, it } from 'vitest';
 
 const registerSource = fs.readFileSync('app/api/auth/register/route.ts', 'utf8');
 
+/** The body of the transaction callback starting at `from`, by brace matching. */
+function transactionBodyAt(src: string, from: number): string {
+  const open = src.indexOf('{', src.indexOf('=>', from));
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) return src.slice(open, i + 1);
+  }
+  return src.slice(open);
+}
+
+function transactionBodies(src: string): string[] {
+  return [...src.matchAll(/db\.transaction\s*\(/g)].map((m) =>
+    transactionBodyAt(src, m.index ?? 0)
+  );
+}
+
 /**
- * verification_tokens is keyed on (identifier, token) where identifier is the
- * raw email — there is no reference to a users.id. So a token issued for one
- * user row verifies whatever row currently holds that email.
+ * A verification token has to be written in the same transaction as the user it
+ * belongs to.
  *
- * Registration exploits exactly that: when an email already has an unverified,
- * non-OAuth row, the route deletes it and inserts a new user, with a new id and
- * the *new caller's* password, under the same address. Every token outstanding
- * for that email stays valid for 24 hours and now points at the replacement.
+ * Issued afterwards, a concurrent registration can replace and cascade-delete
+ * that user in between: the foreign key then rejects the insert, and it does so
+ * after the default project, the admin notification and the welcome email have
+ * already run. Both registration paths — the ordinary insert and the
+ * replacement of an unverified row — have to hold this.
  *
- * A source-level check rather than a behavioural one: the route runs the delete
- * inside the same transaction as the replacement, and reproducing that through
- * a mocked Drizzle transaction would assert the shape of the mock rather than
- * the behaviour. The invariant worth freezing is that the delete is there and
- * is bound to the transaction.
+ * Source-level rather than behavioural, deliberately: the property is about
+ * transaction boundaries, and driving that through a mocked Drizzle `tx` would
+ * assert the shape of the mock rather than the boundary. So the check is that
+ * every `insert(users)` and every `insert(verificationTokens)` lives inside a
+ * transaction, and that no transaction creates a user without also issuing its
+ * token.
  */
-describe('replacing an unverified user invalidates its outstanding tokens', () => {
-  it('deletes verification tokens inside the replacement transaction', () => {
-    const transaction = registerSource.slice(
-      registerSource.indexOf('const result = await db.transaction'),
-      registerSource.indexOf('return { success: true, userId };')
-    );
+describe('a token is written with the user it belongs to', () => {
+  const bodies = transactionBodies(registerSource);
 
-    // Tolerant of formatting: the call may be broken across lines.
-    expect(transaction).toMatch(/tx\s*\.\s*delete\(verificationTokens\)/);
+  it('creates users only inside a transaction', () => {
+    const insideTransactions = bodies.join('\n');
+    const totalUserInserts = registerSource.match(/insert\(users\)/g) ?? [];
+    const transactionalUserInserts = insideTransactions.match(/insert\(users\)/g) ?? [];
+
+    expect(transactionalUserInserts.length).toBe(totalUserInserts.length);
+    expect(totalUserInserts.length).toBeGreaterThan(0);
   });
 
-  it('deletes them before the replacement user is inserted', () => {
-    const transaction = registerSource.slice(
-      registerSource.indexOf('const result = await db.transaction'),
-      registerSource.indexOf('return { success: true, userId };')
-    );
+  it('issues tokens only inside a transaction', () => {
+    const insideTransactions = bodies.join('\n');
+    const totalTokenInserts = registerSource.match(/insert\(verificationTokens\)/g) ?? [];
+    const transactionalTokenInserts =
+      insideTransactions.match(/insert\(verificationTokens\)/g) ?? [];
 
-    // Ordering matters only for clarity here, but a delete placed after the
-    // insert would also drop a token issued by a racing request.
-    expect(transaction.search(/tx\s*\.\s*delete\(verificationTokens\)/)).toBeLessThan(
-      transaction.search(/tx\s*\.\s*insert\(users\)/)
-    );
+    expect(transactionalTokenInserts.length).toBe(totalTokenInserts.length);
+    expect(totalTokenInserts.length).toBeGreaterThan(0);
   });
 
-  it('clears stale tokens for the address before issuing a new one', () => {
-    // Covers the ordinary path too: re-registering, or any earlier request that
-    // left a token behind, must not leave two live tokens for one address.
-    const issue = registerSource.slice(
-      registerSource.indexOf('// Store the verification token'),
-      registerSource.indexOf('// Send the verification email')
-    );
+  it('never creates a user without issuing its token in the same transaction', () => {
+    const creating = bodies.filter((body) => /insert\(users\)/.test(body));
 
-    expect(issue).toMatch(/delete\(verificationTokens\)/);
+    expect(creating.length).toBeGreaterThan(0);
+    for (const body of creating) {
+      expect(body).toMatch(/insert\(verificationTokens\)/);
+      expect(body).toMatch(/user_id:\s*userId/);
+    }
+  });
+});
+
+/**
+ * The token table is shared with NextAuth, whose email provider issues magic
+ * links for addresses that may not have a user yet. Deleting by address takes
+ * those with it and breaks a sign-in this route has nothing to do with.
+ *
+ * Nothing needs deleting anyway: the foreign key's ON DELETE CASCADE removes a
+ * user's tokens along with the user.
+ */
+describe('registration does not delete tokens by address', () => {
+  it('issues no delete against verification_tokens at all', () => {
+    expect(registerSource).not.toMatch(/delete\(verificationTokens\)/);
+  });
+
+  it('relies on deleting the user instead', () => {
+    expect(registerSource).toMatch(/delete\(users\)/);
   });
 });

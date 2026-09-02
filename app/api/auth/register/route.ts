@@ -145,14 +145,28 @@ export async function POST(req: NextRequest) {
     try {
       // Try to create the user - unique constraint will prevent duplicates
       userId = nanoid();
-      await db.insert(users).values({
-        id: userId,
-        name: data.name,
-        email: data.email,
-        password: hashedPassword,
-        emailVerified: null, // Email not verified yet
-        created_at: new Date(),
-        updated_at: new Date(),
+      // The token is written with the user, not after it. Issued in a later
+      // transaction, a concurrent registration could replace this user in
+      // between — and the foreign key would then reject the insert, after the
+      // default project, the admin notification and the welcome email had all
+      // already run.
+      await db.transaction(async (tx) => {
+        await tx.insert(users).values({
+          id: userId,
+          name: data.name,
+          email: data.email,
+          password: hashedPassword,
+          emailVerified: null, // Email not verified yet
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+
+        await tx.insert(verificationTokens).values({
+          identifier: data.email,
+          token: verificationToken,
+          expires: tokenExpiry,
+          user_id: userId,
+        });
       });
 
       log.info('New user created successfully', {
@@ -204,14 +218,11 @@ export async function POST(req: NextRequest) {
             oldUserId: existingUser.id,
           });
 
-          // Tokens are keyed on the email, not on a user id, so anything
-          // outstanding for this address would go on to verify the replacement
-          // row — a row that carries whoever registered last as its password.
-          // They die with the user they were issued for.
-          await tx
-            .delete(verificationTokens)
-            .where(eq(verificationTokens.identifier, data.email));
-
+          // No explicit token cleanup: the foreign key's ON DELETE CASCADE
+          // removes this user's tokens along with the user, which is the whole
+          // point of binding them. Deleting by address instead would also take
+          // NextAuth's magic-link rows for the same email — rows this route
+          // does not own and a pending sign-in still needs.
           await tx.delete(users).where(eq(users.id, existingUser.id));
 
           // Create new user with same email
@@ -224,6 +235,13 @@ export async function POST(req: NextRequest) {
             emailVerified: null,
             created_at: new Date(),
             updated_at: new Date(),
+          });
+
+          await tx.insert(verificationTokens).values({
+            identifier: data.email,
+            token: verificationToken,
+            expires: tokenExpiry,
+            user_id: userId,
           });
 
           return { success: true, userId };
@@ -291,26 +309,8 @@ export async function POST(req: NextRequest) {
       // Don't fail registration if welcome email fails
     }
     
-    // Store the verification token, bound to the user it was issued for.
-    //
-    // user_id is what makes this safe: verification resolves the account
-    // through it rather than through the address, and the foreign key's
-    // ON DELETE CASCADE means a token cannot outlive its user — so replacing an
-    // unverified registration takes its tokens with it, with no cleanup step to
-    // forget. The delete below is still worth keeping: the table permits many
-    // live tokens per address, and a second valid link is a second way in.
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(verificationTokens)
-        .where(eq(verificationTokens.identifier, data.email));
-
-      await tx.insert(verificationTokens).values({
-        identifier: data.email,
-        token: verificationToken,
-        expires: tokenExpiry,
-        user_id: userId,
-      });
-    });
+    // The verification token was written with the user, in the same transaction
+    // as whichever branch above created it.
 
     // Send the verification email
     const emailSent = await sendEmail(generateVerificationEmail(data.email, verificationToken));
