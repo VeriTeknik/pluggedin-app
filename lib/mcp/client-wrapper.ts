@@ -262,8 +262,15 @@ export function createBubblewrapConfig(
     '--ro-bind-try', '/usr/local/lib/python3', '/usr/local/lib/python3',
     '--ro-bind-try', '/usr/local/lib/python3.12', '/usr/local/lib/python3.12',
     
-    // User's local bin directory
-    '--ro-bind', paths.localBin, paths.localBin,
+    // User's local bin directory.
+    //
+    // Tolerant, like the optional paths above and below it. This is a host
+    // convention ($HOME/.local/bin) and it does not exist in the container
+    // image, where the tools live in /usr/local/bin. bwrap aborts outright if a
+    // --ro-bind source is missing, taking the child with it — which reached the
+    // user as "MCP error -32000: Connection closed" and stopped every sandboxed
+    // STDIO server from starting after the containerised cutover.
+    '--ro-bind-try', paths.localBin, paths.localBin,
     
     // Pipx venvs directory (needed for uvx and other pipx-installed tools)
     '--ro-bind-try', `${paths.userHome}/.local/share/pipx`, `${paths.userHome}/.local/share/pipx`,

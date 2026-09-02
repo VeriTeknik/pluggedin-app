@@ -10,7 +10,7 @@
  * that could expose sensitive files like ~/.ssh, ~/.bash_history, etc.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach,beforeEach, describe, expect, it } from 'vitest';
 
 import { McpServerType } from '@/db/schema';
 import { createBubblewrapConfig } from '@/lib/mcp/client-wrapper';
@@ -280,5 +280,58 @@ describe('Sandbox Regression Prevention', () => {
     // If these conditions are not met, the sandbox is bypassed!
 
     expect(true).toBe(true);
+  });
+});
+
+/**
+ * bwrap aborts if a `--ro-bind` source does not exist, and the child dies with
+ * it — surfacing to the user as "MCP error -32000: Connection closed".
+ *
+ * `paths.localBin` is `$HOME/.local/bin`, a host convention. It does not exist
+ * in the container image, so every sandboxed STDIO server failed to start after
+ * the containerised cutover. The neighbouring optional paths already use the
+ * tolerant form; this one did not.
+ */
+describe('the sandbox does not abort on a directory that may not exist', () => {
+  // createBubblewrapConfig returns null off Linux, so this needs the same
+  // platform setup the nested suites above use — without it the test fails on
+  // a macOS or Windows runner for a reason that has nothing to do with binds.
+  const originalPlatform = process.platform;
+
+  beforeEach(() => {
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+  });
+
+  it('binds the local bin directory read-only and tolerantly', async () => {
+    const { createBubblewrapConfig } = await import('@/lib/mcp/client-wrapper');
+
+    const config = createBubblewrapConfig({
+      name: 'probe',
+      type: McpServerType.STDIO,
+      command: 'npx',
+      args: ['some-server'],
+    } as never);
+
+    const args: string[] = (config as { args?: string[] } | null)?.args ?? [];
+    expect(args.length).toBeGreaterThan(0);
+
+    // A bind is `<flag> <source> <dest>`, and source and dest are the same path
+    // here — so only look at entries that are actually a flag.
+    const localBinFlags = args
+      .map((arg, i) => ({ arg, next: args[i + 1] }))
+      .filter(({ arg, next }) => arg.startsWith('--') && next?.endsWith('/.local/bin'))
+      .map(({ arg }) => arg);
+
+    expect(localBinFlags.length).toBeGreaterThan(0);
+    // Exactly --ro-bind-try. `--bind-try` would also survive a missing source,
+    // but it would make the mount writable — a regression this test has to
+    // fail on, not wave through.
+    for (const flag of localBinFlags) {
+      expect(flag).toBe('--ro-bind-try');
+    }
   });
 });
