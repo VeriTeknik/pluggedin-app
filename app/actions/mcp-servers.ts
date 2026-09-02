@@ -741,6 +741,18 @@ export async function bulkImportMcpServers(
   for (const [name, serverConfig] of serverEntries) {
     const serverType = serverConfig.type || McpServerType.STDIO;
 
+    // An unrecognised type reaches the insert unchanged and fails there, which
+    // aborts the whole import rather than the one bad entry.
+    const KNOWN_TYPES: McpServerType[] = [
+      McpServerType.STDIO,
+      McpServerType.SSE,
+      McpServerType.STREAMABLE_HTTP,
+    ];
+    if (!KNOWN_TYPES.includes(serverType)) {
+      console.error(`Skipping server '${name}': unsupported type ${String(serverType)}`);
+      continue;
+    }
+
     // A type without the field it needs cannot connect to anything, and the
     // conditional checks below would wave it through as an ACTIVE server.
     const missingRequiredField =
