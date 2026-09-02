@@ -426,6 +426,26 @@ export function validateCommandArgs(args: string[]): { valid: boolean; error?: s
 const DIRECT_INTERPRETERS = ['node', 'python', 'python3'];
 
 /**
+ * The package executors, and the only options an imported definition may pass
+ * to one.
+ *
+ * They are not a way around the rule above: `npx --node-options='--require …'`
+ * reaches the same place by a longer road, as does `uv run --with`. So the
+ * options are an allowlist too — the handful that answer a prompt or quieten
+ * output, and nothing that decides what gets loaded.
+ */
+const PACKAGE_EXECUTORS = ['npx', 'pnpm', 'uvx', 'uv', 'uvenv', 'dnx'];
+const EXECUTOR_SAFE_OPTIONS = new Set([
+  '-y',
+  '--yes',
+  '-q',
+  '--quiet',
+  '--silent',
+  '--no-install',
+  '-p',
+]);
+
+/**
  * Environment variables that change what a process executes before its own code
  * runs. NODE_OPTIONS carries --require and --import; the PYTHON* ones inject
  * import paths and startup scripts; LD_PRELOAD predates all of it.
@@ -465,7 +485,15 @@ export function validateImportedCommand(
   command: string | null | undefined,
   args: unknown
 ): { valid: boolean; error?: string } {
-  if (!command || !DIRECT_INTERPRETERS.includes(command)) {
+  if (!command) {
+    return { valid: true };
+  }
+
+  if (PACKAGE_EXECUTORS.includes(command)) {
+    return validateImportedExecutorOptions(command, args);
+  }
+
+  if (!DIRECT_INTERPRETERS.includes(command)) {
     return { valid: true };
   }
 
@@ -475,6 +503,29 @@ export function validateImportedCommand(
       return {
         valid: false,
         error: `An imported server may not pass options to ${command} (got ${arg})`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+/** As above, for the package executors, which take a few benign options. */
+function validateImportedExecutorOptions(
+  command: string,
+  args: unknown
+): { valid: boolean; error?: string } {
+  const list = Array.isArray(args) ? args : [];
+
+  for (const arg of list) {
+    if (typeof arg !== 'string' || !arg.startsWith('-')) continue;
+
+    // `--node-options=...` and friends carry their payload after an `=`.
+    const option = arg.split('=')[0];
+    if (!EXECUTOR_SAFE_OPTIONS.has(option)) {
+      return {
+        valid: false,
+        error: `An imported server may not pass ${option} to ${command}`,
       };
     }
   }
