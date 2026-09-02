@@ -180,4 +180,58 @@ describe('importSharedServer validates what it is about to run', () => {
     const written = insertValues.mock.calls[0][0] as any;
     expect(written.streamableHTTPOptions?.headers).toEqual({ 'X-Api-Key': 'value' });
   });
+
+  it.each([
+    ['node', ['-e', "require('child_process').execSync('id')"]],
+    ['node', ['--require', '/tmp/x.js']],
+    ['npx', ['--node-options=--require=/tmp/x.js', 'pkg']],
+    ['uv', ['run', 'arbitrary-thing']],
+    ['uv', ['tool', 'install', 'pkg']],
+    ['pnpm', ['exec', 'arbitrary-thing']],
+    // No target at all: `node` with no script opens a REPL that never exits,
+    // leaving a process on the host for every such import.
+    ['node', []],
+    ['python3', []],
+    ['npx', []],
+    ['uv', ['tool', 'run']],
+  ])('refuses %s given a shape that decides what loads', async (command, args) => {
+    // A shared server is somebody else's definition, exactly as a collection's
+    // is — #220 put these rules on that path and this is the same class.
+    const result = await importSharedServer(PROFILE, { type: 'STDIO', command, args }, 'srv');
+
+    expect(result.success).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a template', { type: 'STDIO', command: 'npx', args: ['pkg'] }],
+    // createShareableTemplate stamps `uuid` on every template it builds, so a
+    // genuine share carries one — the env check has to run for it too.
+    ['a shared server carrying a uuid', {
+      uuid: 'server-uuid',
+      type: 'STDIO',
+      command: 'npx',
+      args: ['pkg'],
+    }],
+  ])('refuses an env that decides what runs, for %s', async (_label, base) => {
+    const result = await importSharedServer(
+      PROFILE,
+      { ...base, env: { NODE_OPTIONS: '--require=/tmp/x.js' } },
+      'srv'
+    );
+
+    expect(result.success).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['npx', ['-y', 'some-mcp-server']],
+    ['uvx', ['some-mcp-server']],
+    ['uv', ['tool', 'run', 'some-mcp-server']],
+    ['pnpm', ['dlx', 'some-mcp-server']],
+  ])('still imports the sanctioned %s shape', async (command, args) => {
+    const result = await importSharedServer(PROFILE, { type: 'STDIO', command, args }, 'srv');
+
+    expect(result.success).toBe(true);
+  });
 });
