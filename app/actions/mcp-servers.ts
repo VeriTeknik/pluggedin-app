@@ -916,7 +916,12 @@ export async function importSharedServer(
       return { success: false, error: importedCommand.error };
     }
 
-    const importedEnv = validateImportedEnv(isTemplate ? serverData.env : undefined);
+    // Validated unconditionally rather than mirroring `isTemplate`. That flag
+    // is `!serverData.uuid`, but createShareableTemplate puts `uuid` on every
+    // template it builds — so it is false for a genuine share, and mirroring it
+    // meant this check never ran on anything. Checking what arrived is correct
+    // whatever the write path below decides to keep.
+    const importedEnv = validateImportedEnv(serverData.env);
     if (!importedEnv.valid) {
       return { success: false, error: importedEnv.error };
     }

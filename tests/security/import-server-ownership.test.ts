@@ -197,10 +197,20 @@ describe('importSharedServer validates what it is about to run', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('refuses an env that decides what runs', async () => {
+  it.each([
+    ['a template', { type: 'STDIO', command: 'npx', args: ['pkg'] }],
+    // createShareableTemplate stamps `uuid` on every template it builds, so a
+    // genuine share carries one — the env check has to run for it too.
+    ['a shared server carrying a uuid', {
+      uuid: 'server-uuid',
+      type: 'STDIO',
+      command: 'npx',
+      args: ['pkg'],
+    }],
+  ])('refuses an env that decides what runs, for %s', async (_label, base) => {
     const result = await importSharedServer(
       PROFILE,
-      { type: 'STDIO', command: 'npx', args: ['pkg'], env: { NODE_OPTIONS: '--require=/tmp/x.js' } },
+      { ...base, env: { NODE_OPTIONS: '--require=/tmp/x.js' } },
       'srv'
     );
 
