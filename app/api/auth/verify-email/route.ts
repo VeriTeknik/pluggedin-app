@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { profilesTable, projectsTable, users, verificationTokens } from '@/db/schema';
+import { users, verificationTokens } from '@/db/schema';
+import { createDefaultProject } from '@/lib/default-project-creation';
 
 const verifyEmailSchema = z.object({
   token: z.string(),
@@ -144,63 +145,13 @@ export async function POST(req: NextRequest) {
         )
       );
 
-    // Create a default project for the newly verified user
+    // Create a default project for the newly verified user.
+    //
+    // Delegated rather than inlined: createDefaultProject locks the user row
+    // and returns any existing project, so a user who already has one from
+    // registration or a first page load does not get a second.
     try {
-      // Manually insert a default project for this user
-      await db.transaction(async (tx) => {
-        // Insert the project
-        const [project] = await tx
-          .insert(projectsTable)
-          .values({
-            name: 'Default Hub',
-            active_profile_uuid: null,
-            user_id: user.id,
-          })
-          .returning();
-
-        // Create the default profile
-        const [profile] = await tx
-          .insert(profilesTable)
-          .values({
-            name: 'Default Workspace',
-            project_uuid: project.uuid,
-          })
-          .returning();
-
-        // Update the project with the profile UUID
-        await tx
-          .update(projectsTable)
-          .set({ active_profile_uuid: profile.uuid })
-          .where(eq(projectsTable.uuid, project.uuid));
-
-        // Add sample MCP servers within the same transaction
-        try {
-          const { SAMPLE_MCP_SERVERS } = await import('@/lib/sample-mcp-servers');
-          const { mcpServersTable, McpServerType } = await import('@/db/schema');
-
-          const serversToAdd = SAMPLE_MCP_SERVERS.map(server => ({
-            profile_uuid: profile.uuid,
-            name: server.name,
-            slug: server.slug,
-            description: server.description,
-            type: server.type,
-            command: server.type === McpServerType.STDIO ? server.command : undefined,
-            args: server.type === McpServerType.STDIO ? server.args : undefined,
-            env: server.type === McpServerType.STDIO ? server.env : undefined,
-            url: server.type === McpServerType.STREAMABLE_HTTP ? server.url : undefined,
-            headers: server.type === McpServerType.STREAMABLE_HTTP ? server.headers : undefined,
-            notes: server.notes,
-            created_at: new Date(),
-            updated_at: new Date()
-          }));
-
-          await tx.insert(mcpServersTable).values(serversToAdd);
-          console.log(`✅ Added ${SAMPLE_MCP_SERVERS.length} sample MCP servers for profile ${profile.uuid}`);
-        } catch (error) {
-          console.error('Failed to add sample MCP servers:', error);
-          // Don't fail the verification process if sample servers can't be added
-        }
-      });
+      await createDefaultProject(user.id);
     } catch (projectError) {
       console.error('Error creating default project:', projectError);
       // We won't fail the verification process if project creation fails
