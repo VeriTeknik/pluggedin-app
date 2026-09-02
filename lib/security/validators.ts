@@ -521,6 +521,12 @@ export function validateImportedCommand(
     }
   }
 
+  // An interpreter with nothing to run opens a REPL and never exits, so every
+  // such import leaves a process behind on the host.
+  if (list.length === 0) {
+    return { valid: false, error: `An imported ${command} server must name a script to run` };
+  }
+
   return { valid: true };
 }
 
@@ -559,6 +565,14 @@ function validateImportedExecutorOptions(
         error: `An imported server must invoke ${command} as \`${command} ${required.join(' ')}\``,
       };
     }
+
+    if (positionals.length <= required.length) {
+      return { valid: false, error: `An imported ${command} server must name a package` };
+    }
+  } else if (
+    !list.some((arg) => typeof arg === 'string' && !arg.startsWith('-'))
+  ) {
+    return { valid: false, error: `An imported ${command} server must name a package` };
   }
 
   return { valid: true };
