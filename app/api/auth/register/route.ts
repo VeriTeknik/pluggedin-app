@@ -8,8 +8,8 @@ import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
 import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
-import { isPasswordComplex } from '@/lib/auth-security';
 import { BCRYPT_COST_FACTOR, registerSchema } from '@/lib/auth-constants';
+import { isPasswordComplex } from '@/lib/auth-security';
 import { createDefaultProject } from '@/lib/default-project-creation';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
@@ -204,6 +204,14 @@ export async function POST(req: NextRequest) {
             oldUserId: existingUser.id,
           });
 
+          // Tokens are keyed on the email, not on a user id, so anything
+          // outstanding for this address would go on to verify the replacement
+          // row — a row that carries whoever registered last as its password.
+          // They die with the user they were issued for.
+          await tx
+            .delete(verificationTokens)
+            .where(eq(verificationTokens.identifier, data.email));
+
           await tx.delete(users).where(eq(users.id, existingUser.id));
 
           // Create new user with same email
@@ -283,11 +291,19 @@ export async function POST(req: NextRequest) {
       // Don't fail registration if welcome email fails
     }
     
-    // Store the verification token
-    await db.insert(verificationTokens).values({
-      identifier: data.email,
-      token: verificationToken,
-      expires: tokenExpiry,
+    // Store the verification token. Any earlier one for this address is
+    // dropped first: the table permits many live tokens per email, and a
+    // second valid link is a second way in.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(verificationTokens)
+        .where(eq(verificationTokens.identifier, data.email));
+
+      await tx.insert(verificationTokens).values({
+        identifier: data.email,
+        token: verificationToken,
+        expires: tokenExpiry,
+      });
     });
 
     // Send the verification email
