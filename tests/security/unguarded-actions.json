@@ -30,8 +30,6 @@
   "app/actions/mcp-server-metrics.ts#trackServerInstallation",
   "app/actions/mcp-server-user-rating.ts#getUserRating",
   "app/actions/mcp-server-user-rating.ts#getUserRatingsForServers",
-  "app/actions/mcp-servers.ts#bulkImportMcpServers",
-  "app/actions/mcp-servers.ts#importSharedServer",
   "app/actions/notifications.ts#deleteAllNotifications",
   "app/actions/notifications.ts#deleteNotification",
   "app/actions/notifications.ts#getNotifications",

@@ -1,6 +1,7 @@
 'use server';
 
 import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { db } from '@/db';
 import {
@@ -54,6 +55,18 @@ async function applyRateLimit(
   
   if (!rateLimitResult.allowed) {
     throw new Error(formatRateLimitError(rateLimitResult));
+  }
+}
+
+
+/**
+ * withProfileAuth turns away an anonymous caller by throwing a Next redirect.
+ * Actions here answer with a { success, error } shape, so each catch has to let
+ * that one through rather than reporting it as a failure.
+ */
+function rethrowIfRedirect(error: unknown): void {
+  if (isRedirectError(error)) {
+    throw error;
   }
 }
 
@@ -711,6 +724,10 @@ export async function bulkImportMcpServers(
     throw new Error('Current workspace not found');
   }
 
+  // Checking that a profile was supplied is not checking it is the caller's.
+  // Every sibling in this file wraps its body this way; this one did not, and
+  // each imported server lands with status ACTIVE.
+  return withProfileAuth(profileUuid, async () => {
   const { mcpServers } = data;
 
   const serverEntries = Object.entries(mcpServers);
@@ -791,6 +808,7 @@ export async function bulkImportMcpServers(
   }
 
   return { success: true, count: serverEntries.length };
+  });
 }
 
 /**
@@ -806,8 +824,43 @@ export async function importSharedServer(
   serverName: string
 ): Promise<{ success: boolean; server?: McpServer; error?: string }> {
   try {
+    // The profile arrives from the client and the row lands with status ACTIVE,
+    // so without this anyone could plant a server in anyone else's workspace.
+    return await withProfileAuth(profileUuid, async () => {
     // Determine if we're using the original server or a sanitized template
     const isTemplate = serverData && !serverData.uuid;
+
+    // createMcpServer validates all of this before writing; this path wrote
+    // command, args and url verbatim, which made it the softer way in.
+    const type = serverData.type;
+
+    if ((type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) && serverData.url) {
+      const urlValidation = validateMcpUrl(serverData.url);
+      if (!urlValidation.valid) {
+        return { success: false, error: urlValidation.error };
+      }
+    }
+
+    if (type === McpServerType.STDIO && serverData.command) {
+      const commandValidation = validateCommand(serverData.command);
+      if (!commandValidation.valid) {
+        return { success: false, error: commandValidation.error };
+      }
+    }
+
+    if (serverData.args && serverData.args.length > 0) {
+      const argsValidation = validateCommandArgs(serverData.args);
+      if (!argsValidation.valid) {
+        return { success: false, error: argsValidation.error };
+      }
+    }
+
+    if (type === McpServerType.STREAMABLE_HTTP && serverData.streamableHTTPOptions?.headers) {
+      const headerValidation = validateHeaders(serverData.streamableHTTPOptions.headers);
+      if (!headerValidation.valid) {
+        return { success: false, error: headerValidation.error };
+      }
+    }
     
     // Use the template values or the original server values with appropriate defaults
     const serverToImport = {
@@ -867,11 +920,13 @@ export async function importSharedServer(
       success: true,
       server: newServer as unknown as McpServer,
     };
+    });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error importing shared server:', error);
     return {
       success: false,
-      error: 'An error occurred while importing the server',
+      error: error instanceof Error ? error.message : 'An error occurred while importing the server',
     };
   }
 }
