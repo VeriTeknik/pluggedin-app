@@ -22,6 +22,8 @@ import {
   validateCommand,
   validateCommandArgs,
   validateHeaders,
+  validateImportedCommand,
+  validateImportedEnv,
   validateMcpUrl,
 } from '@/lib/security/validators';
 import { formatRateLimitError,rateLimitServerAction, ServerActionRateLimits } from '@/lib/server-action-rate-limiter';
@@ -906,9 +908,18 @@ export async function importSharedServer(
       sanitizedArgs = argsValidation.sanitizedArgs ?? serverData.args;
     }
 
-    // TODO: also apply validateImportedCommand / validateImportedEnv here once
-    // #220 lands them in lib/security/validators.ts — the same rules belong on
-    // this path, and it is the same class of import.
+    // A shared server is somebody else's definition, exactly as a collection's
+    // is — so the same two rules apply: the invocation shape is allowlisted,
+    // and the environment may not decide what the process loads.
+    const importedCommand = validateImportedCommand(serverData.command, serverData.args);
+    if (!importedCommand.valid) {
+      return { success: false, error: importedCommand.error };
+    }
+
+    const importedEnv = validateImportedEnv(isTemplate ? serverData.env : undefined);
+    if (!importedEnv.valid) {
+      return { success: false, error: importedEnv.error };
+    }
 
     let sanitizedHeaders: Record<string, string> | undefined;
     if (type === McpServerType.STREAMABLE_HTTP && serverData.streamableHTTPOptions?.headers) {

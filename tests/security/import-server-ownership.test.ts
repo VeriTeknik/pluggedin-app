@@ -180,4 +180,42 @@ describe('importSharedServer validates what it is about to run', () => {
     const written = insertValues.mock.calls[0][0] as any;
     expect(written.streamableHTTPOptions?.headers).toEqual({ 'X-Api-Key': 'value' });
   });
+
+  it.each([
+    ['node', ['-e', "require('child_process').execSync('id')"]],
+    ['node', ['--require', '/tmp/x.js']],
+    ['npx', ['--node-options=--require=/tmp/x.js', 'pkg']],
+    ['uv', ['run', 'arbitrary-thing']],
+    ['uv', ['tool', 'install', 'pkg']],
+    ['pnpm', ['exec', 'arbitrary-thing']],
+  ])('refuses %s given a shape that decides what loads', async (command, args) => {
+    // A shared server is somebody else's definition, exactly as a collection's
+    // is — #220 put these rules on that path and this is the same class.
+    const result = await importSharedServer(PROFILE, { type: 'STDIO', command, args }, 'srv');
+
+    expect(result.success).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses an env that decides what runs', async () => {
+    const result = await importSharedServer(
+      PROFILE,
+      { type: 'STDIO', command: 'npx', args: ['pkg'], env: { NODE_OPTIONS: '--require=/tmp/x.js' } },
+      'srv'
+    );
+
+    expect(result.success).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['npx', ['-y', 'some-mcp-server']],
+    ['uvx', ['some-mcp-server']],
+    ['uv', ['tool', 'run', 'some-mcp-server']],
+    ['pnpm', ['dlx', 'some-mcp-server']],
+  ])('still imports the sanctioned %s shape', async (command, args) => {
+    const result = await importSharedServer(PROFILE, { type: 'STDIO', command, args }, 'srv');
+
+    expect(result.success).toBe(true);
+  });
 });
