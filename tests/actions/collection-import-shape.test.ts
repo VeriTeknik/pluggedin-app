@@ -126,6 +126,9 @@ describe('importing a collection reads its server list', () => {
     // No flag at all: these run whatever they are handed.
     ['uv', ['run', 'arbitrary-thing']],
     ['pnpm', ['exec', 'arbitrary-thing']],
+    // The right first token is not the right sequence.
+    ['uv', ['tool', 'install', 'pkg']],
+    ['uv', ['tool']],
   ])('refuses %s given options that decide what loads', async (command, args) => {
     // `node` is on the allowlist because running your own server is the point.
     // A command that arrives inside somebody else's collection is not your own,

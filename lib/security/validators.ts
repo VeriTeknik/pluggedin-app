@@ -446,8 +446,8 @@ const PACKAGE_EXECUTORS = ['npx', 'pnpm', 'uvx', 'uv', 'uvenv', 'dnx'];
  * first positional is the package itself.
  */
 const EXECUTOR_SUBCOMMANDS: Record<string, string[]> = {
-  uv: ['tool'],   // `uv tool run <package>`
-  pnpm: ['dlx'],  // `pnpm dlx <package>`
+  uv: ['tool', 'run'], // the whole sequence: `uv tool install` is not this
+  pnpm: ['dlx'],
 };
 const EXECUTOR_SAFE_OPTIONS = new Set([
   '-y',
@@ -546,14 +546,17 @@ function validateImportedExecutorOptions(
 
   const required = EXECUTOR_SUBCOMMANDS[command];
   if (required) {
-    const firstPositional = list.find(
+    // The whole sequence has to match, in order. Checking only the first token
+    // let `uv tool install <package>` through, which is not running a package.
+    const positionals = list.filter(
       (arg): arg is string => typeof arg === 'string' && !arg.startsWith('-')
     );
 
-    if (!firstPositional || !required.includes(firstPositional)) {
+    const matches = required.every((token, index) => positionals[index] === token);
+    if (!matches) {
       return {
         valid: false,
-        error: `An imported server must invoke ${command} as \`${command} ${required[0]}\``,
+        error: `An imported server must invoke ${command} as \`${command} ${required.join(' ')}\``,
       };
     }
   }
