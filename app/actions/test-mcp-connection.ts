@@ -324,6 +324,10 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
               },
             };
           } else {
+            // Clone before reading: once the body is consumed the response is
+            // disturbed, and clone() then throws rather than returning a copy.
+            const forCorsCheck = initResponse.clone();
+
             // Try to read response body for CORS checking
             let responseText = '';
             try {
@@ -331,9 +335,9 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
             } catch {
               // Ignore errors reading response body
             }
-            
+
             // Check for CORS issues
-            const corsDetails = await checkForCorsIssue(initResponse.clone(), validated.url, responseText);
+            const corsDetails = await checkForCorsIssue(forCorsCheck, validated.url, responseText);
             
             // Check if this is a 401 authentication error
             const requiresAuth = initResponse.status === 401;
