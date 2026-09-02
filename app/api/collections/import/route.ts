@@ -6,6 +6,12 @@ import { db } from '@/db';
 import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { encryptServerData } from '@/lib/encryption';
+import {
+  validateCommand,
+  validateCommandArgs,
+  validateHeaders,
+  validateMcpUrl,
+} from '@/lib/security/validators';
 
 /**
  * @swagger
@@ -90,6 +96,55 @@ import { encryptServerData } from '@/lib/encryption';
  *                   type: string
  *                   example: Failed to import collection
  */
+
+/**
+ * Why a shared server must not be imported, or null if it is acceptable.
+ *
+ * The same allowlist createMcpServer enforces: the type must bring the field it
+ * needs, the command must be one of the permitted binaries, the arguments must
+ * be free of shell metacharacters, and the URL must not point inside the
+ * network.
+ */
+function rejectUnsafeServer(serverConfig: any): string | null {
+  const type = serverConfig?.type || McpServerType.STDIO;
+
+  if (type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) {
+    if (!serverConfig?.url) {
+      return 'no URL for an SSE or Streamable HTTP server';
+    }
+    const urlValidation = validateMcpUrl(serverConfig.url);
+    if (!urlValidation.valid) {
+      return urlValidation.error ?? 'invalid URL';
+    }
+  } else if (type === McpServerType.STDIO) {
+    if (!serverConfig?.command) {
+      return 'no command for a STDIO server';
+    }
+    const commandValidation = validateCommand(serverConfig.command);
+    if (!commandValidation.valid) {
+      return commandValidation.error ?? 'invalid command';
+    }
+  } else {
+    return `unsupported server type: ${String(type)}`;
+  }
+
+  if (Array.isArray(serverConfig?.args) && serverConfig.args.length > 0) {
+    const argsValidation = validateCommandArgs(serverConfig.args);
+    if (!argsValidation.valid) {
+      return argsValidation.error ?? 'invalid arguments';
+    }
+  }
+
+  if (serverConfig?.headers) {
+    const headerValidation = validateHeaders(serverConfig.headers);
+    if (!headerValidation.valid) {
+      return headerValidation.error ?? 'invalid headers';
+    }
+  }
+
+  return null;
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getAuthSession();
@@ -147,6 +202,16 @@ export async function POST(request: Request) {
     for (const serverConfig of sharedServers) {
       const serverName = (serverConfig as any)?.name;
       if (!serverName) {
+        continue;
+      }
+
+      // A collection is public and anyone can publish one, so this content is
+      // attacker-controlled and these rows land with status ACTIVE. #214's
+      // sanitizer redacts credentials but says nothing about what may run, so
+      // the same checks createMcpServer applies are applied here.
+      const rejection = rejectUnsafeServer(serverConfig);
+      if (rejection) {
+        console.warn(`Skipping server '${serverName}' from collection ${collectionUuid}: ${rejection}`);
         continue;
       }
 
