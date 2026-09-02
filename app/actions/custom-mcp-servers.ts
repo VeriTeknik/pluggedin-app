@@ -8,6 +8,7 @@ import {
   customMcpServersTable,
   McpServerStatus,
 } from '@/db/schema';
+import { withProfileAuth } from '@/lib/auth-helpers';
 import { CustomMcpServer } from '@/types/custom-mcp-server';
 import {
   CreateCustomMcpServerData,
@@ -15,6 +16,7 @@ import {
 } from '@/types/custom-mcp-server';
 
 export async function getCustomMcpServers(profileUuid: string) {
+  return withProfileAuth(profileUuid, async () => {
   const servers = await db
     .select({
       uuid: customMcpServersTable.uuid,
@@ -43,12 +45,14 @@ export async function getCustomMcpServers(profileUuid: string) {
     .orderBy(desc(customMcpServersTable.created_at));
 
   return servers as CustomMcpServer[];
+  });
 }
 
 export async function getCustomMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<CustomMcpServer | null> {
+  return withProfileAuth(profileUuid, async () => {
   const server = await db
     .select({
       uuid: customMcpServersTable.uuid,
@@ -78,12 +82,14 @@ export async function getCustomMcpServerByUuid(
   }
 
   return server[0] as CustomMcpServer;
+  });
 }
 
 export async function deleteCustomMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
+  return withProfileAuth(profileUuid, async () => {
   // First get the code_uuid
   const server = await db
     .select({ code_uuid: customMcpServersTable.code_uuid })
@@ -107,6 +113,7 @@ export async function deleteCustomMcpServerByUuid(
         )
       );
   }
+  });
 }
 
 export async function toggleCustomMcpServerStatus(
@@ -114,6 +121,7 @@ export async function toggleCustomMcpServerStatus(
   uuid: string,
   newStatus: McpServerStatus
 ): Promise<void> {
+  return withProfileAuth(profileUuid, async () => {
   await db
     .update(customMcpServersTable)
     .set({ status: newStatus })
@@ -123,12 +131,14 @@ export async function toggleCustomMcpServerStatus(
         eq(customMcpServersTable.profile_uuid, profileUuid)
       )
     );
+  });
 }
 
 export async function createCustomMcpServer(
   profileUuid: string,
   data: CreateCustomMcpServerData
 ) {
+  return withProfileAuth(profileUuid, async () => {
   const [server] = await db
     .insert(customMcpServersTable)
     .values({
@@ -143,6 +153,7 @@ export async function createCustomMcpServer(
     .returning();
 
   return server;
+  });
 }
 
 export async function updateCustomMcpServer(
@@ -150,6 +161,7 @@ export async function updateCustomMcpServer(
   uuid: string,
   data: UpdateCustomMcpServerData
 ): Promise<void> {
+  return withProfileAuth(profileUuid, async () => {
   await db
     .update(customMcpServersTable)
     .set({
@@ -161,4 +173,5 @@ export async function updateCustomMcpServer(
         eq(customMcpServersTable.profile_uuid, profileUuid)
       )
     );
+  });
 }
