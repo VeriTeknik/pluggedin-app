@@ -1,6 +1,7 @@
 'use server';
 
 import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { db } from '@/db';
 import {
@@ -17,7 +18,12 @@ import {
 import { withProfileAuth, withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { mcpServerOperations } from '@/lib/mcp/metrics';
-import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
+import {
+  validateCommand,
+  validateCommandArgs,
+  validateHeaders,
+  validateMcpUrl,
+} from '@/lib/security/validators';
 import { formatRateLimitError,rateLimitServerAction, ServerActionRateLimits } from '@/lib/server-action-rate-limiter';
 import { sanitizeServerTemplate } from '@/lib/server-template';
 import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
@@ -54,6 +60,18 @@ async function applyRateLimit(
   
   if (!rateLimitResult.allowed) {
     throw new Error(formatRateLimitError(rateLimitResult));
+  }
+}
+
+
+/**
+ * withProfileAuth turns away an anonymous caller by throwing a Next redirect.
+ * Actions here answer with a { success, error } shape, so each catch has to let
+ * that one through rather than reporting it as a failure.
+ */
+function rethrowIfRedirect(error: unknown): void {
+  if (isRedirectError(error)) {
+    throw error;
   }
 }
 
@@ -711,6 +729,10 @@ export async function bulkImportMcpServers(
     throw new Error('Current workspace not found');
   }
 
+  // Checking that a profile was supplied is not checking it is the caller's.
+  // Every sibling in this file wraps its body this way; this one did not, and
+  // each imported server lands with status ACTIVE.
+  return withProfileAuth(profileUuid, async () => {
   const { mcpServers } = data;
 
   const serverEntries = Object.entries(mcpServers);
@@ -718,7 +740,31 @@ export async function bulkImportMcpServers(
 
   for (const [name, serverConfig] of serverEntries) {
     const serverType = serverConfig.type || McpServerType.STDIO;
-    
+
+    // An unrecognised type reaches the insert unchanged and fails there, which
+    // aborts the whole import rather than the one bad entry.
+    const KNOWN_TYPES: McpServerType[] = [
+      McpServerType.STDIO,
+      McpServerType.SSE,
+      McpServerType.STREAMABLE_HTTP,
+    ];
+    if (!KNOWN_TYPES.includes(serverType)) {
+      console.error(`Skipping server '${name}': unsupported type ${String(serverType)}`);
+      continue;
+    }
+
+    // A type without the field it needs cannot connect to anything, and the
+    // conditional checks below would wave it through as an ACTIVE server.
+    const missingRequiredField =
+      (serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP)
+        ? !serverConfig.url
+        : !serverConfig.command;
+
+    if (missingRequiredField) {
+      console.error(`Skipping server '${name}': missing the field its type requires`);
+      continue;
+    }
+
     // Validate URL for SSE and StreamableHTTP servers
     if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && serverConfig.url) {
       const urlValidation = validateMcpUrl(serverConfig.url);
@@ -790,7 +836,8 @@ export async function bulkImportMcpServers(
       });
   }
 
-  return { success: true, count: serverEntries.length };
+  return { success: true, count: createdServerUuids.length };
+  });
 }
 
 /**
@@ -806,8 +853,75 @@ export async function importSharedServer(
   serverName: string
 ): Promise<{ success: boolean; server?: McpServer; error?: string }> {
   try {
+    // The profile arrives from the client and the row lands with status ACTIVE,
+    // so without this anyone could plant a server in anyone else's workspace.
+    return await withProfileAuth(profileUuid, async () => {
     // Determine if we're using the original server or a sanitized template
     const isTemplate = serverData && !serverData.uuid;
+
+    // createMcpServer validates all of this before writing; this path wrote
+    // command, args and url verbatim, which made it the softer way in.
+    const type = serverData.type;
+
+    // Conditional checks alone let a type through without the field it needs:
+    // an SSE entry with no url, or a STDIO entry with no command, was written
+    // as an ACTIVE server that cannot connect to anything.
+    if (type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) {
+      if (!serverData.url) {
+        return { success: false, error: 'A URL is required for SSE and Streamable HTTP servers' };
+      }
+    } else if (type === McpServerType.STDIO) {
+      if (!serverData.command) {
+        return { success: false, error: 'A command is required for STDIO servers' };
+      }
+    } else {
+      return { success: false, error: `Unsupported server type: ${String(type)}` };
+    }
+
+    if ((type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) && serverData.url) {
+      const urlValidation = validateMcpUrl(serverData.url);
+      if (!urlValidation.valid) {
+        return { success: false, error: urlValidation.error };
+      }
+    }
+
+    if (type === McpServerType.STDIO && serverData.command) {
+      const commandValidation = validateCommand(serverData.command);
+      if (!commandValidation.valid) {
+        return { success: false, error: commandValidation.error };
+      }
+    }
+
+    // A truthy non-array with no numeric length skipped this entirely and was
+    // then JSON-stringified into args_encrypted.
+    let sanitizedArgs: string[] = [];
+    if (serverData.args !== undefined && serverData.args !== null) {
+      if (!Array.isArray(serverData.args)) {
+        return { success: false, error: 'Arguments must be an array' };
+      }
+      const argsValidation = validateCommandArgs(serverData.args);
+      if (!argsValidation.valid) {
+        return { success: false, error: argsValidation.error };
+      }
+      sanitizedArgs = argsValidation.sanitizedArgs ?? serverData.args;
+    }
+
+    // TODO: also apply validateImportedCommand / validateImportedEnv here once
+    // #220 lands them in lib/security/validators.ts — the same rules belong on
+    // this path, and it is the same class of import.
+
+    let sanitizedHeaders: Record<string, string> | undefined;
+    if (type === McpServerType.STREAMABLE_HTTP && serverData.streamableHTTPOptions?.headers) {
+      const headers = serverData.streamableHTTPOptions.headers;
+      if (typeof headers !== 'object' || Array.isArray(headers)) {
+        return { success: false, error: 'Headers must be an object' };
+      }
+      const headerValidation = validateHeaders(headers);
+      if (!headerValidation.valid) {
+        return { success: false, error: headerValidation.error };
+      }
+      sanitizedHeaders = headerValidation.sanitizedHeaders;
+    }
     
     // Use the template values or the original server values with appropriate defaults
     const serverToImport = {
@@ -815,7 +929,7 @@ export async function importSharedServer(
       description: serverData.description, // Ensure description is properly transferred
       type: serverData.type,
       command: serverData.command,
-      args: serverData.args || [],
+      args: sanitizedArgs,
       // If it's a template, use the sanitized env, otherwise use empty object
       env: isTemplate && serverData.env ? serverData.env : {}, 
       url: serverData.url,
@@ -826,6 +940,9 @@ export async function importSharedServer(
       notes: isTemplate
         ? `Imported from template shared by ${serverData.sharedBy || 'another user'} (original server ID: ${serverData.originalServerUuid || 'unknown'})`
         : `Imported from shared server originally created by ${serverData.profile_uuid}`,
+      // A header-authenticated Streamable HTTP server was validated and then
+      // inserted without the headers it needs.
+      ...(sanitizedHeaders ? { streamableHTTPOptions: { headers: sanitizedHeaders } } : {}),
     };
 
     // Encrypt sensitive fields before insertion
@@ -867,11 +984,13 @@ export async function importSharedServer(
       success: true,
       server: newServer as unknown as McpServer,
     };
+    });
   } catch (error) {
+    rethrowIfRedirect(error);
     console.error('Error importing shared server:', error);
     return {
       success: false,
-      error: 'An error occurred while importing the server',
+      error: error instanceof Error ? error.message : 'An error occurred while importing the server',
     };
   }
 }
