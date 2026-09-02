@@ -213,4 +213,49 @@ describe('importing a collection reads its server list', () => {
 
     expect(values).toHaveBeenCalled();
   });
+
+  it('stores the headers the validator returned', async () => {
+    // validateHeaders currently returns a valid set unchanged, so this pins the
+    // contract rather than a behaviour difference: what is persisted is the
+    // validator's output, so if it ever begins stripping, the strip is kept.
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: {
+        servers: [
+          {
+            name: 'ok',
+            type: 'STREAMABLE_HTTP',
+            url: 'https://mcp.example.com/mcp',
+            headers: { 'X-Api-Key': 'value' },
+          },
+        ],
+      },
+    });
+
+    await POST(request());
+
+    const written = values.mock.calls[0][0] as { headers: Record<string, string> };
+    expect(written.headers).toEqual({ 'X-Api-Key': 'value' });
+  });
+
+  it('skips a server whose headers do not validate', async () => {
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: {
+        servers: [
+          {
+            name: 'bad',
+            type: 'STREAMABLE_HTTP',
+            url: 'https://mcp.example.com/mcp',
+            headers: { 'Bad Header Name': 'x' },
+          },
+        ],
+      },
+    });
+
+    await POST(request());
+
+    expect(values).not.toHaveBeenCalled();
+  });
 });
+

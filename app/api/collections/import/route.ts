@@ -107,37 +107,40 @@ import {
  * be free of shell metacharacters, and the URL must not point inside the
  * network.
  */
-function rejectUnsafeServer(serverConfig: any): string | null {
+function rejectUnsafeServer(serverConfig: any): {
+  reason: string | null;
+  sanitizedHeaders?: Record<string, string>;
+} {
   const type = serverConfig?.type || McpServerType.STDIO;
 
   if (type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) {
     if (!serverConfig?.url) {
-      return 'no URL for an SSE or Streamable HTTP server';
+      return { reason: 'no URL for an SSE or Streamable HTTP server' };
     }
     const urlValidation = validateMcpUrl(serverConfig.url);
     if (!urlValidation.valid) {
-      return urlValidation.error ?? 'invalid URL';
+      return { reason: urlValidation.error ?? 'invalid URL' };
     }
   } else if (type === McpServerType.STDIO) {
     if (!serverConfig?.command) {
-      return 'no command for a STDIO server';
+      return { reason: 'no command for a STDIO server' };
     }
     const commandValidation = validateCommand(serverConfig.command);
     if (!commandValidation.valid) {
-      return commandValidation.error ?? 'invalid command';
+      return { reason: commandValidation.error ?? 'invalid command' };
     }
   } else {
-    return `unsupported server type: ${String(type)}`;
+    return { reason: `unsupported server type: ${String(type)}` };
   }
 
   // A non-array `args` used to skip validation entirely and be written as-is.
   if (serverConfig?.args !== undefined && serverConfig.args !== null) {
     if (!Array.isArray(serverConfig.args)) {
-      return 'arguments must be a list';
+      return { reason: 'arguments must be a list' };
     }
     const argsValidation = validateCommandArgs(serverConfig.args);
     if (!argsValidation.valid) {
-      return argsValidation.error ?? 'invalid arguments';
+      return { reason: argsValidation.error ?? 'invalid arguments' };
     }
   }
 
@@ -147,29 +150,32 @@ function rejectUnsafeServer(serverConfig: any): string | null {
   // arbitrary code execution as the importer.
   const importedCommand = validateImportedCommand(serverConfig?.command, serverConfig?.args);
   if (!importedCommand.valid) {
-    return importedCommand.error ?? 'command not allowed for an imported server';
+    return { reason: importedCommand.error ?? 'command not allowed for an imported server' };
   }
 
   // Restricting the command buys nothing if the environment can tell the
   // interpreter what to load first.
   const importedEnv = validateImportedEnv(serverConfig?.env);
   if (!importedEnv.valid) {
-    return importedEnv.error ?? 'environment not allowed for an imported server';
+    return { reason: importedEnv.error ?? 'environment not allowed for an imported server' };
   }
 
   // Arrays and other truthy non-objects survive validateHeaders' Object.entries
   // walk, and the unsanitized original was the value persisted.
   if (serverConfig?.headers !== undefined && serverConfig.headers !== null) {
     if (typeof serverConfig.headers !== 'object' || Array.isArray(serverConfig.headers)) {
-      return 'headers must be an object';
+      return { reason: 'headers must be an object' };
     }
     const headerValidation = validateHeaders(serverConfig.headers);
     if (!headerValidation.valid) {
-      return headerValidation.error ?? 'invalid headers';
+      return { reason: headerValidation.error ?? 'invalid headers' };
     }
+    // The sanitized headers are what should be stored — persisting the original
+    // keeps whatever the validator stripped.
+    return { reason: null, sanitizedHeaders: headerValidation.sanitizedHeaders };
   }
 
-  return null;
+  return { reason: null };
 }
 
 export async function POST(request: Request) {
@@ -236,9 +242,11 @@ export async function POST(request: Request) {
       // attacker-controlled and these rows land with status ACTIVE. #214's
       // sanitizer redacts credentials but says nothing about what may run, so
       // the same checks createMcpServer applies are applied here.
-      const rejection = rejectUnsafeServer(serverConfig);
-      if (rejection) {
-        console.warn(`Skipping server '${serverName}' from collection ${collectionUuid}: ${rejection}`);
+      const checked = rejectUnsafeServer(serverConfig);
+      if (checked.reason) {
+        console.warn(
+          `Skipping server '${serverName}' from collection ${collectionUuid}: ${checked.reason}`
+        );
         continue;
       }
 
@@ -261,7 +269,7 @@ export async function POST(request: Request) {
           env: (serverConfig as any).env || {},
           url: (serverConfig as any).url || null,
           oauth_token: (serverConfig as any).oauth_token || null,
-          headers: (serverConfig as any).headers || null,
+          headers: checked.sanitizedHeaders ?? null,
           session_id: (serverConfig as any).session_id || null,
           profile_uuid: profileUuid,
           status: McpServerStatus.ACTIVE,
