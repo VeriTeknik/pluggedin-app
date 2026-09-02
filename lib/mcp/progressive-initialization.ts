@@ -12,12 +12,11 @@
  */
 
 // Import necessary types from the library - Remove Stdio/SseServerParameters
-import dns from 'node:dns/promises';
-
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
+import { pinnedHeadRequest } from '@/lib/mcp/pinned-head-request';
 import { addServerLog } from '@/lib/mcp/server-logs';
-import { isPrivateAddress, validateMcpUrl } from '@/lib/security/validators';
+import { validateMcpUrl } from '@/lib/security/validators';
 import { validateTimeouts } from '@/lib/timeout-validator';
 
 // Interface for server initialization status
@@ -122,10 +121,9 @@ async function performServerHealthChecks(
     // Only check WebSocket (SSE) servers with a URL
     // Skip health checks for Streamable HTTP servers as they may require special auth handling
     if (config.type === 'SSE' && config.url) {
-      // The url reaches fetch, and fetch follows redirects. Without this the
-      // health check is a probe of whatever the server can reach — cloud
-      // metadata, internal admin panels, neighbouring containers — with the
-      // answer handed back through the server log.
+      // Without validation this check is a probe of whatever the server can
+      // reach — cloud metadata, internal admin panels, neighbouring containers
+      // — with the answer handed back through the server log.
       const urlCheck = validateMcpUrl(config.url);
       if (!urlCheck.valid) {
         results[serverName] = false;
@@ -137,64 +135,32 @@ async function performServerHealthChecks(
         return;
       }
 
-      // The hostname passing is not enough: a name the caller controls can be
-      // pointed straight at loopback or RFC 1918 space, so check what DNS
-      // actually returns. This is still resolve-then-connect, so it does not
-      // close a rebind between the two, but it removes the trivial case.
-      try {
-        const addresses = await dns.lookup(urlCheck.parsedUrl!.hostname, { all: true });
-        if (addresses.some((entry) => isPrivateAddress(entry.address))) {
-          results[serverName] = false;
-          await addServerLog(
-            profileUuid,
-            'warn',
-            `Health check for ${serverName} skipped: host resolves to a private address`
-          );
-          return;
-        }
-      } catch (_error) {
+      // The address is resolved, checked and then pinned to the socket, so the
+      // name cannot answer differently when the connection is opened.
+      const probe = await pinnedHeadRequest(config.url, 3000);
+
+      if ('error' in probe) {
         results[serverName] = false;
         await addServerLog(
           profileUuid,
           'warn',
-          `Health check for ${serverName} skipped: host could not be resolved`
+          `Health check for ${serverName} failed: ${probe.error}`
         );
         return;
       }
 
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout for health check
+      // The redirect is not followed, but a 3xx still answers the only question
+      // this check asks: is the endpoint alive? Treating it as a failure would
+      // skip every server that legitimately redirects.
+      const reachable = probe.status >= 200 && probe.status < 400;
+      results[serverName] = reachable;
 
-        const response = await fetch(config.url, {
-          method: 'HEAD', // Use HEAD for efficiency
-          signal: controller.signal,
-          // A public url can redirect into the private network, and fetch
-          // follows redirects by default. The check only needs the first hop.
-          redirect: 'manual',
-        });
+      await addServerLog(
+        profileUuid,
+        'info',
+        `Health check for ${serverName}: ${reachable ? 'OK' : `Failed (Status: ${probe.status})`}`
+      );
 
-        clearTimeout(timeoutId);
-
-        // We do not follow the redirect, but a 3xx still answers the only
-        // question this check asks: is the endpoint alive? Treating it as a
-        // failure would skip every server that legitimately redirects.
-        const reachable = response.ok || (response.status >= 300 && response.status < 400);
-        results[serverName] = reachable;
-
-        await addServerLog(
-          profileUuid,
-          'info',
-          `Health check for ${serverName}: ${reachable ? 'OK' : `Failed (Status: ${response.status})`}`
-        );
-      } catch (error: any) {
-        results[serverName] = false;
-        await addServerLog(
-          profileUuid,
-          'warn',
-          `Health check for ${serverName} failed: ${error.name === 'AbortError' ? 'Timeout' : error.message}`
-        );
-      }
     } else {
       // STDIO and STREAMABLE_HTTP servers are assumed to be healthy for initialization purposes
       results[serverName] = true;

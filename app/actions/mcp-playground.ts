@@ -49,22 +49,30 @@ async function withOwnedProfile<T>(
   profileUuid: string,
   fn: () => Promise<T>
 ): Promise<T | { success: false; error: string }> {
+  // Two separate concerns, and both reviews on this were right.
+  //
+  // The ownership check runs on its own, so the catch cannot see errors thrown
+  // by the action body — otherwise an authorized action that threw
+  // "Unauthorized ..." of its own would be reported as a profile refusal.
+  //
+  // And within that catch, only withProfileAuth's own two refusals become a
+  // result. A database outage or a bug in the profile query keeps propagating,
+  // rather than reaching the user as an authorization decision that was never
+  // made.
   try {
-    return await withProfileAuth(profileUuid, fn);
+    await withProfileAuth(profileUuid, async () => undefined);
   } catch (error) {
     rethrowIfRedirect(error);
 
-    // Only the helper's own authorization refusals become a result. Anything
-    // else — a database outage, a bug in the profile query — must keep
-    // propagating: reporting it as "unauthorized" would be a wrong answer
-    // dressed as a considered one.
     const message = error instanceof Error ? error.message : '';
-    if (/^(Profile not found|Unauthorized)/.test(message)) {
-      return { success: false, error: message };
+    if (!/^(Profile not found|Unauthorized)/.test(message)) {
+      throw error;
     }
 
-    throw error;
+    return { success: false, error: message };
   }
+
+  return fn();
 }
 
 import { ensureLogDirectories } from './log-retention'; // Correct path alias

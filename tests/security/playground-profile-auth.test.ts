@@ -161,4 +161,21 @@ describe('getServerLogs surfaces the in-flight streaming message', () => {
     expect(result.hasPartialMessage).toBe(true);
     expect(result.logs.some((l) => l.level === 'streaming')).toBe(true);
   });
+
+  it('does not mistake the action\'s own error for a refusal', async () => {
+    // Classifying by message prefix meant an authorized action that happened
+    // to throw "Unauthorized …" from its own body was reported as a profile
+    // refusal. The ownership check and the body are now separate.
+    getAuthSession.mockResolvedValue({ user: { id: OWNER } });
+    usersFindFirst.mockResolvedValue({ id: OWNER });
+    const m = await import('@/app/actions/mcp-playground');
+
+    // executePlaygroundQuery with no active session throws from its own body.
+    const result = (await m.executePlaygroundQuery(PROFILE, 'hello')) as {
+      success?: boolean;
+      error?: string;
+    };
+
+    expect(result.error ?? '').not.toMatch(/do not have access to this profile/i);
+  });
 });
