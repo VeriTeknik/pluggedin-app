@@ -735,7 +735,19 @@ export async function bulkImportMcpServers(
 
   for (const [name, serverConfig] of serverEntries) {
     const serverType = serverConfig.type || McpServerType.STDIO;
-    
+
+    // A type without the field it needs cannot connect to anything, and the
+    // conditional checks below would wave it through as an ACTIVE server.
+    const missingRequiredField =
+      (serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP)
+        ? !serverConfig.url
+        : !serverConfig.command;
+
+    if (missingRequiredField) {
+      console.error(`Skipping server '${name}': missing the field its type requires`);
+      continue;
+    }
+
     // Validate URL for SSE and StreamableHTTP servers
     if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && serverConfig.url) {
       const urlValidation = validateMcpUrl(serverConfig.url);
@@ -833,6 +845,21 @@ export async function importSharedServer(
     // createMcpServer validates all of this before writing; this path wrote
     // command, args and url verbatim, which made it the softer way in.
     const type = serverData.type;
+
+    // Conditional checks alone let a type through without the field it needs:
+    // an SSE entry with no url, or a STDIO entry with no command, was written
+    // as an ACTIVE server that cannot connect to anything.
+    if (type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) {
+      if (!serverData.url) {
+        return { success: false, error: 'A URL is required for SSE and Streamable HTTP servers' };
+      }
+    } else if (type === McpServerType.STDIO) {
+      if (!serverData.command) {
+        return { success: false, error: 'A command is required for STDIO servers' };
+      }
+    } else {
+      return { success: false, error: `Unsupported server type: ${String(type)}` };
+    }
 
     if ((type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) && serverData.url) {
       const urlValidation = validateMcpUrl(serverData.url);
