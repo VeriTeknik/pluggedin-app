@@ -6,6 +6,11 @@ vi.mock('@/lib/auth-helpers', () => ({
 }));
 
 // Mock database
+// library.ts now imports authOptions to derive the session user; pulling in the
+// real module drags the Drizzle adapter in, which cannot take a mocked db.
+vi.mock('next-auth', () => ({ getServerSession: vi.fn(async () => ({ user: { id: 'test-user' } })) }));
+vi.mock('@/lib/auth', () => ({ authOptions: {}, getAuthSession: vi.fn() }));
+
 vi.mock('@/db', () => ({
   db: {
     insert: vi.fn().mockReturnThis(),

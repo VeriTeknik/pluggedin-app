@@ -2,10 +2,10 @@ import { readFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
 
-import { getDocByUuid } from '@/app/actions/library';
 import { authenticateApiKey } from '@/app/api/auth';
 import { ErrorResponses } from '@/lib/api-errors';
 import { getAuthSession } from '@/lib/auth';
+import { getDocByUuidFor } from '@/lib/library/queries';
 
 export async function GET(
   request: NextRequest,
@@ -43,7 +43,9 @@ export async function GET(
     // Extract uuid from params and projectUuid from query
     const { uuid } = await params;
     const { searchParams } = new URL(request.url);
-    const projectUuid = searchParams.get('projectUuid') || authenticatedProjectUuid;
+    // An API key is issued for one project. Letting the query parameter win
+    // would let a key scoped to one project read documents from another.
+    const projectUuid = authenticatedProjectUuid ?? searchParams.get('projectUuid');
 
     // Get the document using the authenticated user's ID and project UUID
     // This ensures users can only access documents within their own project
@@ -54,7 +56,7 @@ export async function GET(
       authenticatedProjectUuid
     });
     
-    const doc = await getDocByUuid(userId, uuid, projectUuid || undefined);
+    const doc = await getDocByUuidFor(userId, uuid, projectUuid || undefined);
     
     console.log('[Download] Document result:', doc ? 'Found' : 'Not found');
     if (doc) {
