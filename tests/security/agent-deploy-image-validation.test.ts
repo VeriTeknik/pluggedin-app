@@ -31,13 +31,23 @@ function walk(dir: string): string[] {
  * only knows the endpoints already thought of.
  */
 describe('every path that deploys an agent validates what it deploys', () => {
-  it('no deployAgent call site skips the validators', () => {
+  it('no deployAgent call site is reached without the validators running first', () => {
+    // Presence in the same file is not a guard: the call could sit above the
+    // validation, or behind a branch that skips it. Positions are compared, so
+    // moving either validator below the deploy fails this.
     const offenders = walk('app')
       .concat(walk('lib'))
-      .filter((file) => {
+      .flatMap((file) => {
         const src = stripComments(fs.readFileSync(file, 'utf8'));
-        if (!/\.deployAgent\s*\(/.test(src)) return false;
-        return !/validateContainerImage\s*\(/.test(src) || !/validateResourceLimits\s*\(/.test(src);
+
+        return [...src.matchAll(/\.deployAgent\s*\(/g)].flatMap((deploy) => {
+          const before = src.slice(0, deploy.index ?? 0);
+          const validated =
+            /validateContainerImage\s*\(/.test(before) &&
+            /validateResourceLimits\s*\(/.test(before);
+
+          return validated ? [] : [file];
+        });
       });
 
     expect(offenders).toEqual([]);

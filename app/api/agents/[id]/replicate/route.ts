@@ -290,10 +290,13 @@ export async function POST(
       const resources =
         overrides?.resources || (sourceMetadata.resources as Record<string, string>);
 
-      // Both come from a caller-supplied `overrides` and reach the same
-      // deployAgent() sink that app/api/agents/route.ts guards. Without these,
-      // anyone holding an API key and one agent could put an arbitrary image
-      // into the shared cluster namespace.
+      // Either value may come from the caller's `overrides`, falling back to
+      // the source agent's stored metadata — and both reach the same
+      // deployAgent() sink that app/api/agents/route.ts guards. Validating
+      // regardless of which one supplied it is the point: the override path is
+      // how an API-key holder could put an arbitrary image into the shared
+      // cluster namespace, and stored metadata predating this check is no more
+      // trustworthy.
       const imageError = validateContainerImage(image);
       if (imageError) {
         return NextResponse.json({ error: imageError }, { status: 400 });
