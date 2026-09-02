@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { clustersTable } from '@/db/schema';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 
 /**
  * Timeout for collector requests in milliseconds.
@@ -69,7 +70,8 @@ export async function GET(
     }
 
     // Proxy request to collector
-    const collectorResponse = await fetch(
+    // Same collector_url as the sibling listing route, one directory down.
+    const collectorResponse = await safeFetch(
       `${cluster.collector_url}/agents/${agentId}`,
       {
         method: 'GET',

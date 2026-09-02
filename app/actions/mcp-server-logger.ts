@@ -2,10 +2,10 @@
 
 import { db } from '@/db';
 import { systemLogsTable } from '@/db/schema';
+import { addServerLog } from '@/lib/mcp/server-logs';
 
 import { logAuditEvent } from './audit-logger';
 import { ensureLogDirectories, getMcpServerLogDir } from './log-retention';
-import { addServerLogForProfile } from './mcp-playground';
 
 // Factory function to create a logger instance
 export async function createEnhancedMcpLogger(
@@ -115,7 +115,7 @@ export async function createEnhancedMcpLogger(
         const logMessage = `${colors[level as keyof typeof colors] || ''}[MCP:${level.toUpperCase()}]${colors.reset} ${message}`;
 
         // Add to UI visible logs - Also send init logs to UI
-        await addServerLogForProfile(this.profileUuid, level, logMessage);
+        await addServerLog(this.profileUuid, level, logMessage);
 
         // Record audit log for errors and warnings (Consider awaiting if critical)
         if (level === 'error' || level === 'warn') {
@@ -170,10 +170,10 @@ export async function createEnhancedMcpLogger(
 
           // Add to UI visible logs - critical for displaying logs in the UI
           // We send the formatted message to make parsing easier on the client side
-          await addServerLogForProfile(this.profileUuid, level, logMessage);
+          await addServerLog(this.profileUuid, level, logMessage);
         } else {
           // In production, just add the regular message
-          await addServerLogForProfile(this.profileUuid, level, message);
+          await addServerLog(this.profileUuid, level, message);
         }
 
         // Record audit log for errors and warnings (Consider awaiting if critical)

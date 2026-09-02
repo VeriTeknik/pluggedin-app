@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
     // Trigger RAG processing only for text-based formats (synchronous with embedded zvec)
     if (process.env.ENABLE_RAG === 'true' && activeProfile.project_uuid && ['md', 'txt'].includes(validatedData.format) && processedContent) {
       const { ragService } = await import('@/lib/rag-service');
-      const { updateDocRagId } = await import('@/app/actions/library');
+      const { updateDocRagIdFor } = await import('@/lib/library/queries');
 
       try {
         // Use the document's own UUID so re-index can find vectors by doc.uuid
@@ -315,7 +315,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (result.success) {
-          const updateResult = await updateDocRagId(documentId, documentId, user.id);
+          const updateResult = await updateDocRagIdFor(user.id, documentId, documentId);
           if (!updateResult.success) {
             console.error(`Failed to update RAG ID for document ${documentId}:`, updateResult.error);
           }

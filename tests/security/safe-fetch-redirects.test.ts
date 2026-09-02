@@ -132,7 +132,10 @@ describe('safeFetch redirect handling', () => {
 
     for (const call of fetchSpy.mock.calls) {
       const init = call[1] as RequestInit;
-      expect((init.headers as Record<string, string>).Accept).toBe('application/json');
+      // Read through Headers: a cross-origin hop rebuilds the container while
+      // dropping credential headers, so the shape differs between hops even
+      // though a non-credential header like Accept survives both.
+      expect(new Headers(init.headers).get('accept')).toBe('application/json');
       // Redirects must be handled by us, not by fetch.
       expect(init.redirect).toBe('manual');
     }

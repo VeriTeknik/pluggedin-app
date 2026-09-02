@@ -6,6 +6,14 @@ import { db } from '@/db';
 import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { encryptServerData } from '@/lib/encryption';
+import {
+  validateCommand,
+  validateCommandArgs,
+  validateHeaders,
+  validateImportedCommand,
+  validateImportedEnv,
+  validateMcpUrl,
+} from '@/lib/security/validators';
 
 /**
  * @swagger
@@ -90,6 +98,86 @@ import { encryptServerData } from '@/lib/encryption';
  *                   type: string
  *                   example: Failed to import collection
  */
+
+/**
+ * Why a shared server must not be imported, or null if it is acceptable.
+ *
+ * The same allowlist createMcpServer enforces: the type must bring the field it
+ * needs, the command must be one of the permitted binaries, the arguments must
+ * be free of shell metacharacters, and the URL must not point inside the
+ * network.
+ */
+function rejectUnsafeServer(serverConfig: any): {
+  reason: string | null;
+  sanitizedHeaders?: Record<string, string>;
+} {
+  const type = serverConfig?.type || McpServerType.STDIO;
+
+  if (type === McpServerType.SSE || type === McpServerType.STREAMABLE_HTTP) {
+    if (!serverConfig?.url) {
+      return { reason: 'no URL for an SSE or Streamable HTTP server' };
+    }
+    const urlValidation = validateMcpUrl(serverConfig.url);
+    if (!urlValidation.valid) {
+      return { reason: urlValidation.error ?? 'invalid URL' };
+    }
+  } else if (type === McpServerType.STDIO) {
+    if (!serverConfig?.command) {
+      return { reason: 'no command for a STDIO server' };
+    }
+    const commandValidation = validateCommand(serverConfig.command);
+    if (!commandValidation.valid) {
+      return { reason: commandValidation.error ?? 'invalid command' };
+    }
+  } else {
+    return { reason: `unsupported server type: ${String(type)}` };
+  }
+
+  // A non-array `args` used to skip validation entirely and be written as-is.
+  if (serverConfig?.args !== undefined && serverConfig.args !== null) {
+    if (!Array.isArray(serverConfig.args)) {
+      return { reason: 'arguments must be a list' };
+    }
+    const argsValidation = validateCommandArgs(serverConfig.args);
+    if (!argsValidation.valid) {
+      return { reason: argsValidation.error ?? 'invalid arguments' };
+    }
+  }
+
+  // `node` and `python` are on the allowlist because running your own server is
+  // the point of the product. A definition that arrives inside somebody else's
+  // collection is not your own, and an interpreter handed inline code there is
+  // arbitrary code execution as the importer.
+  const importedCommand = validateImportedCommand(serverConfig?.command, serverConfig?.args);
+  if (!importedCommand.valid) {
+    return { reason: importedCommand.error ?? 'command not allowed for an imported server' };
+  }
+
+  // Restricting the command buys nothing if the environment can tell the
+  // interpreter what to load first.
+  const importedEnv = validateImportedEnv(serverConfig?.env);
+  if (!importedEnv.valid) {
+    return { reason: importedEnv.error ?? 'environment not allowed for an imported server' };
+  }
+
+  // Arrays and other truthy non-objects survive validateHeaders' Object.entries
+  // walk, and the unsanitized original was the value persisted.
+  if (serverConfig?.headers !== undefined && serverConfig.headers !== null) {
+    if (typeof serverConfig.headers !== 'object' || Array.isArray(serverConfig.headers)) {
+      return { reason: 'headers must be an object' };
+    }
+    const headerValidation = validateHeaders(serverConfig.headers);
+    if (!headerValidation.valid) {
+      return { reason: headerValidation.error ?? 'invalid headers' };
+    }
+    // The sanitized headers are what should be stored — persisting the original
+    // keeps whatever the validator stripped.
+    return { reason: null, sanitizedHeaders: headerValidation.sanitizedHeaders };
+  }
+
+  return { reason: null };
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getAuthSession();
@@ -150,6 +238,18 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // A collection is public and anyone can publish one, so this content is
+      // attacker-controlled and these rows land with status ACTIVE. #214's
+      // sanitizer redacts credentials but says nothing about what may run, so
+      // the same checks createMcpServer applies are applied here.
+      const checked = rejectUnsafeServer(serverConfig);
+      if (checked.reason) {
+        console.warn(
+          `Skipping server '${serverName}' from collection ${collectionUuid}: ${checked.reason}`
+        );
+        continue;
+      }
+
       // Check if server already exists in this profile
       const existingServer = await db.query.mcpServersTable.findFirst({
         where: and(
@@ -169,7 +269,7 @@ export async function POST(request: Request) {
           env: (serverConfig as any).env || {},
           url: (serverConfig as any).url || null,
           oauth_token: (serverConfig as any).oauth_token || null,
-          headers: (serverConfig as any).headers || null,
+          headers: checked.sanitizedHeaders ?? null,
           session_id: (serverConfig as any).session_id || null,
           profile_uuid: profileUuid,
           status: McpServerStatus.ACTIVE,
