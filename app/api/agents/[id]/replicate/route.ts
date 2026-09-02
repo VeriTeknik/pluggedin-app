@@ -9,7 +9,7 @@ import {
   apiKeysTable,
   modelRouterServicesTable,
 } from '@/db/schema';
-import { buildAgentEnv } from '@/lib/agent-helpers';
+import { buildAgentEnv, validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
 import { generateModelRouterToken } from '@/lib/model-router/token';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
@@ -289,6 +289,20 @@ export async function POST(
         overrides?.image || (sourceMetadata.image as string) || 'ghcr.io/veriteknik/compass-agent:latest';
       const resources =
         overrides?.resources || (sourceMetadata.resources as Record<string, string>);
+
+      // Both come from a caller-supplied `overrides` and reach the same
+      // deployAgent() sink that app/api/agents/route.ts guards. Without these,
+      // anyone holding an API key and one agent could put an arbitrary image
+      // into the shared cluster namespace.
+      const imageError = validateContainerImage(image);
+      if (imageError) {
+        return NextResponse.json({ error: imageError }, { status: 400 });
+      }
+
+      const resourceError = validateResourceLimits(resources);
+      if (resourceError) {
+        return NextResponse.json({ error: resourceError }, { status: 400 });
+      }
 
       // Note: dnsName in DB is just subdomain (e.g., "dev1"), but K8s Ingress needs full FQDN
       const fullDnsName = `${dnsName}.is.plugged.in`;
