@@ -92,7 +92,7 @@ const DANGEROUS_HEADERS = [
 /**
  * Check if an IP address is in a private range
  */
-function isPrivateIP(ip: string): boolean {
+export function isPrivateIP(ip: string): boolean {
   const parts = ip.split('.').map(Number);
   if (parts.length !== 4) return false;
   
@@ -110,6 +110,59 @@ function isPrivateIP(ip: string): boolean {
   // Reserved
   if (parts[0] === 0) return true;
   
+  return false;
+}
+
+/**
+ * Whether a resolved address is anything other than globally routable unicast.
+ *
+ * Validating the hostname string is not enough on its own: a name the caller
+ * controls can be pointed anywhere, so whatever DNS actually returns has to be
+ * checked too. The test is an allowlist by inversion — blocking only RFC 1918
+ * and loopback still leaves carrier-grade NAT, multicast, the reserved and
+ * documentation ranges and the whole 240/4 block to aim at.
+ */
+export function isPrivateAddress(address: string): boolean {
+  const ip = address.toLowerCase().split('%')[0]; // drop any zone id
+
+  // ::ffff:10.0.0.1 and friends carry an IPv4 address inside an IPv6 one.
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(ip);
+  if (mapped) return isNonGlobalIPv4(mapped[1]);
+
+  return ip.includes(':') ? isNonGlobalIPv6(ip) : isNonGlobalIPv4(ip);
+}
+
+function isNonGlobalIPv4(ip: string): boolean {
+  const p = ip.split('.').map(Number);
+  if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+    return true; // unparseable is not something we connect to
+  }
+
+  if (p[0] === 0) return true;                                   // 0.0.0.0/8
+  if (p[0] === 10) return true;                                  // RFC 1918
+  if (p[0] === 127) return true;                                 // loopback
+  if (p[0] === 169 && p[1] === 254) return true;                 // link-local
+  if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;     // RFC 1918
+  if (p[0] === 192 && p[1] === 168) return true;                 // RFC 1918
+  if (p[0] === 100 && p[1] >= 64 && p[1] <= 127) return true;    // 100.64/10 CGNAT
+  if (p[0] === 192 && p[1] === 0 && p[2] === 0) return true;     // IETF assignments
+  if (p[0] === 192 && p[1] === 0 && p[2] === 2) return true;     // TEST-NET-1
+  if (p[0] === 198 && (p[1] === 18 || p[1] === 19)) return true; // benchmarking
+  if (p[0] === 198 && p[1] === 51 && p[2] === 100) return true;  // TEST-NET-2
+  if (p[0] === 203 && p[1] === 0 && p[2] === 113) return true;   // TEST-NET-3
+  if (p[0] >= 224) return true;                                  // multicast, reserved, broadcast
+
+  return false;
+}
+
+function isNonGlobalIPv6(ip: string): boolean {
+  if (ip === '::' || ip === '::1') return true;      // unspecified, loopback
+  if (/^f[cd][0-9a-f]{2}:/.test(ip)) return true;    // fc00::/7 unique local
+  if (/^fe[89ab][0-9a-f]:/.test(ip)) return true;    // fe80::/10 link-local
+  if (/^ff[0-9a-f]{2}:/.test(ip)) return true;       // ff00::/8 multicast
+  if (/^2001:0*db8:/.test(ip)) return true;          // 2001:db8::/32 documentation
+  if (/^64:ff9b:/.test(ip)) return true;             // NAT64, carries an IPv4 target
+
   return false;
 }
 
