@@ -16,6 +16,7 @@ import { McpServerType, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { withProfileAuth } from '@/lib/auth-helpers';
 import { createBubblewrapConfig } from '@/lib/mcp/client-wrapper';
+import { progressivelyInitializeMcpServers } from '@/lib/mcp/progressive-initialization';
 import {
   addServerLog,
   clearPartialServerLog,
@@ -70,7 +71,6 @@ import { ensureLogDirectories } from './log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from './mcp-server-logger'; // Correct path alias
 import { getMcpServers } from './mcp-servers'; // Correct path alias
 import { getPlaygroundSettings } from './playground-settings'; // Add this import
-import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
 // Store active sessions with cleanup functions
 interface McpPlaygroundSession {
