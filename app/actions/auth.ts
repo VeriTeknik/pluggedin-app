@@ -54,6 +54,12 @@ export async function verifyEmail(token: string) {
       throw new Error('Invalid or expired verification token');
     }
 
+    // The route at app/api/auth/verify-email checks this; without it here the
+    // 24-hour lifetime is decorative, since this path verifies just as well.
+    if (new Date() > new Date(verificationToken.expires)) {
+      throw new Error('Verification token has expired');
+    }
+
     // Update user's emailVerified field
     await db.update(users)
       .set({ 
