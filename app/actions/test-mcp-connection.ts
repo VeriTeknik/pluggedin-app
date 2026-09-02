@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { McpServerType } from '@/db/schema';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { requireAuthUserId } from '@/lib/require-auth';
 import { validateCommand, validateCommandArgs, validateHeaders } from '@/lib/security/validators';
 
@@ -143,7 +144,9 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         
         // Test the remote URL to see if it needs authentication
         try {
-          const response = await fetch(remoteUrl, {
+          // remoteUrl comes out of the server's own args, so the caller
+          // chooses it and the outcome is reported back to them.
+          const response = await safeFetch(remoteUrl, {
             method: 'HEAD',
             headers: {
               'User-Agent': 'Plugged.in MCP Client',
@@ -228,7 +231,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           // ✅ First, check if server requires authentication with a simple HEAD request
           // This avoids CORS issues from POST requests without auth
           try {
-            const headResponse = await fetch(validated.url, {
+            const headResponse = await safeFetch(validated.url, {
               method: 'HEAD',
               headers,
               signal: AbortSignal.timeout(5000),
@@ -251,7 +254,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           }
 
           // Try to send an initialize request
-          const initResponse = await fetch(validated.url, {
+          const initResponse = await safeFetch(validated.url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -376,7 +379,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
       // For other servers, try HEAD request first
       try {
-        const response = await fetch(validated.url, {
+        const response = await safeFetch(validated.url, {
           method: 'HEAD',
           headers,
           signal: AbortSignal.timeout(5000), // 5 second timeout
@@ -402,7 +405,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
       } catch (fetchError) {
         // If HEAD fails, try OPTIONS as a fallback
         try {
-          const optionsResponse = await fetch(validated.url, {
+          const optionsResponse = await safeFetch(validated.url, {
             method: 'OPTIONS',
             headers,
             signal: AbortSignal.timeout(5000),

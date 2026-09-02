@@ -42,10 +42,13 @@ describe('Context7 MCP Server Tests', () => {
       expect(result.message).toContain('MCP server connection verified');
       
       // Verify correct headers were sent
+      // These calls now go through safeFetch, which validates the destination
+      // and hands fetch the parsed URL with redirects taken off automatic.
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://mcp.context7.com/mcp',
+        new URL('https://mcp.context7.com/mcp'),
         expect.objectContaining({
           method: 'POST',
+          redirect: 'manual',
           headers: expect.objectContaining({
             'Accept': 'application/json, text/event-stream',
             'Content-Type': 'application/json',
@@ -100,9 +103,10 @@ describe('Context7 MCP Server Tests', () => {
 
       // Should try HEAD request for SSE (not special handling)
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://mcp.context7.com/mcp',
+        new URL('https://mcp.context7.com/mcp'),
         expect.objectContaining({
-          method: 'HEAD'
+          method: 'HEAD',
+          redirect: 'manual',
         })
       );
     });
