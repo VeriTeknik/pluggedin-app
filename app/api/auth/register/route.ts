@@ -291,9 +291,14 @@ export async function POST(req: NextRequest) {
       // Don't fail registration if welcome email fails
     }
     
-    // Store the verification token. Any earlier one for this address is
-    // dropped first: the table permits many live tokens per email, and a
-    // second valid link is a second way in.
+    // Store the verification token, bound to the user it was issued for.
+    //
+    // user_id is what makes this safe: verification resolves the account
+    // through it rather than through the address, and the foreign key's
+    // ON DELETE CASCADE means a token cannot outlive its user — so replacing an
+    // unverified registration takes its tokens with it, with no cleanup step to
+    // forget. The delete below is still worth keeping: the table permits many
+    // live tokens per address, and a second valid link is a second way in.
     await db.transaction(async (tx) => {
       await tx
         .delete(verificationTokens)
@@ -303,6 +308,7 @@ export async function POST(req: NextRequest) {
         identifier: data.email,
         token: verificationToken,
         expires: tokenExpiry,
+        user_id: userId,
       });
     });
 

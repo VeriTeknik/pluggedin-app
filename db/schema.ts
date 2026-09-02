@@ -253,11 +253,28 @@ export const verificationTokens = pgTable(
     identifier: text('identifier').notNull(),
     token: text('token').notNull(),
     expires: timestamp('expires', { mode: 'date' }).notNull(),
+    // Which user this token was issued for.
+    //
+    // Without it the table is keyed on the raw email, and both verification
+    // paths resolved the account that way — so a token issued for one user
+    // verified whichever row happened to hold that address. Registration
+    // replaces an unverified row with a new one under the same email, which
+    // turned that into an account takeover.
+    //
+    // Nullable because this table is also NextAuth's: the DrizzleAdapter writes
+    // rows for the email provider's magic links and knows nothing about this
+    // column. Those rows are consumed by NextAuth's own callback; the app's
+    // verification routes require a user_id and refuse anything without one.
+    //
+    // ON DELETE CASCADE is what makes the fix hold: a token cannot outlive the
+    // user it was issued for, with no cleanup code to forget to run.
+    user_id: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   },
   (vt) => ({
     compoundKey: primaryKey({
       columns: [vt.identifier, vt.token],
     }),
+    userIdIdx: index('idx_verification_tokens_user_id').on(vt.user_id),
   })
 );
 

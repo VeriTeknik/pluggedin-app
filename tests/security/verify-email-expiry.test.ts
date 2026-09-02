@@ -32,6 +32,7 @@ describe('verifyEmail honours the token expiry', () => {
       identifier: 'someone@example.com',
       token: 'stale',
       expires: new Date(Date.now() - 60_000),
+      user_id: 'user-the-token-was-issued-for',
     });
 
     await expect(verifyEmail('stale')).rejects.toThrow(/expired/i);
@@ -43,6 +44,8 @@ describe('verifyEmail honours the token expiry', () => {
       identifier: 'someone@example.com',
       token: 'fresh',
       expires: new Date(Date.now() + 60_000),
+      // Bound to a user: verification now resolves through user_id, not email.
+      user_id: 'user-the-token-was-issued-for',
     });
 
     await expect(verifyEmail('fresh')).resolves.toEqual({ success: true });

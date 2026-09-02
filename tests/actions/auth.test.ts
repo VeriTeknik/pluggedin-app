@@ -85,6 +85,9 @@ describe('Authentication Actions', () => {
       const mockToken = {
         token: 'valid-token',
         identifier: 'test@example.com',
+        expires: new Date(Date.now() + 60_000),
+        // Verification resolves through user_id now, not the address.
+        user_id: 'user-the-token-was-issued-for',
       };
 
       mockedDb.query.verificationTokens.findFirst.mockResolvedValue(mockToken);
@@ -109,6 +112,9 @@ describe('Authentication Actions', () => {
       const mockToken = {
         token: 'valid-token',
         identifier: 'test@example.com',
+        expires: new Date(Date.now() + 60_000),
+        // Verification resolves through user_id now, not the address.
+        user_id: 'user-the-token-was-issued-for',
       };
 
       mockedDb.query.verificationTokens.findFirst.mockResolvedValue(mockToken);
