@@ -11,6 +11,7 @@ import {
   validateCommandArgs,
   validateHeaders,
   validateImportedCommand,
+  validateImportedEnv,
   validateMcpUrl,
 } from '@/lib/security/validators';
 
@@ -147,6 +148,13 @@ function rejectUnsafeServer(serverConfig: any): string | null {
   const importedCommand = validateImportedCommand(serverConfig?.command, serverConfig?.args);
   if (!importedCommand.valid) {
     return importedCommand.error ?? 'command not allowed for an imported server';
+  }
+
+  // Restricting the command buys nothing if the environment can tell the
+  // interpreter what to load first.
+  const importedEnv = validateImportedEnv(serverConfig?.env);
+  if (!importedEnv.valid) {
+    return importedEnv.error ?? 'environment not allowed for an imported server';
   }
 
   // Arrays and other truthy non-objects survive validateHeaders' Object.entries

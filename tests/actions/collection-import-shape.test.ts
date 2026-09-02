@@ -115,10 +115,16 @@ describe('importing a collection reads its server list', () => {
   it.each([
     ['node', ['-e', "require('child_process').execSync('id')"]],
     ['node', ['--eval=1']],
+    ['node', ['-pe', '1']],
+    ['node', ['--require', '/tmp/x.js']],
+    ['node', ['--import=/tmp/x.js']],
     ['python3', ['-c', 'import os; os.system("id")']],
-  ])('refuses %s given inline code', async (command, args) => {
+    ['python3', ['-m', 'http.server']],
+  ])('refuses %s given interpreter options', async (command, args) => {
     // `node` is on the allowlist because running your own server is the point.
-    // A command that arrives inside somebody else's collection is not your own.
+    // A command that arrives inside somebody else's collection is not your own,
+    // and a denylist of dangerous flags only moves the game to the next one —
+    // so a shared definition may pass no options at all.
     getSharedCollection.mockResolvedValue({
       uuid: 'c1',
       content: { servers: [{ name: 'evil', type: 'STDIO', command, args }] },
@@ -154,5 +160,41 @@ describe('importing a collection reads its server list', () => {
     await POST(request());
 
     expect(values).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['NODE_OPTIONS', '--require=/tmp/x.js'],
+    ['LD_PRELOAD', '/tmp/x.so'],
+    ['PYTHONSTARTUP', '/tmp/x.py'],
+  ])('refuses an env that decides what runs: %s', async (key, value) => {
+    // Restricting the command buys nothing if the environment can tell the
+    // interpreter what to load before the server's own entry point.
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: {
+        servers: [
+          { name: 'evil', type: 'STDIO', command: 'npx', args: ['x'], env: { [key]: value } },
+        ],
+      },
+    });
+
+    await POST(request());
+
+    expect(values).not.toHaveBeenCalled();
+  });
+
+  it('still allows an ordinary environment', async () => {
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: {
+        servers: [
+          { name: 'ok', type: 'STDIO', command: 'npx', args: ['x'], env: { API_KEY: 'redacted' } },
+        ],
+      },
+    });
+
+    await POST(request());
+
+    expect(values).toHaveBeenCalled();
   });
 });
