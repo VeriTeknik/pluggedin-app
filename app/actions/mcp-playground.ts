@@ -13,13 +13,13 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { McpServerType, profilesTable } from '@/db/schema';
 import { createBubblewrapConfig } from '@/lib/mcp/client-wrapper';
+import { progressivelyInitializeMcpServers } from '@/lib/mcp/progressive-initialization'; // Import the new function
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
 import { ensureLogDirectories } from './log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from './mcp-server-logger'; // Correct path alias
 import { getMcpServers } from './mcp-servers'; // Correct path alias
 import { getPlaygroundSettings } from './playground-settings'; // Add this import
-import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
 // Store active sessions with cleanup functions
 interface McpPlaygroundSession {
