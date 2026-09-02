@@ -188,6 +188,12 @@ describe('importSharedServer validates what it is about to run', () => {
     ['uv', ['run', 'arbitrary-thing']],
     ['uv', ['tool', 'install', 'pkg']],
     ['pnpm', ['exec', 'arbitrary-thing']],
+    // No target at all: `node` with no script opens a REPL that never exits,
+    // leaving a process on the host for every such import.
+    ['node', []],
+    ['python3', []],
+    ['npx', []],
+    ['uv', ['tool', 'run']],
   ])('refuses %s given a shape that decides what loads', async (command, args) => {
     // A shared server is somebody else's definition, exactly as a collection's
     // is — #220 put these rules on that path and this is the same class.
