@@ -172,6 +172,30 @@ export async function POST(
 
     // Clone metadata, applying overrides
     const sourceMetadata = (sourceAgent.metadata as Record<string, unknown>) || {};
+
+    // Resolved and validated before anything is written. Either value may come
+    // from the caller's `overrides`, falling back to the source agent's stored
+    // metadata, and both reach the same deployAgent() sink that
+    // app/api/agents/route.ts guards. Validating here rather than at the deploy
+    // keeps a rejected image from leaving a replica row behind and reserving
+    // its DNS name.
+    const image =
+      overrides?.image || (sourceMetadata.image as string) || 'ghcr.io/veriteknik/compass-agent:latest';
+    const resources =
+      overrides?.resources || (sourceMetadata.resources as Record<string, string>);
+
+    if (deploy) {
+      const imageError = validateContainerImage(image);
+      if (imageError) {
+        return NextResponse.json({ error: imageError }, { status: 400 });
+      }
+
+      const resourceError = validateResourceLimits(resources);
+      if (resourceError) {
+        return NextResponse.json({ error: resourceError }, { status: 400 });
+      }
+    }
+
     const newMetadata = {
       ...sourceMetadata,
       replicated_from: {
@@ -285,28 +309,6 @@ export async function POST(
 
     // Optionally deploy to Kubernetes
     if (deploy) {
-      const image =
-        overrides?.image || (sourceMetadata.image as string) || 'ghcr.io/veriteknik/compass-agent:latest';
-      const resources =
-        overrides?.resources || (sourceMetadata.resources as Record<string, string>);
-
-      // Either value may come from the caller's `overrides`, falling back to
-      // the source agent's stored metadata — and both reach the same
-      // deployAgent() sink that app/api/agents/route.ts guards. Validating
-      // regardless of which one supplied it is the point: the override path is
-      // how an API-key holder could put an arbitrary image into the shared
-      // cluster namespace, and stored metadata predating this check is no more
-      // trustworthy.
-      const imageError = validateContainerImage(image);
-      if (imageError) {
-        return NextResponse.json({ error: imageError }, { status: 400 });
-      }
-
-      const resourceError = validateResourceLimits(resources);
-      if (resourceError) {
-        return NextResponse.json({ error: resourceError }, { status: 400 });
-      }
-
       // Note: dnsName in DB is just subdomain (e.g., "dev1"), but K8s Ingress needs full FQDN
       const fullDnsName = `${dnsName}.is.plugged.in`;
 

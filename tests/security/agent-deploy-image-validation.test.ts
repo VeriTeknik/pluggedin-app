@@ -31,17 +31,28 @@ function walk(dir: string): string[] {
  * only knows the endpoints already thought of.
  */
 describe('every path that deploys an agent validates what it deploys', () => {
+  /** The body of the function containing `at`, by scanning back to its header. */
+  function enclosingFunction(src: string, at: number): string {
+    const header = /(?:export\s+)?(?:async\s+)?function\s+\w+\s*\(/g;
+    let start = 0;
+    for (const match of src.matchAll(header)) {
+      if ((match.index ?? 0) > at) break;
+      start = match.index ?? 0;
+    }
+    return src.slice(start, at);
+  }
+
   it('no deployAgent call site is reached without the validators running first', () => {
     // Presence in the same file is not a guard: the call could sit above the
-    // validation, or behind a branch that skips it. Positions are compared, so
-    // moving either validator below the deploy fails this.
+    // validation, or in a different function entirely. The window is the
+    // enclosing function, up to the call.
     const offenders = walk('app')
       .concat(walk('lib'))
       .flatMap((file) => {
         const src = stripComments(fs.readFileSync(file, 'utf8'));
 
         return [...src.matchAll(/\.deployAgent\s*\(/g)].flatMap((deploy) => {
-          const before = src.slice(0, deploy.index ?? 0);
+          const before = enclosingFunction(src, deploy.index ?? 0);
           const validated =
             /validateContainerImage\s*\(/.test(before) &&
             /validateResourceLimits\s*\(/.test(before);
@@ -51,6 +62,21 @@ describe('every path that deploys an agent validates what it deploys', () => {
       });
 
     expect(offenders).toEqual([]);
+  });
+
+  it('validates before it writes the replica row', () => {
+    // A rejected image used to return 400 after the agent row existed, leaving
+    // an orphan and its reserved DNS name behind.
+    const src = stripComments(
+      fs.readFileSync('app/api/agents/[id]/replicate/route.ts', 'utf8')
+    );
+
+    expect(src.search(/validateContainerImage\s*\(/)).toBeLessThan(
+      src.search(/insert\(agentsTable\)/)
+    );
+    expect(src.search(/validateResourceLimits\s*\(/)).toBeLessThan(
+      src.search(/insert\(agentsTable\)/)
+    );
   });
 });
 
