@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { mcpServerOAuthTokensTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { decryptField, encryptField } from '@/lib/encryption';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { log } from '@/lib/observability/logger';
 import {
   recordTokenRefresh,
@@ -362,7 +363,8 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       log.oauth('token_refresh_using_basic_auth', { serverUuid });
     }
 
-    const tokenResponse = await fetch(oauthConfig.token_endpoint, {
+    // The same stored token_endpoint the callback route fetches.
+    const tokenResponse = await safeFetch(oauthConfig.token_endpoint, {
       method: 'POST',
       headers,
       body: tokenParams,

@@ -220,6 +220,22 @@ async function handleMcpRemoteOAuth(server: McpServer) {
   );
   const remoteUrl = urlIndex !== -1 && urlIndex !== undefined && server.args ? server.args[urlIndex] : null;
 
+  // The sibling handler validates server.url before contacting it; this one
+  // spawns `npx -y mcp-remote <remoteUrl>` against a URL taken from the
+  // server's own args and never did. That is worse than a blind probe: the
+  // process manager reflects the child's stdout and stderr back to the caller
+  // on failure, so an internal service's banner comes with it.
+  if (remoteUrl) {
+    try {
+      validateUrlForSSRF(remoteUrl);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'The remote URL is not allowed',
+      };
+    }
+  }
+
   if (!remoteUrl) {
     return {
       success: false,

@@ -9,6 +9,7 @@ import { mcpOAuthCallbacks } from '@/lib/mcp/metrics';
 import { validatePkceState } from '@/lib/oauth/integrity';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { createRateLimiter } from '@/lib/rate-limiter';
 
 // P0 Security: Rate limiter for OAuth callback (10 requests per 15 minutes per IP)
@@ -248,7 +249,10 @@ export async function GET(request: NextRequest) {
     console.log('[OAuth Callback] Using client_id:', clientId);
 
     // Add 5-second timeout to prevent hanging requests (reduced from 10s for security)
-    const tokenResponse = await fetch(tokenEndpoint, {
+    // token_endpoint comes from the stored OAuth config, which is influenced by
+    // the server the user registered — so it is not a trusted constant, and the
+    // response is reflected back to the caller.
+    const tokenResponse = await safeFetch(tokenEndpoint, {
       method: 'POST',
       headers,
       body: tokenParams,

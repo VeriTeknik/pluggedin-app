@@ -5,6 +5,7 @@
  * This module implements OAuth discovery for MCP servers that follow RFC 9728.
  */
 
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { log } from '@/lib/observability/logger';
 import { recordDiscovery } from '@/lib/observability/oauth-metrics';
 
@@ -100,7 +101,10 @@ export async function discoverOAuthMetadata(
       metadataUrl
     });
 
-    const response = await fetch(metadataUrl, {
+    // metadataUrl is built from the WWW-Authenticate header of a server the
+    // user configured, so its host is theirs to choose. The first hop being
+    // validated says nothing about this one.
+    const response = await safeFetch(metadataUrl, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
