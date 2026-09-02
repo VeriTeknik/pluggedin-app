@@ -422,3 +422,172 @@ export function validateCommandArgs(args: string[]): { valid: boolean; error?: s
   
   return { valid: true, sanitizedArgs };
 } 
+/** Interpreters that will run whatever their options tell them to. */
+const DIRECT_INTERPRETERS = ['node', 'python', 'python3'];
+
+/**
+ * The package executors, and the only options an imported definition may pass
+ * to one.
+ *
+ * They are not a way around the rule above: `npx --node-options='--require …'`
+ * reaches the same place by a longer road, as does `uv run --with`. So the
+ * options are an allowlist too — the handful that answer a prompt or quieten
+ * output, and nothing that decides what gets loaded.
+ */
+const PACKAGE_EXECUTORS = ['npx', 'pnpm', 'uvx', 'uv', 'uvenv', 'dnx'];
+
+/**
+ * The subcommand each executor must be given, where it has one.
+ *
+ * Restricting options is not enough on its own: `uv run <anything>` and
+ * `pnpm exec <anything>` carry no flag at all and run whatever they are handed.
+ * So the *shape* of the invocation is allowlisted — for these two the first
+ * positional has to be the package-running subcommand, and for the rest the
+ * first positional is the package itself.
+ */
+const EXECUTOR_SUBCOMMANDS: Record<string, string[]> = {
+  uv: ['tool', 'run'], // the whole sequence: `uv tool install` is not this
+  pnpm: ['dlx'],
+};
+const EXECUTOR_SAFE_OPTIONS = new Set([
+  '-y',
+  '--yes',
+  '-q',
+  '--quiet',
+  '--silent',
+  '--no-install',
+  '-p',
+]);
+
+/**
+ * Environment variables that change what a process executes before its own code
+ * runs. NODE_OPTIONS carries --require and --import; the PYTHON* ones inject
+ * import paths and startup scripts; LD_PRELOAD predates all of it.
+ */
+const EXECUTION_ALTERING_ENV = [
+  'NODE_OPTIONS',
+  'NODE_REPL_EXTERNAL_MODULE',
+  'PYTHONSTARTUP',
+  'PYTHONPATH',
+  'PYTHONHOME',
+  'PYTHONEXECUTABLE',
+  'LD_PRELOAD',
+  'LD_LIBRARY_PATH',
+  'DYLD_INSERT_LIBRARIES',
+  'DYLD_LIBRARY_PATH',
+];
+
+/**
+ * Extra restrictions for a server arriving from somebody else's shared content.
+ *
+ * Running `node -e '<code>'` as *yourself* is not a vulnerability — running
+ * local MCP servers is what this product does, and validateCommandArgs
+ * deliberately permits metacharacters because args are passed as argv and never
+ * through a shell. An imported server is different: the definition comes from a
+ * collection or share that anyone can publish, and it lands ACTIVE in the
+ * importer's profile. There, anything that decides what the interpreter runs is
+ * arbitrary code execution as another user.
+ *
+ * Both rules below are allowlists by shape rather than lists of dangerous
+ * names. A denylist invites smuggling — `-e`, `--eval=`, `-m`, `--require`,
+ * `--loader`, `--import`, bundled short flags like `-pe`, and whatever the next
+ * runtime release adds — while a shared definition has no legitimate reason to
+ * pass interpreter options at all. `node ./server.js` imports; `node` with any
+ * option does not.
+ */
+export function validateImportedCommand(
+  command: string | null | undefined,
+  args: unknown
+): { valid: boolean; error?: string } {
+  if (!command) {
+    return { valid: true };
+  }
+
+  if (PACKAGE_EXECUTORS.includes(command)) {
+    return validateImportedExecutorOptions(command, args);
+  }
+
+  if (!DIRECT_INTERPRETERS.includes(command)) {
+    return { valid: true };
+  }
+
+  const list = Array.isArray(args) ? args : [];
+  for (const arg of list) {
+    if (typeof arg === 'string' && arg.startsWith('-')) {
+      return {
+        valid: false,
+        error: `An imported server may not pass options to ${command} (got ${arg})`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+/** As above, for the package executors, which take a few benign options. */
+function validateImportedExecutorOptions(
+  command: string,
+  args: unknown
+): { valid: boolean; error?: string } {
+  const list = Array.isArray(args) ? args : [];
+
+  for (const arg of list) {
+    if (typeof arg !== 'string' || !arg.startsWith('-')) continue;
+
+    // `--node-options=...` and friends carry their payload after an `=`.
+    const option = arg.split('=')[0];
+    if (!EXECUTOR_SAFE_OPTIONS.has(option)) {
+      return {
+        valid: false,
+        error: `An imported server may not pass ${option} to ${command}`,
+      };
+    }
+  }
+
+  const required = EXECUTOR_SUBCOMMANDS[command];
+  if (required) {
+    // The whole sequence has to match, in order. Checking only the first token
+    // let `uv tool install <package>` through, which is not running a package.
+    const positionals = list.filter(
+      (arg): arg is string => typeof arg === 'string' && !arg.startsWith('-')
+    );
+
+    const matches = required.every((token, index) => positionals[index] === token);
+    if (!matches) {
+      return {
+        valid: false,
+        error: `An imported server must invoke ${command} as \`${command} ${required.join(' ')}\``,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * The environment of a server arriving from somebody else's shared content.
+ *
+ * The command allowlist is worth nothing if the environment can tell the
+ * interpreter what to load: `NODE_OPTIONS=--require=/tmp/x.js` runs before the
+ * server's own entry point, and LD_PRELOAD does the same a layer down.
+ */
+export function validateImportedEnv(env: unknown): { valid: boolean; error?: string } {
+  if (env === undefined || env === null) {
+    return { valid: true };
+  }
+
+  if (typeof env !== 'object' || Array.isArray(env)) {
+    return { valid: false, error: 'Environment must be an object' };
+  }
+
+  for (const key of Object.keys(env as Record<string, unknown>)) {
+    if (EXECUTION_ALTERING_ENV.includes(key.toUpperCase())) {
+      return {
+        valid: false,
+        error: `An imported server may not set ${key}`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
