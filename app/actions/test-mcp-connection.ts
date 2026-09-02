@@ -324,10 +324,6 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
               },
             };
           } else {
-            // Clone before reading: once the body is consumed the response is
-            // disturbed, and clone() then throws rather than returning a copy.
-            const forCorsCheck = initResponse.clone();
-
             // Try to read response body for CORS checking
             let responseText = '';
             try {
@@ -336,8 +332,11 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
               // Ignore errors reading response body
             }
 
-            // Check for CORS issues
-            const corsDetails = await checkForCorsIssue(forCorsCheck, validated.url, responseText);
+            // No clone: checkForCorsIssue reads only status and headers, both of
+            // which survive the body being consumed. Cloning first threw
+            // because the body was already read; cloning here would leave a
+            // second buffered stream nobody drains.
+            const corsDetails = await checkForCorsIssue(initResponse, validated.url, responseText);
             
             // Check if this is a 401 authentication error
             const requiresAuth = initResponse.status === 401;

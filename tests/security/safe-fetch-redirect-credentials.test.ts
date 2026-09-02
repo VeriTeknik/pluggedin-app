@@ -82,3 +82,44 @@ describe('safeFetch does not carry credentials across origins', () => {
     expect(headers.get('authorization')).toBeNull();
   });
 });
+
+/**
+ * 307 and 308 replay the request, body included. A URLSearchParams body — what
+ * the OAuth token exchange sends — is consumed by the first request, so the
+ * replay went out empty.
+ */
+describe('safeFetch can replay the body a 307 preserves', () => {
+  it('sends the same body on the second hop', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        status: 307,
+        headers: new Headers({ location: 'https://issuer.example.com/v2/token' }),
+        body: null,
+      })
+      .mockResolvedValueOnce({ status: 200, headers: new Headers(), body: null });
+
+    await safeFetch('https://issuer.example.com/token', {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'authorization_code', code: 'abc' }),
+    });
+
+    const first = fetchMock.mock.calls[0][1].body;
+    const second = fetchMock.mock.calls[1][1].body;
+
+    expect(typeof second).toBe('string');
+    expect(second).toBe(first);
+    expect(second).toContain('grant_type=authorization_code');
+  });
+
+  it('sets the form content type when the caller did not', async () => {
+    fetchMock.mockResolvedValueOnce({ status: 200, headers: new Headers(), body: null });
+
+    await safeFetch('https://issuer.example.com/token', {
+      method: 'POST',
+      body: new URLSearchParams({ code: 'abc' }),
+    });
+
+    const headers = new Headers(fetchMock.mock.calls[0][1].headers);
+    expect(headers.get('content-type')).toBe('application/x-www-form-urlencoded;charset=UTF-8');
+  });
+});

@@ -169,10 +169,22 @@ export async function safeFetch(
   options?: RequestInit,
   allowPrivate = false
 ): Promise<Response> {
-  // Reassigned when a 301/302/303 downgrades the method — see below.
-   
+  // Reassigned when a 301/302/303 downgrades the method, and when a
+  // cross-origin hop drops credentials — see below.
   let requestInit = options;
   let currentUrl = url;
+
+  // 307 and 308 replay the body, so it has to survive being sent twice.
+  // URLSearchParams — what the OAuth callers send — is consumed by the first
+  // request, and the replay would go out empty. Serializing it up front costs
+  // nothing and makes the body replayable.
+  if (requestInit?.body instanceof URLSearchParams) {
+    const headers = new Headers(requestInit.headers);
+    if (!headers.has('content-type')) {
+      headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
+    }
+    requestInit = { ...requestInit, body: requestInit.body.toString(), headers };
+  }
 
   for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
     // Fetch the URL the validator returned rather than the string that went
