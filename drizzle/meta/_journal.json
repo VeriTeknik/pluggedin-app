@@ -722,6 +722,13 @@
       "when": 1786645942889,
       "tag": "0102_one_workspace_per_hub",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1788371868335,
+      "tag": "0103_verification_tokens_bind_to_user",
+      "breakpoints": true
     }
   ]
 }

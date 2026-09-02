@@ -54,13 +54,27 @@ export async function verifyEmail(token: string) {
       throw new Error('Invalid or expired verification token');
     }
 
+    // The route at app/api/auth/verify-email checks this; without it here the
+    // 24-hour lifetime is decorative, since this path verifies just as well.
+    if (new Date() > new Date(verificationToken.expires)) {
+      throw new Error('Verification token has expired');
+    }
+
+    // A row with no user_id belongs to NextAuth's email provider, which
+    // consumes it through its own callback. This path may not verify one:
+    // resolving by the address is what let a token issued for one user verify
+    // whichever row happened to hold that email.
+    if (!verificationToken.user_id) {
+      throw new Error('Invalid or expired verification token');
+    }
+
     // Update user's emailVerified field
     await db.update(users)
       .set({ 
         emailVerified: new Date(),
         updated_at: new Date()
       })
-      .where(eq(users.email, verificationToken.identifier));
+      .where(eq(users.id, verificationToken.user_id));
 
     // Delete the used token
     await db.delete(verificationTokens)

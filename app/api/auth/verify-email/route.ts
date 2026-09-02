@@ -101,9 +101,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find the user with the matching email
+    // A row with no user_id belongs to NextAuth's email provider, which
+    // consumes it through its own callback. This route may not verify one:
+    // resolving by the address is what let a token issued for one user verify
+    // whichever row happened to hold that email.
+    if (!verificationToken.user_id) {
+      return NextResponse.json(
+        { message: 'Invalid or expired verification token' },
+        { status: 400 }
+      );
+    }
+
+    // Find the user this token was issued for — not whoever holds the address
+    const boundUserId = verificationToken.user_id;
     const user = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, verificationToken.identifier),
+      where: (users, { eq }) => eq(users.id, boundUserId),
     });
 
     if (!user) {
