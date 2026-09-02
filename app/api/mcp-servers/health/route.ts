@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { getMcpServers } from '@/app/actions/mcp-servers'; // Use path alias relative to app root
 import { authenticateApiKey } from '@/app/api/auth'; // Use path alias relative to app root
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 
 /**
  * @swagger
@@ -127,7 +128,8 @@ export async function GET(request: Request) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
 
-        const response = await fetch(server.url, {
+        // server.url is stored per server and chosen by whoever configured it.
+        const response = await safeFetch(server.url, {
           method: 'HEAD', // Use HEAD for efficiency
           signal: controller.signal,
           // Add headers if needed, e.g., Authorization if the health endpoint is protected

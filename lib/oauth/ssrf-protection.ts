@@ -131,15 +131,60 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
  * @param options - Fetch options
  * @param allowPrivate - Allow private IPs (default: false) - use ONLY for testing
  */
+/**
+ * Headers that authenticate the request, and so must not survive a hop to an
+ * origin the caller never addressed.
+ *
+ * The named three are what browsers drop on a cross-origin redirect. The
+ * pattern covers what this application sends beyond them — X-Collector-Key to
+ * a cluster collector, X-Api-Key to a server — because the destination of a
+ * redirect is chosen by the very host the credential authenticates against.
+ */
+const CREDENTIAL_HEADER = /^(authorization|cookie|proxy-authorization)$/i;
+const CREDENTIAL_HEADER_PATTERN = /(^|-)(key|token|secret|password|auth|credential)(-|$)/i;
+
+function isCredentialHeader(name: string): boolean {
+  return CREDENTIAL_HEADER.test(name) || CREDENTIAL_HEADER_PATTERN.test(name);
+}
+
+/** The same request with every credential header removed. */
+function withoutCredentials(init: RequestInit | undefined): RequestInit | undefined {
+  if (!init?.headers) return init;
+
+  const kept = new Headers();
+  new Headers(init.headers).forEach((value, name) => {
+    if (!isCredentialHeader(name)) kept.set(name, value);
+  });
+
+  return { ...init, headers: kept };
+}
+
+/** Whether two URLs differ in scheme, host or port. */
+function crossOrigin(from: string, to: string): boolean {
+  return new URL(from).origin !== new URL(to).origin;
+}
+
 export async function safeFetch(
   url: string,
   options?: RequestInit,
   allowPrivate = false
 ): Promise<Response> {
-  // Reassigned when a 301/302/303 downgrades the method — see below.
-  // eslint-disable-next-line prefer-const
+  // Reassigned when a 301/302/303 downgrades the method, and when a
+  // cross-origin hop drops credentials — see below.
   let requestInit = options;
   let currentUrl = url;
+
+  // 307 and 308 replay the body, so it has to survive being sent twice.
+  // URLSearchParams — what the OAuth callers send — is consumed by the first
+  // request, and the replay would go out empty. Serializing it up front costs
+  // nothing and makes the body replayable.
+  if (requestInit?.body instanceof URLSearchParams) {
+    const headers = new Headers(requestInit.headers);
+    if (!headers.has('content-type')) {
+      headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
+    }
+    requestInit = { ...requestInit, body: requestInit.body.toString(), headers };
+  }
 
   for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
     // Fetch the URL the validator returned rather than the string that went
@@ -178,7 +223,17 @@ export async function safeFetch(
       // to release it must not fail the request that was otherwise fine.
     });
 
-    currentUrl = new URL(location, currentUrl).toString();
+    const nextUrl = new URL(location, currentUrl).toString();
+
+    // Browsers drop Authorization on a cross-origin redirect, and for the same
+    // reason: the host answering this hop was chosen by the previous one, not
+    // by the caller, so it has no claim on credentials meant for the caller's
+    // destination.
+    if (crossOrigin(currentUrl, nextUrl)) {
+      requestInit = withoutCredentials(requestInit);
+    }
+
+    currentUrl = nextUrl;
   }
 
   throw new Error('Too many redirects');
