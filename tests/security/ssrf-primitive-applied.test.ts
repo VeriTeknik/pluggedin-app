@@ -83,15 +83,21 @@ describe('every server-side fetch of a stored url goes through safeFetch', () =>
  * handleStreamableHttpOAuth validates; this one did not.
  */
 describe('the mcp-remote path validates before it spawns', () => {
-  it('validates the remote url', () => {
-    const src = stripComments(
-      fs.readFileSync('app/actions/trigger-mcp-oauth.ts', 'utf8')
-    );
+  it('validates the remote url, and does so before the process is launched', () => {
+    // Asserting only that the call exists would pass if it moved below the
+    // spawn, which is where it would stop protecting anything.
+    const src = stripComments(fs.readFileSync('app/actions/trigger-mcp-oauth.ts', 'utf8'));
     const handler = src.slice(
       src.indexOf('async function handleMcpRemoteOAuth'),
       src.indexOf('async function handleStreamableHttpOAuth')
     );
 
-    expect(handler).toMatch(/validateUrlForSSRF\s*\(/);
+    const validatedAt = handler.search(/validateUrlForSSRF\s*\(/);
+    const spawnedAt = handler.search(/oauthProcessManager\.triggerOAuth\s*\(/);
+
+    expect(validatedAt).toBeGreaterThanOrEqual(0);
+    expect(spawnedAt).toBeGreaterThanOrEqual(0);
+    expect(validatedAt).toBeLessThan(spawnedAt);
   });
 });
+
