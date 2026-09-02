@@ -20,9 +20,11 @@ describe('the default project is created in one place, under a lock', () => {
     expect(helper).toMatch(/\.for\(\s*['"]update['"]\s*\)/);
   });
 
-  it('returns the existing project instead of creating a second', () => {
-    expect(helper).toMatch(/existing/i);
-  });
+  // "returns the existing project instead of creating a second" used to live
+  // here as a grep for the word "existing", which the comments satisfy on their
+  // own — a mutation that always inserts passed it. That behaviour is asserted
+  // properly in default-project-behaviour.test.ts, against a mocked
+  // transaction, and that one does fail under the mutation.
 
   it('is the only place that creates a Default Hub', () => {
     const others = ['app/actions/projects.ts', 'app/api/auth/verify-email/route.ts']
