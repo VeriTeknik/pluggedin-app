@@ -3,6 +3,7 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { getServerSession } from 'next-auth';
 import * as path from 'path';
 import { z } from 'zod';
@@ -10,8 +11,6 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
-import { isRedirectError } from 'next/dist/client/components/redirect-error';
-
 import { withProfileAuth } from '@/lib/auth-helpers';
 import {
   askKnowledgeBaseFor,
