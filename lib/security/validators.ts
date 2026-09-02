@@ -435,6 +435,20 @@ const DIRECT_INTERPRETERS = ['node', 'python', 'python3'];
  * output, and nothing that decides what gets loaded.
  */
 const PACKAGE_EXECUTORS = ['npx', 'pnpm', 'uvx', 'uv', 'uvenv', 'dnx'];
+
+/**
+ * The subcommand each executor must be given, where it has one.
+ *
+ * Restricting options is not enough on its own: `uv run <anything>` and
+ * `pnpm exec <anything>` carry no flag at all and run whatever they are handed.
+ * So the *shape* of the invocation is allowlisted — for these two the first
+ * positional has to be the package-running subcommand, and for the rest the
+ * first positional is the package itself.
+ */
+const EXECUTOR_SUBCOMMANDS: Record<string, string[]> = {
+  uv: ['tool'],   // `uv tool run <package>`
+  pnpm: ['dlx'],  // `pnpm dlx <package>`
+};
 const EXECUTOR_SAFE_OPTIONS = new Set([
   '-y',
   '--yes',
@@ -526,6 +540,20 @@ function validateImportedExecutorOptions(
       return {
         valid: false,
         error: `An imported server may not pass ${option} to ${command}`,
+      };
+    }
+  }
+
+  const required = EXECUTOR_SUBCOMMANDS[command];
+  if (required) {
+    const firstPositional = list.find(
+      (arg): arg is string => typeof arg === 'string' && !arg.startsWith('-')
+    );
+
+    if (!firstPositional || !required.includes(firstPositional)) {
+      return {
+        valid: false,
+        error: `An imported server must invoke ${command} as \`${command} ${required[0]}\``,
       };
     }
   }

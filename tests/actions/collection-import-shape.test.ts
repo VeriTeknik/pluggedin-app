@@ -123,6 +123,9 @@ describe('importing a collection reads its server list', () => {
     // The executors are not a way around it: these reach the same place.
     ['npx', ['--node-options=--require=/tmp/x.js', 'pkg']],
     ['uv', ['run', '--with', '/tmp/evil', 'pkg']],
+    // No flag at all: these run whatever they are handed.
+    ['uv', ['run', 'arbitrary-thing']],
+    ['pnpm', ['exec', 'arbitrary-thing']],
   ])('refuses %s given options that decide what loads', async (command, args) => {
     // `node` is on the allowlist because running your own server is the point.
     // A command that arrives inside somebody else's collection is not your own,
@@ -144,6 +147,22 @@ describe('importing a collection reads its server list', () => {
       content: {
         servers: [{ name: 'ok', type: 'STDIO', command: 'npx', args: ['-y', 'some-mcp-server'] }],
       },
+    });
+
+    await POST(request());
+
+    expect(values).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['npx', ['-y', 'some-mcp-server']],
+    ['uvx', ['some-mcp-server']],
+    ['uv', ['tool', 'run', 'some-mcp-server']],
+    ['pnpm', ['dlx', 'some-mcp-server']],
+  ])('still allows the sanctioned %s shape', async (command, args) => {
+    getSharedCollection.mockResolvedValue({
+      uuid: 'c1',
+      content: { servers: [{ name: 'ok', type: 'STDIO', command, args }] },
     });
 
     await POST(request());
