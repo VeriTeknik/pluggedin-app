@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
+// safeFetch resolves each hop's hostname before fetching it. These suites are
+// about redirect handling, not about DNS, so every name here answers with one
+// public address — otherwise the assertions would depend on what the network
+// says about example.com today.
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]) },
+}));
+
+
 const { safeFetch } = await import('@/lib/oauth/ssrf-protection');
 
 /** A 302 to `location`, then a 200. */

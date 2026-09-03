@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
 const mockUpdate = vi.fn(() => ({
@@ -32,6 +32,13 @@ const mockSelect = vi.fn(() => ({
   })),
 }));
 
+// safeFetch resolves each hop's hostname before fetching. The example.com names
+// these suites use do not resolve, so DNS answers with one public address here
+// — this is about token handling, not about name resolution.
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]) },
+}));
+
 vi.mock('@/db', () => ({
   db: {
     query: {
@@ -61,7 +68,12 @@ vi.mock('@/lib/encryption', () => ({
   encryptField: vi.fn((data) => `encrypted-${JSON.stringify(data)}`),
 }));
 
-vi.mock('@/lib/security/validators', () => ({
+// Only validateHeaders is stubbed. The rest of the module stays real, because
+// the SSRF guard now classifies addresses through isPrivateAddress /
+// ipLiteralFromHost here — replacing those with stubs would quietly disable the
+// guard for this suite rather than exercise it.
+vi.mock('@/lib/security/validators', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/security/validators')>()),
   validateHeaders: vi.fn((headers) => ({
     valid: true,
     sanitizedHeaders: headers,

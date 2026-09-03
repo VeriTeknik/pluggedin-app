@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { sharedMcpServersTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { userOwnsProfile } from '@/lib/auth/profile-ownership';
 
 /**
  * @swagger
@@ -102,6 +103,17 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Profile ID and Server ID are required' },
         { status: 400 }
+      );
+    }
+
+    // Being signed in is not the same as owning this profile. Both identifiers
+    // in the path are public — the sibling GET lists every public share for a
+    // profile with its uuid — so without this check any account could delete
+    // another tenant's shares (GHSA-fv94-f4f5-vr99).
+    if (!(await userOwnsProfile(session.user.id, profileId))) {
+      return NextResponse.json(
+        { error: 'You do not have permission to unshare this server' },
+        { status: 403 }
       );
     }
 

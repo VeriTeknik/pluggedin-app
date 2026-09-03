@@ -18,6 +18,7 @@ type User = typeof users.$inferSelect;
 type LanguageCode = typeof languageEnum.enumValues[number]; 
 
 import { getAuthSession } from '@/lib/auth';
+import { userOwnsProfile } from '@/lib/auth/profile-ownership';
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import type { PublicUser } from '@/lib/public-user';
 import { toPublicUser } from '@/lib/public-user';
@@ -554,21 +555,6 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
  * @param profileUuid The profile UUID to verify ownership of
  * @returns True if the user owns the profile, false otherwise
  */
-async function userOwnsProfile(userId: string, profileUuid: string): Promise<boolean> {
-  try {
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-      with: {
-        project: true
-      }
-    });
-    
-    return profile?.project?.user_id === userId;
-  } catch (error) {
-    console.error('Error checking profile ownership:', error);
-    return false;
-  }
-}
 
 /**
  * Unshare an MCP server from a profile

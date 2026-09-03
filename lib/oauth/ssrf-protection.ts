@@ -3,48 +3,33 @@
  * Validates URLs to prevent access to private networks and reserved IP ranges
  */
 
+import dns from 'node:dns/promises';
+
+import { ipLiteralFromHost, isPrivateAddress } from '@/lib/security/validators';
+
 /**
  * Check if a hostname is a private or reserved IP address
  * Prevents SSRF attacks against internal services
  */
 function isPrivateOrReservedIP(hostname: string): boolean {
-  // Check for localhost variations
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '::1' ||
-    hostname.startsWith('127.') ||
-    hostname === '0.0.0.0'
-  ) {
+  // A trailing dot root-qualifies a name: `localhost.` and `localhost` reach
+  // the same place, but only one of them matched a string comparison.
+  const host = hostname.toLowerCase().replace(/\.+$/, '');
+
+  // Names that mean the local machine. Every other name is a name, not an
+  // address — assertHostResolvesPublic below is what judges those.
+  if (host === 'localhost' || host.endsWith('.localhost')) {
     return true;
   }
 
-  // Check for private IPv4 ranges
-  const privateIPv4Ranges = [
-    /^10\./, // 10.0.0.0/8
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
-    /^192\.168\./, // 192.168.0.0/16
-    /^169\.254\./, // Link-local (AWS/GCP metadata)
-  ];
-
-  if (privateIPv4Ranges.some((range) => range.test(hostname))) {
-    return true;
-  }
-
-  // Check for private IPv6 ranges
-  const privateIPv6Patterns = [
-    /^fe80:/i, // Link-local
-    /^fc00:/i, // Unique local addresses
-    /^fd00:/i, // Unique local addresses
-    /^::1$/i, // Loopback
-    /^::ffff:127\./i, // IPv4-mapped loopback
-  ];
-
-  if (privateIPv6Patterns.some((pattern) => pattern.test(hostname))) {
-    return true;
-  }
-
-  return false;
+  // One classifier for both families, shared with the socket-level check, and
+  // decided on the parsed address. The list this replaces compared the
+  // hostname against '::1' and matched `/^::ffff:127\./` — but a URL hostname
+  // is bracketed (`[::1]`) and WHATWG canonicalises IPv4-mapped addresses to
+  // hex (`[::ffff:7f00:1]`), so neither pattern could ever fire
+  // (GHSA-gmhc-h765-37cg).
+  const literal = ipLiteralFromHost(host);
+  return literal !== null && isPrivateAddress(literal);
 }
 
 /**
@@ -164,6 +149,44 @@ function crossOrigin(from: string, to: string): boolean {
   return new URL(from).origin !== new URL(to).origin;
 }
 
+/**
+ * Refuse a hostname whose addresses are not all globally routable.
+ *
+ * validateUrlForSSRF can only judge the text of a URL. A name is not an
+ * address: `internal.attacker.example` looks entirely ordinary and its A record
+ * can be 127.0.0.1, which is how a guard that reads hostnames gets walked past.
+ *
+ * Every address is checked and any private one rejects the request, rather than
+ * picking a public one out of the set. Without pinning there is nothing to
+ * guarantee the socket lands on the address that was approved.
+ *
+ * What this does not do: `fetch` resolves the name again when it opens the
+ * connection, so a host that answers differently the second time can still move
+ * the request after the check. Closing that needs the address handed to the
+ * socket — which is what lib/mcp/pinned-head-request.ts does over node:http,
+ * and what global fetch gives no way to do. This narrows the hole to an
+ * attacker who can time a DNS answer, from one who only has to own a name.
+ */
+async function assertHostResolvesPublic(url: URL): Promise<void> {
+  // An IP literal has no name to resolve; validateUrlForSSRF already judged it.
+  if (ipLiteralFromHost(url.hostname) !== null) {
+    return;
+  }
+
+  let addresses: Array<{ address: string }>;
+  try {
+    addresses = await dns.lookup(url.hostname, { all: true });
+  } catch {
+    throw new Error(`Host ${url.hostname} could not be resolved`);
+  }
+
+  if (addresses.length === 0 || addresses.some((entry) => isPrivateAddress(entry.address))) {
+    throw new Error(
+      `Host ${url.hostname} resolves to a private or reserved address, which is not allowed`
+    );
+  }
+}
+
 export async function safeFetch(
   url: string,
   options?: RequestInit,
@@ -193,6 +216,12 @@ export async function safeFetch(
     // which otherwise cannot tell that a validator throwing on the line above
     // guards this call.
     const validated = validateUrlForSSRF(currentUrl, allowPrivate);
+
+    // Per hop, not once: a redirect chooses its own destination, and the second
+    // host is no more trustworthy than the first.
+    if (!allowPrivate) {
+      await assertHostResolvesPublic(validated);
+    }
 
     const response = await fetch(validated, { ...requestInit, redirect: 'manual' });
 
