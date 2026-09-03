@@ -140,10 +140,14 @@ describe('pinnedFetch resource limits', () => {
     slowServer = http.createServer((req, res) => {
       if (req.url === '/big-redirect') {
         res.writeHead(302, { location: 'https://elsewhere.example/' });
-        // A redirect that also streams: the body must never be read.
+        // The body never ends. A finite one would let a draining
+        // implementation pass this test: it would download the lot, discard
+        // it, and still hand back the right status. An endless stream can only
+        // be survived by not reading it. (CodeRabbit's point on PR #230 — my
+        // first version of this fixture wrote 4 MB and stopped.)
         const chunk = 'x'.repeat(64 * 1024);
-        for (let i = 0; i < 64; i++) res.write(chunk);
-        res.end();
+        const timer = setInterval(() => res.write(chunk), 5);
+        res.on('close', () => clearInterval(timer));
         return;
       }
       if (req.url === '/big-body') {
@@ -178,6 +182,22 @@ describe('pinnedFetch resource limits', () => {
     expect(response.headers.get('location')).toBe('https://elsewhere.example/');
     // The point: the 4 MB the server offered was never read.
     expect(await response.text()).toBe('');
+  });
+
+  it('gives a HEAD response a null body, as fetch does', async () => {
+    // A HEAD has no body by definition. Buffering yields an empty Buffer, and
+    // `response.body` is then an empty stream rather than null — a difference
+    // callers can branch on.
+    const response = await pinnedFetch(
+      new URL(`http://example.com:${slowPort}/`),
+      { method: 'HEAD' },
+      '127.0.0.1',
+      4,
+      { timeoutMs: 2000 }
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toBeNull();
   });
 
   it('refuses a response larger than the cap instead of buffering it', async () => {

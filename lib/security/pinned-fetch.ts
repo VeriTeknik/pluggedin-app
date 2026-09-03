@@ -139,7 +139,11 @@ export async function pinnedFetch(
           }
         }
 
-        const finish = (body: Buffer | null) =>
+        // Uint8Array<ArrayBuffer>, not Buffer and not a view over one. Buffer
+        // is absent from the DOM lib's BodyInit union, and a view carries
+        // `ArrayBufferLike`, which BodyInit also rejects — both compile-time
+        // only, both fine at run time. The copy is bounded by maxBytes.
+        const finish = (body: Uint8Array<ArrayBuffer> | null) =>
           resolve(
             new Response(body, {
               status,
@@ -148,11 +152,20 @@ export async function pinnedFetch(
             })
           );
 
+        // Three cases with no body to read.
+        //
         // A redirect's headers are the whole answer; the body is never read by
         // anyone and is the cheapest thing for a hostile host to make large.
         // Destroying the stream stops the download rather than discarding it
         // afterwards.
-        if (REDIRECT_STATUSES.has(status) || NULL_BODY_STATUSES.has(status)) {
+        //
+        // A HEAD has no body by definition, and fetch gives those a null body.
+        // Buffering would produce an empty one instead — an empty stream is
+        // not null, and callers can tell the difference.
+        //
+        // And the statuses the Fetch standard forbids a body on.
+        const isHead = (init?.method ?? 'GET').toUpperCase() === 'HEAD';
+        if (isHead || REDIRECT_STATUSES.has(status) || NULL_BODY_STATUSES.has(status)) {
           response.destroy();
           finish(null);
           return;
@@ -172,7 +185,9 @@ export async function pinnedFetch(
           chunks.push(chunk);
         });
         response.on('error', reject);
-        response.on('end', () => finish(Buffer.concat(chunks)));
+        response.on('end', () => {
+          finish(new Uint8Array(Buffer.concat(chunks)));
+        });
       }
     );
 
