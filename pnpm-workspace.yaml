@@ -75,9 +75,14 @@ overrides:
   # when the override was written. A security override with an open top can
   # walk into the next vulnerability on its own.
   #
-  # Bounded now: 0.9.12 is the patched release, and the ceiling stops it
-  # repeating the trick on 0.10.
-  '@xmldom/xmldom@<0.9.12': '>=0.9.12 <0.10.0'
+  # Bounded now — and bounded to the 0.8 line, not the 0.9 one. The only
+  # consumer is mammoth, which calls `DOMParser.parseFromString(string)` with no
+  # MIME type; xmldom made that argument mandatory in 0.9.0. So every 0.9.x
+  # resolution, 0.9.10 on main included, throws before a DOCX is ever parsed.
+  # 0.8.15 clears the advisory on the 0.8 line and keeps the one-argument call
+  # working. tests/deps/docx-conversion.test.ts converts a real DOCX so the next
+  # bump here cannot quietly break the preview again.
+  '@xmldom/xmldom@<0.8.15': '>=0.8.15 <0.9.0'
   # Surfaced by `pnpm audit` after the bumps above pulled newer transitives.
   # Every target is bounded to its own major — the xmldom entry above is what
   # happens when one is not.
