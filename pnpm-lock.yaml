@@ -15,7 +15,7 @@ overrides:
   axios@=1.10.0: '>=1.11.0'
   js-yaml@>=4.0.0 <4.3.1: '>=4.3.1 <5.0.0'
   playwright@<1.55.1: '>=1.55.1'
-  qs@<6.16.0: '>=6.16.0'
+  qs@<6.16.0: '>=6.16.0 <7.0.0'
   tar@<7.5.19: '>=7.5.19 <8.0.0'
   fast-xml-parser@<5.3.5: '>=5.3.5'
   minimatch@>=3.0.0 <3.1.3: '>=3.1.3 <4.0.0'
@@ -44,15 +44,15 @@ overrides:
   express-rate-limit@>=8.2.0 <8.2.2: '>=8.2.2'
   underscore@<1.13.8: '>=1.13.8'
   '@xmldom/xmldom@<0.9.12': '>=0.9.12 <0.10.0'
-  browserslist@<=4.28.6: '>=4.28.7'
-  '@humanfs/node@<0.16.8': '>=0.16.8'
-  postcss-selector-parser@>=6.1.0 <6.1.3: '>=6.1.3'
+  browserslist@<=4.28.6: '>=4.28.7 <5.0.0'
+  '@humanfs/node@<0.16.8': '>=0.16.8 <0.17.0'
+  postcss-selector-parser@>=6.1.0 <6.1.3: '>=6.1.3 <7.0.0'
   protobufjs@<7.6.5: '>=7.6.5 <8.0.0'
   vite@>=7.0.0 <7.3.6: '>=7.3.6 <8.0.0'
   lodash@<4.18.0: '>=4.18.0 <5.0.0'
   dompurify@<3.4.13: '>=3.4.13 <4.0.0'
   '@opentelemetry/core@<2.8.0': '>=2.8.0 <3.0.0'
-  postcss@<8.5.23: '>=8.5.23'
+  postcss@<8.5.23: '>=8.5.23 <9.0.0'
   ws@>=8.0.0 <8.20.1: '>=8.20.1 <9.0.0'
   ws@>=7.0.0 <7.5.11: '>=7.5.11 <8.0.0'
   smol-toml@<1.6.1: '>=1.6.1'
@@ -433,7 +433,7 @@ importers:
         specifier: ^13.1.3
         version: 13.1.3
       postcss:
-        specifier: '>=8.5.23'
+        specifier: '>=8.5.23 <9.0.0'
         version: 8.5.24
       postcss-load-config:
         specifier: ^6.0.1
@@ -6177,20 +6177,20 @@ packages:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
-      postcss: '>=8.5.23'
+      postcss: '>=8.5.23 <9.0.0'
 
   postcss-js@4.1.0:
     resolution: {integrity: sha512-oIAOTqgIo7q2EOwbhb8UalYePMvYoIeRY2YKntdpFQXNosSu3vLrniGgmH9OKs/qAkfoj5oB3le/7mINW1LCfw==}
     engines: {node: ^12 || ^14 || >= 16}
     peerDependencies:
-      postcss: '>=8.5.23'
+      postcss: '>=8.5.23 <9.0.0'
 
   postcss-load-config@6.0.1:
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
     engines: {node: '>= 18'}
     peerDependencies:
       jiti: '>=1.21.0'
-      postcss: '>=8.5.23'
+      postcss: '>=8.5.23 <9.0.0'
       tsx: ^4.8.1
       yaml: '>=2.7.1'
     peerDependenciesMeta:
@@ -6207,14 +6207,14 @@ packages:
     resolution: {integrity: sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==}
     engines: {node: '>=12.0'}
     peerDependencies:
-      postcss: '>=8.5.23'
+      postcss: '>=8.5.23 <9.0.0'
 
   postcss-selector-parser@6.0.10:
     resolution: {integrity: sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==}
     engines: {node: '>=4'}
 
-  postcss-selector-parser@7.1.5:
-    resolution: {integrity: sha512-KvvtD7SrlBP7dlgkBghEE3r84CABm5SmV2aNcG4oCA+qDnJ/tvKonFVvwWAyyWUEwxuNawdfEAZKP9zM3oZ2Uw==}
+  postcss-selector-parser@6.1.4:
+    resolution: {integrity: sha512-bIoJLOmjCO1S9XdY/DcnR5hJxvrDir1PbGChrzXG3vw0/FOliy/fA3dmdhQ441kah4gKv+TwckGzex6wNS5cnQ==}
     engines: {node: '>=4'}
 
   postcss-value-parser@4.2.0:
@@ -7189,7 +7189,7 @@ packages:
     resolution: {integrity: sha512-UQ+MSxlhRm1bzjhU+DcuXfjFO1FzNtqhK5+9Yvlp90ItDLk5vT932A0rFu619nf7RVS+Y/VeaUW1jaRDqZ8VJw==}
     hasBin: true
     peerDependencies:
-      browserslist: '>=4.28.7'
+      browserslist: '>=4.28.7 <5.0.0'
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
@@ -13548,14 +13548,14 @@ snapshots:
   postcss-nested@6.2.0(postcss@8.5.24):
     dependencies:
       postcss: 8.5.24
-      postcss-selector-parser: 7.1.5
+      postcss-selector-parser: 6.1.4
 
   postcss-selector-parser@6.0.10:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
 
-  postcss-selector-parser@7.1.5:
+  postcss-selector-parser@6.1.4:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -14501,7 +14501,7 @@ snapshots:
       postcss-js: 4.1.0(postcss@8.5.24)
       postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.24)(tsx@4.21.0)(yaml@2.8.3)
       postcss-nested: 6.2.0(postcss@8.5.24)
-      postcss-selector-parser: 7.1.5
+      postcss-selector-parser: 6.1.4
       resolve: 1.22.11
       sucrase: 3.35.1
     transitivePeerDependencies:
