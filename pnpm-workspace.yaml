@@ -9,7 +9,8 @@ overrides:
   # all of them. 5.0.8 publishes both ESM and CJS (exports.require), and
   # minimatch only calls expand(), so this is a drop-in for the minimatch 3/9/10
   # consumers in the tree (glob/rimraf/eslint tooling).
-  'brace-expansion@<5.0.8': '>=5.0.8 <6.0.0'
+  # Round 3, CVE-2026-69152: 5.0.8 is affected too; 5.0.9 is the fix.
+  'brace-expansion@<5.0.9': '>=5.0.9 <6.0.0'
   # Target must be >=0.28.1, not >=0.25.0: pnpm matches override selectors
   # against the DECLARED range, so this entry catches @esbuild-kit/core-utils'
   # '~0.18.20' and is the only override that ever fires for it. Pointing it at
@@ -18,12 +19,19 @@ overrides:
   # GHSA-g7r4-m6w7-qqqr. Became reachable once vite moved to 7.3.6, which pulls
   # esbuild 0.27.7 into the tree; the pre-bump tree only had 0.25.12/0.27.1.
   'esbuild@>=0.27.3 <0.28.1': '>=0.28.1'
+  # CVE-2026-67213 / -67214 / -73086. The direct dependency is bumped in
+  # package.json; these cover the 3.x and 5.x copies pulled in transitively.
+  'nanoid@<3.3.18': '>=3.3.18 <4.0.0'
+  'nanoid@>=4.0.0 <5.1.16': '>=5.1.16 <6.0.0'
+  'sanitize-html@<2.17.7': '>=2.17.7 <3.0.0'
   'prismjs@<1.30.0': '>=1.30.0'
   'axios@=1.10.0': '>=1.11.0'
   # GHSA-52cp-r559-cp3m (high) + GHSA-h67p-54hq-rp68
-  'js-yaml@>=4.0.0 <4.3.0': '>=4.3.0 <5.0.0'
+  # Round 3, GHSA-5p4m-2wfm-xmqj: the previous target, 4.3.0, is itself affected.
+  'js-yaml@>=4.0.0 <4.3.1': '>=4.3.1 <5.0.0'
   'playwright@<1.55.1': '>=1.55.1'
-  'qs@<6.15.2': '>=6.15.2'
+  # Round 3: the previous target, 6.15.2, is affected.
+  'qs@<6.16.0': '>=6.16.0'
   # GHSA-23hp-3jrh-7fpw (critical), GHSA-8x88-c5mf-7j5w, GHSA-w8wr-v893-vjvp
   'tar@<7.5.19': '>=7.5.19 <8.0.0'
   'fast-xml-parser@<5.3.5': '>=5.3.5'
@@ -31,13 +39,15 @@ overrides:
   'minimatch@>=9.0.0 <9.0.6': '>=9.0.6 <10.0.0'
   'minimatch@>=10.0.0 <10.2.3': '>=10.2.3 <11.0.0'
   # GHSA-88fw-hqm2-52qc (high) + 6 medium advisories
-  'hono@<4.12.27': '>=4.12.27 <5.0.0'
+  'hono@<4.12.34': '>=4.12.34 <5.0.0'
   'ajv@>=8.0.0 <8.18.0': '>=8.18.0'
   'ajv@<6.14.0': '>=6.14.0 <7.0.0'
   'langsmith@<0.6.0': '>=0.6.0 <0.7.0'
   # GHSA-4c8g-83qw-93j6 + GHSA-v2hh-gcrm-f6hx (high)
-  'fast-uri@<3.1.4': '>=3.1.4 <4.0.0'
-  'ip-address@<10.1.1': '>=10.1.1 <11.0.0'
+  # Round 3, CVE-2026-18446 / -75899 / -75931: three advisories past 3.1.4.
+  'fast-uri@<3.1.6': '>=3.1.6 <4.0.0'
+  # Round 3, CVE-2026-69192: affects everything up to and including 10.3.0.
+  'ip-address@<10.3.1': '>=10.3.1 <11.0.0'
   'uuid@<11.1.1': '>=11.1.1 <12.0.0'
   'uuid@>=13.0.0 <13.0.1': '>=13.0.1 <14.0.0'
   '@isaacs/brace-expansion@<5.0.1': '>=5.0.1'
@@ -57,16 +67,30 @@ overrides:
   '@hono/node-server@<2.0.5': '>=2.0.5 <3.0.0'
   'express-rate-limit@>=8.2.0 <8.2.2': '>=8.2.2'
   'underscore@<1.13.8': '>=1.13.8'
-  '@xmldom/xmldom@<0.8.13': '>=0.8.13'
+  # GHSA-6gmq-8vp8-gcm6, and a lesson about unbounded targets.
+  #
+  # mammoth declares '^0.8.6'. The previous round's override matched that and
+  # sent it to '>=0.8.13' with no upper bound, so it drifted onto the 0.9 line
+  # and landed on 0.9.10 — inside the range of an advisory that did not exist
+  # when the override was written. A security override with an open top can
+  # walk into the next vulnerability on its own.
+  #
+  # Bounded now: 0.9.12 is the patched release, and the ceiling stops it
+  # repeating the trick on 0.10.
+  '@xmldom/xmldom@<0.9.12': '>=0.9.12 <0.10.0'
+  # Surfaced by `pnpm audit` after the bumps above pulled newer transitives.
+  'browserslist@<=4.28.6': '>=4.28.7'
+  '@humanfs/node@<0.16.8': '>=0.16.8'
+  'postcss-selector-parser@>=6.1.0 <6.1.3': '>=6.1.3'
   # GHSA-j3f2-48v5-ccww, reached via @google/genai
   'protobufjs@<7.6.5': '>=7.6.5 <8.0.0'
   'vite@>=7.0.0 <7.3.6': '>=7.3.6 <8.0.0'
   'lodash@<4.18.0': '>=4.18.0 <5.0.0'
   # GHSA-c2j3-45gr-mqc4
-  'dompurify@<3.4.12': '>=3.4.12 <4.0.0'
+  'dompurify@<3.4.13': '>=3.4.13 <4.0.0'
   '@opentelemetry/core@<2.8.0': '>=2.8.0 <3.0.0'
   # Round 2: <=8.5.17 vulnerable.
-  'postcss@<8.5.18': '>=8.5.18'
+  'postcss@<8.5.23': '>=8.5.23'
   'ws@>=8.0.0 <8.20.1': '>=8.20.1 <9.0.0'
   # Round 2: the 7.x copy in the tree is covered by >=7.0.0 <7.5.11.
   'ws@>=7.0.0 <7.5.11': '>=7.5.11 <8.0.0'
