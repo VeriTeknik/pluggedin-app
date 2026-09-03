@@ -5,6 +5,7 @@
 
 import dns from 'node:dns/promises';
 
+import { pinnedFetch } from '@/lib/security/pinned-fetch';
 import { ipLiteralFromHost, isPrivateAddress } from '@/lib/security/validators';
 
 /**
@@ -167,13 +168,17 @@ function crossOrigin(from: string, to: string): boolean {
  * and what global fetch gives no way to do. This narrows the hole to an
  * attacker who can time a DNS answer, from one who only has to own a name.
  */
-async function assertHostResolvesPublic(url: URL): Promise<void> {
-  // An IP literal has no name to resolve; validateUrlForSSRF already judged it.
-  if (ipLiteralFromHost(url.hostname) !== null) {
-    return;
+async function resolveToPinnableAddress(
+  url: URL
+): Promise<{ address: string; family: number }> {
+  // An IP literal has no name to resolve; validateUrlForSSRF already judged it,
+  // and it is its own pin.
+  const literal = ipLiteralFromHost(url.hostname);
+  if (literal !== null) {
+    return { address: literal, family: literal.includes(':') ? 6 : 4 };
   }
 
-  let addresses: Array<{ address: string }>;
+  let addresses: Array<{ address: string; family: number }>;
   try {
     addresses = await dns.lookup(url.hostname, { all: true });
   } catch {
@@ -185,6 +190,12 @@ async function assertHostResolvesPublic(url: URL): Promise<void> {
       `Host ${url.hostname} resolves to a private or reserved address, which is not allowed`
     );
   }
+
+  // The first address is returned *and used*. Approving the set and then
+  // letting the socket resolve again was the rebinding window: the check and
+  // the connection could disagree. pinnedFetch connects to this address, so
+  // there is nothing left to disagree with.
+  return addresses[0];
 }
 
 export async function safeFetch(
@@ -219,11 +230,19 @@ export async function safeFetch(
 
     // Per hop, not once: a redirect chooses its own destination, and the second
     // host is no more trustworthy than the first.
-    if (!allowPrivate) {
-      await assertHostResolvesPublic(validated);
-    }
-
-    const response = await fetch(validated, { ...requestInit, redirect: 'manual' });
+    //
+    // allowPrivate is the test path, which deliberately targets loopback. It
+    // gets plain fetch, because there is nothing to pin to when the point is to
+    // reach a private address.
+    const response = allowPrivate
+      ? await fetch(validated, { ...requestInit, redirect: 'manual' })
+      : await pinnedFetch(
+          validated,
+          requestInit,
+          ...(({ address, family }) => [address, family] as const)(
+            await resolveToPinnableAddress(validated)
+          )
+        );
 
     if (!REDIRECT_STATUSES.has(response.status)) return response;
 
@@ -247,6 +266,11 @@ export async function safeFetch(
     // large-bodied redirects and lean on that: twenty hops per request, each
     // leaving a stream open. cancel() discards it without downloading, which
     // is the point; response.text() would fetch the very bytes being refused.
+    //
+    // On the pinned path this is already handled a layer down — pinnedFetch
+    // destroys a 3xx stream rather than buffering it, so the body here is
+    // null and `?.` short-circuits. It still matters for the allowPrivate
+    // path, which goes through fetch.
     await response.body?.cancel().catch(() => {
       // An already-disturbed or closed body is nothing to act on, and failing
       // to release it must not fail the request that was otherwise fine.
