@@ -17,7 +17,9 @@ Plugged.in takes security seriously as a collaborative platform for the Model Co
 9. [Security Best Practices](#security-best-practices)
 10. [Environment Security](#environment-security)
 11. [Supported Versions](#supported-versions)
-12. [Acknowledgements](#acknowledgements)
+12. [Security Contact](#security-contact)
+13. [Recent Security Enhancements](#recent-security-enhancements-january-2025---admin-email-system)
+14. [Acknowledgements](#acknowledgements)
 
 ## Reporting Security Vulnerabilities
 
@@ -578,7 +580,7 @@ WHERE user_id IN (SELECT id FROM users WHERE is_admin = true);
 - Review and update security documentation
 - Conduct admin security training
 
-### 📊 Additional Security Enhancements (January 2025 - Latest Updates)
+### 📊 Additional Security Enhancements (January 2025)
 
 #### 6. Centralized HTML Sanitization
 - **Implementation**: Created `lib/sanitization.ts` for consistent security
@@ -682,6 +684,6 @@ them wrong. The check now lives in a single place.
 **Last Updated**: September 3, 2026 (Five reported advisories fixed and credited — see Acknowledgements)
 **Previously Updated**: January 15, 2025 (Critical vulnerability fixes - XSS, SSRF, URL validation, Admin Email Security, Enhanced Sanitization, Translation Retry Logic, Environment Validation)
 **Security Improvements**: Secure tokens, admin roles, audit logging, rate limiting, XSS protection, centralized sanitization, robust error handling, environment validation
-**Next Review**: April 2025
+**Next Review**: December 2026
 
 For questions about this security policy or to report vulnerabilities, please contact our security team or create a GitHub Security Advisory. 
