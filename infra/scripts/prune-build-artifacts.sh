@@ -26,12 +26,12 @@
 #
 #   TAGS ARE A DIFFERENT MATTER, and this bit is genuinely surprising: prune
 #   can drop a TAG from an image it is otherwise protecting. Observed here — a
-#   run removed `:live` while keeping the image, because the container holds it
-#   by ID and no longer needs the name. The stack still ran, but
-#   `IMAGE_TAG=live docker compose up` would then find nothing locally and try
-#   to pull a tag that does not exist in the registry, so the next deploy
-#   breaks rather than the current one. The script re-asserts the tags compose
-#   depends on afterwards.
+#   run removed the deployed tag while keeping the image, because the container
+#   holds it by ID and no longer needs the name. The stack still ran, but the
+#   next `docker compose up` would find nothing locally and try to pull a tag
+#   that does not exist in the registry, so the next deploy breaks rather than
+#   the current one. The script re-asserts the tags compose depends on
+#   afterwards — read from the running container, not hardcoded.
 set -euo pipefail
 
 DRY_RUN=0
@@ -125,9 +125,36 @@ fi
 BEFORE=$(free_gb)
 log "disk before: ${BEFORE}G free"
 
-# Record what the compose-referenced tags point at BEFORE pruning, so a tag the
-# prune strips can be put back on the same image rather than on a guess.
-COMPOSE_TAGS=(live)
+# Which tags matter is derived, not assumed. This was hardcoded to `live`,
+# which no longer appears anywhere: compose reads `${IMAGE_TAG:-latest}` and
+# deploys run without setting it, so the deployed tag is `latest`. Both halves
+# of the tag protection were therefore guarding a name nothing used — the
+# restore could not restore the tag a deploy needs, and the registry check
+# warned three times a day about the absence of a tag that was never meant to
+# exist, while never once looking at the one that does.
+#
+# The running container is the authority: it is by definition the tag a
+# rollback or redeploy has to find. `latest` is included as a floor because it
+# is compose's default and would be used by a deploy run with no IMAGE_TAG.
+# Order matters and must not be sorted: the running container's tag comes
+# first, because the registry check below asks about the DEPLOYED tag and a
+# sorted list would silently answer about a different one. (`latest` sorts
+# before `sha-abc1234`, so sorting made the check report on the wrong tag while
+# looking correct.)
+COMPOSE_TAGS=()
+RUNNING_TAG="$(docker inspect pluggedin-app --format '{{.Config.Image}}' 2>/dev/null \
+  | sed -n 's|^ghcr\.io/veriteknik/pluggedin-app:||p' || true)"
+# Written as ifs rather than `[ … ] && …`. Under `set -e` that form is exempt
+# only because the test is not the command after the final `&&` — a rule this
+# file has already been bitten by once, and not one worth relying on twice.
+if [ -n "$RUNNING_TAG" ]; then
+  COMPOSE_TAGS+=("$RUNNING_TAG")
+fi
+# compose's default, used by any deploy that does not set IMAGE_TAG.
+if [ "$RUNNING_TAG" != "latest" ]; then
+  COMPOSE_TAGS+=(latest)
+fi
+log "protecting tags: ${COMPOSE_TAGS[*]}"
 TAG_SNAPSHOT=()
 for tag in "${COMPOSE_TAGS[@]}"; do
   ref="ghcr.io/veriteknik/pluggedin-app:${tag}"
@@ -266,14 +293,15 @@ log "disk after: ${AFTER}G free (reclaimed $((AFTER - BEFORE))G)"
 # so treating a non-zero exit as proof of absence produces a warning that is
 # permanently wrong and quickly ignored. Root runs this timer and has no
 # registry credentials, which is exactly the case that would misreport.
-if REG_OUT=$(docker manifest inspect "ghcr.io/veriteknik/pluggedin-app:live" 2>&1); then
-  log "ok — :live is present in GHCR"
+DEPLOYED_TAG="${COMPOSE_TAGS[0]:-latest}"
+if REG_OUT=$(docker manifest inspect "ghcr.io/veriteknik/pluggedin-app:${DEPLOYED_TAG}" 2>&1); then
+  log "ok — :${DEPLOYED_TAG} is present in GHCR"
 else
   case "$REG_OUT" in
     *denied*|*unauthorized*|*authentication*|*"no basic auth"*)
-      log "note: cannot check GHCR for :live (no registry credentials) — not asserting either way" ;;
+      log "note: cannot check GHCR for :${DEPLOYED_TAG} (no registry credentials) — not asserting either way" ;;
     *)
-      log "WARNING: :live is not in GHCR — the local image is the only copy" ;;
+      log "WARNING: :${DEPLOYED_TAG} is not in GHCR — the local image is the only copy" ;;
   esac
 fi
 
