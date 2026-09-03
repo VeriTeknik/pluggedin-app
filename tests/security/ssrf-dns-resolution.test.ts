@@ -16,6 +16,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const lookup = vi.fn();
+// safeFetch now hands each hop to pinnedFetch, which speaks node:http so the
+// socket gets the address that was validated. That moved the seam: stubbing
+// global fetch no longer intercepts anything.
+vi.mock('@/lib/security/pinned-fetch', () => ({
+  pinnedFetch: vi.fn((url, init) => (globalThis.fetch as unknown as (u: unknown, i: unknown) => Promise<Response>)(url, init)),
+  pinnedLookup: vi.fn(),
+}));
+
 vi.mock('node:dns/promises', () => ({ default: { lookup: (...a: unknown[]) => lookup(...a) } }));
 
 const { safeFetch } = await import('@/lib/oauth/ssrf-protection');

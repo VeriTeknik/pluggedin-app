@@ -7,6 +7,14 @@ vi.stubGlobal('fetch', fetchMock);
 // about redirect handling, not about DNS, so every name here answers with one
 // public address — otherwise the assertions would depend on what the network
 // says about example.com today.
+// safeFetch now hands each hop to pinnedFetch, which speaks node:http so the
+// socket gets the address that was validated. That moved the seam: stubbing
+// global fetch no longer intercepts anything.
+vi.mock('@/lib/security/pinned-fetch', () => ({
+  pinnedFetch: vi.fn((url, init) => (globalThis.fetch as unknown as (u: unknown, i: unknown) => Promise<Response>)(url, init)),
+  pinnedLookup: vi.fn(),
+}));
+
 vi.mock('node:dns/promises', () => ({
   default: { lookup: vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]) },
 }));

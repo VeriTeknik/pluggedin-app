@@ -2,6 +2,7 @@ import dns from 'node:dns/promises';
 import http from 'node:http';
 import https from 'node:https';
 
+import { pinnedLookup } from '@/lib/security/pinned-fetch';
 import { isPrivateAddress } from '@/lib/security/validators';
 
 /**
@@ -54,7 +55,7 @@ export async function pinnedHeadRequest(
         path: `${url.pathname}${url.search}`,
         timeout: timeoutMs,
         // Hand the socket the address we checked, rather than resolving again.
-        lookup: (_hostname, _options, callback) => callback(null, address, family),
+        lookup: pinnedLookup(address, family),
       },
       (response) => {
         response.resume(); // a HEAD has no body, but the socket must be freed

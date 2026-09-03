@@ -4,6 +4,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // about redirect handling, not about DNS, so every name here answers with one
 // public address — otherwise the assertions would depend on what the network
 // says about example.com today.
+// safeFetch now hands each hop to pinnedFetch, which speaks node:http so the
+// socket gets the address that was validated. That moved the seam: stubbing
+// global fetch no longer intercepts anything.
+vi.mock('@/lib/security/pinned-fetch', () => ({
+  pinnedFetch: vi.fn((url, init) => (globalThis.fetch as unknown as (u: unknown, i: unknown) => Promise<Response>)(url, init)),
+  pinnedLookup: vi.fn(),
+}));
+
 vi.mock('node:dns/promises', () => ({
   default: { lookup: vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]) },
 }));
@@ -131,6 +139,10 @@ describe('safeFetch redirect handling', () => {
   });
 
   it('passes the caller’s options through on every hop', async () => {
+    // `redirect: 'manual'` used to be asserted here too. It is gone from the
+    // options because hops no longer go through fetch at all: pinnedFetch
+    // speaks node:http and never follows a redirect, so not following one is
+    // structural rather than a flag that could be forgotten.
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(redirectTo('https://other.example/final'))
@@ -144,8 +156,6 @@ describe('safeFetch redirect handling', () => {
       // dropping credential headers, so the shape differs between hops even
       // though a non-credential header like Accept survives both.
       expect(new Headers(init.headers).get('accept')).toBe('application/json');
-      // Redirects must be handled by us, not by fetch.
-      expect(init.redirect).toBe('manual');
     }
   });
 

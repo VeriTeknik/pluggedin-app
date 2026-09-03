@@ -3,6 +3,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { testMcpConnection } from '@/app/actions/test-mcp-connection';
 
 // testMcpConnection spawns a child process, so it now requires a session.
+// safeFetch now hands each hop to pinnedFetch, which speaks node:http so the
+// socket gets the address that was validated. That moved the seam: stubbing
+// global fetch no longer intercepts anything.
+// safeFetch resolves each hop before pinning it, so without this the suite
+// would make a real DNS query for mcp.context7.com.
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]) },
+}));
+
+vi.mock('@/lib/security/pinned-fetch', () => ({
+  pinnedFetch: vi.fn((url, init) => (globalThis.fetch as unknown as (u: unknown, i: unknown) => Promise<Response>)(url, init)),
+  pinnedLookup: vi.fn(),
+}));
+
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(async () => ({ user: { id: 'test-user' } })) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {}, getAuthSession: vi.fn() }));
 import { McpServerType } from '@/db/schema';
@@ -42,13 +56,14 @@ describe('Context7 MCP Server Tests', () => {
       expect(result.message).toContain('MCP server connection verified');
       
       // Verify correct headers were sent
-      // These calls now go through safeFetch, which validates the destination
-      // and hands fetch the parsed URL with redirects taken off automatic.
+      // These calls go through safeFetch, which validates and resolves the
+      // destination and then hands the request to pinnedFetch. `redirect:
+      // 'manual'` is gone from the options because pinnedFetch does not follow
+      // redirects at all — it is structural now, not a flag.
       expect(mockFetch).toHaveBeenCalledWith(
         new URL('https://mcp.context7.com/mcp'),
         expect.objectContaining({
           method: 'POST',
-          redirect: 'manual',
           headers: expect.objectContaining({
             'Accept': 'application/json, text/event-stream',
             'Content-Type': 'application/json',
@@ -101,12 +116,13 @@ describe('Context7 MCP Server Tests', () => {
         url: 'https://mcp.context7.com/mcp'
       });
 
-      // Should try HEAD request for SSE (not special handling)
+      // Should try HEAD request for SSE (not special handling). `redirect:
+      // 'manual'` is no longer among the options: pinnedFetch never follows a
+      // redirect, so not following one stopped being a flag to pass.
       expect(mockFetch).toHaveBeenCalledWith(
         new URL('https://mcp.context7.com/mcp'),
         expect.objectContaining({
           method: 'HEAD',
-          redirect: 'manual',
         })
       );
     });
