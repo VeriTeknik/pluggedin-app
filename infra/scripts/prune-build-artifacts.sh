@@ -288,7 +288,11 @@ USED_PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "$USED_PCT" -ge 75 ]; then
   echo "WARNING: / still ${USED_PCT}% full after pruning — investigate before it reaches Postgres" >&2
   echo "         largest consumers:" >&2
-  du -xh --max-depth=2 /var /home 2>/dev/null | sort -rh | head -5 >&2
+  # `|| true` for the same reason as the systemctl pipeline in --install-timer,
+  # and I reintroduced the bug this file already documents: `head` closes the
+  # pipe, sort takes SIGPIPE, and under pipefail that exit 141 aborts the script
+  # — here, right before the exit status that carries the warning.
+  du -xh --max-depth=2 /var /home 2>/dev/null | sort -rh | head -5 >&2 || true
   UNHEALTHY=1
 else
   log "ok — / is ${USED_PCT}% full"
