@@ -49,13 +49,47 @@ export function pinnedLookup(address: string, family: number) {
  * reads the whole response — `.json()` or `.text()`, including the two that
  * parse `text/event-stream` — so there is nothing to gain from a stream and a
  * `Response` built from a buffer keeps the interface identical to `fetch`.
+ *
+ * Buffering has to be bounded, though, and node:http brings none of undici's
+ * defaults:
+ *
+ * - A redirect's body is discarded without reading it. safeFetch follows up to
+ *   twenty hops against attacker-supplied hosts, and cancelled each hop's body
+ *   for exactly this reason; buffering to `end` first would have undone that.
+ * - A size cap, so a host cannot answer a single request with more than the
+ *   process can hold.
+ * - An inactivity timeout, so a host that accepts the connection and then says
+ *   nothing does not hold the request open forever.
  */
+/**
+ * Final statuses that must not carry a body. `new Response(buffer, {status})`
+ * throws for these rather than ignoring the body.
+ *
+ * The Fetch standard also lists 101 and 103, but a client never yields those as
+ * a response: node:http reports 1xx through the `information` event, and
+ * `new Response` rejects any status below 200 outright. They are handled as an
+ * error below rather than listed here, so an unexpected one surfaces as a
+ * rejection instead of an unhandled RangeError.
+ */
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+/** Large enough for any response this application reads, small enough to hold. */
+const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
+
+/** Inactivity, not total duration — a slow but progressing response is fine. */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export async function pinnedFetch(
   url: URL,
   init: RequestInit | undefined,
   address: string,
-  family: number
+  family: number,
+  limits: { maxBytes?: number; timeoutMs?: number } = {}
 ): Promise<Response> {
+  const maxBytes = limits.maxBytes ?? DEFAULT_MAX_BYTES;
+  const timeoutMs = limits.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const transport = url.protocol === 'https:' ? https : http;
 
   const headers = new Headers(init?.headers);
@@ -80,38 +114,65 @@ export async function pinnedFetch(
         hostname: url.hostname.replace(/^\[|\]$/g, ''), // node wants the bare v6 address
         port: url.port || (url.protocol === 'https:' ? 443 : 80),
         path: `${url.pathname}${url.search}`,
+        timeout: timeoutMs,
         headers: Object.fromEntries(headers.entries()),
         // Hand the socket the address that was checked, rather than resolving
         // the name again. This is the entire point of the module.
         lookup: pinnedLookup(address, family),
       },
       (response) => {
-        const chunks: Buffer[] = [];
-        response.on('data', (chunk: Buffer) => chunks.push(chunk));
-        response.on('error', reject);
-        response.on('end', () => {
-          const responseHeaders = new Headers();
-          for (const [name, value] of Object.entries(response.headers)) {
-            if (Array.isArray(value)) {
-              for (const item of value) responseHeaders.append(name, item);
-            } else if (value !== undefined) {
-              responseHeaders.set(name, value);
-            }
+        const status = response.statusCode ?? 502;
+
+        if (status < 200 || status > 599) {
+          response.destroy();
+          request.destroy();
+          reject(new Error(`Unrepresentable HTTP status ${status}`));
+          return;
+        }
+
+        const responseHeaders = new Headers();
+        for (const [name, value] of Object.entries(response.headers)) {
+          if (Array.isArray(value)) {
+            for (const item of value) responseHeaders.append(name, item);
+          } else if (value !== undefined) {
+            responseHeaders.set(name, value);
           }
+        }
 
-          const status = response.statusCode ?? 502;
-          // 204 and 304 must not carry a body; `new Response(buffer, {status})`
-          // throws for those rather than ignoring the body.
-          const carriesBody = status !== 204 && status !== 304 && status >= 200;
-
+        const finish = (body: Buffer | null) =>
           resolve(
-            new Response(carriesBody ? Buffer.concat(chunks) : null, {
+            new Response(body, {
               status,
               statusText: response.statusMessage ?? '',
               headers: responseHeaders,
             })
           );
+
+        // A redirect's headers are the whole answer; the body is never read by
+        // anyone and is the cheapest thing for a hostile host to make large.
+        // Destroying the stream stops the download rather than discarding it
+        // afterwards.
+        if (REDIRECT_STATUSES.has(status) || NULL_BODY_STATUSES.has(status)) {
+          response.destroy();
+          finish(null);
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let received = 0;
+
+        response.on('data', (chunk: Buffer) => {
+          received += chunk.length;
+          if (received > maxBytes) {
+            response.destroy();
+            request.destroy();
+            reject(new Error(`Response body too large (over ${maxBytes} bytes)`));
+            return;
+          }
+          chunks.push(chunk);
         });
+        response.on('error', reject);
+        response.on('end', () => finish(Buffer.concat(chunks)));
       }
     );
 
@@ -122,6 +183,10 @@ export async function pinnedFetch(
     signal?.addEventListener('abort', onAbort, { once: true });
     request.on('close', () => signal?.removeEventListener('abort', onAbort));
 
+    request.on('timeout', () => {
+      request.destroy();
+      reject(new Error(`Request to ${url.hostname} timed out after ${timeoutMs}ms`));
+    });
     request.on('error', reject);
     if (typeof body === 'string') request.write(body);
     request.end();

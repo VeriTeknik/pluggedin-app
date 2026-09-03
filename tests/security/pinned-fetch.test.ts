@@ -119,3 +119,105 @@ describe('pinnedFetch', () => {
     ).rejects.toThrow();
   });
 });
+
+/**
+ * Raised on PR #230 by Sentry and CodeRabbit, and correct: buffering every
+ * response undid a protection #228 had added deliberately.
+ *
+ * safeFetch follows up to 20 redirects and cancels each hop's body without
+ * reading it, because the hosts it resolves are attacker-supplied and a hostile
+ * one can answer with large-bodied redirects. Buffering to `end` before
+ * handing the response back meant all twenty were downloaded in full.
+ *
+ * node:http also brings none of undici's default timeouts, so a host that
+ * accepts a connection and then says nothing held the request open forever.
+ */
+describe('pinnedFetch resource limits', () => {
+  let slowServer: http.Server;
+  let slowPort: number;
+
+  beforeAll(async () => {
+    slowServer = http.createServer((req, res) => {
+      if (req.url === '/big-redirect') {
+        res.writeHead(302, { location: 'https://elsewhere.example/' });
+        // A redirect that also streams: the body must never be read.
+        const chunk = 'x'.repeat(64 * 1024);
+        for (let i = 0; i < 64; i++) res.write(chunk);
+        res.end();
+        return;
+      }
+      if (req.url === '/big-body') {
+        res.writeHead(200, { 'content-type': 'text/plain' });
+        const chunk = 'x'.repeat(1024 * 1024);
+        const timer = setInterval(() => res.write(chunk), 1);
+        res.on('close', () => clearInterval(timer));
+        return;
+      }
+      if (req.url === '/silent') {
+        // Accept and never answer.
+        return;
+      }
+      res.writeHead(200);
+      res.end();
+    });
+    await new Promise<void>((resolve) => slowServer.listen(0, '127.0.0.1', resolve));
+    slowPort = (slowServer.address() as { port: number }).port;
+  });
+
+  afterAll(() => slowServer.close());
+
+  it('does not download a redirect body', async () => {
+    const response = await pinnedFetch(
+      new URL(`http://example.com:${slowPort}/big-redirect`),
+      undefined,
+      '127.0.0.1',
+      4
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe('https://elsewhere.example/');
+    // The point: the 4 MB the server offered was never read.
+    expect(await response.text()).toBe('');
+  });
+
+  it('refuses a response larger than the cap instead of buffering it', async () => {
+    await expect(
+      pinnedFetch(new URL(`http://example.com:${slowPort}/big-body`), undefined, '127.0.0.1', 4, {
+        maxBytes: 512 * 1024,
+      })
+    ).rejects.toThrow(/too large/i);
+  });
+
+  it('gives up on a host that accepts the connection and says nothing', async () => {
+    await expect(
+      pinnedFetch(new URL(`http://example.com:${slowPort}/silent`), undefined, '127.0.0.1', 4, {
+        timeoutMs: 300,
+      })
+    ).rejects.toThrow(/timed out/i);
+  });
+
+  // 101 and 103 are not in this list on purpose: node:http reports 1xx through
+  // the `information` event, never as a response, and `new Response` rejects
+  // any status below 200. Including them tested the test, not the code.
+  it.each([204, 205, 304])('builds a Response for null-body status %i', async (status) => {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(status);
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    try {
+      const response = await pinnedFetch(
+        new URL(`http://example.com:${port}/`),
+        undefined,
+        '127.0.0.1',
+        4,
+        { timeoutMs: 2000 }
+      );
+      expect(response.status).toBe(status);
+    } finally {
+      server.close();
+    }
+  });
+});

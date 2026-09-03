@@ -266,6 +266,11 @@ export async function safeFetch(
     // large-bodied redirects and lean on that: twenty hops per request, each
     // leaving a stream open. cancel() discards it without downloading, which
     // is the point; response.text() would fetch the very bytes being refused.
+    //
+    // On the pinned path this is already handled a layer down — pinnedFetch
+    // destroys a 3xx stream rather than buffering it, so the body here is
+    // null and `?.` short-circuits. It still matters for the allowPrivate
+    // path, which goes through fetch.
     await response.body?.cancel().catch(() => {
       // An already-disturbed or closed body is nothing to act on, and failing
       // to release it must not fail the request that was otherwise fine.
