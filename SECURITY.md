@@ -17,6 +17,7 @@ Plugged.in takes security seriously as a collaborative platform for the Model Co
 9. [Security Best Practices](#security-best-practices)
 10. [Environment Security](#environment-security)
 11. [Supported Versions](#supported-versions)
+12. [Acknowledgements](#acknowledgements)
 
 ## Reporting Security Vulnerabilities
 
@@ -648,9 +649,38 @@ const RATE_LIMITS = {
    - Add API key rotation mechanism
    - Enhanced API usage analytics and monitoring
 
+## Acknowledgements
+
+Every fix below came from someone who looked at this code carefully and told us
+privately before telling anyone else. Thank you — the reports were specific
+enough to reproduce from, which is the difference between a report and a lead.
+
+| Reported by | Issue | Advisory | Fixed in |
+|---|---|---|---|
+| Syed Anas Mohiuddin ([@SyedAnas01](https://github.com/SyedAnas01)) | OS command injection through MCP server `args`, reaching an unescaped shell in the pnpm/uv install path | [GHSA-m623-vm42-63fg](https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-m623-vm42-63fg) | `ebadd474` (#204) |
+| [EQSTLab](https://github.com/EQSTLab) | The same install-path injection, reached through discovery on a server the caller owns | [GHSA-qm2x-3m6j-c7fc](https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-qm2x-3m6j-c7fc) | `ebadd474` (#204) |
+| [EQSTLab](https://github.com/EQSTLab) | Command injection in `testMcpConnection` via `` exec(`which ${command}`) `` | [GHSA-m29x-gj35-9w8g](https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-m29x-gj35-9w8g) | `c3aece0f` (#208) |
+| [@tonghuaroot](https://github.com/tonghuaroot) | SSRF guard bypass via IPv4-mapped IPv6 hosts — the guards matched hostname text, which never matches the bracketed, hex-canonicalised form Node produces | [GHSA-gmhc-h765-37cg](https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-gmhc-h765-37cg) | `0f34f682` (#228) |
+| [@0xParth](https://github.com/0xParth) | Broken access control: the REST unshare endpoint authenticated the caller but never checked profile ownership, so any account could delete another tenant's shares | [GHSA-fv94-f4f5-vr99](https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-fv94-f4f5-vr99) | `0f34f682` (#228) |
+
+Two of these reports were worth more than the bug they named.
+
+`@tonghuaroot`'s SSRF report identified the *class* of mistake, not just the
+instance: blocking hosts by matching the text of a hostname cannot be made
+reliable, because one address has many spellings. Fixing only the reported
+IPv4-mapped form would have left `http://[::1]/` working, since a URL hostname
+carries brackets and never equalled `::1` either. The guards now parse the
+address instead of reading it.
+
+`@0xParth` asked us to audit the sibling REST endpoints rather than only patch
+the one that was broken, and pointed at the real defect: the equivalent server
+action had always checked ownership. One rule with two implementations, one of
+them wrong. The check now lives in a single place.
+
 ---
 
-**Last Updated**: January 15, 2025 (Critical vulnerability fixes - XSS, SSRF, URL validation, Admin Email Security, Enhanced Sanitization, Translation Retry Logic, Environment Validation)
+**Last Updated**: September 3, 2026 (Five reported advisories fixed and credited — see Acknowledgements)
+**Previously Updated**: January 15, 2025 (Critical vulnerability fixes - XSS, SSRF, URL validation, Admin Email Security, Enhanced Sanitization, Translation Retry Logic, Environment Validation)
 **Security Improvements**: Secure tokens, admin roles, audit logging, rate limiting, XSS protection, centralized sanitization, robust error handling, environment validation
 **Next Review**: April 2025
 
