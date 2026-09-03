@@ -15,6 +15,7 @@
  * bump to that override has to keep it working.
  */
 import { createRequire } from 'node:module';
+import { dirname } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -23,8 +24,10 @@ const require = createRequire(import.meta.url);
 // jszip is not a direct dependency of this app; mammoth ships it, and resolving
 // it through mammoth is also the honest thing to do — this test should exercise
 // whatever mammoth itself would use.
-const mammothEntry = require.resolve('mammoth');
-const JSZip = require(require.resolve('jszip', { paths: [mammothEntry] }));
+// `paths` takes directories, so resolve from mammoth's own directory rather
+// than from its entry file.
+const mammothDir = dirname(require.resolve('mammoth'));
+const JSZip = require(require.resolve('jszip', { paths: [mammothDir] }));
 
 async function buildDocx(text: string): Promise<Buffer> {
   const zip = new JSZip();
@@ -66,7 +69,7 @@ describe('DOCX preview conversion', () => {
   it('resolves mammoth onto an xmldom whose parseFromString accepts one argument', async () => {
     // The narrower assertion: mammoth's exact call shape. Kept separate so a
     // failure says which half broke — the wiring or the parser contract.
-    const xmldomPath = require.resolve('@xmldom/xmldom', { paths: [mammothEntry] });
+    const xmldomPath = require.resolve('@xmldom/xmldom', { paths: [mammothDir] });
     const { DOMParser } = require(xmldomPath);
 
     const parsed = new DOMParser().parseFromString('<w:t xmlns:w="urn:x">HI</w:t>');
