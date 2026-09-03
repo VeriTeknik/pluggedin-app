@@ -39,6 +39,13 @@ const { mockDb } = vi.hoisted(() => ({
   },
 }));
 
+// safeFetch resolves each hop's hostname before fetching. The example.com names
+// these suites use do not resolve, so DNS answers with one public address here
+// — this is about token handling, not about name resolution.
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]) },
+}));
+
 vi.mock('@/db', () => ({ db: mockDb }));
 
 vi.mock('@/lib/observability/logger', () => ({

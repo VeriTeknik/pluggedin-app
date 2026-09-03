@@ -3,6 +3,8 @@
  * Validates URLs to prevent access to private networks and reserved IP ranges
  */
 
+import dns from 'node:dns/promises';
+
 import { ipLiteralFromHost, isPrivateAddress } from '@/lib/security/validators';
 
 /**
@@ -10,10 +12,12 @@ import { ipLiteralFromHost, isPrivateAddress } from '@/lib/security/validators';
  * Prevents SSRF attacks against internal services
  */
 function isPrivateOrReservedIP(hostname: string): boolean {
-  const host = hostname.toLowerCase();
+  // A trailing dot root-qualifies a name: `localhost.` and `localhost` reach
+  // the same place, but only one of them matched a string comparison.
+  const host = hostname.toLowerCase().replace(/\.+$/, '');
 
-  // Names that mean the local machine. Anything else that is a name gets
-  // checked against what DNS returns, not against its text.
+  // Names that mean the local machine. Every other name is a name, not an
+  // address — assertHostResolvesPublic below is what judges those.
   if (host === 'localhost' || host.endsWith('.localhost')) {
     return true;
   }
@@ -145,6 +149,44 @@ function crossOrigin(from: string, to: string): boolean {
   return new URL(from).origin !== new URL(to).origin;
 }
 
+/**
+ * Refuse a hostname whose addresses are not all globally routable.
+ *
+ * validateUrlForSSRF can only judge the text of a URL. A name is not an
+ * address: `internal.attacker.example` looks entirely ordinary and its A record
+ * can be 127.0.0.1, which is how a guard that reads hostnames gets walked past.
+ *
+ * Every address is checked and any private one rejects the request, rather than
+ * picking a public one out of the set. Without pinning there is nothing to
+ * guarantee the socket lands on the address that was approved.
+ *
+ * What this does not do: `fetch` resolves the name again when it opens the
+ * connection, so a host that answers differently the second time can still move
+ * the request after the check. Closing that needs the address handed to the
+ * socket — which is what lib/mcp/pinned-head-request.ts does over node:http,
+ * and what global fetch gives no way to do. This narrows the hole to an
+ * attacker who can time a DNS answer, from one who only has to own a name.
+ */
+async function assertHostResolvesPublic(url: URL): Promise<void> {
+  // An IP literal has no name to resolve; validateUrlForSSRF already judged it.
+  if (ipLiteralFromHost(url.hostname) !== null) {
+    return;
+  }
+
+  let addresses: Array<{ address: string }>;
+  try {
+    addresses = await dns.lookup(url.hostname, { all: true });
+  } catch {
+    throw new Error(`Host ${url.hostname} could not be resolved`);
+  }
+
+  if (addresses.length === 0 || addresses.some((entry) => isPrivateAddress(entry.address))) {
+    throw new Error(
+      `Host ${url.hostname} resolves to a private or reserved address, which is not allowed`
+    );
+  }
+}
+
 export async function safeFetch(
   url: string,
   options?: RequestInit,
@@ -174,6 +216,12 @@ export async function safeFetch(
     // which otherwise cannot tell that a validator throwing on the line above
     // guards this call.
     const validated = validateUrlForSSRF(currentUrl, allowPrivate);
+
+    // Per hop, not once: a redirect chooses its own destination, and the second
+    // host is no more trustworthy than the first.
+    if (!allowPrivate) {
+      await assertHostResolvesPublic(validated);
+    }
 
     const response = await fetch(validated, { ...requestInit, redirect: 'manual' });
 

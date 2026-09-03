@@ -66,6 +66,15 @@ describe('SSRF guards, IPv6 and IPv4-mapped hosts', () => {
     it('still allows a public host', () => {
       expect(validateMcpUrl('https://example.com/').valid).toBe(true);
     });
+
+    // A trailing dot root-qualifies a name: `localhost.` reaches localhost but
+    // does not equal it. Raised by CodeRabbit on PR #228.
+    it.each(['http://localhost./', 'http://LOCALHOST./', 'http://127.0.0.1./'])(
+      'rejects the root-qualified form %s',
+      (url) => {
+        expect(validateMcpUrl(url).valid).toBe(false);
+      }
+    );
   });
 
   describe('isPrivateAddress', () => {

@@ -289,7 +289,9 @@ export function validateMcpUrl(
     
     // Skip host blocking if localhost is allowed with user consent
     if (!allowLocalhost) {
-      const hostname = parsedUrl.hostname.toLowerCase();
+      // A trailing dot root-qualifies a name — `localhost.` and `localhost`
+      // reach the same host, but only one matches a string comparison.
+      const hostname = parsedUrl.hostname.toLowerCase().replace(/\.+$/, '');
       
       // Enhanced IP address validation
       // Check if hostname is an IP address
