@@ -52,6 +52,11 @@ SYSTEM_KEEP="${SYSTEM_KEEP:-72h}"
 # Short for CI output: every one of those images exists in GHCR as well.
 RUNNER_KEEP="${RUNNER_KEEP:-24h}"
 
+# The MCP package manager's uv cache. Default mirrors
+# PackageManagerConfig.UV_CACHE_DIR in lib/mcp/package-manager/config.ts, which
+# is PACKAGE_STORE_DIR/uv-cache; override it here the same way the app does.
+UV_CACHE_DIR="${MCP_UV_CACHE_DIR:-/var/mcp-packages/uv-cache}"
+
 log() { printf '[prune %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 free_gb() { df -BG --output=avail / | tail -1 | tr -dc '0-9'; }
 
@@ -83,7 +88,11 @@ Description=Daily prune of Docker build artefacts
 [Timer]
 # 04:20 rather than on the hour: nothing else on this host runs then, and the
 # Ofelia jobs cluster at :00.
-OnCalendar=*-*-* 04:20:00
+# Every six hours, not nightly. On 2026-09-02 the 04:20 run reported 168G free
+# and the disk was full by 23:42 — a daily cadence cannot catch a fill that
+# takes nineteen hours, and the cost of running this more often is a few
+# seconds of docker and uv bookkeeping.
+OnCalendar=*-*-* 00,06,12,18:20:00
 Persistent=true
 RandomizedDelaySec=600
 
@@ -158,6 +167,68 @@ else
   log "no ${RUNNER_USER} user — skipping the rootless daemon"
 fi
 
+# ─── The uv cache ──────────────────────────────────────────────────────────
+#
+# This is what actually filled the disk. On 2026-09-02 the timer ran at 04:21,
+# reclaimed 2G of images and reported the disk 68% full with 168G free; by 23:42
+# it was 100% full, Postgres was PANICking on every checkpoint, and Traefik had
+# pulled the app out of the load balancer — the outage the header warns about,
+# arriving from a direction it did not cover. `uv cache prune` then reclaimed
+# 289 GiB.
+#
+# Docker retention was working the whole time: images were 16G of a 532G disk.
+# The MCP package manager's uv cache had simply never been bounded.
+#
+# `prune`, not `clean`: prune removes only entries no longer referenced by an
+# installed environment, so a cached wheel an MCP server still depends on stays.
+# clean would empty it and make the next server start re-download everything.
+#
+# Run as the directory's owner rather than as root — root would leave
+# root-owned entries behind that the app user could not later evict.
+# What happened to the uv cache, so the exit status can say so. A retention job
+# that reports success while skipping the thing it exists to do is worse than no
+# job: monitoring cannot tell it apart from a working one.
+UV_RESULT="absent"
+
+if [ -d "$UV_CACHE_DIR" ]; then
+  CACHE_OWNER="$(stat -c '%U' "$UV_CACHE_DIR")"
+  # `|| true` because getent exits non-zero for an unknown user, and with
+  # `set -e` that would kill the whole script here — taking the docker prune
+  # and the disk check down with it over an ownership entry this job could
+  # simply have reported and worked around.
+  OWNER_HOME="$(getent passwd "$CACHE_OWNER" | cut -d: -f6 || true)"
+
+  # Resolve uv by absolute path rather than through PATH. `sudo -u` runs with a
+  # minimal environment that does not include ~/.local/bin, which is where uv
+  # installs itself — so a PATH lookup reports "not installed" on a host where
+  # it plainly is.
+  UV_BIN=""
+  for candidate in "${OWNER_HOME:+${OWNER_HOME}/.local/bin/uv}" /usr/local/bin/uv /usr/bin/uv; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then UV_BIN="$candidate"; break; fi
+  done
+
+  if [ -z "$OWNER_HOME" ]; then
+    log "WARNING: no passwd entry for ${CACHE_OWNER} (owner of ${UV_CACHE_DIR})"
+  fi
+
+  if [ -n "$UV_BIN" ]; then
+    log "uv cache (${UV_CACHE_DIR}, owner ${CACHE_OWNER}) — removing unreferenced entries"
+    # Not left to `set -e`: a failing prune must not skip the disk check, which
+    # is the part that says how bad things are.
+    if run sudo -u "$CACHE_OWNER" env UV_CACHE_DIR="$UV_CACHE_DIR" "$UV_BIN" cache prune; then
+      UV_RESULT="pruned"
+    else
+      UV_RESULT="failed"
+      log "WARNING: uv cache prune failed"
+    fi
+  else
+    UV_RESULT="no-uv"
+    log "WARNING: uv not found for ${CACHE_OWNER} — the uv cache is NOT being pruned"
+  fi
+else
+  log "no uv cache at ${UV_CACHE_DIR} — nothing to prune"
+fi
+
 # Restore any tag the prune stripped off an image it otherwise kept (see the
 # header). RESTORE is the operative word: the mapping is captured before
 # pruning and put back exactly as it was.
@@ -208,9 +279,34 @@ fi
 
 # A prune that leaves the disk critically full is not a success; say so loudly
 # so the timer's exit status carries the signal.
+UNHEALTHY=0
+
 USED_PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
-if [ "$USED_PCT" -ge 85 ]; then
+# 85% on this disk is ~80G free, which sounds comfortable and is not: the fill
+# that caused the outage moved faster than that between two runs. Warning at 75
+# leaves a margin worth acting on rather than one worth noting.
+if [ "$USED_PCT" -ge 75 ]; then
   echo "WARNING: / still ${USED_PCT}% full after pruning — investigate before it reaches Postgres" >&2
-  exit 1
+  echo "         largest consumers:" >&2
+  # `|| true` for the same reason as the systemctl pipeline in --install-timer,
+  # and I reintroduced the bug this file already documents: `head` closes the
+  # pipe, sort takes SIGPIPE, and under pipefail that exit 141 aborts the script
+  # — here, right before the exit status that carries the warning.
+  du -xh --max-depth=2 /var /home 2>/dev/null | sort -rh | head -5 >&2 || true
+  UNHEALTHY=1
+else
+  log "ok — / is ${USED_PCT}% full"
 fi
-log "ok — / is ${USED_PCT}% full"
+
+# A cache that exists and was not pruned is a failure even when the disk still
+# looks fine — it is how the disk stops looking fine. Only "pruned" and
+# "absent" are success; a dry run reports whatever it would have done.
+case "$UV_RESULT" in
+  pruned|absent) ;;
+  *)
+    echo "WARNING: the uv cache was not pruned (${UV_RESULT}) — this job is not doing its main task" >&2
+    [ "$DRY_RUN" -eq 1 ] || UNHEALTHY=1
+    ;;
+esac
+
+exit "$UNHEALTHY"
