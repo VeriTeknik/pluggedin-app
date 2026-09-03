@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
 const mockUpdate = vi.fn(() => ({
@@ -61,7 +61,12 @@ vi.mock('@/lib/encryption', () => ({
   encryptField: vi.fn((data) => `encrypted-${JSON.stringify(data)}`),
 }));
 
-vi.mock('@/lib/security/validators', () => ({
+// Only validateHeaders is stubbed. The rest of the module stays real, because
+// the SSRF guard now classifies addresses through isPrivateAddress /
+// ipLiteralFromHost here — replacing those with stubs would quietly disable the
+// guard for this suite rather than exercise it.
+vi.mock('@/lib/security/validators', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/security/validators')>()),
   validateHeaders: vi.fn((headers) => ({
     valid: true,
     sanitizedHeaders: headers,

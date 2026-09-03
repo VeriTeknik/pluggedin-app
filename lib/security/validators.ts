@@ -123,13 +123,98 @@ export function isPrivateIP(ip: string): boolean {
  * documentation ranges and the whole 240/4 block to aim at.
  */
 export function isPrivateAddress(address: string): boolean {
-  const ip = address.toLowerCase().split('%')[0]; // drop any zone id
+  const ip = address
+    .toLowerCase()
+    .split('%')[0] // drop any zone id
+    .replace(/^\[|\]$/g, ''); // and the brackets a URL hostname carries
 
-  // ::ffff:10.0.0.1 and friends carry an IPv4 address inside an IPv6 one.
-  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(ip);
-  if (mapped) return isNonGlobalIPv4(mapped[1]);
+  if (!ip.includes(':')) {
+    return isNonGlobalIPv4(ip);
+  }
 
-  return ip.includes(':') ? isNonGlobalIPv6(ip) : isNonGlobalIPv4(ip);
+  const groups = expandIPv6(ip);
+  if (!groups) {
+    return true; // unparseable is not something we connect to
+  }
+
+  // An IPv4-mapped address (::ffff:0:0/96) carries an IPv4 target inside an
+  // IPv6 one, and the socket layer connects to that IPv4. It has several
+  // spellings — ::ffff:127.0.0.1, ::ffff:7f00:1, 0:0:0:0:0:ffff:7f00:1 — and
+  // matching on the text caught only the first. Reading the groups catches all
+  // of them, because the spelling is gone by then.
+  if (groups.slice(0, 5).every((g) => g === 0) && groups[5] === 0xffff) {
+    const [a, b] = [groups[6], groups[7]];
+    return isNonGlobalIPv4(`${a >> 8}.${a & 0xff}.${b >> 8}.${b & 0xff}`);
+  }
+
+  return isNonGlobalIPv6Groups(groups);
+}
+
+/**
+ * The bare IP literal in a URL hostname, or null if the host is a name.
+ *
+ * `new URL('http://[::1]/').hostname` is `[::1]`, brackets included, which is
+ * why every anchored pattern that tested the hostname directly missed IPv6
+ * entirely. Names return null: they are not addresses yet, and get checked
+ * against what DNS returns.
+ */
+export function ipLiteralFromHost(hostname: string): string | null {
+  const host = hostname.toLowerCase();
+
+  if (host.startsWith('[') && host.endsWith(']')) {
+    return host.slice(1, -1);
+  }
+
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) ? host : null;
+}
+
+/**
+ * An IPv6 address as its eight 16-bit groups, or null if it will not parse.
+ *
+ * Handles `::` compression and the embedded-IPv4 tail form, so callers can
+ * reason about the address rather than about how it happens to be written.
+ */
+function expandIPv6(ip: string): number[] | null {
+  let text = ip;
+
+  // ::ffff:127.0.0.1 — fold the dotted tail into two hex groups first.
+  const embedded = /^(.*:)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(text);
+  if (embedded) {
+    const octets = embedded.slice(2).map(Number);
+    if (octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+      return null;
+    }
+    const hi = ((octets[0] << 8) | octets[1]).toString(16);
+    const lo = ((octets[2] << 8) | octets[3]).toString(16);
+    text = `${embedded[1]}${hi}:${lo}`;
+  }
+
+  const halves = text.split('::');
+  if (halves.length > 2) {
+    return null;
+  }
+
+  const parseGroups = (part: string) =>
+    part === '' ? [] : part.split(':').map((h) => (/^[0-9a-f]{1,4}$/.test(h) ? parseInt(h, 16) : NaN));
+
+  let groups: number[];
+  if (halves.length === 2) {
+    const head = parseGroups(halves[0]);
+    const tail = parseGroups(halves[1]);
+    const missing = 8 - head.length - tail.length;
+    if (missing < 0) {
+      return null;
+    }
+    groups = [...head, ...new Array(missing).fill(0), ...tail];
+  } else {
+    groups = parseGroups(text);
+  }
+
+  if (groups.length !== 8 || groups.some((g) => !Number.isInteger(g))) {
+    return null;
+  }
+
+  return groups;
 }
 
 function isNonGlobalIPv4(ip: string): boolean {
@@ -155,13 +240,22 @@ function isNonGlobalIPv4(ip: string): boolean {
   return false;
 }
 
-function isNonGlobalIPv6(ip: string): boolean {
-  if (ip === '::' || ip === '::1') return true;      // unspecified, loopback
-  if (/^f[cd][0-9a-f]{2}:/.test(ip)) return true;    // fc00::/7 unique local
-  if (/^fe[89ab][0-9a-f]:/.test(ip)) return true;    // fe80::/10 link-local
-  if (/^ff[0-9a-f]{2}:/.test(ip)) return true;       // ff00::/8 multicast
-  if (/^2001:0*db8:/.test(ip)) return true;          // 2001:db8::/32 documentation
-  if (/^64:ff9b:/.test(ip)) return true;             // NAT64, carries an IPv4 target
+/**
+ * The same ranges the text patterns covered, decided on the parsed groups.
+ *
+ * Prefix tests on the written form depend on the spelling: `::1` and
+ * `0:0:0:0:0:0:0:1` are one address written two ways, and only the first
+ * matched a `=== '::1'` comparison.
+ */
+function isNonGlobalIPv6Groups(g: number[]): boolean {
+  if (g.every((x) => x === 0)) return true;                          // :: unspecified
+  if (g.slice(0, 7).every((x) => x === 0) && g[7] === 1) return true; // ::1 loopback
+
+  if ((g[0] & 0xfe00) === 0xfc00) return true;   // fc00::/7 unique local
+  if ((g[0] & 0xffc0) === 0xfe80) return true;   // fe80::/10 link-local
+  if ((g[0] & 0xff00) === 0xff00) return true;   // ff00::/8 multicast
+  if (g[0] === 0x2001 && g[1] === 0x0db8) return true; // 2001:db8::/32 documentation
+  if (g[0] === 0x0064 && g[1] === 0xff9b) return true; // NAT64, carries an IPv4 target
 
   return false;
 }
@@ -226,15 +320,17 @@ export function validateMcpUrl(
         }
       }
       
-      // Additional checks for IPv6
-      if (hostname.includes(':')) {
-        // Basic IPv6 localhost check
-        if (hostname === '::1' || hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) {
-          return {
-            valid: false,
-            error: `Blocked IPv6 address: ${hostname}. Private networks are not allowed.`
-          };
-        }
+      // Any IP literal, v4 or v6, decided on the parsed address rather than on
+      // how it is spelled. The previous check compared the hostname against
+      // '::1' and a few prefixes, and a URL hostname carries brackets — so
+      // `http://[::1]/` never matched, nor did any IPv4-mapped form
+      // (GHSA-gmhc-h765-37cg).
+      const literal = ipLiteralFromHost(hostname);
+      if (literal && isPrivateAddress(literal)) {
+        return {
+          valid: false,
+          error: `Blocked address: ${hostname}. Private networks are not allowed.`
+        };
       }
       
       // Block common metadata endpoints (cloud providers)

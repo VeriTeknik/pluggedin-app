@@ -3,48 +3,29 @@
  * Validates URLs to prevent access to private networks and reserved IP ranges
  */
 
+import { ipLiteralFromHost, isPrivateAddress } from '@/lib/security/validators';
+
 /**
  * Check if a hostname is a private or reserved IP address
  * Prevents SSRF attacks against internal services
  */
 function isPrivateOrReservedIP(hostname: string): boolean {
-  // Check for localhost variations
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '::1' ||
-    hostname.startsWith('127.') ||
-    hostname === '0.0.0.0'
-  ) {
+  const host = hostname.toLowerCase();
+
+  // Names that mean the local machine. Anything else that is a name gets
+  // checked against what DNS returns, not against its text.
+  if (host === 'localhost' || host.endsWith('.localhost')) {
     return true;
   }
 
-  // Check for private IPv4 ranges
-  const privateIPv4Ranges = [
-    /^10\./, // 10.0.0.0/8
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
-    /^192\.168\./, // 192.168.0.0/16
-    /^169\.254\./, // Link-local (AWS/GCP metadata)
-  ];
-
-  if (privateIPv4Ranges.some((range) => range.test(hostname))) {
-    return true;
-  }
-
-  // Check for private IPv6 ranges
-  const privateIPv6Patterns = [
-    /^fe80:/i, // Link-local
-    /^fc00:/i, // Unique local addresses
-    /^fd00:/i, // Unique local addresses
-    /^::1$/i, // Loopback
-    /^::ffff:127\./i, // IPv4-mapped loopback
-  ];
-
-  if (privateIPv6Patterns.some((pattern) => pattern.test(hostname))) {
-    return true;
-  }
-
-  return false;
+  // One classifier for both families, shared with the socket-level check, and
+  // decided on the parsed address. The list this replaces compared the
+  // hostname against '::1' and matched `/^::ffff:127\./` — but a URL hostname
+  // is bracketed (`[::1]`) and WHATWG canonicalises IPv4-mapped addresses to
+  // hex (`[::ffff:7f00:1]`), so neither pattern could ever fire
+  // (GHSA-gmhc-h765-37cg).
+  const literal = ipLiteralFromHost(host);
+  return literal !== null && isPrivateAddress(literal);
 }
 
 /**
