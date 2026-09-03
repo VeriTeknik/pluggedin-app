@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { profilesTable, projectsTable } from '@/db/schema';
 import { withAuth, withProjectAuth } from '@/lib/auth-helpers';
+import { createDefaultProject } from '@/lib/default-project-creation';
 
 export async function createProject(name: string) {
   return withAuth(async (session) => {
@@ -66,69 +67,12 @@ export async function getProjects() {
         .where(eq(projectsTable.user_id, session.user.id));
 
       if (projects.length === 0) {
-        // User has no projects, create a default one
+        // Delegate rather than inline: createDefaultProject takes a lock on the
+        // user row and re-checks, so two concurrent page loads for a brand-new
+        // user cannot both create a hub. This block used to do its own
+        // check-then-create, which is how 27 users ended up with two.
         try {
-          
-          // Direct DB transaction method instead of using createProject function
-          // This avoids dependency loops and ensures project creation works correctly
-          const defaultProject = await db.transaction(async (tx) => {
-            // Insert the project
-            const [project] = await tx
-              .insert(projectsTable)
-              .values({
-                name: 'Default Hub',
-                active_profile_uuid: null,
-                user_id: session.user.id,
-              })
-              .returning();
-
-            // Create the profile with the project UUID
-            const [profile] = await tx
-              .insert(profilesTable)
-              .values({
-                name: 'Default Workspace',
-                project_uuid: project.uuid,
-              })
-              .returning();
-
-            // Update the project with the profile UUID
-            const [updatedProject] = await tx
-              .update(projectsTable)
-              .set({ active_profile_uuid: profile.uuid })
-              .where(eq(projectsTable.uuid, project.uuid))
-              .returning();
-
-            // Add sample MCP servers within the same transaction
-            try {
-              const { SAMPLE_MCP_SERVERS } = await import('@/lib/sample-mcp-servers');
-              const { mcpServersTable, McpServerType } = await import('@/db/schema');
-
-              const serversToAdd = SAMPLE_MCP_SERVERS.map(server => ({
-                profile_uuid: profile.uuid,
-                name: server.name,
-                slug: server.slug,
-                description: server.description,
-                type: server.type,
-                command: server.type === McpServerType.STDIO ? server.command : undefined,
-                args: server.type === McpServerType.STDIO ? server.args : undefined,
-                env: server.type === McpServerType.STDIO ? server.env : undefined,
-                url: server.type === McpServerType.STREAMABLE_HTTP ? server.url : undefined,
-                headers: server.type === McpServerType.STREAMABLE_HTTP ? server.headers : undefined,
-                notes: server.notes,
-                created_at: new Date(),
-                updated_at: new Date()
-              }));
-
-              await tx.insert(mcpServersTable).values(serversToAdd);
-              console.log(`✅ Added ${SAMPLE_MCP_SERVERS.length} sample MCP servers for profile ${profile.uuid}`);
-            } catch (error) {
-              console.error('Failed to add sample MCP servers:', error);
-              // Don't fail the signup process if sample servers can't be added
-            }
-
-            return updatedProject;
-          });
-          
+          const defaultProject = await createDefaultProject(session.user.id);
           projects = [defaultProject];
         } catch (error) {
           console.error('Error creating default project:', error);
