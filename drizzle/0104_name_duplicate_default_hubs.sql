@@ -40,8 +40,15 @@ named AS (
     d.uuid,
     (
       -- The first free "Default Hub N" for this user, N counting from 2.
+      -- Unbounded rather than generate_series(2, 100): a bound leaves
+      -- new_name NULL past the end, and a NULL name silently means "this row
+      -- stays duplicated, and every later run will also fail to name it".
+      -- One free number always exists below (count of this user's projects + 2).
       SELECT 'Default Hub ' || n
-      FROM generate_series(2, 100) AS n
+      FROM generate_series(
+             2,
+             (SELECT count(*) + 2 FROM projects p2 WHERE p2.user_id = d.user_id)::int
+           ) AS n
       WHERE NOT EXISTS (
         SELECT 1 FROM projects p
         WHERE p.user_id = d.user_id

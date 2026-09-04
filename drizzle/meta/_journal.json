@@ -729,6 +729,13 @@
       "when": 1788371868335,
       "tag": "0103_verification_tokens_bind_to_user",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1788375468335,
+      "tag": "0104_name_duplicate_default_hubs",
+      "breakpoints": true
     }
   ]
 }
