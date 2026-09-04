@@ -13,6 +13,27 @@
 
 set -euo pipefail
 
+# Held for the whole deploy so the retention job cannot prune underneath it —
+# see the same lock in infra/scripts/prune-build-artifacts.sh. Deploys wait
+# rather than skip: the prune is short, and a deploy the operator asked for
+# should happen.
+# Overridable so the locking itself can be exercised without root or a real
+# deploy; production uses the default.
+LOCK_FILE="${PLUGGEDIN_LOCK_FILE:-/var/lock/pluggedin-deploy.lock}"
+#
+# The braces matter: `exec 9>"$FILE" 2>/dev/null` would redirect stderr for the
+# whole deploy, silencing every error this script reports. Scoped to the exec.
+if command -v flock >/dev/null 2>&1; then
+  if { exec 9>"$LOCK_FILE"; } 2>/dev/null; then
+    flock -w 600 9 || { echo "could not acquire ${LOCK_FILE} within 600s" >&2; exit 1; }
+  else
+    # A deploy is operator-initiated and watched, so this warns rather than
+    # refusing. The retention job is the unattended one and treats the same
+    # condition as a failed run.
+    echo "WARNING: cannot open ${LOCK_FILE} — deploying WITHOUT retention-job serialisation" >&2
+  fi
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA_DIR="${REPO_ROOT}/infra"
 # /run/sops is the production location: /run is tmpfs, so the decrypted
