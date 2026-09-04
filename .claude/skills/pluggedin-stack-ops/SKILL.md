@@ -20,11 +20,17 @@ decryption, so the secrets file and the staged Traefik config never appear.
 | Smoke test | `./infra/scripts/verify.sh` (add `--quick` to skip the RAG canary) |
 | Logs | `docker compose -f infra/docker-compose.yml logs -f --tail=50 pluggedin-app traefik` |
 | Which routers exist | Traefik dashboard at `https://traefik.plugged.in/api/http/routers` (basic auth) |
+| Is a deploy waiting? | `infra/scripts/deploy-watch.sh --status` |
 
 Health must report `"status":"healthy"` **and** `"database":true`. The endpoint never
 emits `"ok"` — asserting that is a bug that once made the smoke test unpassable.
 
 ## Deploying is not just `git pull`
+
+> Application merges to `main` now deploy themselves within ~2 minutes via
+> `pluggedin-deploy-watch.timer`. `deploy.sh` remains the entry point for
+> anything the infra gate blocks — `infra/`, compose, `Dockerfile`,
+> workflows — and for any manual intervention. See `docs/ops/auto-deploy.md`.
 
 > **`git pull` alone can 404 the site.**
 
