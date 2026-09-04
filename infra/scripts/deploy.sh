@@ -20,8 +20,18 @@ set -euo pipefail
 # Overridable so the locking itself can be exercised without root or a real
 # deploy; production uses the default.
 LOCK_FILE="${PLUGGEDIN_LOCK_FILE:-/var/lock/pluggedin-deploy.lock}"
-if exec 9>"$LOCK_FILE" 2>/dev/null && command -v flock >/dev/null 2>&1; then
-  flock -w 600 9 || { echo "could not acquire ${LOCK_FILE} within 600s" >&2; exit 1; }
+#
+# The braces matter: `exec 9>"$FILE" 2>/dev/null` would redirect stderr for the
+# whole deploy, silencing every error this script reports. Scoped to the exec.
+if command -v flock >/dev/null 2>&1; then
+  if { exec 9>"$LOCK_FILE"; } 2>/dev/null; then
+    flock -w 600 9 || { echo "could not acquire ${LOCK_FILE} within 600s" >&2; exit 1; }
+  else
+    # A deploy is operator-initiated and watched, so this warns rather than
+    # refusing. The retention job is the unattended one and treats the same
+    # condition as a failed run.
+    echo "WARNING: cannot open ${LOCK_FILE} — deploying WITHOUT retention-job serialisation" >&2
+  fi
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

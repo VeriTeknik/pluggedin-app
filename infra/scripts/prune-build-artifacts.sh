@@ -48,14 +48,6 @@ set -euo pipefail
 # deploy; production uses the default.
 LOCK_FILE="${PLUGGEDIN_LOCK_FILE:-/var/lock/pluggedin-deploy.lock}"
 
-# A retention run that cannot get the lock is skipped, not queued: a deploy is
-# in progress, and the timer comes round again in six hours. Exit 0 — a skipped
-# run is not a failure.
-exec 9>"$LOCK_FILE" 2>/dev/null || true
-if command -v flock >/dev/null 2>&1 && ! flock -n 9; then
-  echo "[prune] a deploy holds ${LOCK_FILE} — skipping this run"
-  exit 0
-fi
 
 DRY_RUN=0
 INSTALL_TIMER=0
@@ -81,6 +73,37 @@ RUNNER_KEEP="${RUNNER_KEEP:-24h}"
 UV_CACHE_DIR="${MCP_UV_CACHE_DIR:-/var/mcp-packages/uv-cache}"
 
 log() { printf '[prune %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
+
+# A retention run that cannot get the lock is skipped, not queued: a deploy is
+# in progress, and the timer comes round again in six hours. Exit 0 — a skipped
+# run is not a failure.
+#
+# Two things this has to get right, both found in review after being got wrong:
+#
+#   `exec 9>"$FILE" 2>/dev/null` redirects stderr for the REST OF THE SCRIPT,
+#   not just for the exec — redirections apply to the shell, and a bare exec is
+#   how you set them. Braces scope it to the exec alone.
+#
+#   A failed exec leaves fd 9 unopened, and `flock -n 9` then fails with "Bad
+#   file descriptor" — indistinguishable, to a test on its exit status, from
+#   "someone holds the lock". So an unwritable lock path would have skipped the
+#   prune silently and for ever, which is the exact failure this file exists to
+#   argue against.
+LOCK_HELD_BY_US=0
+if ! command -v flock >/dev/null 2>&1; then
+  log "note: flock not available — running without deploy serialisation"
+elif ! { exec 9>"$LOCK_FILE"; } 2>/dev/null; then
+  # Not fatal: a cleanup that never runs is what filled the disk once already.
+  # Loud, and carried into the exit status further down.
+  log "WARNING: cannot open ${LOCK_FILE} — running WITHOUT deploy serialisation"
+  LOCK_UNAVAILABLE=1
+elif ! flock -n 9; then
+  echo "[prune] a deploy holds ${LOCK_FILE} — skipping this run"
+  exit 0
+else
+  LOCK_HELD_BY_US=1
+fi
+LOCK_UNAVAILABLE="${LOCK_UNAVAILABLE:-0}"
 free_gb() { df -BG --output=avail / | tail -1 | tr -dc '0-9'; }
 
 if [ "$INSTALL_TIMER" -eq 1 ]; then
@@ -331,6 +354,12 @@ fi
 # A prune that leaves the disk critically full is not a success; say so loudly
 # so the timer's exit status carries the signal.
 UNHEALTHY=0
+
+# Running unserialised is a real risk to the deployed tag, so it must not be
+# reported as a clean run.
+if [ "$LOCK_UNAVAILABLE" -eq 1 ]; then
+  UNHEALTHY=1
+fi
 
 USED_PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 # 85% on this disk is ~80G free, which sounds comfortable and is not: the fill
