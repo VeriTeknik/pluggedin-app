@@ -13,6 +13,17 @@
 
 set -euo pipefail
 
+# Held for the whole deploy so the retention job cannot prune underneath it —
+# see the same lock in infra/scripts/prune-build-artifacts.sh. Deploys wait
+# rather than skip: the prune is short, and a deploy the operator asked for
+# should happen.
+# Overridable so the locking itself can be exercised without root or a real
+# deploy; production uses the default.
+LOCK_FILE="${PLUGGEDIN_LOCK_FILE:-/var/lock/pluggedin-deploy.lock}"
+if exec 9>"$LOCK_FILE" 2>/dev/null && command -v flock >/dev/null 2>&1; then
+  flock -w 600 9 || { echo "could not acquire ${LOCK_FILE} within 600s" >&2; exit 1; }
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA_DIR="${REPO_ROOT}/infra"
 # /run/sops is the production location: /run is tmpfs, so the decrypted

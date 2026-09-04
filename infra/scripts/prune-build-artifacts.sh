@@ -34,6 +34,29 @@
 #   afterwards — read from the running container, not hardcoded.
 set -euo pipefail
 
+# Deploys and the retention job must not overlap. The retention job reads which
+# tags to protect, prunes, then puts back any tag the prune stripped. A deploy
+# landing inside that window swaps the running container, so the job protects
+# the tag that was deployed a minute ago and the new one is left exposed —
+# raised in review on PR #231.
+#
+# Serialising is the fix rather than re-reading the container mid-run: this
+# script is explicitly forbidden from re-pointing a tag at whatever happens to
+# be running (see the restore block below), because during a rollback that
+# would rewrite deployment state to agree with the rollback.
+# Overridable so the locking itself can be exercised without root or a real
+# deploy; production uses the default.
+LOCK_FILE="${PLUGGEDIN_LOCK_FILE:-/var/lock/pluggedin-deploy.lock}"
+
+# A retention run that cannot get the lock is skipped, not queued: a deploy is
+# in progress, and the timer comes round again in six hours. Exit 0 — a skipped
+# run is not a failure.
+exec 9>"$LOCK_FILE" 2>/dev/null || true
+if command -v flock >/dev/null 2>&1 && ! flock -n 9; then
+  echo "[prune] a deploy holds ${LOCK_FILE} — skipping this run"
+  exit 0
+fi
+
 DRY_RUN=0
 INSTALL_TIMER=0
 for arg in "$@"; do
