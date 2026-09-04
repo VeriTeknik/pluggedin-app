@@ -595,7 +595,7 @@ Hubs changed.
 - Users who hit the duplicate-Hub race will see the second one renamed to
   "Default Hub 2"; nothing is merged and nothing is deleted
 
-View the full changelog at [GitHub Releases](https://github.com/VeriTeknik/pluggedin-app/releases/tag/v4.0.0)
+View the full changelog at [GitHub Releases](https://github.com/VeriTeknik/pluggedin-app/releases/latest)
 
 ---
 
