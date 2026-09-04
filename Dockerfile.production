@@ -1,6 +1,6 @@
 # Multi-stage production Dockerfile with sandboxing support
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache python3 make g++ curl
@@ -35,7 +35,7 @@ ENV NEXT_BUILD_STANDALONE=true
 RUN pnpm build
 
 # Migration stage
-FROM node:22-alpine AS migrator
+FROM node:26-alpine AS migrator
 
 # Install PostgreSQL client for database operations
 RUN apk add --no-cache postgresql-client
@@ -56,7 +56,7 @@ ENV NODE_ENV=production
 CMD ["pnpm", "db:migrate"]
 
 # Production runtime stage
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 
 # Install runtime dependencies including sandboxing tools
 RUN apk add --no-cache \

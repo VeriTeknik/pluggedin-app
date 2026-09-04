@@ -12,7 +12,7 @@
 # Tag:    ghcr.io/veriteknik/pluggedin-app:{latest,sha-XXXX}
 
 # ─── stage 1: deps + build ────────────────────────────────────────────
-FROM node:22-trixie-slim AS builder
+FROM node:26-trixie-slim AS builder
 
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
@@ -72,7 +72,7 @@ RUN NODE_OPTIONS=--max-old-space-size=6144 pnpm build
 # image, which is acceptable for a server image.
 
 # ─── stage 2: runtime ─────────────────────────────────────────────────
-FROM node:22-trixie-slim AS runtime
+FROM node:26-trixie-slim AS runtime
 
 # HOSTNAME=0.0.0.0: Next.js standalone binds to process.env.HOSTNAME. Docker
 # sets HOSTNAME to the container id, so without this the server binds to the
