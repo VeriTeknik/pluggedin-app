@@ -89,7 +89,6 @@ log() { printf '[prune %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 #   "someone holds the lock". So an unwritable lock path would have skipped the
 #   prune silently and for ever, which is the exact failure this file exists to
 #   argue against.
-LOCK_HELD_BY_US=0
 if ! command -v flock >/dev/null 2>&1; then
   log "note: flock not available — running without deploy serialisation"
 elif ! { exec 9>"$LOCK_FILE"; } 2>/dev/null; then
@@ -100,8 +99,6 @@ elif ! { exec 9>"$LOCK_FILE"; } 2>/dev/null; then
 elif ! flock -n 9; then
   echo "[prune] a deploy holds ${LOCK_FILE} — skipping this run"
   exit 0
-else
-  LOCK_HELD_BY_US=1
 fi
 LOCK_UNAVAILABLE="${LOCK_UNAVAILABLE:-0}"
 free_gb() { df -BG --output=avail / | tail -1 | tr -dc '0-9'; }
