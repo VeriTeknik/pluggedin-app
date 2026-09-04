@@ -5,6 +5,100 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-09-04
+
+A major by Semantic Versioning: two features were removed and the data model
+under Hubs changed. 72 commits since 3.3.0, and no release in between — which
+is why five published security advisories had to point at commit SHAs instead
+of a version. That is the gap this release closes.
+
+Entries between 2.16.0 and 3.3.0 are missing from this file; those releases were
+described in GitHub release notes only. This entry resumes the practice rather
+than reconstructing the gap.
+
+### Removed
+
+- **Workspaces as a separate axis.** Every Workspace is now its own Hub, one
+  Workspace per Hub, and the Workspace switcher is gone along with everything
+  that fed it. Existing Workspaces were promoted in place: no row of user data
+  moved, and `mcp_servers.slug` — the tool-name prefix in `{slug}__{tool}` — is
+  untouched, so saved instructions naming those tools still resolve.
+- **Discover / AI Social.** The feed and its surface are gone. The sharing
+  infrastructure underneath it stays: profiles, shared servers and shared
+  collections still work.
+
+### Added
+
+- **Hosted MCP connector at `/api/mcp`**, with an OAuth 2.1 authorization server
+  in front of it — PKCE, refresh-token rotation with reuse detection, and RFC
+  9728 discovery.
+- **Library tools over MCP**, behind a Hub boundary a caller cannot step
+  around.
+- **Docker + Traefik + SOPS deployment.** The stack runs in containers behind
+  Traefik with secrets decrypted to tmpfs at deploy time. `infra/scripts/deploy.sh`
+  is the entry point; running compose by hand skips decryption.
+- **Scheduled retention for Docker build artefacts**, four times a day, after a
+  4 GB-per-push image build filled the disk and took the site down.
+
+### Security
+
+Twenty security commits and five advisories, all published with the reporter
+credited (see the Acknowledgements section of SECURITY.md):
+
+- [GHSA-m623-vm42-63fg] (critical) — OS command injection through MCP server
+  `args`, reaching an unescaped shell in the pnpm/uv install path. Reported by
+  Syed Anas Mohiuddin.
+- [GHSA-qm2x-3m6j-c7fc] (high) — the same install-path injection reached through
+  discovery. Reported by EQSTLab.
+- [GHSA-m29x-gj35-9w8g] (high) — command injection in `testMcpConnection` via
+  ``exec(`which ${command}`)``. Reported by EQSTLab.
+- [GHSA-gmhc-h765-37cg] (high) — SSRF guard bypass. The guards matched hostname
+  text, which never matches the bracketed, hex-canonicalised form Node produces
+  for an IPv4-mapped address. Reported by tonghuaroot.
+- [GHSA-fv94-f4f5-vr99] (medium) — the REST unshare endpoint authenticated the
+  caller but never checked profile ownership, so any account could delete
+  another tenant's shares. Reported by 0xParth.
+
+Beyond the advisories, and found by an audit rather than reported:
+
+- Server actions no longer trust a caller-supplied identity; the set that did is
+  frozen by a test that discovers them rather than listing them.
+- `/api/search/users` no longer returns password hashes and 2FA secrets to
+  anonymous callers.
+- Spawned MCP servers no longer inherit the application's environment.
+- The SSRF primitive is applied everywhere a stored URL is fetched, and
+  `safeFetch` now resolves each redirect hop and connects to the address it
+  validated rather than re-resolving the name.
+- Email verification tokens are bound to the user they were issued for.
+- Shared-collection content is sanitised on write and on every read.
+- Imports validate what they are about to make runnable.
+
+### Fixed
+
+- **MCP discovery on STDIO servers.** The sandbox aborted on a bind for
+  `~/.local/bin`, a directory absent from every container image, so discovery
+  failed with `MCP error -32000: Connection closed`.
+- **Duplicate "Default Hub".** A race created two for 27 users. The race is
+  closed, and the duplicates are named apart rather than merged — merging would
+  have to rewrite slugs.
+- `deploy.sh` survives a second run and a failed decrypt.
+- Postgres and Redis are no longer published on `0.0.0.0` with a committed
+  password.
+- No SecurityError crash when Web Storage is blocked (Mobile Safari).
+
+### Dependencies
+
+`pnpm audit` reports no known vulnerabilities in this repository or in
+`pluggedin-mcp`. Automated security updates were **off** here and **paused**
+there, which is how twenty alerts went unattended; both are enabled now, and a
+`.github/dependabot.yml` schedules the routine half.
+
+[GHSA-m623-vm42-63fg]: https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-m623-vm42-63fg
+[GHSA-qm2x-3m6j-c7fc]: https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-qm2x-3m6j-c7fc
+[GHSA-m29x-gj35-9w8g]: https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-m29x-gj35-9w8g
+[GHSA-gmhc-h765-37cg]: https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-gmhc-h765-37cg
+[GHSA-fv94-f4f5-vr99]: https://github.com/VeriTeknik/pluggedin-app/security/advisories/GHSA-fv94-f4f5-vr99
+
 ## [2.16.0] - 2025-10-30
 
 ### Added
