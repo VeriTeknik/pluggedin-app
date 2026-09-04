@@ -1,0 +1,50 @@
+# Dependabot configuration.
+#
+# Security updates are enabled at the repository level and do not need an entry
+# here — they fire on advisories regardless. What this file adds is the routine
+# half: without it, nothing looks at dependencies until an advisory is
+# published, which is how twenty alerts came to sit unattended.
+#
+# The pnpm ecosystem is "npm" to Dependabot; it reads pnpm-lock.yaml.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Istanbul
+    # Enough to keep moving, few enough to actually review. Security PRs are
+    # not counted against this limit.
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the routine noise, so the interesting ones stand out.
+      patch-and-minor:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # Majors are a deliberate migration, not a weekly chore. A major with an
+      # advisory still arrives, because security updates ignore this list.
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(actions)
+    labels: [dependencies]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(docker)
+    labels: [dependencies]
