@@ -15,3 +15,9 @@ LICENSE
 # TypeDoc
 typedoc.json
 docs/api/
+
+# Secrets: never let a local build bake .env into an image layer.
+# CI checkouts have no .env, so this only changes local `docker build`.
+.env
+.env.*
+!.env.example
