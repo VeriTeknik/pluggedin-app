@@ -18,8 +18,8 @@
 ---
 🧩 **Now Multi‑Arch Ready!**
 Plugged.in Docker images support both `amd64` and `arm64` architectures via a unified manifest.
-🧠 **v3.0.0 — Embedded RAG Vector Engine:**
-RAG now runs fully in-process using zvec (RocksDB + HNSW). No external services needed — document processing, chunking, and semantic search are all built-in.
+🧭 **v4.0.0 — Hubs, a hosted MCP connector, and a security pass:**
+Workspaces are Hubs now, one Workspace per Hub. `/api/mcp` serves a hosted connector behind an OAuth 2.1 server. Five reported advisories fixed and credited.
 ---
 </div>
 
@@ -557,38 +557,45 @@ Built on top of these amazing projects:
 
 ## 📝 Release Notes
 
-**Latest Release: v3.0.0** — Embedded RAG Vector Engine
+**Latest Release: v4.0.0** — Hubs, a hosted MCP connector, and a security pass
 
-### 🎯 What's New in v3.0.0
+### 🎯 What's New in v4.0.0
 
-This is a **major architectural shift** that eliminates the external FastAPI/Milvus dependency for RAG.
+Major by Semantic Versioning: two features were removed and the data model under
+Hubs changed.
 
-**🧠 Embedded RAG Vector Engine** (Breaking Change)
-- **In-process vector search** via zvec (RocksDB + HNSW) — zero external dependencies
-- **Shared vector infrastructure** (`lib/vectors/`) with domain-based collections
-- **Server-side PDF extraction** using unpdf — no external service needed
-- **Smart text chunking** with configurable overlap and separators
-- **Model-to-dimension validation** — detects misconfigured embedding models at startup
-- **Re-index menu option** in library UI for recovering from vector corruption
-- **Relevance-ordered results** with query term highlighting
+**🧭 Workspaces are Hubs** (Breaking Change)
+- Every Workspace is its own Hub, one Workspace per Hub; the Workspace switcher is gone
+- Existing Workspaces were promoted in place — no row of user data moved
+- `mcp_servers.slug` is untouched, so saved instructions naming `{slug}__{tool}` still resolve
 
-**🔒 Security Hardening**
-- **Filter injection prevention**: Field-name allowlist + per-type value validation (UUID/alphanumeric regex)
-- **Path traversal protection**: External `ZVEC_DATA_PATH` blocked unless explicitly opted in
-- **Corruption recovery**: Collections backed up to `.bak` before recreation with stats logging
-- **Idempotent document processing**: Prevents orphaned rows on retry
+**🔌 Hosted MCP connector**
+- `/api/mcp` serves the connector, with an OAuth 2.1 authorization server in front of it
+- PKCE, refresh-token rotation with reuse detection, RFC 9728 discovery
+- Library tools exposed over MCP, behind a Hub boundary a caller cannot step around
 
-**🗑️ Dead Code Removal**
-- Removed ~750 lines of upload polling infrastructure (no longer needed with synchronous processing)
-- Removed `UploadProgressContext`, `UploadProgressToast`, upload-status API route
+**🔒 Security**
+- Five advisories fixed and published, each credited to its reporter — see
+  [Acknowledgements](SECURITY.md#acknowledgements)
+- Command injection in the pnpm/uv install path and in `testMcpConnection`
+- SSRF guards now classify the parsed address rather than matching hostname text,
+  and `safeFetch` connects to the address it validated instead of re-resolving
+- Server actions no longer trust a caller-supplied identity
+
+**🐳 Deployment**
+- Docker + Traefik + SOPS; secrets are decrypted to tmpfs at deploy time
+- `infra/scripts/deploy.sh` is the entry point — running compose by hand skips decryption
+- Scheduled retention for build artefacts, after a 4 GB-per-push image build filled the disk
+
+**🗑️ Removed**
+- Discover / AI Social. The sharing infrastructure underneath it stays
 
 **⚠️ Migration Notes**
-- Docker image changed to `pgvector/pgvector:pg18` — back up your database before upgrading
-- New env vars: `ZVEC_DATA_PATH`, `EMBEDDING_MODEL`, `RAG_SEARCH_TOP_K`, `RAG_CACHE_TTL_MS`
-- Removed env var: `RAG_API_URL`
-- Run `pnpm db:migrate` after upgrading (3 new migrations)
+- Run `pnpm db:migrate` after upgrading
+- Users who hit the duplicate-Hub race will see the second one renamed to
+  "Default Hub 2"; nothing is merged and nothing is deleted
 
-View the full changelog at [GitHub Releases](https://github.com/VeriTeknik/pluggedin-app/releases/tag/v3.0.0)
+View the full changelog at [GitHub Releases](https://github.com/VeriTeknik/pluggedin-app/releases/tag/v4.0.0)
 
 ---
 
