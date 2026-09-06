@@ -52,10 +52,23 @@ function spreadFedUserUpdates(source: string): string[] {
     if (spreadNames.has(m[2])) spreadNames.add(m[1]);
   }
 
-  for (const m of source.matchAll(/\.update\(\s*users\s*\)[\s\S]{0,400}?\.set\(\s*([^)\s,]+)/g)) {
-    const arg = m[1];
-    if (arg.startsWith('{...') || arg.startsWith('{ ...')) hits.push(`inline spread into .set(${arg}…)`);
-    else if (spreadNames.has(arg)) hits.push(`.set(${arg}) where ${arg} was built by spreading`);
+  // Capture a window after `.set(` rather than a single token: an inline
+  // `{ ...data }` puts a space between the brace and the spread, and a
+  // token-shaped capture stops at that space and returns just `{`. That is the
+  // form this guard exists to catch, so getting it wrong made the guard a
+  // decoration — raised in review on PR #242.
+  for (const m of source.matchAll(/\.update\(\s*users\s*\)[\s\S]{0,400}?\.set\(([\s\S]{0,60})/g)) {
+    const window = m[1];
+
+    if (/^\s*\{\s*\.\.\./.test(window)) {
+      hits.push('inline spread into .set({ ...x })');
+      continue;
+    }
+
+    const identifier = window.match(/^\s*([A-Za-z_$][\w$]*)/)?.[1];
+    if (identifier && spreadNames.has(identifier)) {
+      hits.push(`.set(${identifier}) where ${identifier} was built by spreading`);
+    }
   }
 
   return hits;
@@ -77,6 +90,14 @@ describe('mass assignment into the users table', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it.each([
+    ['inline, no space', 'db.update(users).set({...data, updated_at: new Date()}).where(x)'],
+    ['inline, with space', 'db.update(users).set({ ...data, updated_at: new Date() }).where(x)'],
+    ['inline, newline', 'db.update(users)\n  .set({\n    ...data,\n  })\n  .where(x)'],
+  ])('detects an inline spread written %s', (_label, source) => {
+    expect(spreadFedUserUpdates(source)).not.toEqual([]);
   });
 
   it('detects the shape it is meant to catch', () => {
