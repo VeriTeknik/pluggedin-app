@@ -47,7 +47,6 @@ import { type ConnectedAccount, removeConnectedAccount, removePassword, setPassw
 import { AppearanceSection } from './appearance-section';
 import { CurrentProjectSection } from './current-project-section';
 import { LoginMethodsCard } from './login-methods-card';
-import { ProfileSocialSection } from './profile-social-section';
 import { RemovePasswordDialog } from './remove-password-dialog';
 type User = typeof users.$inferSelect;
 
@@ -440,7 +439,6 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       </Card>
 
       {/* Social Profile Section - Pass user prop */}
-      <ProfileSocialSection user={user} />
 
       {/* Login Methods Card - Unified view of all login methods */}
       <LoginMethodsCard

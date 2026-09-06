@@ -11,30 +11,7 @@
       "language": "Taal",
       "updateButton": "Profiel bijwerken",
       "success": "Profiel succesvol bijgewerkt",
-      "error": "Bijwerken profiel mislukt",
-      "profileUrl": {
-        "title": "Uw Profiel URL",
-        "setUsername": "Stel hierboven een gebruikersnaam in om uw aangepaste openbare profiel-URL te maken",
-        "copyTooltip": "Klik om URL te kopiëren"
-      },
-      "social": {
-        "title": "Sociaal Profiel",
-        "description": "Beheer uw openbare profiel en sociale instellingen",
-        "username": {
-          "label": "Gebruikersnaam",
-          "placeholder": "Kies een gebruikersnaam",
-          "checking": "Beschikbaarheid controleren...",
-          "save": "Opslaan"
-        },
-        "publicProfile": {
-          "title": "Openbaar Profiel",
-          "description": {
-            "noUsername": "Stel eerst een gebruikersnaam in om uw profiel openbaar te maken",
-            "public": "Uw profiel en gedeelde inhoud zijn zichtbaar voor iedereen",
-            "private": "Uw profiel is alleen zichtbaar voor u"
-          }
-        }
-      }
+      "error": "Bijwerken profiel mislukt"
     },
     "password": {
       "title": "Wachtwoord",

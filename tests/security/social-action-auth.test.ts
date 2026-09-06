@@ -1,17 +1,13 @@
-import { and, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { db } from '@/db';
 import {
   embeddedChatsTable,
-  followersTable,
   profilesTable,
   sharedCollectionsTable,
   sharedMcpServersTable,
-  users,
 } from '@/db/schema';
-import { db } from '@/db';
 import { getAuthSession } from '@/lib/auth';
-import { PUBLIC_USER_COLUMN_NAMES } from '@/lib/public-user';
 
 vi.mock('@/db');
 vi.mock('@/lib/auth', () => ({
@@ -37,14 +33,9 @@ const {
   updateUserSocial,
   reserveUsername,
   shareMcpServer,
-  getSharedMcpServer,
-  getSharedMcpServers,
   isServerShared,
   shareCollection,
-  updateSharedCollection,
   unshareCollection,
-  shareEmbeddedChat,
-  updateEmbeddedChat,
 } = await import('@/app/actions/social');
 
 const { createShareableTemplate } = vi.mocked(await import('@/app/actions/mcp-servers'));
@@ -193,126 +184,6 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // Self-service writes that took a caller-supplied userId
 // ---------------------------------------------------------------------------
-describe('updateUserSocial identity', () => {
-  beforeEach(() => {
-    mockedDb.update = vi.fn(() => {
-      const chain: any = {
-        set: vi.fn(() => chain),
-        where: vi.fn(() => chain),
-        returning: vi.fn(() => Promise.resolve([fullUserRow()])),
-      };
-      return chain;
-    });
-  });
-
-  it('redirects an anonymous caller to login', async () => {
-    signedInAs(null);
-
-    await expect(updateUserSocial(OWNER_ID, { is_public: true })).rejects.toMatchObject({
-      digest: expect.stringContaining('NEXT_REDIRECT'),
-    });
-    expect(mockedDb.update).not.toHaveBeenCalled();
-  });
-
-  it('refuses to write to another user', async () => {
-    signedInAs(ATTACKER_ID);
-
-    const result = await updateUserSocial(OWNER_ID, { is_public: true });
-
-    expect(result.success).toBe(false);
-    expect(mockedDb.update).not.toHaveBeenCalled();
-  });
-
-  it('lets a user update themselves', async () => {
-    signedInAs(OWNER_ID);
-
-    const result = await updateUserSocial(OWNER_ID, { is_public: true });
-
-    expect(result.success).toBe(true);
-    expect(mockedDb.update).toHaveBeenCalled();
-  });
-
-  it('returns no auth columns to the user it updated', async () => {
-    signedInAs(OWNER_ID);
-
-    const serialized = JSON.stringify(await updateUserSocial(OWNER_ID, { is_public: true }));
-
-    expect(serialized).not.toContain('hashedpassword');
-    expect(serialized).not.toContain('JBSWY3DPEHPK3PXP');
-    expect(serialized).not.toContain('victim@example.com');
-  });
-});
-
-describe('reserveUsername identity', () => {
-  /** The user exists, and the username they are asking for is unclaimed. */
-  function usernameIsFree(userId: string) {
-    mockedDb.query.users.findFirst.mockImplementation(async (args: any) => {
-      // withAuth's session probe passes a callback as `where`.
-      if (typeof args?.where === 'function') {
-        const session = await mockedGetAuthSession();
-        return session?.user?.id ? { id: session.user.id } : null;
-      }
-      // The availability check narrows to `id`; nobody holds the name.
-      if (args?.columns) {
-        return null;
-      }
-      // The existence check: this user is real.
-      return fullUserRow({ id: userId });
-    });
-  }
-
-  beforeEach(() => {
-    mockedDb.update = vi.fn(() => {
-      const chain: any = {
-        set: vi.fn(() => chain),
-        where: vi.fn(() => chain),
-        returning: vi.fn(() => Promise.resolve([fullUserRow({ username: 'newname' })])),
-      };
-      return chain;
-    });
-  });
-
-  it('redirects an anonymous caller to login even when the username is free', async () => {
-    signedInAs(null);
-    usernameIsFree(OWNER_ID);
-
-    await expect(reserveUsername(OWNER_ID, 'newname')).rejects.toMatchObject({
-      digest: expect.stringContaining('NEXT_REDIRECT'),
-    });
-    expect(mockedDb.update).not.toHaveBeenCalled();
-  });
-
-  it('refuses to claim a username for another user', async () => {
-    signedInAs(ATTACKER_ID);
-    usernameIsFree(OWNER_ID);
-
-    const result = await reserveUsername(OWNER_ID, 'newname');
-
-    expect(result.success).toBe(false);
-    expect(mockedDb.update).not.toHaveBeenCalled();
-  });
-
-  it('lets a user claim their own username', async () => {
-    signedInAs(OWNER_ID);
-    usernameIsFree(OWNER_ID);
-
-    const result = await reserveUsername(OWNER_ID, 'newname');
-
-    expect(result.success).toBe(true);
-    expect(mockedDb.update).toHaveBeenCalled();
-  });
-
-  it('returns no auth columns on success', async () => {
-    signedInAs(OWNER_ID);
-    usernameIsFree(OWNER_ID);
-
-    const serialized = JSON.stringify(await reserveUsername(OWNER_ID, 'newname'));
-
-    expect(serialized).not.toContain('hashedpassword');
-    expect(serialized).not.toContain('JBSWY3DPEHPK3PXP');
-    expect(serialized).not.toContain('victim@example.com');
-  });
-});
 
 // ---------------------------------------------------------------------------
 // #3 — MCP server sharing
@@ -376,203 +247,16 @@ describe('shareMcpServer ownership', () => {
   });
 });
 
-describe('shared MCP server template handling', () => {
-  const SECRETS = ['ghp_liveVictimToken', 'sk-live-secret', 'live-header-token'];
-
-  const dirtyTemplate = {
-    name: 'srv',
-    type: 'STDIO',
-    command: 'npx',
-    args: ['-y', '@victim/server'],
-    env: { GITHUB_PAT: 'ghp_liveVictimToken', API_KEY: 'sk-live-secret' },
-    streamableHTTPOptions: { headers: { Authorization: 'Bearer live-header-token' } },
-  };
-
-  it('sanitises a caller-supplied customTemplate before persisting it', async () => {
-    signedInAs(OWNER_ID);
-    profileOwnedBy(OWNER_ID);
-    mockedDb.query.mcpServersTable.findFirst.mockResolvedValue({
-      uuid: SERVER_UUID,
-      profile_uuid: PROFILE_UUID,
-      name: 'srv',
-      config: null,
-    });
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue(null);
-
-    await shareMcpServer(PROFILE_UUID, SERVER_UUID, 'title', undefined, true, dirtyTemplate);
-
-    const serialized = JSON.stringify(writtenValues);
-    expect(serialized).not.toBe('[]');
-    for (const secret of SECRETS) {
-      expect(serialized).not.toContain(secret);
-    }
-  });
-
-  it('sanitises a legacy template on the way out of a public share', async () => {
-    signedInAs(null);
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
-      uuid: SHARED_UUID,
-      profile_uuid: PROFILE_UUID,
-      server_uuid: SERVER_UUID,
-      title: 'public share',
-      description: null,
-      is_public: true,
-      // Stored before templates were sanitised on write.
-      template: dirtyTemplate,
-      created_at: new Date(),
-      updated_at: new Date(),
-      server: null,
-      profile: { name: 'p', uuid: PROFILE_UUID, project: { user: { username: 'victim', name: 'Victim' } } },
-    });
-
-    const serialized = JSON.stringify(await getSharedMcpServer(SHARED_UUID));
-
-    for (const secret of SECRETS) {
-      expect(serialized).not.toContain(secret);
-    }
-  });
-
-  it('keeps the install recipe intact on a public share', async () => {
-    signedInAs(null);
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
-      uuid: SHARED_UUID,
-      profile_uuid: PROFILE_UUID,
-      server_uuid: SERVER_UUID,
-      title: 'public share',
-      description: null,
-      is_public: true,
-      template: dirtyTemplate,
-      created_at: new Date(),
-      updated_at: new Date(),
-      server: null,
-      profile: { name: 'p', uuid: PROFILE_UUID, project: { user: { username: 'victim', name: 'Victim' } } },
-    });
-
-    const result: any = await getSharedMcpServer(SHARED_UUID);
-
-    expect(result.template.command).toBe('npx');
-    expect(Object.keys(result.template.env)).toEqual(['GITHUB_PAT', 'API_KEY']);
-  });
-});
-
-describe('shared MCP server read paths', () => {
-  it('getSharedMcpServers ignores includePrivate for a non-owner', async () => {
-    signedInAs(ATTACKER_ID);
-    profileOwnedBy(OWNER_ID);
-    mockedDb.query.sharedMcpServersTable.findMany.mockResolvedValue([]);
-
-    await getSharedMcpServers(PROFILE_UUID, 10, true);
-
-    const call = mockedDb.query.sharedMcpServersTable.findMany.mock.calls.at(-1)?.[0];
-    expect(call.where).toEqual(
-      and(
-        eq(sharedMcpServersTable.profile_uuid, PROFILE_UUID),
-        eq(sharedMcpServersTable.is_public, true)
-      )
-    );
-  });
-
-  it('getSharedMcpServers honours includePrivate for the owner', async () => {
-    signedInAs(OWNER_ID);
-    profileOwnedBy(OWNER_ID);
-    mockedDb.query.sharedMcpServersTable.findMany.mockResolvedValue([]);
-
-    await getSharedMcpServers(PROFILE_UUID, 10, true);
-
-    const call = mockedDb.query.sharedMcpServersTable.findMany.mock.calls.at(-1)?.[0];
-    expect(call.where).toEqual(eq(sharedMcpServersTable.profile_uuid, PROFILE_UUID));
-  });
-
-  it('getSharedMcpServer withholds a private share from a non-owner', async () => {
-    signedInAs(ATTACKER_ID);
-    profileOwnedBy(OWNER_ID);
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
-      uuid: SHARED_UUID,
-      profile_uuid: PROFILE_UUID,
-      server_uuid: SERVER_UUID,
-      title: 'secret',
-      description: null,
-      is_public: false,
-      template: { env: { API_KEY: 'sk-live-secret' } },
-      created_at: new Date(),
-      updated_at: new Date(),
-      server: null,
-      profile: { name: 'p', uuid: PROFILE_UUID, project: { user: { username: 'victim', email: 'victim@example.com', name: 'Victim' } } },
-    });
-
-    const result = await getSharedMcpServer(SHARED_UUID);
-
-    expect(result).toBeNull();
-  });
-
-  it('getSharedMcpServer never returns the owner email', async () => {
-    signedInAs(null);
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
-      uuid: SHARED_UUID,
-      profile_uuid: PROFILE_UUID,
-      server_uuid: SERVER_UUID,
-      title: 'public share',
-      description: null,
-      is_public: true,
-      template: {},
-      created_at: new Date(),
-      updated_at: new Date(),
-      server: null,
-      profile: { name: 'p', uuid: PROFILE_UUID, project: { user: { username: null, email: 'victim@example.com', name: 'Victim' } } },
-    });
-
-    const serialized = JSON.stringify(await getSharedMcpServer(SHARED_UUID));
-
-    expect(serialized).not.toContain('victim@example.com');
-  });
-
-  it('isServerShared returns nothing to a caller who does not own the profile', async () => {
-    signedInAs(ATTACKER_ID);
-    profileOwnedBy(OWNER_ID);
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
-      uuid: SHARED_UUID,
-      profile_uuid: PROFILE_UUID,
-      server_uuid: SERVER_UUID,
-      title: 'secret',
-      is_public: false,
-      template: { env: { API_KEY: 'sk-live-secret' } },
-    });
-
-    const result = await isServerShared(PROFILE_UUID, SERVER_UUID);
-
-    expect(result.isShared).toBe(false);
-    expect(JSON.stringify(result)).not.toContain('sk-live-secret');
-  });
-
-  it('isServerShared never hands back the raw template to the owner either', async () => {
-    signedInAs(OWNER_ID);
-    profileOwnedBy(OWNER_ID);
-    mockedDb.query.sharedMcpServersTable.findFirst.mockResolvedValue({
-      uuid: SHARED_UUID,
-      profile_uuid: PROFILE_UUID,
-      server_uuid: SERVER_UUID,
-      title: 'mine',
-      description: null,
-      is_public: true,
-      template: { env: { API_KEY: 'sk-live-secret' } },
-    });
-
-    const result = await isServerShared(PROFILE_UUID, SERVER_UUID);
-
-    expect(result.isShared).toBe(true);
-    expect(result.server).not.toHaveProperty('template');
-  });
-});
 
 // ---------------------------------------------------------------------------
 // #5 — collection and embedded-chat mutations
 // ---------------------------------------------------------------------------
+// updateSharedCollection, shareEmbeddedChat and updateEmbeddedChat were deleted
+// along with the rest of the dead social surface — the guard they were checked
+// for cannot regress on a function that no longer exists.
 const MUTATIONS: Array<[string, () => Promise<{ success: boolean }>]> = [
   ['shareCollection', () => shareCollection(PROFILE_UUID, 'title', undefined, {}, true)],
-  ['updateSharedCollection', () => updateSharedCollection(PROFILE_UUID, SHARED_UUID, { title: 'x' })],
   ['unshareCollection', () => unshareCollection(PROFILE_UUID, SHARED_UUID)],
-  ['shareEmbeddedChat', () => shareEmbeddedChat(PROFILE_UUID, 'title', undefined, {}, true)],
-  ['updateEmbeddedChat', () => updateEmbeddedChat(PROFILE_UUID, SHARED_UUID, { title: 'x' })],
 ];
 
 describe.each(MUTATIONS)('%s profile ownership', (_name, callAction) => {

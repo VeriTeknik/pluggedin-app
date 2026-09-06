@@ -11,30 +11,7 @@
       "language": "语言",
       "updateButton": "更新个人资料",
       "success": "个人资料更新成功",
-      "error": "更新个人资料失败",
-      "profileUrl": {
-        "title": "您的个人资料 URL",
-        "setUsername": "在上方设置用户名以创建您的自定义公共个人资料 URL",
-        "copyTooltip": "点击复制 URL"
-      },
-      "social": {
-        "title": "社交资料",
-        "description": "管理您的公共个人资料和社交设置",
-        "username": {
-          "label": "用户名",
-          "placeholder": "选择一个用户名",
-          "checking": "正在检查可用性...",
-          "save": "保存"
-        },
-        "publicProfile": {
-          "title": "公共个人资料",
-          "description": {
-            "noUsername": "请先设置用户名才能公开您的个人资料",
-            "public": "您的个人资料和共享内容将对所有人可见",
-            "private": "您的个人资料将仅对您可见"
-          }
-        }
-      }
+      "error": "更新个人资料失败"
     },
     "password": {
       "title": "密码",
