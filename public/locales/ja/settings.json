@@ -11,30 +11,7 @@
       "language": "言語",
       "updateButton": "プロフィールを更新",
       "success": "プロフィールが正常に更新されました",
-      "error": "プロフィールの更新に失敗しました",
-      "profileUrl": {
-        "title": "あなたのプロフィールURL",
-        "setUsername": "カスタム公開プロフィールURLを作成するには、上にユーザー名を設定してください",
-        "copyTooltip": "クリックしてURLをコピー"
-      },
-      "social": {
-        "title": "ソーシャルプロフィール",
-        "description": "公開プロフィールとソーシャル設定を管理します",
-        "username": {
-          "label": "ユーザー名",
-          "placeholder": "ユーザー名を選択してください",
-          "checking": "利用可能か確認中...",
-          "save": "保存"
-        },
-        "publicProfile": {
-          "title": "公開プロフィール",
-          "description": {
-            "noUsername": "プロフィールを公開するには、まずユーザー名を設定してください",
-            "public": "あなたのプロフィールと共有コンテンツはすべての人に表示されます",
-            "private": "あなたのプロフィールはあなたにのみ表示されます"
-          }
-        }
-      }
+      "error": "プロフィールの更新に失敗しました"
     },
     "password": {
       "title": "パスワード",
