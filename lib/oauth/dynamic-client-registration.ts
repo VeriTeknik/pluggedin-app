@@ -6,6 +6,7 @@
  */
 
 import { clearOAuthConfigCache } from '@/lib/oauth/oauth-config-store';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { log } from '@/lib/observability/logger';
 import { recordClientRegistration } from '@/lib/observability/oauth-metrics';
 
@@ -62,7 +63,12 @@ export async function registerOAuthClient(
   });
 
   try {
-    const response = await fetch(registrationEndpoint, {
+    // safeFetch, not fetch: registrationEndpoint is not ours. It arrives from
+    // the remote server's own OAuth metadata document, so a host we merely
+    // reached can name any address it likes — including 169.254.169.254 or
+    // loopback. safeFetch validates the URL, resolves it, refuses a non-global
+    // address and pins the connection to the address it checked.
+    const response = await safeFetch(registrationEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
