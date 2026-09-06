@@ -593,20 +593,6 @@ function buildMiddlewaresManifest(config: OpenCodeAgentConfig): object[] {
       apiVersion: 'traefik.io/v1alpha1',
       kind: 'Middleware',
       metadata: {
-        name: `${config.name}-strip-terminal`,
-        namespace: config.namespace,
-        labels: { app: config.name, 'pap-agent': 'true' },
-      },
-      spec: {
-        stripPrefix: {
-          prefixes: ['/terminal'],
-        },
-      },
-    },
-    {
-      apiVersion: 'traefik.io/v1alpha1',
-      kind: 'Middleware',
-      metadata: {
         name: `${config.name}-strip-code`,
         namespace: config.namespace,
         labels: { app: config.name, 'pap-agent': 'true' },
@@ -685,12 +671,17 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
         services: [{ name: config.name, port: 4000 }],
         middlewares: [{ name: `${config.name}-strip-opencode` }],
       },
-      {
-        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/terminal\`)`,
-        kind: 'Rule',
-        services: [{ name: config.name, port: 7681 }],
-        middlewares: [{ name: `${config.name}-strip-terminal` }],
-      },
+      // No public /terminal route. The ttyd container runs `ttyd -W -p 7681 sh`
+      // — writable, a shell — and this route carried a stripPrefix middleware
+      // and nothing else, so reaching the host was reaching a root shell in the
+      // pod, with its workspace and its service-account token.
+      //
+      // ttyd is still in the Deployment and still reachable with
+      // `kubectl port-forward`, which requires cluster credentials. `uiPassword`
+      // exists in the config and lands in the Secret, but nothing wires it to
+      // Traefik, so there is no authenticated route to publish instead. Adding
+      // one is a change worth making deliberately, not a way to keep an
+      // unauthenticated shell on the internet in the meantime.
       {
         // /api routes go to openchamber (not agent-api) for frontend to work
         // openchamber handles auth and proxies to opencode-serve
