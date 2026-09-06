@@ -181,6 +181,20 @@ export async function setProfileActive(
   const validatedProfileUuid = uuidSchema.parse(profileUuid);
   
   return withProjectAuth(validatedProjectUuid, async (session, project) => {
+    // Owning the project is not enough. The foreign key on
+    // active_profile_uuid points at profiles.uuid and accepts any row, so
+    // without this a caller could aim their own Hub at another tenant's
+    // profile — and registry-servers.ts resolves the working profile as
+    // `activeProject.active_profile_uuid`, so the aim is what gets acted on.
+    const target = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, validatedProfileUuid),
+      columns: { uuid: true, project_uuid: true },
+    });
+
+    if (!target || target.project_uuid !== validatedProjectUuid) {
+      throw new Error('Profile does not belong to this project');
+    }
+
     const updatedProject = await db
       .update(projectsTable)
       .set({ active_profile_uuid: validatedProfileUuid })
