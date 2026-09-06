@@ -182,6 +182,22 @@ async function isCommandAvailable(command: string): Promise<boolean> {
 }
 
 // Add this function to handle bubblewrap configuration
+/**
+ * Does this server need the raw Docker socket, and therefore no sandbox?
+ *
+ * Only the `docker` binary itself. This used to also return true for any `uvx`
+ * server with "docker" as a *substring* of any argument, which meant
+ * `docker-utils`, `mcp-docker-helper` or `--from x-docker-y` ran with no
+ * bubblewrap or firejail at all — the whole isolation, disabled by a package
+ * name. A uvx package is not Docker; it runs under uv like every other one.
+ *
+ * A server that genuinely wraps Docker opts out explicitly with
+ * `applySandboxing: false`, which createMcpClientAndTransport already honours.
+ */
+export function requiresDockerSocket(command: string, _args: string[]): boolean {
+  return command === 'docker';
+}
+
 export function createBubblewrapConfig(
   serverConfig: McpServer
 ): FirejailConfig | null {
@@ -595,14 +611,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         }
       }
 
-      // Check if this is a Docker-based server that needs direct socket access
-      const isDockerServer = 
-        transformedCommand === 'docker' || 
-        (transformedCommand === 'uvx' && 
-         transformedArgs.some(arg => arg.toLowerCase().includes('docker')));
-      
-      if (isDockerServer) {
-      }
+      // Skipping the sandbox is a decision, so it is made by one named
+      // function with tests rather than inline.
+      const isDockerServer = requiresDockerSocket(transformedCommand, transformedArgs);
 
       // Apply sandboxing by default for all STDIO servers (unless explicitly disabled)
       let sandboxConfig: FirejailConfig | null = null;
