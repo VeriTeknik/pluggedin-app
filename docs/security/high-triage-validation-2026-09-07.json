@@ -1,7 +1,7 @@
 {
   "baselineCommit": "623105ae6b7adcbaa6755bce15534c80b4a0562a",
-  "verifiedSourceCommit": "39a1e31c6eb7ad5f9d60eb0d1f3896b60e30ec33",
-  "verifiedSourceTree": "0698e3c58a9e9b5fbfde1342adf2891cc83238f9",
+  "verifiedSourceCommit": "e588b299d13d4ddfbef36753163ce5dc78d591be",
+  "verifiedSourceTree": "e33495b0e8e9529f1c55ba90987fee16c407f846",
   "baselineFailedTests": [
     "API Keys Actions trackApiKeyUsage should batch updates for same key within debounce window",
     "API Keys Actions trackApiKeyUsage should debounce usage updates and use atomic timestamp",
@@ -534,7 +534,8 @@
     "authorizes tool schemas for owner": "passed",
     "does not expose the unused client-controlled audit writer endpoint": "passed",
     "does not expose the unused shared long-lived model configuration credential endpoint": "passed",
-    "registration does not delete tokens by address preserves the existing user and their pending verification token": "passed"
+    "registration does not delete tokens by address preserves the existing user and their pending verification token": "passed",
+    "omits the private project relation from public profile details": "passed"
   },
   "removedOrRenamedAssertions": [
     "registration does not delete tokens by address relies on deleting the user instead"

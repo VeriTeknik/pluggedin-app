@@ -7,7 +7,7 @@ The 65 active HIGH records from the 2026-09-06 scan were checked against baselin
 ## Verification
 
 - Work and builds used an isolated `/tmp` worktree; the live checkout was not used for development.
-- Clean immutable baseline reproduced **189 failed assertions and 10 suite-load errors**, rather than the handoff's 188. Final full run: **1,896 passed, 189 failed, 53 pending**, with the **same 189 failing names and same 10 suite-load failures**. New failures: **zero**. This is not a green full test suite.
+- Clean immutable baseline reproduced **189 failed assertions and 10 suite-load errors**, rather than the handoff's 188. Final full run: **1,897 passed, 189 failed, 53 pending**, with the **same 189 failing names and same 10 suite-load failures**. New failures: **zero**. This is not a green full test suite.
 - [Machine-readable comparison](high-triage-validation-2026-09-07.json) records names, suite failures, new assertions, and the intentional duplicate-registration test rename. Existing assertions were retained; its replacement now requires preservation of the pending account.
 - Every new security regression fixture was run against the defect, the fix, and a reverted/broken fix. The mutation runs failed as expected. Server-only boundary tests inspect exports/directives; route tests exercise authorization and response behavior. They do not prove untested paths.
 - MCP HTTP fixtures use real loopback connections, verify pinned connection selection, streamed delivery before EOF, cancellation and body limits. The installed Streamable HTTP SDK invokes the pinned hook. A real bubblewrap child could write its private cache but could not read a sibling credential fixture; restoring the shared mount at its original position made that test fail. The integration fixture skips only when the host lacks working bubblewrap/user namespaces.
@@ -90,7 +90,7 @@ The known GET/DELETE session-ownership defect was also fixed in [`2c35225d`](htt
 
 ## Review follow-ups
 
-The same full-suite comparison and a fresh production build were repeated after these changes; the final result is 1,896 passed, the original 189 failed names, 53 pending and the original 10 suite-load errors.
+The same full-suite comparison and a fresh production build were repeated after these changes; the final result is 1,897 passed, the original 189 failed names, 53 pending and the original 10 suite-load errors.
 
 - #37: `beb73fd9` closes the legacy JWT gap: null/missing password versions are revoked after a reset, and refreshing legacy user fields cannot overwrite an old password version. `password-reset-jwt-revalidation.test.ts` tests the real callback; restoring the old callback fails three cases. Revocation occurs on the existing user-revalidation interval (up to 15 minutes), not immediately at reset time.
 - #22: `cead3e7a` also constrains the stored active-profile reference by project and repairs a stale cross-project reference. The query-level fixture fails when this predicate is removed. Production contained zero such mismatches.
@@ -101,6 +101,13 @@ The same full-suite comparison and a fresh production build were repeated after 
 - #30/#31: `c7d684f2` preserves the token-status banner using a server-derived `has_model_router_token` boolean while keeping credentials private. GET/PATCH/export assertions pass; restoring the old helper fails all three presence assertions.
 - #60/#61: the streaming-error review allegation was rejected against the real HTTP fixture: `response.text()` rejects on the size limit, and abort/cancellation propagate. A streaming fetch resolves at headers; later failures reject body reads.
 - #2/#52: `8aa59030` accepts AVIF using Sharp's actual `heif` metadata format, retaining bounded raster decoding and WebP output. Restoring the incorrect format name fails the AVIF fixture. Production's four local avatar references all had PNG extensions.
+
+## Late review verification
+
+- #50: `74d3f9fb` removes the complete OAuth object from public shared transport options, including legacy templates. The unauthenticated route fixture fails with the original sanitizer, passes with the fix, and fails when the fix is reverted.
+- #50: `e588b299` limits public profile relations to UUID/name and no longer selects the private project UUID. The public response assertion fails before and under mutation, and passes with the projection.
+- Unclaimed community contributions intentionally support third-party repositories and persist `is_claimed:false`; verified registry claims still require GitHub ownership. Owner agent endpoints constrain the profile and intentionally return owner-supplied configuration; platform-issued credentials remain excluded and exports redact secrets. These late allegations did not demonstrate an authorization bypass.
+- The legacy root `docker-compose.production.yml` references an nginx config absent at baseline. That recipe requires operator-provided proxy configuration; closing its direct public app port does not repair this pre-existing setup gap. A complete legacy nginx recipe remains an operational follow-up. The live deployment uses the separate tracked Traefik/SOPS configuration.
 
 ## Operational scope and remaining work
 
