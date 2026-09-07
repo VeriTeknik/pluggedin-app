@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 vi.mock('@/lib/auth', () => ({ getAuthSession: async () => null }));
-vi.mock('@/db', () => ({ db: { query: { sharedMcpServersTable: { findMany: async () => [{ created_at: new Date(), template: { env: { KEY: 'SECRET-TEMPLATE' } }, server: { uuid: 'server', command: 'npx', args: ['mcp', '--token', 'SECRET-ARG'], url: 'https://example.com/mcp?api_key=SECRET-URL' } }] } } } }));
+vi.mock('@/db', () => ({ db: { query: { sharedMcpServersTable: { findMany: async () => [{ created_at: new Date(), template: { env: { KEY: 'SECRET-TEMPLATE' }, streamableHTTPOptions: { oauth: { accessToken: 'SECRET-OAUTH', refreshToken: 'SECRET-REFRESH', clientSecret: 'SECRET-CLIENT' }, enableResumption: true } }, server: { uuid: 'server', command: 'npx', args: ['mcp', '--token', 'SECRET-ARG'], url: 'https://example.com/mcp?api_key=SECRET-URL' } }] } } } }));
 import { NextRequest } from 'next/server';
 
 import { GET } from '@/app/api/profile/[profileId]/shared-servers/route';

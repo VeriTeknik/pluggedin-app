@@ -105,7 +105,7 @@ export function sanitizeServerTemplate<T>(template: T): T {
 
   // Transport headers are pure credentials, and a session id is a live handle.
   if (sanitized.streamableHTTPOptions && typeof sanitized.streamableHTTPOptions === 'object') {
-    const { sessionId: _sessionId, headers, ...rest } = sanitized.streamableHTTPOptions;
+    const { sessionId: _sessionId, oauth: _oauth, headers, ...rest } = sanitized.streamableHTTPOptions;
     sanitized.streamableHTTPOptions = { ...rest };
     if (headers && typeof headers === 'object') {
       sanitized.streamableHTTPOptions.headers = Object.fromEntries(
