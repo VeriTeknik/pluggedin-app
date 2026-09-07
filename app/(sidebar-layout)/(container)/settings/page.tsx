@@ -48,7 +48,13 @@ export default async function SettingsPage() {
       <div className="max-w-2xl mx-auto space-y-6">
         <SettingsTitle />
         <SettingsForm
-          user={user}
+          user={{
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            hasPassword: !!user.password,
+          }}
           connectedAccounts={connectedAccounts}
         />
         <EmailPreferencesSection

@@ -38,7 +38,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 import { safeLocalStorage, safeSessionStorage } from '@/lib/storage-utils';
@@ -48,7 +47,13 @@ import { AppearanceSection } from './appearance-section';
 import { CurrentProjectSection } from './current-project-section';
 import { LoginMethodsCard } from './login-methods-card';
 import { RemovePasswordDialog } from './remove-password-dialog';
-type User = typeof users.$inferSelect;
+type User = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  hasPassword: boolean;
+};
 
 interface SettingsFormProps {
   user: User;
@@ -443,7 +448,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       {/* Login Methods Card - Unified view of all login methods */}
       <LoginMethodsCard
         userEmail={user.email || ''}
-        hasPassword={!!user.password}
+        hasPassword={!!user.hasPassword}
         connectedAccounts={connectedAccounts.map((acc) => ({
           id: acc.provider,
           provider: acc.provider,
@@ -452,7 +457,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         onDisconnect={handleRemoveAccount}
         onConnect={(provider) => signIn(provider)}
         canRemoveAccount={
-          connectedAccounts.length > 1 || (connectedAccounts.length === 1 && !!user.password)
+          connectedAccounts.length > 1 || (connectedAccounts.length === 1 && !!user.hasPassword)
         }
       />
 
@@ -461,7 +466,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         <CardHeader>
           <CardTitle>{t('settings.password.title')}</CardTitle>
           <CardDescription>
-            {!user.password
+            {!user.hasPassword
               ? t('settings.password.descriptionNoPassword')
               : connectedAccounts.length > 0
               ? t('settings.password.descriptionWithRemove')
@@ -469,7 +474,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!user.password ? (
+          {!user.hasPassword ? (
             // No password set - Show "Set Password" form
             <>
               <p className="text-sm text-muted-foreground mb-4">
