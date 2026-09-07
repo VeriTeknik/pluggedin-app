@@ -16,7 +16,7 @@ import {
 } from '@/types/custom-mcp-server';
 
 export async function getCustomMcpServers(profileUuid: string) {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
   const servers = await db
     .select({
       uuid: customMcpServersTable.uuid,
@@ -32,7 +32,7 @@ export async function getCustomMcpServers(profileUuid: string) {
       codeFileName: codesTable.fileName,
     })
     .from(customMcpServersTable)
-    .leftJoin(codesTable, eq(customMcpServersTable.code_uuid, codesTable.uuid))
+    .leftJoin(codesTable, and(eq(customMcpServersTable.code_uuid, codesTable.uuid), eq(codesTable.user_id, session.user.id)))
     .where(
       and(
         eq(customMcpServersTable.profile_uuid, profileUuid),
@@ -52,7 +52,7 @@ export async function getCustomMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<CustomMcpServer | null> {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
   const server = await db
     .select({
       uuid: customMcpServersTable.uuid,
@@ -68,7 +68,7 @@ export async function getCustomMcpServerByUuid(
       codeFileName: codesTable.fileName,
     })
     .from(customMcpServersTable)
-    .leftJoin(codesTable, eq(customMcpServersTable.code_uuid, codesTable.uuid))
+    .leftJoin(codesTable, and(eq(customMcpServersTable.code_uuid, codesTable.uuid), eq(codesTable.user_id, session.user.id)))
     .where(
       and(
         eq(customMcpServersTable.uuid, uuid),
@@ -89,7 +89,7 @@ export async function deleteCustomMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
   // First get the code_uuid
   const server = await db
     .select({ code_uuid: customMcpServersTable.code_uuid })
@@ -121,7 +121,7 @@ export async function toggleCustomMcpServerStatus(
   uuid: string,
   newStatus: McpServerStatus
 ): Promise<void> {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
   await db
     .update(customMcpServersTable)
     .set({ status: newStatus })
@@ -138,7 +138,15 @@ export async function createCustomMcpServer(
   profileUuid: string,
   data: CreateCustomMcpServerData
 ) {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
+  if (data.code_uuid !== undefined) {
+    const code = await db.query.codesTable.findFirst({
+      where: and(eq(codesTable.uuid, data.code_uuid), eq(codesTable.user_id, session.user.id)),
+      columns: { uuid: true },
+    });
+    if (!code) throw new Error('Code not found');
+  }
+
   const [server] = await db
     .insert(customMcpServersTable)
     .values({
@@ -161,11 +169,23 @@ export async function updateCustomMcpServer(
   uuid: string,
   data: UpdateCustomMcpServerData
 ): Promise<void> {
-  return withProfileAuth(profileUuid, async () => {
+  return withProfileAuth(profileUuid, async (session) => {
+  if (data.code_uuid !== undefined) {
+    const code = await db.query.codesTable.findFirst({
+      where: and(eq(codesTable.uuid, data.code_uuid), eq(codesTable.user_id, session.user.id)),
+      columns: { uuid: true },
+    });
+    if (!code) throw new Error('Code not found');
+  }
+
   await db
     .update(customMcpServersTable)
     .set({
-      ...data,
+      name: data.name,
+      description: data.description,
+      code_uuid: data.code_uuid,
+      additionalArgs: data.additionalArgs,
+      env: data.env,
     })
     .where(
       and(
