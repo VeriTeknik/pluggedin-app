@@ -1,4 +1,3 @@
-import { safeMcpFetch } from '@/lib/mcp/safe-fetch';
 // Standard library imports
 // Third-party library imports
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -26,6 +25,7 @@ import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is h
 import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+import { safeMcpFetch } from '@/lib/mcp/safe-fetch';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
@@ -142,6 +142,16 @@ function validateUUID(uuid: string | undefined): void {
   if (!uuidRegex.test(uuid)) {
     throw new Error('Invalid UUID format');
   }
+}
+
+function privateRuntimeCaches(serverConfig: McpServer): Record<string, string> {
+  if (!serverConfig.uuid) throw new Error('A server UUID is required for sandbox isolation');
+  validateUUID(serverConfig.uuid);
+  const workspace = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace');
+  return {
+    UV_CACHE_DIR: path.join(workspace, '.cache/uv'),
+    PNPM_STORE_DIR: path.join(workspace, '.cache/pnpm'),
+  };
 }
 
 // Check if a command is available on the system
@@ -306,12 +316,10 @@ export function createBubblewrapConfig(
     // UV cache directory
     '--bind-try', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
     
-    // MCP package store directory (needed for uvx and other package managers)
-    '--bind', PackageManagerConfig.PACKAGE_STORE_DIR, PackageManagerConfig.PACKAGE_STORE_DIR,
-    
-    // Docker socket (only if not using network isolation, use try variant since Docker might not be installed)
-    ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : ['--ro-bind-try', '/var/run/docker.sock', '/var/run/docker.sock']),
-    
+    // Only the server-specific directory above is mounted. The shared store
+    // contains other tenants' packages and OAuth credentials; a Docker socket
+    // would let a child bypass this filesystem boundary altogether.
+
     // User/group mapping for user namespace
     '--uid', '1000',
     '--gid', '1000',
@@ -362,6 +370,7 @@ export function createBubblewrapConfig(
     NODE_ENV: 'production',
     // Apply server-specific env vars
     ...(serverConfig.env || {}),
+    ...privateRuntimeCaches(serverConfig),
   };
 
   return {
@@ -734,7 +743,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           ...sandboxConfig.env,
           // For mcp-remote, override HOME to OAuth directory
           ...(isMcpRemote && serverConfig.uuid ? { HOME: serverOAuthHome } : {}),
-          ...packageManagerEnv // Merge package manager env
+          ...packageManagerEnv,
+          // Enforce this after both package-manager and caller environment merges.
+          ...(sandboxConfig.command === 'bwrap' ? privateRuntimeCaches(serverConfig) : {}),
         }
       } : {
         // Use transformed configuration
