@@ -189,17 +189,11 @@ export function createRedisRateLimiter(config: RateLimitConfig) {
  * For sensitive endpoints, this provides better security
  */
 async function defaultKeyGenerator(req: NextRequest): Promise<string> {
-  const forwardedFor = req.headers.get('x-forwarded-for');
-  const realIp = req.headers.get('x-real-ip');
-  const cfConnectingIp = req.headers.get('cf-connecting-ip'); // Cloudflare
+  // Traefik is the public edge and appends the socket peer at the right.
+  // Earlier XFF entries and CF-Connecting-IP may be supplied by the caller.
+  const ip = req.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()
+    || req.headers.get('x-real-ip') || 'unknown';
 
-  // Get the most reliable IP
-  const ip = cfConnectingIp ||
-             forwardedFor?.split(',')[0]?.trim() ||
-             realIp ||
-             'unknown';
-
-  // Use IP and pathname only - no user agent to prevent bypass
   return `${ip}:${req.nextUrl.pathname}`;
 }
 

@@ -5,8 +5,7 @@ services:
     image: veriteknik/pluggedin:latest
     container_name: pluggedin-app
     restart: always
-    ports:
-      - '3000:3000'
+    # nginx reaches port 3000 over the compose network; no direct public ingress.
     volumes:
       - mcp-cache:/app/.cache
       - app-uploads:/app/uploads

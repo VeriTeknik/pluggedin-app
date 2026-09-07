@@ -76,15 +76,14 @@ describe('a token is written with the user it belongs to', () => {
  * links for addresses that may not have a user yet. Deleting by address takes
  * those with it and breaks a sign-in this route has nothing to do with.
  *
- * Nothing needs deleting anyway: the foreign key's ON DELETE CASCADE removes a
- * user's tokens along with the user.
+ * Duplicate registration preserves the existing account and its tokens.
  */
 describe('registration does not delete tokens by address', () => {
   it('issues no delete against verification_tokens at all', () => {
     expect(registerSource).not.toMatch(/delete\(verificationTokens\)/);
   });
 
-  it('relies on deleting the user instead', () => {
-    expect(registerSource).toMatch(/delete\(users\)/);
+  it('preserves the existing user and their pending verification token', () => {
+    expect(registerSource).not.toMatch(/delete\(users\)/);
   });
 });

@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache';
 
 import { db } from '@/db';
 import { agentTemplatesTable, users } from '@/db/schema';
-import { getAdminEmails } from '@/lib/admin-notifications';
 import { getAuthSession } from '@/lib/auth';
 
 type ActionResult<T = void> = {
@@ -63,13 +62,8 @@ async function checkAdminAuth(): Promise<{ userId: string; email: string } | nul
     where: eq(users.id, session.user.id),
   });
 
-  let isAdmin = user?.is_admin || false;
+  const isAdmin = user?.is_admin || false;
 
-  // Fallback to environment variable check
-  if (!isAdmin) {
-    const adminEmails = getAdminEmails();
-    isAdmin = adminEmails.includes(session.user.email);
-  }
 
   if (!isAdmin) {
     return null;

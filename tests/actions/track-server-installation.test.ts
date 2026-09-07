@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@/lib/auth', () => ({ getAuthSession: vi.fn() }));
+
 const findFirst = vi.fn(async () => undefined);
 const values = vi.fn(async () => undefined);
 

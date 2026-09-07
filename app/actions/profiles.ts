@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
-import { getAuthSession } from '@/lib/auth';
+import { getProjectActiveProfileInternal } from '@/lib/active-profile-internal';
 import { withAuth, withProfileAuth, withProjectAuth } from '@/lib/auth-helpers';
 import { Profile } from '@/types/profile';
 
@@ -58,118 +58,9 @@ export async function getProfiles(currentProjectUuid: string) {
 }
 
 export async function getProjectActiveProfile(currentProjectUuid: string) {
-  const session = await getAuthSession();
-  
-  if (!session) {
-    // This function is also used internally by API authentication
-    // So we'll do authorization check later based on project ownership
-    // rather than failing early if there's no session
-  }
-  
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, currentProjectUuid))
-    .limit(1);
-
-  if (project.length === 0) {
-    throw new Error('Project not found');
-  }
-
-  // If we have a session, verify the project belongs to the current user
-  if (session && session.user && project[0].user_id !== session.user.id) { // Explicitly check session.user too
-    throw new Error('Unauthorized - you do not have access to this project');
-  }
-
-  const currentProject = project[0];
-
-  // Define the fields to select, combining profile and user data
-  const selectFields = {
-    // Profile fields
-    uuid: profilesTable.uuid,
-    name: profilesTable.name,
-    project_uuid: profilesTable.project_uuid,
-    created_at: profilesTable.created_at,
-    language: profilesTable.language,
-    enabled_capabilities: profilesTable.enabled_capabilities,
-    // User fields (prefixing to avoid potential name clashes if needed later)
-    userId: users.id,
-    username: users.username,
-    userEmail: users.email, // Added email as it might be useful context
-    userBio: users.bio,
-    userAvatarUrl: users.avatar_url,
-    userIsPublic: users.is_public,
-    userIsAdmin: users.is_admin,
-  };
-
-  // Try to get active profile if set, joining with users table
-  if (currentProject.active_profile_uuid) {
-    const activeProfileData = await db
-      .select(selectFields)
-      .from(profilesTable)
-      .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
-      .innerJoin(users, eq(projectsTable.user_id, users.id))
-      .where(eq(profilesTable.uuid, currentProject.active_profile_uuid))
-      .limit(1);
-
-    if (activeProfileData.length > 0) {
-      // TODO: Define a proper return type combining Profile and User fields
-      return activeProfileData[0]; // Removed 'as any' cast
-    }
-  }
-
-  // If no active profile or not found, get all profiles for the project, joining with users
-  const profilesData = await db
-    .select(selectFields)
-    .from(profilesTable)
-    .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
-    .innerJoin(users, eq(projectsTable.user_id, users.id))
-    .where(eq(profilesTable.project_uuid, currentProjectUuid));
-
-  // If there are profiles, use the first one and set it as active
-  if (profilesData.length > 0) {
-    await db
-      .update(projectsTable)
-      .set({ active_profile_uuid: profilesData[0].uuid })
-      .where(eq(projectsTable.uuid, currentProjectUuid));
-
-    // TODO: Define a proper return type combining Profile and User fields
-    return profilesData[0]; // Removed 'as any' cast
-  }
-
-  // If no profiles exist, create a default one
-  const insertedDefaultProfile = await db
-    .insert(profilesTable)
-    .values({
-      name: 'Default Workspace',
-      project_uuid: currentProjectUuid,
-    })
-    .returning({ uuid: profilesTable.uuid }); // Only return the UUID
-
-  const defaultProfileUuid = insertedDefaultProfile[0].uuid;
-
-  // Set it as active
-  await db
-    .update(projectsTable)
-    .set({ active_profile_uuid: defaultProfileUuid })
-    .where(eq(projectsTable.uuid, currentProjectUuid));
-
-  // Now fetch the newly created default profile with user data
-  const defaultProfileData = await db
-    .select(selectFields)
-    .from(profilesTable)
-    .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
-    .innerJoin(users, eq(projectsTable.user_id, users.id))
-    .where(eq(profilesTable.uuid, defaultProfileUuid))
-    .limit(1);
-
-  if (defaultProfileData.length === 0) {
-    // This should ideally not happen
-    throw new Error('Failed to fetch newly created default profile');
-  }
-
-  // TODO: Define a proper return type combining Profile and User fields
-  return defaultProfileData[0]; // Removed 'as any' cast
+  return withProjectAuth(uuidSchema.parse(currentProjectUuid), () =>
+    getProjectActiveProfileInternal(currentProjectUuid)
+  );
 }
 
 export async function setProfileActive(

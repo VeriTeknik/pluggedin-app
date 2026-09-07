@@ -1,8 +1,7 @@
-'use server';
+import 'server-only';
 
 import { and, eq, isNotNull, lt } from 'drizzle-orm';
 import fs from 'fs/promises'; // Use fs.promises
-import path from 'path';
 
 import { db } from '@/db';
 import { auditLogsTable, logRetentionPoliciesTable } from '@/db/schema';

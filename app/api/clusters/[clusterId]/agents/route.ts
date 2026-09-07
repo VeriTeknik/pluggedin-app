@@ -15,9 +15,9 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { clustersTable } from '@/db/schema';
+import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
 import { safeFetch } from '@/lib/oauth/ssrf-protection';
 
 /**

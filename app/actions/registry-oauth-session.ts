@@ -163,19 +163,3 @@ export async function hasValidRegistryOAuthSession() {
   const result = await getRegistryOAuthToken();
   return result.success;
 }
-
-/**
- * Clean up expired sessions (can be run periodically)
- */
-export async function cleanupExpiredSessions() {
-  try {
-    await db
-      .delete(registryOAuthSessions)
-      .where(gt(registryOAuthSessions.expiresAt, new Date()));
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error cleaning up expired sessions:', error);
-    return { success: false, error: 'Failed to cleanup sessions' };
-  }
-}

@@ -2,9 +2,10 @@ import { eq } from 'drizzle-orm';
 import * as jose from 'jose';
 import { NextResponse } from 'next/server';
 
-import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { aiModelsTable, modelRouterServicesTable } from '@/db/schema';
+import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
@@ -86,6 +87,10 @@ export async function POST(request: Request) {
       services.map(async (service) => {
         const syncUrl = validateServiceUrl(service.url, service.sync_endpoint || '/admin/sync');
 
+        if (new URL(syncUrl).protocol !== 'https:') {
+          throw new Error('Model synchronization with an admin credential requires HTTPS');
+        }
+
         // Generate admin JWT token for this sync operation
         const MODEL_ROUTER_JWT_SECRET = process.env.MODEL_ROUTER_JWT_SECRET;
         if (!MODEL_ROUTER_JWT_SECRET) {
@@ -104,7 +109,7 @@ export async function POST(request: Request) {
           .sign(secret);
 
         // POST to service's sync endpoint
-        const response = await fetch(syncUrl, {
+        const response = await safeFetch(syncUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

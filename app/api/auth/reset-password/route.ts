@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
       .update(users)
       .set({
         password: hashedPassword,
+        password_changed_at: new Date(),
         updated_at: new Date(),
       })
       .where(eq(users.id, user.id));

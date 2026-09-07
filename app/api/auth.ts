@@ -5,9 +5,8 @@ import { getServerSession } from 'next-auth/next';
 import { trackApiKeyUsage } from '@/app/actions/api-keys';
 import { db } from '@/db';
 import { apiKeysTable, projectsTable } from '@/db/schema';
+import { getProjectActiveProfileInternal as getProjectActiveProfile } from '@/lib/active-profile-internal';
 import { authOptions } from '@/lib/auth';
-
-import { getProjectActiveProfile } from '../actions/profiles';
 
 export async function authenticateApiKey(request: Request) {
   const authHeader = request.headers.get('authorization');

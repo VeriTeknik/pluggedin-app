@@ -14,9 +14,9 @@ import { and,desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { AlertSeverity,clusterAlertsTable, ClusterAlertType, clustersTable } from '@/db/schema';
+import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
 
 // Collector API key from environment
 const COLLECTOR_API_KEY = process.env.PAP_COLLECTOR_API_KEY;

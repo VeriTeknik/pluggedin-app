@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { getNotifications } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
+import { getNotifications } from '@/lib/notifications-internal';
 
 const querySchema = z.object({
   onlyUnread: z

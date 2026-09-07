@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { customInstructionsTable, mcpServersTable } from '@/db/schema';
+import { withProfileAuth } from '@/lib/auth-helpers';
 
 // Define the structure for the messages array based on schema
 type McpMessageContent =
@@ -31,6 +32,7 @@ export async function getCustomInstructionsForServer(profileUuid: string, server
   }
 
   try {
+    await withProfileAuth(profileUuid, async () => undefined);
     // Verify server ownership indirectly by checking if it exists for the profile
     const serverCheck = await db.query.mcpServersTable.findFirst({
         where: and(
@@ -80,6 +82,7 @@ export async function upsertCustomInstructions(
    }
 
   try {
+    await withProfileAuth(profileUuid, async () => undefined);
      // Verify server ownership indirectly
      const serverCheck = await db.query.mcpServersTable.findFirst({
         where: and(
