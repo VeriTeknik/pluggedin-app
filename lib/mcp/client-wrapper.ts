@@ -1,3 +1,4 @@
+import { safeMcpFetch } from '@/lib/mcp/safe-fetch';
 // Standard library imports
 // Third-party library imports
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -834,7 +835,10 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         }
       }
 
-      transport = new SSEClientTransport(transportOptions.url, transportOptions.requestInit);
+      transport = new SSEClientTransport(transportOptions.url, {
+        requestInit: transportOptions.requestInit,
+        fetch: safeMcpFetch,
+      });
     } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP && !isMcpRemoteServer) {
       if (!serverConfig.url) {
         return null;

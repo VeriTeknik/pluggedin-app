@@ -1,5 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
+import { pipeline, Readable, Transform } from 'node:stream';
 
 /**
  * A `lookup` that answers with a fixed address instead of consulting DNS.
@@ -45,10 +46,8 @@ export function pinnedLookup(address: string, family: number) {
  * Redirects are not followed. The caller decides whether to take a hop, because
  * taking one means validating and resolving a new host.
  *
- * The body is buffered rather than streamed. Every caller in this codebase
- * reads the whole response — `.json()` or `.text()`, including the two that
- * parse `text/event-stream` — so there is nothing to gain from a stream and a
- * `Response` built from a buffer keeps the interface identical to `fetch`.
+ * Responses are buffered by default. MCP transports opt into a bounded stream
+ * so SSE headers and events arrive before the connection ends.
  *
  * Buffering has to be bounded, though, and node:http brings none of undici's
  * defaults:
@@ -86,7 +85,7 @@ export async function pinnedFetch(
   init: RequestInit | undefined,
   address: string,
   family: number,
-  limits: { maxBytes?: number; timeoutMs?: number } = {}
+  limits: { maxBytes?: number; timeoutMs?: number; stream?: boolean } = {}
 ): Promise<Response> {
   const maxBytes = limits.maxBytes ?? DEFAULT_MAX_BYTES;
   const timeoutMs = limits.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -107,6 +106,7 @@ export async function pinnedFetch(
   }
 
   return new Promise<Response>((resolve, reject) => {
+    let incoming: http.IncomingMessage | undefined;
     const request = transport.request(
       {
         method: init?.method ?? 'GET',
@@ -121,6 +121,7 @@ export async function pinnedFetch(
         lookup: pinnedLookup(address, family),
       },
       (response) => {
+        incoming = response;
         const status = response.statusCode ?? 502;
 
         if (status < 200 || status > 599) {
@@ -171,6 +172,28 @@ export async function pinnedFetch(
           return;
         }
 
+        if (limits.stream) {
+          let received = 0;
+          const bounded = new Transform({
+            transform(chunk: Buffer, _encoding, callback) {
+              received += chunk.length;
+              callback(received > maxBytes
+                ? new Error(`Response body too large (over ${maxBytes} bytes)`)
+                : null, chunk);
+            },
+          });
+          // pipeline propagates upstream failures and tears down the socket
+          // when a reader cancels. toWeb maintains backpressure.
+          pipeline(response, bounded, () => {});
+          const body = Readable.toWeb(bounded, {
+            strategy: { highWaterMark: 64 * 1024, size: (chunk: Uint8Array) => chunk.byteLength },
+          }) as ReadableStream<Uint8Array>;
+          resolve(new Response(body, {
+            status, statusText: response.statusMessage ?? '', headers: responseHeaders,
+          }));
+          return;
+        }
+
         const chunks: Buffer[] = [];
         let received = 0;
 
@@ -192,17 +215,21 @@ export async function pinnedFetch(
     );
 
     const onAbort = () => {
-      request.destroy();
-      reject(signal?.reason instanceof Error ? signal.reason : new Error('The operation was aborted'));
+      const error = signal?.reason instanceof Error ? signal.reason : new Error('The operation was aborted');
+      incoming?.destroy(error);
+      request.destroy(error);
+      reject(error);
     };
     signal?.addEventListener('abort', onAbort, { once: true });
     request.on('close', () => signal?.removeEventListener('abort', onAbort));
 
     request.on('timeout', () => {
-      request.destroy();
-      reject(new Error(`Request to ${url.hostname} timed out after ${timeoutMs}ms`));
+      const error = new Error(`Request to ${url.hostname} timed out after ${timeoutMs}ms`);
+      incoming?.destroy(error);
+      request.destroy(error);
+      reject(error);
     });
-    request.on('error', reject);
+    request.on('error', (error) => { incoming?.destroy(error); reject(error); });
     if (typeof body === 'string') request.write(body);
     request.end();
   });
