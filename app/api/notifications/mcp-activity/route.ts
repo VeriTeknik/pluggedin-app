@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { createNotification } from '@/app/actions/notifications';
+import { createNotification } from '@/lib/notifications-internal';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { mcpActivityTable, McpServerSource } from '@/db/schema';

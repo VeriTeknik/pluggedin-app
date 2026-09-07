@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { deleteNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
+import { deleteNotification } from '@/lib/notifications-internal';
 
 /**
  * @swagger

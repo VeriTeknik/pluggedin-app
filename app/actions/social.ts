@@ -223,7 +223,7 @@ export async function unshareServer(
     
     // Create a notification about the unsharing
     try {
-      const { createNotification } = await import('@/app/actions/notifications');
+      const { createNotification } = await import('@/lib/notifications-internal');
       await createNotification({
         profileUuid: sharedServer.profile_uuid,
         type: 'SYSTEM',

@@ -4,8 +4,8 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
-import { createNotification, type NotificationSeverity, type NotificationType } from '@/app/actions/notifications';
 import { sendEmail } from '@/lib/email';
+import { createNotification, type NotificationSeverity, type NotificationType } from '@/lib/notifications-internal';
 
 interface SendNotificationOptions {
   userId: string; // Can be user.id OR profile_uuid

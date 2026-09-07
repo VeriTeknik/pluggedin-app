@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
 import { RATE_LIMITS, rateLimit } from '@/lib/api-rate-limit';
 import { sendEmail as sendEmailHelper } from '@/lib/email';
+import { createNotification } from '@/lib/notifications-internal';
 import type { NotificationMetadata } from '@/lib/types/notifications';
 
 const customNotificationSchema = z.object({

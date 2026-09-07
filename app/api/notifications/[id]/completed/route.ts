@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validate as validateUUID } from 'uuid';
 
-import { toggleNotificationCompletedViaAPI } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
+import { toggleNotificationCompletedViaAPI } from '@/lib/notifications-internal';
 
 /**
  * @swagger

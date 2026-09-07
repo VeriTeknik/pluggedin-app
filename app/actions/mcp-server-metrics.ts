@@ -226,7 +226,7 @@ export const trackServerInstallation = async (input: {
           const installerName = installerProfile?.project?.user?.username || 'Someone';
           
           // Create notification for the server owner
-          const { createNotification } = await import('@/app/actions/notifications');
+          const { createNotification } = await import('@/lib/notifications-internal');
           await createNotification({
             profileUuid: sharedServer.profile_uuid,
             type: 'SYSTEM',
