@@ -7,7 +7,6 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { adminAuditLogTable, emailTemplatesTable,emailTrackingTable, userEmailPreferencesTable, users } from '@/db/schema';
-import { getAdminEmails } from '@/lib/admin-notifications';
 import { checkAdminRateLimit } from '@/lib/admin-rate-limiter';
 import { getAuthSession } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
@@ -29,11 +28,7 @@ async function checkAdminAuth() {
   });
 
   if (!user?.is_admin) {
-    // Fallback to environment variable check for backward compatibility
-    const adminEmails = getAdminEmails();
-    if (!adminEmails.includes(session.user.email)) {
-      throw new Error('Unauthorized: Admin access required');
-    }
+    throw new Error('Unauthorized: Admin access required');
   }
 
   return session;
