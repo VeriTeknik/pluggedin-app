@@ -18,6 +18,7 @@ import {
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PUBLIC_USER_COLUMNS } from '@/lib/public-user';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
 import { verifyGitHubOwnership } from './registry-servers';
@@ -97,7 +98,7 @@ export async function createCommunityServer(data: z.infer<typeof createCommunity
       profile_uuid: validated.profileUuid,
       title: validated.title,
       description: validated.description,
-      template: validated.template,
+      template: sanitizeServerTemplate(validated.template),
       is_public: true, // Always public for community servers
       requires_credentials: false,
     }).returning();
@@ -256,7 +257,7 @@ export async function getCommunityServer(uuid: string) {
       return { success: false, error: 'Server not found' };
     }
 
-    return { success: true, server };
+    return { success: true, server: sanitizeCommunityShare(server) };
   } catch (error) {
     console.error('Error getting community server:', error);
     return { 
@@ -611,7 +612,7 @@ export async function getClaimableCommunityServers() {
       orderBy: (table, { desc }) => desc(table.created_at),
     });
 
-    return { success: true, servers };
+    return { success: true, servers: servers.map(sanitizeCommunityShare) };
   } catch (error) {
     console.error('Error getting claimable servers:', error);
     return { 
@@ -620,4 +621,9 @@ export async function getClaimableCommunityServers() {
       servers: []
     };
   }
+}
+// A live local server is private configuration, not a public install recipe.
+function sanitizeCommunityShare<T extends { template: unknown; server?: unknown }>(share: T) {
+  const { server: _privateServer, ...publicShare } = share;
+  return { ...publicShare, template: sanitizeServerTemplate(share.template) };
 }
