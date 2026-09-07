@@ -1,5 +1,6 @@
 'use server';
 
+import { getAuthSession } from '@/lib/auth';
 import { TransportType } from '@/lib/mcp/package-detector';
 import { validateExternalUrl } from '@/lib/url-validator';
 
@@ -47,15 +48,11 @@ async function fetchFileFromGitHub(
   path: string
 ): Promise<string | null> {
   try {
-    const githubToken = process.env.GITHUB_TOKEN;
     
     const headers: HeadersInit = {
       'Accept': 'application/vnd.github.v3+json',
     };
     
-    if (githubToken) {
-      headers['Authorization'] = `Bearer ${githubToken}`;
-    }
     
     // Validate the GitHub API URL to prevent SSRF
     const githubUrl = validateExternalUrl(
@@ -110,6 +107,8 @@ export async function detectPackageConfiguration(
   transports: TransportType[]
 ): Promise<DetectionResult> {
   const result: DetectionResult = {};
+  const session = await getAuthSession();
+  if (!session?.user?.id) return result;
   
   // First, try to fetch package.json
   const packageJsonContent = await fetchFileFromGitHub(owner, repo, 'package.json');
