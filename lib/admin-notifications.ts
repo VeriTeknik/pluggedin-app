@@ -1,4 +1,5 @@
 import { sendEmail } from '@/lib/email';
+import { escapeHtml } from '@/lib/email-layout';
 
 export type AdminNotificationSeverity = 'INFO' | 'WARNING' | 'ALERT' | 'CRITICAL';
 
@@ -108,7 +109,7 @@ function generateAdminNotificationHtml(options: {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${title}</title>
+      <title>${escapeHtml(title)}</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; color: #1f2937;">
       <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="background-color: #f3f4f6; padding: 20px;">
@@ -128,11 +129,11 @@ function generateAdminNotificationHtml(options: {
               <tr>
                 <td style="padding: 24px;">
                   <h1 style="margin: 0 0 16px; color: #1f2937; font-size: 20px; font-weight: 600;">
-                    ${title}
+                    ${escapeHtml(title)}
                   </h1>
                   
                   <div style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
-                    ${message}
+                    ${escapeHtml(message)}
                   </div>
                   
                   ${userDetails ? `
@@ -144,25 +145,25 @@ function generateAdminNotificationHtml(options: {
                         ${userDetails.name ? `
                           <tr>
                             <td style="padding: 4px 0; font-weight: 600; width: 100px;">Name:</td>
-                            <td style="padding: 4px 0;">${userDetails.name}</td>
+                            <td style="padding: 4px 0;">${escapeHtml(userDetails.name)}</td>
                           </tr>
                         ` : ''}
                         ${userDetails.email ? `
                           <tr>
                             <td style="padding: 4px 0; font-weight: 600;">Email:</td>
-                            <td style="padding: 4px 0;">${userDetails.email}</td>
+                            <td style="padding: 4px 0;">${escapeHtml(userDetails.email)}</td>
                           </tr>
                         ` : ''}
                         ${userDetails.id ? `
                           <tr>
                             <td style="padding: 4px 0; font-weight: 600;">User ID:</td>
-                            <td style="padding: 4px 0; font-family: monospace; font-size: 12px;">${userDetails.id}</td>
+                            <td style="padding: 4px 0; font-family: monospace; font-size: 12px;">${escapeHtml(userDetails.id)}</td>
                           </tr>
                         ` : ''}
                         ${userDetails.source ? `
                           <tr>
                             <td style="padding: 4px 0; font-weight: 600;">Source:</td>
-                            <td style="padding: 4px 0;">${userDetails.source}</td>
+                            <td style="padding: 4px 0;">${escapeHtml(userDetails.source)}</td>
                           </tr>
                         ` : ''}
                       </table>
@@ -175,7 +176,7 @@ function generateAdminNotificationHtml(options: {
                         Additional Information
                       </h3>
                       <pre style="margin: 0; font-family: monospace; font-size: 12px; color: #4b5563; white-space: pre-wrap; word-wrap: break-word;">
-${JSON.stringify(metadata, null, 2)}
+${escapeHtml(JSON.stringify(metadata, null, 2))}
                       </pre>
                     </div>
                   ` : ''}
@@ -192,7 +193,7 @@ ${JSON.stringify(metadata, null, 2)}
                   
                   <!-- Admin Dashboard Link -->
                   <div style="margin-top: 24px; text-align: center;">
-                    <a href="${appUrl}/admin" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 14px;">
+                    <a href="${escapeHtml(appUrl)}/admin" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 14px;">
                       View Admin Dashboard
                     </a>
                   </div>
@@ -203,7 +204,7 @@ ${JSON.stringify(metadata, null, 2)}
               <tr>
                 <td style="background-color: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #e5e7eb;">
                   <p style="margin: 0; color: #6b7280; font-size: 12px;">
-                    This is an automated admin notification from ${appName}
+                    This is an automated admin notification from ${escapeHtml(appName)}
                   </p>
                 </td>
               </tr>
