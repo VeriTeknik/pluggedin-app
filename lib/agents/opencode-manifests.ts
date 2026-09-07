@@ -665,12 +665,7 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
         services: [{ name: config.name, port: 3000 }],
         middlewares: [{ name: `${config.name}-strip-code` }],
       },
-      {
-        match: `Host(\`${config.dnsName}\`) && PathPrefix(\`/opencode\`)`,
-        kind: 'Rule',
-        services: [{ name: config.name, port: 4000 }],
-        middlewares: [{ name: `${config.name}-strip-opencode` }],
-      },
+      // OpenCode is reachable only through the authenticated chamber proxy.
       // No public /terminal route. The ttyd container runs `ttyd -W -p 7681 sh`
       // — writable, a shell — and this route carried a stripPrefix middleware
       // and nothing else, so reaching the host was reaching a root shell in the
