@@ -11,8 +11,8 @@ import { NextResponse } from 'next/server';
 import { authenticate } from '@/app/api/auth';
 import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
-import { configToEnvVars, parseConfigurable } from '@/lib/agent-config';
 import type { ConfigValues } from '@/lib/agent-config';
+import { configToEnvVars, parseConfigurable } from '@/lib/agent-config';
 import { MAX_CPU_CORES,MAX_MEMORY_GI } from '@/lib/pap-constants';
 
 /** Successful auth result type. */
@@ -86,7 +86,7 @@ export async function loadAuthorizedAgent(
  * Protected environment variable prefixes that cannot be overwritten by users.
  * These are set by the system and required for agent operation.
  */
-const PROTECTED_ENV_PREFIXES = ['PAP_', 'PLUGGEDIN_', 'AGENT_'];
+const PROTECTED_ENV_PREFIXES = ['PAP_', 'PLUGGEDIN_', 'AGENT_', 'MODEL_ROUTER_'];
 
 /**
  * Protected individual environment variable names.
