@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { McpServerSource, profilesTable, serverInstallationsTable } from '@/db/schema';
+import { withProfileAuth } from '@/lib/auth-helpers';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { MetricsResponse } from '@/types/reviews';
 
@@ -269,6 +270,7 @@ export async function rateServer(
   source?: McpServerSource
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await withProfileAuth(profileUuid, async () => undefined);
     // Validate input
     if (!serverUuid && (!externalId || !source)) {
       return {
