@@ -17,6 +17,7 @@ it.each(['GET', 'PATCH', 'EXPORT'])('does not expose platform model credentials 
  const response = method === 'GET' ? await GET(request, params) : method === 'PATCH' ? await PATCH(request, params) : await POST(request, params);
  expect(response.status).toBe(200);
  const text = await response.text();
+ expect(JSON.parse(text).agent.has_model_router_token).toBe(true);
  expect(text).toContain('agent');
  expect(text).not.toContain('PLATFORM-SECRET');
  expect(text).not.toContain('FUTURE-CREDENTIAL');

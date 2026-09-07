@@ -33,7 +33,7 @@ export interface Agent {
   metadata?: Record<string, unknown>;
   // Model Router integration
   model_router_service_uuid?: string;
-  model_router_token?: string;
+  has_model_router_token?: boolean;
   model_router_token_issued_at?: string;
   model_router_token_revoked?: boolean;
 }
