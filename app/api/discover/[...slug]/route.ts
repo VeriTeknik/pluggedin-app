@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm'; // Sorted
 import { NextResponse } from 'next/server'; // Sorted
 
-import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools'; // Sorted
 import { authenticateApiKey } from '@/app/api/auth'; // Sorted
 import { db } from '@/db'; // Sorted
 import { mcpServersTable,McpServerStatus } from '@/db/schema'; // Sorted
+import { discoverSingleServerToolsInternal } from '@/lib/mcp/discovery'; // Sorted
 import { RateLimiters } from '@/lib/rate-limiter'; // Sorted
 
 export const dynamic = 'force-dynamic';

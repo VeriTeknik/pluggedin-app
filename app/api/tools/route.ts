@@ -1,10 +1,10 @@
 import { and, eq, type InferSelectModel, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools'; // Moved up
 import { authenticateApiKey } from '@/app/api/auth'; // Moved up
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
+import { discoverSingleServerToolsInternal } from '@/lib/mcp/discovery'; // Moved up
 import { createSlugPrefixedToolName } from '@/lib/utils/slug-utils';
 
 
