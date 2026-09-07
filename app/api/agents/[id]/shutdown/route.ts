@@ -7,6 +7,7 @@ import {
   agentsTable,
   AgentState,
 } from '@/db/schema';
+import { toClientAgent } from '@/lib/agent-response';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
@@ -221,7 +222,7 @@ export async function POST(
 
     return NextResponse.json({
       message: 'Agent shutdown initiated. Transitioning to DRAINING state.',
-      agent: updatedAgent,
+      agent: toClientAgent(updatedAgent),
       kubernetes: kubernetesResult,
       drain_timeout_seconds: drainTimeoutSeconds,
     });

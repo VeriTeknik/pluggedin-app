@@ -10,6 +10,7 @@ import {
   agentsTable,
   AgentState,
 } from '@/db/schema';
+import { toClientAgent } from '@/lib/agent-response';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
@@ -162,7 +163,7 @@ export async function GET(
     ]);
 
     return NextResponse.json(serializeForJson({
-      agent,
+      agent: toClientAgent(agent),
       recentHeartbeats,
       recentMetrics,
       lifecycleEvents,
@@ -458,7 +459,7 @@ export async function PATCH(
 
     return NextResponse.json({
       message: 'Agent updated successfully',
-      agent: serializeForJson(updatedAgent),
+      agent: serializeForJson(toClientAgent(updatedAgent)),
     });
   } catch (error) {
     console.error('Error updating agent:', error);

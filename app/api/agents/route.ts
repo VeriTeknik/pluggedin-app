@@ -12,9 +12,10 @@ import {
   apiKeysTable,
   modelRouterServicesTable,
 } from '@/db/schema';
+import { parseConfigurable, validateConfigValues } from '@/lib/agent-config';
 import { buildAgentEnv, validateContainerImage, validateEnvKey, validateResourceLimits } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
-import { parseConfigurable, validateConfigValues } from '@/lib/agent-config';
+import { toClientAgent } from '@/lib/agent-response';
 import { generateModelRouterToken } from '@/lib/model-router/token';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
@@ -707,7 +708,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(serializeForJson({
-      agent: newAgent,
+      agent: toClientAgent(newAgent),
       template: template ? {
         uuid: template.uuid,
         namespace: template.namespace,

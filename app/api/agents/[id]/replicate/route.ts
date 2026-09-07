@@ -11,6 +11,7 @@ import {
 } from '@/db/schema';
 import { buildAgentEnv, validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
+import { toClientAgent } from '@/lib/agent-response';
 import { generateModelRouterToken } from '@/lib/model-router/token';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
@@ -398,7 +399,7 @@ export async function POST(
         name: sourceAgent.name,
         state: sourceAgent.state,
       },
-      new_agent: newAgent,
+      new_agent: toClientAgent(newAgent),
       deployment: deploymentResult,
     });
   } catch (error) {

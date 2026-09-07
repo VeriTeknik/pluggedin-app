@@ -8,6 +8,7 @@ import {
   AgentState,
 } from '@/db/schema';
 import { validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
+import { toClientAgent } from '@/lib/agent-response';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
@@ -294,7 +295,7 @@ export async function POST(
 
     return NextResponse.json({
       message: 'Agent upgrade initiated with rolling update strategy',
-      agent: updatedAgent,
+      agent: toClientAgent(updatedAgent),
       upgrade: {
         target_image: finalImage,
         strategy: 'RollingUpdate',

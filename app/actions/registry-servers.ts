@@ -1076,6 +1076,13 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       return { success: false, error: 'Missing repository information' };
     }
 
+    const repository = extractGitHubInfo(wizardData.githubUrl);
+    if (repository.owner.toLowerCase() !== wizardData.owner.toLowerCase() ||
+        repository.repo.toLowerCase() !== wizardData.repo.toLowerCase()) {
+      return { success: false, error: 'Repository identity must match the GitHub URL' };
+    }
+    wizardData = { ...wizardData, owner: repository.owner, repo: repository.repo };
+
     // Check if this is a community server (not claimed)
     if (!wizardData.shouldClaim) {
       // Community servers are stored locally, no registry authentication needed

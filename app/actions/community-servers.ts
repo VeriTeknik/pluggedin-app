@@ -19,6 +19,7 @@ import {
 import { getAuthSession } from '@/lib/auth';
 import { PUBLIC_USER_COLUMNS } from '@/lib/public-user';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 
 import { verifyGitHubOwnership } from './registry-servers';
 
@@ -97,7 +98,7 @@ export async function createCommunityServer(data: z.infer<typeof createCommunity
       profile_uuid: validated.profileUuid,
       title: validated.title,
       description: validated.description,
-      template: validated.template,
+      template: sanitizeServerTemplate(validated.template),
       is_public: true, // Always public for community servers
       requires_credentials: false,
     }).returning();
@@ -256,7 +257,7 @@ export async function getCommunityServer(uuid: string) {
       return { success: false, error: 'Server not found' };
     }
 
-    return { success: true, server };
+    return { success: true, server: sanitizeCommunityShare(server) };
   } catch (error) {
     console.error('Error getting community server:', error);
     return { 
@@ -355,6 +356,10 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       return { success: false, error: 'Community server not found' };
     }
 
+    if (communityServer.profile?.project?.user_id !== session.user.id) {
+      return { success: false, error: 'Unauthorized: you do not own this community server' };
+    }
+
     if (communityServer.is_claimed) {
       return { 
         success: false, 
@@ -366,19 +371,11 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     // Get GitHub token - either from registry OAuth or NextAuth
     let githubToken: string | null = null;
     
-    // Check if we have a registry OAuth token passed
-    if (validated.registryToken && validated.registryToken !== 'nextauth') {
-      githubToken = validated.registryToken;
-    } else {
-      // Fall back to NextAuth token
-      const githubAccount = await db.query.accounts.findFirst({
-        where: and(
-          eq(accounts.userId, session.user.id),
-          eq(accounts.provider, 'github')
-        ),
-      });
-      githubToken = githubAccount?.access_token || null;
-    }
+    // A client-provided token is not proof of the signed-in user's identity.
+    const githubAccount = await db.query.accounts.findFirst({
+      where: and(eq(accounts.userId, session.user.id), eq(accounts.provider, 'github')),
+    });
+    githubToken = githubAccount?.access_token || null;
 
     if (!githubToken) {
       return {
@@ -405,7 +402,8 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     }
     const [, owner, repo] = match;
 
-    // Extract package information from template
+    // Legacy shares must not publish stored credentials to the registry.
+    communityServer.template = sanitizeServerTemplate(communityServer.template);
     const packageInfo = extractPackageInfo(communityServer.template);
     
     // Extract environment variables documentation
@@ -611,7 +609,7 @@ export async function getClaimableCommunityServers() {
       orderBy: (table, { desc }) => desc(table.created_at),
     });
 
-    return { success: true, servers };
+    return { success: true, servers: servers.map(sanitizeCommunityShare) };
   } catch (error) {
     console.error('Error getting claimable servers:', error);
     return { 
@@ -620,4 +618,9 @@ export async function getClaimableCommunityServers() {
       servers: []
     };
   }
+}
+// A live local server is private configuration, not a public install recipe.
+function sanitizeCommunityShare<T extends { template: unknown; server?: unknown }>(share: T) {
+  const { server: _privateServer, ...publicShare } = share;
+  return { ...publicShare, template: sanitizeServerTemplate(share.template) };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, Key, Pause, Play, RefreshCw, RotateCw, Server, Shield, Terminal, Trash2, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Download, FileText, HardDrive, Heart, Pause, Play, RefreshCw, RotateCw, Server, Shield, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
@@ -1017,7 +1017,7 @@ export default function AgentDetailPage() {
                     </div>
                   </div>
 
-                  {agent.model_router_token && !agent.model_router_token_revoked && (
+                  {agent.has_model_router_token && !agent.model_router_token_revoked && (
                     <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md">
                       <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
                       <p className="text-sm text-green-800 dark:text-green-400">

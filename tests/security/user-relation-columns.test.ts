@@ -33,6 +33,7 @@ const rowWithFullOwner = (isPublic: boolean) => ({
   template: {},
   profile: {
     project: {
+      user_id: 'owner',
       user: {
         id: 'owner',
         username: 'owner',
@@ -139,7 +140,7 @@ describe('claimCommunityServer does not accept private shares', () => {
   };
 
   beforeEach(() => {
-    getAuthSession.mockResolvedValue({ user: { id: 'claimer' } });
+    getAuthSession.mockResolvedValue({ user: { id: 'owner' } });
   });
 
   it('stops before reading the claimer credentials for a private share', async () => {
