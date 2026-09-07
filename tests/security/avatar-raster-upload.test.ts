@@ -16,8 +16,8 @@ it.each(['payload.html', 'payload.svg'])('rejects executable content disguised a
  expect(m.write).not.toHaveBeenCalled();
  expect(m.update).not.toHaveBeenCalled();
 });
-it('re-encodes a raster and derives its public extension on the server', async () => {
- const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#ffffff' } }).png().toBuffer();
+it.each(['png', 'avif'] as const)('re-encodes a %s raster and derives its public extension on the server', async (format) => {
+ const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#ffffff' } }).toFormat(format).toBuffer();
  const response = await POST(request(png, 'payload.html'));
  expect(response.status).toBe(200);
  const json = await response.json();
