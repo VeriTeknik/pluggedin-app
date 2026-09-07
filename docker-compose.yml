@@ -56,7 +56,8 @@ services:
       - .env
     restart: always
     ports:
-      - '12005:3000'
+      # Local quick-start access only. Public traffic must use a trusted reverse proxy.
+      - '127.0.0.1:12005:3000'
     volumes:
       - mcp-cache:/app/.cache
       - app-uploads:/app/uploads

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
@@ -45,7 +45,7 @@ export async function getProjectActiveProfileInternal(currentProjectUuid: string
       .from(profilesTable)
       .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
       .innerJoin(users, eq(projectsTable.user_id, users.id))
-      .where(eq(profilesTable.uuid, currentProject.active_profile_uuid))
+      .where(and(eq(profilesTable.uuid, currentProject.active_profile_uuid), eq(profilesTable.project_uuid, currentProjectUuid)))
       .limit(1);
 
     if (activeProfileData.length > 0) {
