@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { mkdir, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
+import sharp from 'sharp';
 
 import { db } from '@/db';
 import { users } from '@/db/schema';
@@ -36,14 +37,22 @@ export async function POST(req: NextRequest) {
       return new NextResponse('File size must be less than 1MB', { status: 400 });
     }
 
-    // Create unique filename
-    const ext = file.name.split('.').pop();
-    const filename = `${session.user.id}-${Date.now()}.${ext}`;
+    // Never serve the uploaded bytes or a client-selected extension. Decode a
+    // bounded raster and re-encode it without metadata on our own origin.
+    let buffer: Buffer;
+    try {
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const image = sharp(bytes, { limitInputPixels: 16_000_000, animated: false });
+      const metadata = await image.metadata();
+      if (!['jpeg', 'png', 'webp', 'gif', 'avif'].includes(metadata.format || '')) {
+        return new NextResponse('File must be a raster image', { status: 400 });
+      }
+      buffer = await image.rotate().resize(512, 512, { fit: 'inside', withoutEnlargement: true }).webp().toBuffer();
+    } catch {
+      return new NextResponse('Invalid image', { status: 400 });
+    }
+    const filename = `${session.user.id}-${Date.now()}.webp`;
     const path = join(process.cwd(), 'public', 'avatars', filename);
-    
-    // Convert File to Buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
 
     // Ensure avatars directory exists
     const avatarsDir = join(process.cwd(), 'public', 'avatars');
