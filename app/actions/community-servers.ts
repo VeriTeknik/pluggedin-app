@@ -18,8 +18,8 @@ import {
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PUBLIC_USER_COLUMNS } from '@/lib/public-user';
-import { sanitizeServerTemplate } from '@/lib/server-template';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 
 import { verifyGitHubOwnership } from './registry-servers';
 
@@ -356,6 +356,10 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       return { success: false, error: 'Community server not found' };
     }
 
+    if (communityServer.profile?.project?.user_id !== session.user.id) {
+      return { success: false, error: 'Unauthorized: you do not own this community server' };
+    }
+
     if (communityServer.is_claimed) {
       return { 
         success: false, 
@@ -367,19 +371,11 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     // Get GitHub token - either from registry OAuth or NextAuth
     let githubToken: string | null = null;
     
-    // Check if we have a registry OAuth token passed
-    if (validated.registryToken && validated.registryToken !== 'nextauth') {
-      githubToken = validated.registryToken;
-    } else {
-      // Fall back to NextAuth token
-      const githubAccount = await db.query.accounts.findFirst({
-        where: and(
-          eq(accounts.userId, session.user.id),
-          eq(accounts.provider, 'github')
-        ),
-      });
-      githubToken = githubAccount?.access_token || null;
-    }
+    // A client-provided token is not proof of the signed-in user's identity.
+    const githubAccount = await db.query.accounts.findFirst({
+      where: and(eq(accounts.userId, session.user.id), eq(accounts.provider, 'github')),
+    });
+    githubToken = githubAccount?.access_token || null;
 
     if (!githubToken) {
       return {
@@ -406,7 +402,8 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     }
     const [, owner, repo] = match;
 
-    // Extract package information from template
+    // Legacy shares must not publish stored credentials to the registry.
+    communityServer.template = sanitizeServerTemplate(communityServer.template);
     const packageInfo = extractPackageInfo(communityServer.template);
     
     // Extract environment variables documentation
