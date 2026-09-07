@@ -2,6 +2,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 import { categorizeError, mcpTransportConnectionDuration, mcpTransportConnectionFailures } from '@/lib/mcp/metrics';
+import { safeMcpFetch } from '@/lib/mcp/safe-fetch';
 import { escapeHtml, getSecurityHeaders } from '@/lib/security-utils';
 
 import { oauthStateManager } from '../oauth/OAuthStateManager';
@@ -41,7 +42,7 @@ export class StreamableHTTPWrapper implements Transport {
     this.transport = new StreamableHTTPClientTransport(url, {
       ...options,
       // Add response interceptor to capture session ID with timeout support
-      fetchImplementation: this.createFetchWrapper(options.fetchImplementation),
+      fetch: this.createFetchWrapper(),
     });
 
     // Forward events from the wrapped transport
@@ -88,8 +89,8 @@ export class StreamableHTTPWrapper implements Transport {
    * Creates a fetch wrapper that captures the Mcp-Session-Id header from responses
    * and intercepts OAuth authorization flows
    */
-  private createFetchWrapper(originalFetch?: typeof fetch) {
-    const fetchImpl = originalFetch || fetch;
+  private createFetchWrapper() {
+    const fetchImpl = safeMcpFetch;
     
     return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       // Convert input to URL for analysis

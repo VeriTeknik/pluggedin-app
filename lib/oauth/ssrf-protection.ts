@@ -201,7 +201,8 @@ async function resolveToPinnableAddress(
 export async function safeFetch(
   url: string,
   options?: RequestInit,
-  allowPrivate = false
+  allowPrivate = false,
+  streamResponse = false
 ): Promise<Response> {
   // Reassigned when a 301/302/303 downgrades the method, and when a
   // cross-origin hop drops credentials — see below.
@@ -241,7 +242,8 @@ export async function safeFetch(
           requestInit,
           ...(({ address, family }) => [address, family] as const)(
             await resolveToPinnableAddress(validated)
-          )
+          ),
+          { stream: streamResponse }
         );
 
     if (!REDIRECT_STATUSES.has(response.status)) return response;

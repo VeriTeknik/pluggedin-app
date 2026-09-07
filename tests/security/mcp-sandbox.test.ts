@@ -310,6 +310,7 @@ describe('the sandbox does not abort on a directory that may not exist', () => {
     const { createBubblewrapConfig } = await import('@/lib/mcp/client-wrapper');
 
     const config = createBubblewrapConfig({
+      uuid: '11111111-1111-4111-8111-111111111111',
       name: 'probe',
       type: McpServerType.STDIO,
       command: 'npx',

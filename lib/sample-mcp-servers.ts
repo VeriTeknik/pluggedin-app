@@ -4,9 +4,9 @@
 
 import pLimit from 'p-limit';
 
-import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools';
 import { db } from '@/db';
 import { mcpServersTable, McpServerType } from '@/db/schema';
+import { discoverSingleServerToolsInternal } from '@/lib/mcp/discovery';
 
 export const SAMPLE_MCP_SERVERS = [
   {

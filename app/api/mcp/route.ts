@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 
 import { authOptions } from '@/lib/auth';
 import { handleConnectorRequest, isPublicConnectorRequest } from '@/lib/mcp/connector/handle-request';
+import { ownsMcpSession } from '@/lib/mcp/sessions/ownership';
 import { getSessionManager } from '@/lib/mcp/sessions/SessionManager';
 import { handleStreamableHTTPRequest } from '@/lib/mcp/streamable-http/handler';
 import { buildUnauthorizedResponse } from '@/lib/oauth/provider/authenticate';
@@ -140,6 +141,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (!(await ownsMcpSession(sessionId, session.user.id))) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
     // Create SSE stream
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -202,6 +207,10 @@ export async function DELETE(req: NextRequest) {
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    if (!(await ownsMcpSession(sessionId, session.user.id))) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
     // Delete the session
