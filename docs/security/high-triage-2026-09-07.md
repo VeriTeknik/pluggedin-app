@@ -7,12 +7,12 @@ The 65 active HIGH records from the 2026-09-06 scan were checked against baselin
 ## Verification
 
 - Work and builds used an isolated `/tmp` worktree; the live checkout was not used for development.
-- Clean immutable baseline reproduced **189 failed assertions and 10 suite-load errors**, rather than the handoff's 188. Final full run: **1,880 passed, 189 failed, 53 pending**, with the **same 189 failing names and same 10 suite-load failures**. New failures: **zero**. This is not a green full test suite.
+- Clean immutable baseline reproduced **189 failed assertions and 10 suite-load errors**, rather than the handoff's 188. Final full run: **1,896 passed, 189 failed, 53 pending**, with the **same 189 failing names and same 10 suite-load failures**. New failures: **zero**. This is not a green full test suite.
 - [Machine-readable comparison](high-triage-validation-2026-09-07.json) records names, suite failures, new assertions, and the intentional duplicate-registration test rename. Existing assertions were retained; its replacement now requires preservation of the pending account.
 - Every new security regression fixture was run against the defect, the fix, and a reverted/broken fix. The mutation runs failed as expected. Server-only boundary tests inspect exports/directives; route tests exercise authorization and response behavior. They do not prove untested paths.
 - MCP HTTP fixtures use real loopback connections, verify pinned connection selection, streamed delivery before EOF, cancellation and body limits. The installed Streamable HTTP SDK invokes the pinned hook. A real bubblewrap child could write its private cache but could not read a sibling credential fixture; restoring the shared mount at its original position made that test fail. The integration fixture skips only when the host lacks working bubblewrap/user namespaces.
 - `next build --no-lint` completed successfully, including webpack, type validation and prerendering. The first sandboxed attempt could not fetch Google Fonts; an isolated dependency link for the already-installed PDF worker was also needed. The successful build used no production credentials. Changed files passed lint with warnings; the full standalone tsc run still contains pre-existing test typing errors.
-- Commit autosquash/reordering preserved the exact verified source tree recorded in the comparison JSON. No database migration or workflow permission change is included.
+- Initial commit autosquash/reordering preserved the verified source tree. The comparison JSON now identifies the source revision validated after review follow-ups. No database migration or workflow permission change is included.
 
 ## Findings
 
@@ -87,6 +87,18 @@ The 65 active HIGH records from the 2026-09-06 scan were checked against baselin
 ## Additional public-MCP blocker
 
 The known GET/DELETE session-ownership defect was also fixed in [`2c35225d`](https://github.com/VeriTeknik/pluggedin-app/commit/2c35225d8cfdcbe8bb83ff36983dc6b99dbbabe9). `ownsMcpSession` joins the session profile to the caller's project before opening a stream or deleting the session; [the route regression test](../../tests/security/mcp-session-ownership.test.ts) exercises a foreign session and an owner success case, and fails with the guards removed.
+
+## Review follow-ups
+
+The same full-suite comparison and a fresh production build were repeated after these changes; the final result is 1,896 passed, the original 189 failed names, 53 pending and the original 10 suite-load errors.
+
+- #37: `beb73fd9` closes the legacy JWT gap: null/missing password versions are revoked after a reset, and refreshing legacy user fields cannot overwrite an old password version. `password-reset-jwt-revalidation.test.ts` tests the real callback; restoring the old callback fails three cases. Revocation occurs on the existing user-revalidation interval (up to 15 minutes), not immediately at reset time.
+- #22: `cead3e7a` also constrains the stored active-profile reference by project and repairs a stale cross-project reference. The query-level fixture fails when this predicate is removed. Production contained zero such mismatches.
+- #29/#48: `f7bdf336` requires HTTPS before issuing the administrative model-sync JWT. The HTTP fixture fails without the guard; HTTPS still succeeds. Production contained no model-router service records.
+- #34: `3925fce6` binds the local quick-start app port to loopback and removes the production self-host stack's direct app port; nginx/Traefik remains the public entry point. Actual `docker compose config` tests fail on both original public mappings. The live Traefik stack already had no published app port.
+- #27/#28: `8eab2000` strengthens import-aware test discovery for named aliases and namespace/element calls; reverting the detector fails all three alias fixtures. The alleged missing cluster-detail admin guard was rejected: its current import is `authenticateAdmin`, and the real helper returns 403 before the cluster query.
+- #30/#31: `af762929` replaces credential omission with an explicit agent response field allowlist. GET/PATCH/export fixtures now plant an unknown future credential; restoring the old helper fails all three.
+- #2/#52: `8aa59030` accepts AVIF using Sharp's actual `heif` metadata format, retaining bounded raster decoding and WebP output. Restoring the incorrect format name fails the AVIF fixture. Production's four local avatar references all had PNG extensions.
 
 ## Operational scope and remaining work
 
