@@ -95,7 +95,7 @@ export async function GET(request: Request) {
       .from(customMcpServersTable)
       .leftJoin(
         codesTable,
-        eq(customMcpServersTable.code_uuid, codesTable.uuid)
+        and(eq(customMcpServersTable.code_uuid, codesTable.uuid), eq(codesTable.user_id, auth.project.user_id))
       )
       .where(
         and(
@@ -182,6 +182,12 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { name, description, code_uuid, additionalArgs, env } = body;
+
+    const code = typeof code_uuid === 'string' && await db.query.codesTable.findFirst({
+      where: and(eq(codesTable.uuid, code_uuid), eq(codesTable.user_id, auth.project.user_id)),
+      columns: { uuid: true },
+    });
+    if (!code) return NextResponse.json({ error: 'Code not found' }, { status: 404 });
 
     const [newCustomMcpServer] = await db
       .insert(customMcpServersTable)
