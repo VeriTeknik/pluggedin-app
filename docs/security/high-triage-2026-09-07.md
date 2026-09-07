@@ -98,6 +98,8 @@ The same full-suite comparison and a fresh production build were repeated after 
 - #34: `3925fce6` binds the local quick-start app port to loopback and removes the production self-host stack's direct app port; nginx/Traefik remains the public entry point. Actual `docker compose config` tests fail on both original public mappings. The live Traefik stack already had no published app port.
 - #27/#28: `8eab2000` strengthens import-aware test discovery for named aliases and namespace/element calls; reverting the detector fails all three alias fixtures. The alleged missing cluster-detail admin guard was rejected: its current import is `authenticateAdmin`, and the real helper returns 403 before the cluster query.
 - #30/#31: `af762929` replaces credential omission with an explicit agent response field allowlist. GET/PATCH/export fixtures now plant an unknown future credential; restoring the old helper fails all three.
+- #30/#31: `c7d684f2` preserves the token-status banner using a server-derived `has_model_router_token` boolean while keeping credentials private. GET/PATCH/export assertions pass; restoring the old helper fails all three presence assertions.
+- #60/#61: the streaming-error review allegation was rejected against the real HTTP fixture: `response.text()` rejects on the size limit, and abort/cancellation propagate. A streaming fetch resolves at headers; later failures reject body reads.
 - #2/#52: `8aa59030` accepts AVIF using Sharp's actual `heif` metadata format, retaining bounded raster decoding and WebP output. Restoring the incorrect format name fails the AVIF fixture. Production's four local avatar references all had PNG extensions.
 
 ## Operational scope and remaining work
