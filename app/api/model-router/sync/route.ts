@@ -2,9 +2,10 @@ import { eq } from 'drizzle-orm';
 import * as jose from 'jose';
 import { NextResponse } from 'next/server';
 
-import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
 import { db } from '@/db';
 import { aiModelsTable, modelRouterServicesTable } from '@/db/schema';
+import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
           .sign(secret);
 
         // POST to service's sync endpoint
-        const response = await fetch(syncUrl, {
+        const response = await safeFetch(syncUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

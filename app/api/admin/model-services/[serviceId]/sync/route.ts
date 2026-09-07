@@ -3,7 +3,6 @@
  *
  * @route POST /api/admin/model-services/[serviceId]/sync - Push models to service
  */
-
 import { and, eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -16,6 +15,7 @@ import {
   users,
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // Validate URL to prevent SSRF (e.g., requests to cloud metadata endpoints)
       const syncUrl = validateServiceUrl(service.url, service.sync_endpoint || '/v1/models/sync');
 
-      const response = await fetch(syncUrl, {
+      const response = await safeFetch(syncUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
