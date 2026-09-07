@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { toolsTable } from '@/db/schema';
+import { withServerAuth } from '@/lib/auth-helpers';
 import type { Tool } from '@/types/tool';
 
 const serverUuidSchema = z.string().uuid();
@@ -21,6 +22,7 @@ export async function getToolsForServer(serverUuid: string): Promise<Tool[]> {
   try {
     // Validate input
     const validatedUuid = serverUuidSchema.parse(serverUuid);
+    await withServerAuth(validatedUuid, async () => undefined);
     
     const tools = await db.query.toolsTable.findMany({
       where: eq(toolsTable.mcp_server_uuid, validatedUuid),
