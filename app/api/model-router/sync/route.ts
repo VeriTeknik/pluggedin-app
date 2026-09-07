@@ -87,6 +87,10 @@ export async function POST(request: Request) {
       services.map(async (service) => {
         const syncUrl = validateServiceUrl(service.url, service.sync_endpoint || '/admin/sync');
 
+        if (new URL(syncUrl).protocol !== 'https:') {
+          throw new Error('Model synchronization with an admin credential requires HTTPS');
+        }
+
         // Generate admin JWT token for this sync operation
         const MODEL_ROUTER_JWT_SECRET = process.env.MODEL_ROUTER_JWT_SECRET;
         if (!MODEL_ROUTER_JWT_SECRET) {
