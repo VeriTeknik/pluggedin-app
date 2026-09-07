@@ -9,6 +9,7 @@ import {
   agentsTable,
 } from '@/db/schema';
 import { redactSensitiveMetadata } from '@/lib/agent-helpers';
+import { toClientAgent } from '@/lib/agent-response';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
@@ -227,7 +228,8 @@ export async function POST(
     // SECURITY: Redact sensitive fields from agent metadata before export
     // This prevents accidental exposure of API keys, tokens, secrets, etc.
     const redactedAgent = {
-      ...agent,
+      ...toClientAgent(agent),
+      config_values: redactSensitiveMetadata(agent.config_values as Record<string, unknown>),
       metadata: redactSensitiveMetadata(agent.metadata as Record<string, unknown>),
     };
 
