@@ -441,8 +441,9 @@ export const authOptions: NextAuthOptions = {
             // Ensure null is assigned if dbUser or dbUser.username is null/undefined
             token.username = dbUser?.username ?? null;
             token.is_admin = dbUser?.is_admin ?? false;
-            token.passwordChangedAt = dbUser?.password_changed_at?.getTime() ?? null;
-            token.userValidationTs = Date.now();
+            // A legacy-field refresh must not bless an old session with the new password version.
+            token.passwordChangedAt ??= null;
+            token.userValidationTs = 0; // Revalidate the preserved password version below.
           } catch (error) {
             console.error('Error fetching user details in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
@@ -481,7 +482,7 @@ export const authOptions: NextAuthOptions = {
                const tokenPasswordChangedAt = token.passwordChangedAt as number | null;
 
                // If password was changed after token was created, invalidate session
-               if (dbPasswordChangedAt && tokenPasswordChangedAt && dbPasswordChangedAt > tokenPasswordChangedAt) {
+               if (dbPasswordChangedAt && (!tokenPasswordChangedAt || dbPasswordChangedAt > tokenPasswordChangedAt)) {
                  console.info('Session invalidated: password changed', { userId: token.id });
                  // Invalidate session by removing user info
                  delete (token as any).id;
