@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { expect, it, vi } from 'vitest';
-const agent = vi.hoisted(() => ({ uuid: 'agent', model_router_token: 'PLATFORM-SECRET', config_values: { api_key: 'CONFIG-SECRET' }, metadata: {}, access_level: 'PRIVATE' }));
+const agent = vi.hoisted(() => ({ uuid: 'agent', model_router_token: 'PLATFORM-SECRET', future_platform_credential: 'FUTURE-CREDENTIAL', config_values: { api_key: 'CONFIG-SECRET' }, metadata: {}, access_level: 'PRIVATE' }));
 vi.mock('@/app/api/auth', () => ({ authenticate: async () => ({ activeProfile: { uuid: 'profile' }, project: { user_id: 'owner' } }) }));
 vi.mock('@/lib/rate-limiter-redis', () => ({ EnhancedRateLimiters: { agentRead: async () => ({ allowed: true }), agentUpdate: async () => ({ allowed: true }), agentIntensive: async () => ({ allowed: true }) } }));
 vi.mock('@/lib/services/kubernetes-service', () => ({ kubernetesService: {} }));
@@ -19,5 +19,6 @@ it.each(['GET', 'PATCH', 'EXPORT'])('does not expose platform model credentials 
  const text = await response.text();
  expect(text).toContain('agent');
  expect(text).not.toContain('PLATFORM-SECRET');
+ expect(text).not.toContain('FUTURE-CREDENTIAL');
  if (method === 'EXPORT') expect(text).not.toContain('CONFIG-SECRET');
 });
