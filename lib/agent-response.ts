@@ -12,9 +12,10 @@ const CLIENT_AGENT_FIELDS = [
 type ClientAgentField = typeof CLIENT_AGENT_FIELDS[number];
 
 /** Platform-issued credentials are injected into the pod, never returned to its owner. */
-export function toClientAgent<T extends object>(agent: T): Pick<T, Extract<keyof T, ClientAgentField>> {
-  return Object.fromEntries(
+export function toClientAgent<T extends object>(agent: T): Pick<T, Extract<keyof T, ClientAgentField>> & { has_model_router_token: boolean } {
+  const publicFields = Object.fromEntries(
     CLIENT_AGENT_FIELDS.filter((key) => Object.hasOwn(agent, key))
       .map((key) => [key, agent[key as keyof T]])
   ) as Pick<T, Extract<keyof T, ClientAgentField>>;
+  return { ...publicFields, has_model_router_token: Boolean((agent as { model_router_token?: unknown }).model_router_token) };
 }
