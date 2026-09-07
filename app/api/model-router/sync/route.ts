@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import * as jose from 'jose';
 import { NextResponse } from 'next/server';
 
-import { authenticate } from '@/app/api/auth';
+import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
 import { db } from '@/db';
 import { aiModelsTable, modelRouterServicesTable } from '@/db/schema';
 import { validateServiceUrl } from '@/lib/validation-utils';

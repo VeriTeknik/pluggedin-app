@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { authenticate } from '@/app/api/auth';
+import { authenticateAdmin as authenticate } from '@/lib/admin-api-auth';
 import {
   type ChatCompletionRequest,
   getProviderForModel,
