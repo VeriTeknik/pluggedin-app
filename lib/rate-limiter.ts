@@ -202,9 +202,10 @@ setInterval(() => {
  * Uses req.headers directly for Edge Runtime compatibility (middleware)
  */
 function defaultKeyGenerator(req: NextRequest): string {
-  const forwardedFor = req.headers.get('x-forwarded-for');
-  const realIp = req.headers.get('x-real-ip');
-  const ip = forwardedFor?.split(',')[0] || realIp || 'unknown';
+  // Traefik is the public edge and appends the socket peer at the right.
+  // Earlier XFF entries and CF-Connecting-IP may be supplied by the caller.
+  const ip = req.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()
+    || req.headers.get('x-real-ip') || 'unknown';
 
   return `${ip}:${req.nextUrl.pathname}`;
 }
