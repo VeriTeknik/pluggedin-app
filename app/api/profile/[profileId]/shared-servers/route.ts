@@ -94,7 +94,6 @@ export async function GET(
           columns: {
             uuid: true,
             name: true,
-            project_uuid: true,
           }
         }
       },
@@ -107,6 +106,7 @@ export async function GET(
     
     return NextResponse.json(sortedServers.map(share => ({
       ...share,
+      profile: share.profile ? { uuid: share.profile.uuid, name: share.profile.name } : null,
       template: sanitizeServerTemplate(share.template),
       server: sanitizeServerTemplate(share.server),
     })));
