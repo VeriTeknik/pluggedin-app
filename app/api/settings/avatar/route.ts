@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
       const bytes = Buffer.from(await file.arrayBuffer());
       const image = sharp(bytes, { limitInputPixels: 16_000_000, animated: false });
       const metadata = await image.metadata();
-      if (!['jpeg', 'png', 'webp', 'gif', 'avif'].includes(metadata.format || '')) {
+      // Sharp reports AVIF's container as heif, not avif.
+      if (!['jpeg', 'png', 'webp', 'gif', 'heif'].includes(metadata.format || '')) {
         return new NextResponse('File must be a raster image', { status: 400 });
       }
       buffer = await image.rotate().resize(512, 512, { fit: 'inside', withoutEnlargement: true }).webp().toBuffer();
