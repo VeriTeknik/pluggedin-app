@@ -1,11 +1,12 @@
+import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { createNotification } from '@/lib/notifications-internal';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
-import { mcpActivityTable, McpServerSource } from '@/db/schema';
+import { mcpActivityTable, McpServerSource,mcpServersTable } from '@/db/schema';
 import { analyticsCache } from '@/lib/analytics-cache';
+import { createNotification } from '@/lib/notifications-internal';
 import type { NotificationMetadata } from '@/lib/types/notifications';
 
 const mcpActivitySchema = z.object({
@@ -93,12 +94,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const { action, serverName, serverUuid, externalId, source, itemName, success, errorMessage, executionTime } = mcpActivitySchema.parse(body);
+    const { action, serverName, serverUuid, externalId, itemName, success, errorMessage, executionTime } = mcpActivitySchema.parse(body);
 
     // Store all activity in the database for trending calculations
     try {
       // Determine the correct source
-      let activitySource = source;
+      let activitySource = McpServerSource.PLUGGEDIN;
+      let activityExternalId: string | null = null;
+      let activityServerUuid: string | null = null;
       
       // Check if this is a built-in static tool (not a real server UUID)
       const builtInServerIds = [
@@ -125,42 +128,29 @@ export async function POST(request: Request) {
       
       const isBuiltInTool = serverUuid && builtInServerIds.includes(serverUuid);
       
-      if (!activitySource && serverUuid && !isBuiltInTool) {
-        // Look up the server to get its actual source (only for real UUIDs)
-        const { mcpServersTable } = await import('@/db/schema');
-        const { eq } = await import('drizzle-orm');
-        
-        const server = await db.query.mcpServersTable.findFirst({
-          where: eq(mcpServersTable.uuid, serverUuid)
-        });
-        
-        if (server) {
-          // Map PLUGGEDIN source to COMMUNITY for activity tracking
-          activitySource = server.source === McpServerSource.REGISTRY ? 'REGISTRY' : 'COMMUNITY';
-          // Also use the external_id if available
-          if (server.external_id && !externalId) {
-            await db.insert(mcpActivityTable).values({
-              profile_uuid: auth.activeProfile.uuid,
-              server_uuid: serverUuid,
-              external_id: server.external_id,
-              source: activitySource,
-              action,
-              item_name: itemName || null,
-            });
-
-            // Invalidate analytics cache for this profile
-            analyticsCache.invalidateProfile(auth.activeProfile.uuid);
-
-            return NextResponse.json({ success: true });
-          }
+      if (isBuiltInTool) {
+        activityExternalId = serverUuid!;
+      } else if (serverUuid || externalId) {
+        if (serverUuid && !z.string().uuid().safeParse(serverUuid).success) {
+          return NextResponse.json({ error: 'Invalid server UUID' }, { status: 400 });
         }
+        const server = await db.query.mcpServersTable.findFirst({
+          where: and(
+            eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid),
+            serverUuid ? eq(mcpServersTable.uuid, serverUuid) : eq(mcpServersTable.external_id, externalId!),
+          ),
+        });
+        if (!server) return NextResponse.json({ error: 'Server not found' }, { status: 404 });
+        activityServerUuid = server.uuid;
+        activityExternalId = server.external_id;
+        activitySource = server.source;
       }
-      
+
       await db.insert(mcpActivityTable).values({
         profile_uuid: auth.activeProfile.uuid,
-        server_uuid: (serverUuid && !isBuiltInTool) ? serverUuid : null,
-        external_id: externalId || (isBuiltInTool && serverUuid ? serverUuid : null),
-        source: activitySource || McpServerSource.PLUGGEDIN,
+        server_uuid: activityServerUuid,
+        external_id: activityExternalId,
+        source: activitySource,
         action,
         item_name: itemName || null,
       });
@@ -170,6 +160,7 @@ export async function POST(request: Request) {
     } catch (dbError) {
       // Log but don't fail the request if activity tracking fails
       console.error('Failed to store MCP activity:', dbError);
+      return NextResponse.json({ error: 'Failed to store activity' }, { status: 500 });
     }
 
     // Only create local notifications for errors or important events
