@@ -2,6 +2,7 @@ import { Feed } from 'feed';
 import { NextResponse } from 'next/server';
 
 import { getReleaseNotes } from '@/app/actions/release-notes';
+import { sanitizeStrict } from '@/lib/sanitization';
 import type { ReleaseChange } from '@/types/release';
 
 export async function GET() {
@@ -22,7 +23,7 @@ export async function GET() {
 
     // Add items to feed
     notes.forEach((note) => {
-      const content = note.content.body || 
+      const content = sanitizeStrict(note.content.body || 
         Object.entries(note.content)
           .filter(([key, value]) => Array.isArray(value) && value.length > 0)
           .map(([key, changes]) => {
@@ -41,7 +42,7 @@ export async function GET() {
               </ul>
             `;
           })
-          .join('');
+          .join(''));
 
       feed.addItem({
         title: `${note.repository} ${note.version}`,
