@@ -110,6 +110,19 @@ export function withAnalytics<Args extends any[], P, R>(
         }
       }
 
+      // A caller may own the profile while supplying another tenant's project.
+      // Authorize the independent document scope before touching the cache.
+      if (params && typeof params === 'object' && 'projectUuid' in params && params.projectUuid !== undefined) {
+        const projectUuid = analyticsSchemas.uuid.parse(params.projectUuid);
+        const projects = await db.select({ uuid: projectsTable.uuid })
+          .from(projectsTable)
+          .where(and(eq(projectsTable.uuid, projectUuid), eq(projectsTable.user_id, userId)))
+          .limit(1);
+        if (projects.length === 0) {
+          return { success: false, error: 'Project not found or unauthorized' };
+        }
+      }
+
       // 5. Check cache if enabled (AFTER ownership verification for security)
       let cacheKey: string | undefined;
       if (options.cache?.enabled) {
