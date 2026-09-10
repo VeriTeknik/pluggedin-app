@@ -5,6 +5,97 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-09-07
+
+The HIGH tier of the 2026-09-06 security scan, plus the fixes that came out of
+reviewing it. 66 commits, 38 of them tagged `security:`. No schema migration and
+no workflow change.
+
+Minor rather than major: no feature was removed and no data model changed.
+Several routes and server actions that were never reachable from the UI were
+deleted, and a few responses now carry fewer fields — see Removed and Changed.
+
+### Security
+
+All 65 active HIGH findings were checked against `623105ae` by reading the code.
+**Scan verdicts were treated as allegations, not evidence** — the scan's own
+revalidation step had been 79% wrong on the CRITICAL tier, confirming findings
+in files that had already been deleted. 58 records described real defects, five
+were already fixed, one was rejected against the upstream Kubernetes controller,
+and one was attributed to the wrong module. Evidence per finding is in
+[docs/security/high-triage-2026-09-07.md](docs/security/high-triage-2026-09-07.md).
+
+Grouped by what was wrong:
+
+- **Missing ownership checks.** Custom instructions, analytics by project uuid,
+  custom MCP server code and env vars, notifications, tools, server ratings, the
+  active-profile lookup, and MCP stream and deletion by session id now verify
+  the caller owns the thing they named.
+- **Server actions that were never meant to be public.** The audit-log writer,
+  trusted MCP discovery, log-retention helpers, the registry OAuth session
+  cleanup and the notification writers moved behind `server-only`. Every export
+  of a `'use server'` module is a public POST endpoint regardless of what calls
+  it, so the fix is to stop the module being one.
+- **Secrets in responses.** Agent GET, PATCH and export no longer return
+  `model_router_token`, `config_values` or metadata. Settings passes five fields
+  to the client instead of the users row. Shared templates omit OAuth
+  credentials and the private project relation.
+- **SSRF.** Model service sync uses `safeFetch`; remote MCP transports pin the
+  connection to the address that was validated, with an opt-in bounded stream so
+  SSE still delivers events before the connection ends.
+- **Admin boundaries.** Admin surfaces rely on the database `is_admin` role;
+  membership of `ADMIN_NOTIFICATION_EMAILS` no longer grants privileges. Cluster
+  registration, collector reads and alerts require that role.
+- **Auth lifecycle.** Password reset sets `password_changed_at`, which activates
+  the existing JWT revocation check. Duplicate registration returns a conflict
+  instead of replacing a pending account and its verification token. The
+  password-reset rate limiter reads the rightmost `X-Forwarded-For` address, so
+  a client-supplied prefix cannot rotate the bucket.
+- **Isolation.** MCP package mounts and runtime caches are per-server, so one
+  server's bubblewrap child cannot read a sibling's credentials.
+- **Uploads and output encoding.** Avatars are decoded under a pixel limit,
+  raster formats allowlisted, and re-encoded as server-named WebP. Admin
+  notification HTML escapes user-controlled fields.
+
+### Removed
+
+- `POST /api/audit-log` — unauthenticated and unused.
+- The global `cleanupExpiredSessions` action, which also carried an inverted
+  deletion predicate.
+- Public log-retention purge and policy mutation actions.
+
+### Fixed
+
+- Decoded AVIF avatars in the HEIF container are accepted.
+- Agent token status is preserved without exposing the credential.
+- The OpenCode backend stays behind the authenticated chamber.
+
+### Changed
+
+- **Log lines now carry the real version.** `lib/observability/logger.ts` and
+  `lib/logging.ts` each had a hardcoded fallback — `2.14.0` and `1.0.0` — and
+  `APP_VERSION` was set nowhere, so every production log claimed 2.14.0 while
+  the app was 4.0.0. Both now read `lib/app-version.ts`, which takes the version
+  from `package.json`; `APP_VERSION` still overrides. Release-scoped filtering
+  in Sentry and Loki was silently wrong before this.
+
+### Advisories
+
+All five published advisories were verified against this release rather than
+assumed: no shell `exec` remains in the pnpm or uv install handlers,
+`testMcpConnection` uses `execFileAsync('which', [command])`, the unshare
+endpoint returns 403 without profile ownership, and both SSRF guards classify
+the parsed address. 50 regression assertions cover them.
+
+Thank you again to Syed Anas Mohiuddin, EQSTLab, tonghuaroot and 0xParth — see
+[Acknowledgements](SECURITY.md#acknowledgements).
+
+### Verification
+
+Baseline at `623105ae` reproduces **189 failing assertions**; this release runs
+**1,897 passed / 189 failed** with the **same 189 names** and zero new failures.
+That is not a green suite — it is an unchanged one. `next build` succeeds.
+
 ## [4.0.0] - 2026-09-04
 
 A major by Semantic Versioning: two features were removed and the data model
