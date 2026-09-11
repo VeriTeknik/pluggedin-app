@@ -1,0 +1,15 @@
+[Unit]
+Description=Poll for new plugged.in images every 2 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+# Cycles are cheap when there is nothing to do: one git fetch and one
+# registry HEAD. Persistent=false because a missed window is meaningless —
+# the next cycle sees the same state.
+Persistent=false
+AccuracySec=15s
+Unit=pluggedin-deploy-watch.service
+
+[Install]
+WantedBy=timers.target
