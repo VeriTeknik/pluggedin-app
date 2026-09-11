@@ -15,6 +15,8 @@
 import { randomUUID } from 'crypto';
 import pino from 'pino';
 
+import { APP_VERSION } from '@/lib/app-version';
+
 // Determine environment
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -28,7 +30,7 @@ export const logger = pino({
   base: {
     service: process.env.SERVICE_NAME || 'pluggedin-service',
     environment: process.env.NODE_ENV || 'development',
-    version: process.env.APP_VERSION || '1.0.0',
+    version: APP_VERSION,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     hostname: process.env.HOSTNAME || require('os').hostname(),
   },

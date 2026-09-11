@@ -22,6 +22,8 @@
 import { randomUUID } from 'crypto';
 import pino from 'pino';
 
+import { APP_VERSION } from '@/lib/app-version';
+
 // ========================================
 // Environment Detection
 // ========================================
@@ -98,7 +100,7 @@ export const logger = pino({
   base: {
     service: process.env.SERVICE_NAME || 'pluggedin-app',
     environment: process.env.NODE_ENV || 'development',
-    version: process.env.APP_VERSION || '2.14.0',
+    version: APP_VERSION,
     pid: process.pid,
     // Edge Runtime doesn't support the 'os' module
     hostname: (() => {

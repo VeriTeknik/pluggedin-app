@@ -22,6 +22,7 @@ import { sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
+import { appVersion } from '@/lib/app-version';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
   // Only include detailed info for whitelisted monitoring IPs
   if (isMonitoring) {
     healthStatus.uptime = process.uptime();
-    healthStatus.version = process.env.APP_VERSION || '2.18.0';
+    healthStatus.version = appVersion();
     healthStatus.environment = process.env.NODE_ENV || 'development';
   }
 
