@@ -10,7 +10,15 @@
 // the value cannot drift from the release. Next inlines the import at build
 // time, so this works in the Edge runtime too, where `fs` does not exist.
 //
-// APP_VERSION still wins if set, so a deployment can override it.
+// APP_VERSION still wins if set, so a deployment can override it. It is read on
+// each call rather than captured at import, which is what the previous inline
+// `process.env.APP_VERSION || '…'` did — the health route reports per request,
+// and tests set the variable after importing the route.
 import pkg from '@/package.json';
 
-export const APP_VERSION: string = process.env.APP_VERSION || pkg.version;
+export function appVersion(): string {
+  return process.env.APP_VERSION || pkg.version;
+}
+
+/** For callers evaluated once at module init, such as a logger's base fields. */
+export const APP_VERSION: string = appVersion();

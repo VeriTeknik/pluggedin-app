@@ -3,8 +3,9 @@
  * Tests health checks, IP-based access control, and error handling
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
+
 import { GET, HEAD } from '@/app/api/health/route';
 
 // Mock the database
@@ -13,6 +14,9 @@ vi.mock('@/db', () => ({
     execute: vi.fn(),
   },
 }));
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { db } from '@/db';
 
@@ -221,6 +225,10 @@ describe('/api/health', () => {
     });
 
     describe('Environment variable handling', () => {
+      const pkgVersion = JSON.parse(
+        readFileSync(join(process.cwd(), 'package.json'), 'utf8')
+      ).version as string;
+
       it('should use default version when APP_VERSION not set', async () => {
         vi.mocked(db.execute).mockResolvedValueOnce([{ health_check: 1 }] as any);
         delete process.env.APP_VERSION;
@@ -232,7 +240,9 @@ describe('/api/health', () => {
         const response = await GET(request);
         const data = await response.json();
 
-        expect(data.version).toBe('2.18.0'); // Default version
+        // The default is package.json's version, not a literal that goes stale.
+        // Three modules carried three different stale literals before this.
+        expect(data.version).toBe(pkgVersion); // Default version
       });
 
       it('should use custom APP_VERSION when set', async () => {

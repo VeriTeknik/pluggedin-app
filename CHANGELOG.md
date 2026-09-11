@@ -79,6 +79,13 @@ Grouped by what was wrong:
   from `package.json`; `APP_VERSION` still overrides. Release-scoped filtering
   in Sentry and Loki was silently wrong before this.
 
+  `/api/health` carried a third value, `2.18.0`, shown only to whitelisted
+  monitoring IPs — so the probe that exists to report the running version
+  reported one that had not existed for months. Found in review after the first
+  two were fixed, which is why
+  `tests/security/app-version-single-source.test.ts` now discovers the pattern
+  rather than trusting that someone looked everywhere.
+
 ### Advisories
 
 All five published advisories were verified against this release rather than
