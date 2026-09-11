@@ -25,7 +25,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { APP_VERSION } from '@/lib/app-version';
+import { appVersion } from '@/lib/app-version';
 
 const SOURCE = 'lib/app-version.ts';
 
@@ -46,10 +46,32 @@ describe('app version', () => {
     expect(files.length).toBeGreaterThan(100);
   });
 
-  it('matches package.json', async () => {
+  it('falls back to package.json when APP_VERSION is unset', () => {
+    // Through appVersion(), not the constant: the constant is captured at
+    // import, so a machine that happens to have APP_VERSION set would fail this
+    // for a reason that has nothing to do with the code. Raised in review.
     const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    const original = process.env.APP_VERSION;
+    delete process.env.APP_VERSION;
 
-    expect(APP_VERSION).toBe(pkg.version);
+    try {
+      expect(appVersion()).toBe(pkg.version);
+    } finally {
+      if (original === undefined) delete process.env.APP_VERSION;
+      else process.env.APP_VERSION = original;
+    }
+  });
+
+  it('lets APP_VERSION override', () => {
+    const original = process.env.APP_VERSION;
+    process.env.APP_VERSION = '9.9.9-test';
+
+    try {
+      expect(appVersion()).toBe('9.9.9-test');
+    } finally {
+      if (original === undefined) delete process.env.APP_VERSION;
+      else process.env.APP_VERSION = original;
+    }
   });
 
   it('is read from one module — no file falls back to a literal', () => {
