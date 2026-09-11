@@ -3,6 +3,19 @@
 # allowlist, supported architectures, and peer-dependency rules.
 
 overrides:
+  # --- 2026-09-11: alerts that arrived after v4.1.0 ---
+  # smol-toml reaches us through vitest's config loader and did not move with
+  # the vitest bump; a second sharp copy survived the direct bump because
+  # another dependent pins the old line. Both bounded to their own minor, like
+  # everything added since the unbounded xmldom override walked onto a
+  # vulnerable major on its own.
+  # Unconditional, not range-selected: a range selector is matched against the
+  # dependent's DECLARED range, and these two arrive through knip and through
+  # @sentry/nextjs > next, whose declared ranges did not match `<0.35.4` /
+  # `<=1.7.0`. Bounding the replacement to the minor keeps the ceiling.
+  smol-toml: 1.7.1
+  sharp: '>=0.35.4 <0.36.0'
+
   # GHSA-mh99-v99m-4gvg: DoS via unbounded expansion. The advisory has a SINGLE
   # range, '<= 5.0.7', with 5.0.8 as the only patched version — there is no 1.x
   # or 2.x backport, so every earlier line is affected and one selector covers
@@ -106,7 +119,6 @@ overrides:
   'ws@>=8.0.0 <8.20.1': '>=8.20.1 <9.0.0'
   # Round 2: the 7.x copy in the tree is covered by >=7.0.0 <7.5.11.
   'ws@>=7.0.0 <7.5.11': '>=7.5.11 <8.0.0'
-  'smol-toml@<1.6.1': '>=1.6.1'
   # GHSA-xmf8-cvqr-rfgj (high), GHSA-7rqj-j65f-68wh (critical), GHSA-x445-f3h2-j279
   # reached via @auth/drizzle-adapter (next-auth itself is bumped directly).
   '@auth/core@<0.41.3': '>=0.41.3 <0.42.0'
