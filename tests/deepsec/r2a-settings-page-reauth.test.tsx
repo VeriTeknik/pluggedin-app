@@ -32,7 +32,7 @@ const minutesAgo = (n: number) => Date.now() - n * 60_000;
 /** The props the page hands SettingsForm. */
 async function formProps(searchParams?: Record<string, string | string[]>) {
   const tree = (await SettingsPage(
-    searchParams ? { searchParams: Promise.resolve(searchParams) } : undefined
+    searchParams ? { searchParams: Promise.resolve(searchParams) } : {}
   )) as { props: { children: { props: { children: Array<{ type: unknown; props: Record<string, unknown> }> } } } };
   const form = tree.props.children.props.children.find((child) => child?.type === SettingsForm);
   return form!.props;

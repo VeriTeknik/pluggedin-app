@@ -10,7 +10,7 @@ vi.mock('@/app/(sidebar-layout)/(container)/settings/components/settings-title',
 vi.mock('@/app/(sidebar-layout)/(container)/settings/components/email-preferences-section', () => ({ EmailPreferencesSection: () => null }));
 import SettingsPage from '@/app/(sidebar-layout)/(container)/settings/page';
 it('passes only display fields and a password-presence boolean across the client boundary', async () => {
-  const tree = await SettingsPage();
+  const tree = await SettingsPage({});
   const serialized = JSON.stringify(tree);
   expect(serialized).not.toContain('SECRET-');
   expect(serialized).toContain('owner@example.com');
