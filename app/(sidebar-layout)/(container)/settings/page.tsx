@@ -30,7 +30,7 @@ export default async function SettingsPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
-} = {}) {
+}) {
   const session = await getAuthSession();
 
   if (!session?.user) {
