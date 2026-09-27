@@ -71,7 +71,11 @@ services:
       # before the colon is required by the redis:// scheme.
       - "REDIS_URL=redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env (see .env.example)}@pluggedin-redis:6379"
       - NEXTAUTH_URL=http://localhost:12005
-      - MCP_ISOLATION_TYPE=none
+      # Every STDIO MCP server runs in a per-server bubblewrap sandbox. `none`
+      # ran users' servers as the app user, with every tenant's uploads and
+      # OAuth caches in reach; the app now refuses them instead, unless
+      # MCP_ALLOW_UNSANDBOXED_STDIO=true is set deliberately.
+      - MCP_ISOLATION_TYPE=bubblewrap
       - MCP_ISOLATION_FALLBACK=firejail
       - MCP_ENABLE_NETWORK_ISOLATION=false
       - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages
@@ -79,6 +83,16 @@ services:
       - MCP_UV_CACHE_DIR=/app/.cache/mcp-packages/uv-cache
       - ZVEC_DATA_PATH=/app/data/vectors
       # Set ENABLE_RAG=true in .env to enable RAG vector search
+    # What bubblewrap needs to build its sandbox from inside a container —
+    # the same set, and the same trade-off, as infra/docker-compose.yml, whose
+    # comments record why each one is required. Without them every STDIO
+    # server fails to start (closed) rather than running unsandboxed.
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+      - systempaths=unconfined
     depends_on:
       pluggedin-postgres:
         condition: service_healthy

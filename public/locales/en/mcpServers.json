@@ -233,7 +233,10 @@
       "addServer": "Add Server",
       "analyzing": "Analyzing...",
       "testing": "Testing...",
-      "adding": "Adding..."
+      "adding": "Adding...",
+      "githubNotInRegistry": "This repository is not in the MCP registry, so no verified package was found. Enter its exact install command instead.",
+      "githubSuggestionCommand": "Paste the install command from the repository's README, e.g. npx -y @scope/package",
+      "githubSuggestionJson": "Or paste the MCP JSON configuration the repository documents"
     },
     "intelligentDialog": {
       "title": "Intelligent Add Server",

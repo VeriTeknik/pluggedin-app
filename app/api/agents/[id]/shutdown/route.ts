@@ -8,8 +8,9 @@ import {
   AgentState,
 } from '@/db/schema';
 import { toClientAgent } from '@/lib/agent-response';
+import { agentOperationHttpStatus } from '@/lib/agents/operation-status';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
+import { type AgentOperationResult, kubernetesService } from '@/lib/services/kubernetes-service';
 
 import { authenticate } from '../../../auth';
 
@@ -157,13 +158,22 @@ export async function POST(
     }
 
     // Scale Kubernetes deployment to 0 (graceful drain)
-    let kubernetesResult = { success: true, message: 'No Kubernetes deployment' };
+    let kubernetesResult: AgentOperationResult = { success: true, message: 'No Kubernetes deployment' };
     if (agent.kubernetes_deployment) {
       kubernetesResult = await kubernetesService.scaleAgent(
         agent.kubernetes_deployment,
         0, // Scale to 0 replicas
-        agent.kubernetes_namespace || 'agents'
+        agent.kubernetes_namespace || 'agents',
+        agent.uuid
       );
+      // The Deployment under this name is not provably this agent's: change
+      // nothing, rather than recording a drain that never touched the cluster.
+      if (kubernetesResult.code === 'not_owned') {
+        return NextResponse.json(
+          { error: kubernetesResult.message },
+          { status: agentOperationHttpStatus(kubernetesResult) }
+        );
+      }
     }
 
     // Update agent state to DRAINING
@@ -193,7 +203,8 @@ export async function POST(
         await kubernetesService.scaleAgent(
           agent.kubernetes_deployment,
           1,
-          agent.kubernetes_namespace || 'agents'
+          agent.kubernetes_namespace || 'agents',
+          agent.uuid
         ).catch(() => {});
       }
       return NextResponse.json(

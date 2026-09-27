@@ -6,7 +6,14 @@
 #   infra/scripts/build.sh --push          # also push to ghcr.io
 #   infra/scripts/build.sh --tag v3.4.0    # additional tag, e.g. for a release
 #
-# CI invokes this with --push. Local invocation defaults to no-push.
+# Local invocation defaults to no-push and exports nothing to the registry.
+# --push builds a clean `git archive` of HEAD (tracked changes must be
+# committed first) and is the only mode that refreshes the registry cache.
+#
+# Why: the registry cache is exported with mode=max, which publishes the
+# builder's intermediate layers — including the `COPY . .` layer. Exporting it
+# from a working-tree build published whatever gitignored files the checkout
+# held (.env, uploads, dumps) to anyone with pull access, even without --push.
 
 set -euo pipefail
 
@@ -19,19 +26,22 @@ EXTRA_TAGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --push) PUSH=1; shift ;;
-    --tag)  EXTRA_TAGS+=("$2"); shift 2 ;;
-    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \?//'; exit 0 ;;
+    --tag)
+      [ $# -ge 2 ] || { echo "build.sh: --tag needs a value" >&2; exit 2; }
+      # Docker's tag grammar; the value is spliced into an image reference.
+      [[ "$2" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]] \
+        || { echo "build.sh: invalid tag: $2" >&2; exit 2; }
+      EXTRA_TAGS+=("$2"); shift 2 ;;
+    -h|--help) sed -n '2,16p' "$0" | sed 's/^# \?//'; exit 0 ;;
     *) echo "build.sh: unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
 ARGS=(buildx build
-  --file "${REPO_ROOT}/Dockerfile"
   --platform linux/amd64
   --tag "${IMAGE}:latest"
   --tag "${IMAGE}:sha-${SHORT_SHA}"
   --cache-from "type=registry,ref=${IMAGE}:cache"
-  --cache-to   "type=registry,ref=${IMAGE}:cache,mode=max"
 )
 
 for t in "${EXTRA_TAGS[@]}"; do
@@ -39,12 +49,28 @@ for t in "${EXTRA_TAGS[@]}"; do
 done
 
 if [ "$PUSH" -eq 1 ]; then
-  ARGS+=(--push)
+  # Publish exactly HEAD. A clean export cannot carry gitignored files into
+  # the image or into the mode=max cache, whatever the checkout holds.
+  if [ -n "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)" ]; then
+    echo "build.sh: uncommitted changes to tracked files; commit or stash them before --push" >&2
+    exit 1
+  fi
+  CONTEXT="$(mktemp -d "${TMPDIR:-/tmp}/pluggedin-app-build.XXXXXX")"
+  trap 'rm -rf "$CONTEXT"' EXIT
+  git -C "$REPO_ROOT" archive --format=tar HEAD | tar -x -C "$CONTEXT"
+  ARGS+=(
+    --file "${CONTEXT}/Dockerfile"
+    --cache-to "type=registry,ref=${IMAGE}:cache,mode=max"
+    --push
+  )
 else
-  ARGS+=(--load)
+  # Working-tree build for local use: loaded into the local daemon only, and
+  # never exported to the shared registry cache.
+  CONTEXT="$REPO_ROOT"
+  ARGS+=(--file "${CONTEXT}/Dockerfile" --load)
 fi
 
-ARGS+=("$REPO_ROOT")
+ARGS+=("$CONTEXT")
 
 echo "[build] docker ${ARGS[*]}"
 docker "${ARGS[@]}"

@@ -5,6 +5,8 @@ vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({ Client: class { co
 vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({ StdioClientTransport: class { constructor(options: unknown) { m.stdio(options); } close = async () => {}; } }));
 vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({ SSEClientTransport: class { constructor(url: unknown, options: unknown) { m.sse(url, options); } close = async () => {}; } }));
 vi.mock('@/lib/mcp/package-manager', () => ({ packageManager: { transformCommand: async (command: string, args: string[]) => ({ command, args, env: { UV_CACHE_DIR: '/shared/uv-cache', PNPM_STORE_DIR: '/shared/pnpm-store' } }) } }));
+// The launcher is resolved from fixed system directories, not through `which`.
+vi.mock('@/lib/mcp/sandbox-launcher', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/lib/mcp/sandbox-launcher')>()), resolveSandboxLauncher: (name: string) => `/usr/bin/${name}` }));
 import { McpServerType } from '@/db/schema';
 import { createBubblewrapConfig, listResourcesFromServer } from '@/lib/mcp/client-wrapper';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
@@ -22,7 +24,7 @@ it('mounts only this server package directory and withholds the Docker socket', 
 it('enforces private runtime caches after package manager and user environment merges', async () => {
  await listResourcesFromServer({ ...server, env: { UV_CACHE_DIR: '/shared/override' } });
  const cfg = m.stdio.mock.calls.at(-1)![0];
- expect(cfg.command).toBe('bwrap');
+ expect(cfg.command).toBe('/usr/bin/bwrap');
  expect(cfg.env.UV_CACHE_DIR).toBe(`${own}/workspace/.cache/uv`);
  expect(cfg.env.PNPM_STORE_DIR).toBe(`${own}/workspace/.cache/pnpm`);
 });

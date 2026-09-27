@@ -7,6 +7,7 @@ import { escapeHtml, getSecurityHeaders } from '@/lib/security-utils';
 
 import { oauthStateManager } from '../oauth/OAuthStateManager';
 import { getSessionManager } from '../sessions/SessionManager';
+import { oauthCallbackListener } from './oauth-callback-listener';
 
 /**
  * Wrapper for StreamableHTTPClientTransport that captures and manages session IDs
@@ -367,9 +368,24 @@ export class StreamableHTTPWrapper implements Transport {
   }
 
   /**
-   * Extract OAuth callback URL from the request
+   * Extract OAuth callback URL from the request.
+   *
+   * Stored as the flow's callback_url, which the callback route forwards the
+   * provider's response to from this host — so only a local OAuth listener,
+   * normalised (see oauthCallbackListener); anything else creates no flow.
    */
   private async extractOAuthCallbackUrl(
+    url: URL,
+    init?: RequestInit
+  ): Promise<string | null> {
+    const candidate = await this.findOAuthCallbackCandidate(url, init);
+    return candidate ? oauthCallbackListener(candidate)?.toString() ?? null : null;
+  }
+
+  /**
+   * The callback URL the request names, as given.
+   */
+  private async findOAuthCallbackCandidate(
     url: URL,
     init?: RequestInit
   ): Promise<string | null> {

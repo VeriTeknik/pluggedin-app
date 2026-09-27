@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { ClusterStatus, clustersTable, users } from '@/db/schema';
+import { agentsTable, clustersTable, ClusterStatus, users } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
@@ -280,13 +280,26 @@ export async function getClusterPods(namespace: string = 'agents') {
 }
 
 /**
- * Get detailed pod status for an agent
+ * Get detailed pod status for an agent. Pods are selected by the agent's
+ * owner label, so the agent is looked up by uuid rather than trusted by name.
  */
-export async function getAgentPodStatus(agentName: string, namespace: string = 'agents') {
+export async function getAgentPodStatus(agentUuid: string) {
   try {
     await checkAdminAccess();
 
-    const podStatus = await kubernetesService.getAgentPodStatus(agentName, namespace);
+    const agent = await db.query.agentsTable.findFirst({
+      where: eq(agentsTable.uuid, agentUuid),
+      columns: { uuid: true, kubernetes_deployment: true, kubernetes_namespace: true },
+    });
+    if (!agent?.kubernetes_deployment) {
+      return { success: true, data: [] };
+    }
+
+    const podStatus = await kubernetesService.getAgentPodStatus(
+      agent.kubernetes_deployment,
+      agent.kubernetes_namespace || 'agents',
+      agent.uuid
+    );
 
     return {
       success: true,
@@ -297,6 +310,30 @@ export async function getAgentPodStatus(agentName: string, namespace: string = '
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch pod status',
+    };
+  }
+}
+
+/**
+ * Check that the app's Kubernetes token holds exactly the permissions the
+ * agent manager needs in `namespace` (SelfSubjectAccessReview; read-only).
+ * See docs/ops/pap-agent-manager-rbac.yaml.
+ */
+export async function checkAgentManagerPermissions(namespace: string = 'agents') {
+  try {
+    await checkAdminAccess();
+
+    const report = await kubernetesService.checkAgentManagerAccess(namespace);
+
+    return {
+      success: true,
+      data: report,
+    };
+  } catch (error) {
+    console.error('Error checking Kubernetes permissions:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to check Kubernetes permissions',
     };
   }
 }

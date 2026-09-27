@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { oauthClientsTable } from '@/db/schema';
 import { DCR_CLIENT_TTL_MS } from '@/lib/oauth/provider/clients';
 import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
+import { isAllowedRedirectUri } from '@/lib/oauth/provider/redirect-uri';
 
 // RFC 7591 s3.1: registration requests are application/json. The token endpoint
 // is form-urlencoded — do not share a parser between them.
@@ -33,6 +34,19 @@ export async function POST(req: NextRequest) {
   if (!redirectUris.every((u) => typeof u === 'string')) {
     return NextResponse.json(
       { error: 'invalid_redirect_uri', error_description: 'redirect_uris must be strings' },
+      { status: 400 }
+    );
+  }
+  // RFC 7591 s3.2.2. The same rule CIMD documents are held to: storing a
+  // javascript: or remote plain-http URI would leave every later use of this
+  // record to catch it.
+  const refused = (redirectUris as string[]).find((u) => !isAllowedRedirectUri(u));
+  if (refused !== undefined) {
+    return NextResponse.json(
+      {
+        error: 'invalid_redirect_uri',
+        error_description: `redirect_uri "${refused}" is not an allowed redirect target`,
+      },
       { status: 400 }
     );
   }

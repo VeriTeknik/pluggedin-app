@@ -35,12 +35,17 @@ const STORED_DESTINATIONS =
  * The one site that cannot be fixed by applying safeFetch, listed here rather
  * than left to slip through a pattern that happens not to match it.
  *
- * app/api/mcp/oauth/callback forwards to oauthSession.callback_url, and its
- * guard *requires* the hostname to be localhost — which is the vulnerability,
- * because the fetch runs on the production host. safeFetch would refuse the
- * call outright and break the flow. Closing it properly means restricting the
- * forward to the port the app allocated for that session, and
- * mcp_oauth_sessions records no port. See the PR description.
+ * app/api/mcp/oauth/callback forwards to oauthSession.callback_url, which has
+ * to be on loopback, because the listener it serves is local — so safeFetch
+ * would refuse the call outright and break the flow. It is narrowed instead, at
+ * both ends, to a local OAuth listener (http, loopback host, port 1024-65535,
+ * /oauth/callback, only code/state/iss forwarded, owner of the flow only): by
+ * the route before it forwards, and by StreamableHTTPWrapper before it stores
+ * the URL (lib/mcp/transports/oauth-callback-listener.ts). What stays open is
+ * the port: it comes from the intercepted request, not from an allocation the
+ * app made for that session, and mcp_oauth_sessions records none. Its fetch
+ * argument is `listener`, which the pattern below would not catch, so it stays
+ * listed rather than passing unexamined.
  */
 const KNOWN_UNFIXED = ['app/api/mcp/oauth/callback/route.ts'];
 

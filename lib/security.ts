@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import * as fs from 'fs';
 import path from 'path';
 
 /**
@@ -104,6 +105,22 @@ export function isPathWithinDirectory(filePath: string, allowedDirectory: string
   const cleanPath = resolvedPath.replace(/[\\\/]+$/, '');
   const cleanAllowedDir = resolvedAllowedDir.replace(/[\\\/]+$/, '');
 
+  if (!isSameOrInside(cleanPath, cleanAllowedDir)) {
+    return false;
+  }
+
+  // Lexically inside is not enough: filesystem calls follow symlinks, and a
+  // link anywhere below the directory can put the real location elsewhere.
+  const realPath = realLocation(path.resolve(filePath));
+  const realAllowedDir = realLocation(path.resolve(allowedDirectory));
+  if (realPath === null || realAllowedDir === null) {
+    return false;
+  }
+  return isSameOrInside(realPath, realAllowedDir);
+}
+
+/** Lexical containment of two resolved paths, without trailing separators. */
+function isSameOrInside(cleanPath: string, cleanAllowedDir: string): boolean {
   // Check for exact directory equality
   if (cleanPath === cleanAllowedDir) {
     return true;
@@ -119,6 +136,43 @@ export function isPathWithinDirectory(filePath: string, allowedDirectory: string
   } else {
     // Case-sensitive comparison for Unix-like systems
     return cleanPath.startsWith(cleanAllowedDir + path.sep);
+  }
+}
+
+/**
+ * Where an absolute path really is: its deepest existing ancestor with every
+ * symlink resolved, plus the part that does not exist yet. Null when that
+ * cannot be established safely — a dangling link in the way (a later mkdir or
+ * write would follow it), a loop, or no permission to look.
+ */
+function realLocation(absolutePath: string): string | null {
+  const missing: string[] = [];
+  let current = absolutePath;
+
+  for (;;) {
+    try {
+      return path.join(fs.realpathSync.native(current), ...missing).replace(/[\\\/]+$/, '') || path.sep;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT' && code !== 'ENOTDIR') {
+        return null;
+      }
+    }
+
+    // realpath reports a dangling symlink as missing too; it is not.
+    try {
+      fs.lstatSync(current);
+      return null;
+    } catch {
+      // Genuinely absent: look at the parent.
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    missing.unshift(path.basename(current));
+    current = parent;
   }
 }
 

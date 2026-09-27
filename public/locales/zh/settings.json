@@ -50,12 +50,17 @@
         "confirmEmailMismatch": "电子邮箱确认不匹配。",
         "removalFailed": "删除密码失败。",
         "setFailed": "设置密码失败。",
-        "alreadyExists": "密码已存在。请使用更改密码选项。"
+        "alreadyExists": "密码已存在。请使用更改密码选项。",
+        "currentPasswordRequired": "请输入当前密码以将其移除。",
+        "reauthRequired": "为了您的安全，设置密码前请使用已关联的账户重新登录。",
+        "tooManyAttempts": "尝试次数过多。请稍后再试。"
       },
       "successMessages": {
         "removed": "密码已成功删除。您现在只能使用 OAuth 登录。",
         "set": "密码已成功设置。您现在可以使用邮箱/密码登录。"
-      }
+      },
+      "reauthDescription": "请使用您已关联的任一账户重新登录，然后在 5 分钟内设置密码。",
+      "reauthButton": "使用 {{provider}} 继续"
     },
     "loginMethods": {
       "title": "登录方式",
@@ -72,6 +77,18 @@
         "google": "Google",
         "github": "GitHub",
         "twitter": "Twitter"
+      },
+      "reauth": {
+        "title": "确认是您本人",
+        "connectDescription": "为了您的安全，连接 {{provider}} 需要最近 5 分钟内的登录。",
+        "connectProvidersHint": "请使用已连接的账户重新登录，然后再次点击“连接”：",
+        "confirmAndConnect": "确认并连接",
+        "disconnectPasswordDescription": "请输入当前密码以断开 {{provider}}。",
+        "disconnectProviderDescription": "为了您的安全，请使用另一个已连接的账户重新登录，然后在 5 分钟内断开 {{provider}}。",
+        "confirmAndDisconnect": "确认并断开",
+        "passwordIncorrect": "密码不正确。",
+        "lastLoginMethod": "您不能断开唯一的登录方式。请先设置密码或连接其他账户。",
+        "linkRefused": "由于您上次登录时间过久，{{provider}} 未能连接。请确认是您本人后重试。"
       }
     },
     "account": {

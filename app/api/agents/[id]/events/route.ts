@@ -117,22 +117,25 @@ export async function GET(
 
     const namespace = agent.kubernetes_namespace || 'agents';
 
-    // Get events from Kubernetes
+    // Get events from Kubernetes (this agent's Deployment and pods only)
     const events = await kubernetesService.getAgentEvents(
       agent.kubernetes_deployment,
-      namespace
+      namespace,
+      agent.uuid
     );
 
     // Get pod status
     const pods = await kubernetesService.getAgentPodStatus(
       agent.kubernetes_deployment,
-      namespace
+      namespace,
+      agent.uuid
     );
 
     // Get deployment status
     const deploymentStatus = await kubernetesService.getDeploymentStatus(
       agent.kubernetes_deployment,
-      namespace
+      namespace,
+      agent.uuid
     );
 
     return NextResponse.json({

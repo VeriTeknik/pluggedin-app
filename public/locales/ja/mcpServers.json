@@ -223,6 +223,11 @@
     "messages": {
       "updateSuccess": "サーバー設定が正常に更新されました。"
     },
+    "smartDialog": {
+      "githubNotInRegistry": "このリポジトリは MCP レジストリに登録されていないため、検証済みのパッケージが見つかりませんでした。代わりに正確なインストールコマンドを入力してください。",
+      "githubSuggestionCommand": "リポジトリの README にあるインストールコマンドを貼り付けてください（例: npx -y @scope/package）",
+      "githubSuggestionJson": "または、リポジトリに記載されている MCP JSON 設定を貼り付けてください"
+    },
     "test": {
       "authRequired": "Authentication required - add server to authenticate",
       "authRequiredDetail": "This server requires authentication. After adding it, click the \"Authenticate\" button to connect your account.",

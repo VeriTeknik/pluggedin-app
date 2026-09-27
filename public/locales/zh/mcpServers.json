@@ -223,6 +223,11 @@
     "messages": {
       "updateSuccess": "服务器配置更新成功。"
     },
+    "smartDialog": {
+      "githubNotInRegistry": "此仓库不在 MCP 注册表中，因此未找到经过验证的软件包。请改为输入其确切的安装命令。",
+      "githubSuggestionCommand": "粘贴仓库 README 中的安装命令，例如 npx -y @scope/package",
+      "githubSuggestionJson": "或粘贴仓库文档中提供的 MCP JSON 配置"
+    },
     "test": {
       "authRequired": "需要身份验证 - 添加服务器以进行身份验证",
       "authRequiredDetail": "此服务器需要身份验证。添加后，点击'验证'按钮连接您的账户。",

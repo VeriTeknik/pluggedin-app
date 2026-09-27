@@ -2,8 +2,10 @@ import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { compare } from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { and, eq } from 'drizzle-orm';
-import { NextAuthOptions } from 'next-auth';
+import { cookies } from 'next/headers';
+import { Account, NextAuthOptions } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
+import { getToken, JWT } from 'next-auth/jwt';
 import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import EmailProvider from 'next-auth/providers/email';
@@ -16,6 +18,7 @@ import {
   clearFailedLoginAttempts,
   isAccountLocked,
   recordFailedLoginAttempt} from './auth-security';
+import { hasRecentReauthentication } from './credential-reverification';
 import { createDefaultProject } from './default-project-creation';
 import log from './logger';
 import { sendWelcomeEmail } from './welcome-emails';
@@ -31,6 +34,14 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     passwordChangedAt?: number | null;
+    /**
+     * When (ms) and through which provider THIS session signed in. Written
+     * once at sign-in, never on refresh, so credential changes can ask whether
+     * this session re-authenticated rather than whether the account signed in
+     * somewhere recently. Absent on tokens issued before it existed.
+     */
+    authTime?: number;
+    authProvider?: string | null;
   }
 }
 
@@ -38,6 +49,86 @@ import { db } from '@/db';
 import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 
 const USER_REVALIDATE_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
+/** Where a refused account link lands: the settings page explains it and offers re-authentication. */
+const LINK_REAUTH_REQUIRED_PATH = '/settings?linkError=reauth_required';
+
+/**
+ * The session tokens the signing-in request carries, decoded as NextAuth's
+ * callbackHandler decodes them (same chunked cookie, same secret). Both cookie
+ * names are read, so a deployment whose NEXTAUTH_URL disagrees with the scheme
+ * it is served over still cannot slip a session past the link check.
+ */
+async function currentSessionTokens(): Promise<JWT[]> {
+  const jar = await cookies();
+  const req = {
+    cookies: Object.fromEntries(jar.getAll().map((cookie) => [cookie.name, cookie.value])),
+    headers: {},
+  } as unknown as Parameters<typeof getToken>[0]['req'];
+  const secret = authOptions.secret ?? process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
+  const names = new Set([
+    authOptions.cookies?.sessionToken?.name,
+    '__Secure-next-auth.session-token',
+    'next-auth.session-token',
+  ]);
+
+  const tokens: JWT[] = [];
+  for (const cookieName of names) {
+    if (!cookieName) continue;
+    const token = await getToken({ req, cookieName, secret });
+    if (token) tokens.push(token);
+  }
+  return tokens;
+}
+
+/**
+ * NextAuth links a provider account nobody has yet to the user of the CURRENT
+ * session (next-auth core/lib/callback-handler.js). Unchecked, any session — a
+ * stolen one included — could attach its holder's own GitHub/Google account:
+ * a permanent way in, and a fresh "provider sign-in" for the re-authentication
+ * checks on credential changes. So a session may link a NEW provider account
+ * only if it re-authenticated within the window itself (see
+ * hasRecentReauthentication). Returns true to go on, or where to redirect.
+ */
+async function guardAccountLink(account: Account): Promise<true | string> {
+  const sessions = (await currentSessionTokens()).filter((token) => typeof token.sub === 'string' && token.sub);
+  if (sessions.length === 0) return true; // No session: a plain sign-in or sign-up links nothing to anyone.
+
+  const linked = await db.query.accounts.findFirst({
+    where: (accounts, { and, eq }) =>
+      and(eq(accounts.provider, account.provider), eq(accounts.providerAccountId, account.providerAccountId)),
+    columns: { userId: true },
+  });
+  // Already linked: to this user it is a plain sign-in (the re-authentication
+  // step itself); to anyone else NextAuth refuses it (OAuthAccountNotLinked).
+  if (linked) return true;
+
+  for (const session of sessions) {
+    // `sub`, not `id`: callbackHandler links to `sub`, and the JWT callback
+    // leaves `sub` in place when it strips `id` from a revoked token.
+    const userId = session.sub as string;
+    const owner = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, userId),
+      columns: { id: true, password: true, password_changed_at: true },
+      with: { accounts: { columns: { provider: true } } },
+    });
+    if (!owner) continue; // NextAuth finds no one to link to either.
+
+    const reauthenticated = hasRecentReauthentication(session, {
+      linkedProviders: owner.accounts.map((linkedAccount) => linkedAccount.provider),
+      hasPassword: !!owner.password,
+      passwordChangedAt: owner.password_changed_at,
+    });
+    if (!reauthenticated) {
+      log.warn('Refused to link a provider account to a session without recent re-authentication', {
+        userId,
+        provider: account.provider,
+      });
+      return `${LINK_REAUTH_REQUIRED_PATH}&provider=${encodeURIComponent(account.provider)}`;
+    }
+  }
+  return true;
+}
 
 // Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
 const createCustomAdapter = () => {
@@ -94,7 +185,12 @@ export const authOptions: NextAuthOptions = {
       return undefined; // Use default NextAuth cookies
     }
 
-    // Use secure cookies for HTTPS production
+    // Use secure cookies for HTTPS production.
+    //
+    // Host-only: no `domain`. Setting Domain to the NEXTAUTH_URL hostname does
+    // not pin the cookie to that host — it widens it to every subdomain, and
+    // tenant agents are served from {name}.is.plugged.in. The domain-scoped
+    // copies browsers still hold are expired in app/api/auth/[...nextauth].
     return {
         sessionToken: {
           name: `__Secure-next-auth.session-token`,
@@ -103,7 +199,6 @@ export const authOptions: NextAuthOptions = {
             sameSite: 'lax',
             path: '/',
             secure: true,
-            domain: process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).hostname : undefined
           }
         },
         callbackUrl: {
@@ -113,7 +208,6 @@ export const authOptions: NextAuthOptions = {
             sameSite: 'lax',
             path: '/',
             secure: true,
-            domain: process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).hostname : undefined
           }
         },
         csrfToken: {
@@ -258,6 +352,14 @@ export const authOptions: NextAuthOptions = {
       }
 
       try {
+        // SECURITY: an OAuth sign-in over an existing session may link a new
+        // provider account to it; that needs a recent re-authentication.
+        // Placed first so a refused attempt has no side effects below.
+        if (account?.type === 'oauth') {
+          const verdict = await guardAccountLink(account);
+          if (verdict !== true) return verdict;
+        }
+
         // Check if user exists with this email
         const existingUser = await db.query.users.findFirst({
           where: (users, { eq }) => eq(users.email, user.email as string),
@@ -383,13 +485,15 @@ export const authOptions: NextAuthOptions = {
         session.user.emailVerified = token.emailVerified; // This should be Date | null
         session.user.username = token.username ?? null;
         session.user.is_admin = token.is_admin ?? false;
+        session.authTime = token.authTime ?? null;
+        session.authProvider = token.authProvider ?? null;
       } else {
          console.warn('Session callback: Token is missing!'); // Log if token is missing
       }
 
       return session;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }) {
       // Define common user fields to fetch from database
       const userFieldsToFetch = { username: true, is_admin: true, password_changed_at: true } as const;
 
@@ -400,6 +504,15 @@ export const authOptions: NextAuthOptions = {
        token.email = user.email ?? null;
        token.picture = user.image ?? null;
        token.emailVerified = user.emailVerified;
+       // `user` is only present at sign-in, so this is the session's own
+       // authentication time; nothing below or on refresh rewrites it.
+       // A sign-in that has just linked a new provider is stamped with that
+       // provider too. It cannot vouch for itself: the signIn callback
+       // (guardAccountLink) only lets a session link after it re-authenticated
+       // within the window, so this stamp extends a re-authentication the
+       // session already had rather than creating one.
+       token.authTime = Date.now();
+       token.authProvider = account?.provider ?? null;
 
        // Fetch username, is_admin and password_changed_at from DB during initial sign-in
        try {
@@ -527,6 +640,9 @@ declare module 'next-auth' {
       emailVerified?: Date | null;
       is_admin?: boolean;
     };
+    /** From the JWT: when and how this session signed in (null on legacy tokens). */
+    authTime?: number | null;
+    authProvider?: string | null;
   }
 }
 

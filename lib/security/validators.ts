@@ -1,5 +1,7 @@
 // Security validation utilities for MCP server configurations
 
+import { validateNpmPackageSpec } from './package-name';
+
 /**
  * Allowed URL schemes for MCP connections
  */
@@ -558,6 +560,23 @@ const EXECUTOR_SAFE_OPTIONS = new Set([
 ]);
 
 /**
+ * The bin in `npx -p <package> <bin>`.
+ *
+ * npx does not exec that positional. libnpmexec wraps it in double quotes and
+ * runs it as an npm script, through /bin/sh - and `$(…)` and backticks expand
+ * inside double quotes. So it is held to the shape a bin name actually has.
+ * (The arguments after it are escaped by npm; they are the bin's business.)
+ */
+const NPX_BIN_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+
+/**
+ * An exact `mcp-remote` argument makes client-wrapper launch a process whatever
+ * the declared transport, supplying `npx` when there is no command - and it only
+ * sandboxes servers *declared* STDIO.
+ */
+const MCP_REMOTE = 'mcp-remote';
+
+/**
  * Environment variables that change what a process executes before its own code
  * runs. NODE_OPTIONS carries --require and --import; the PYTHON* ones inject
  * import paths and startup scripts; LD_PRELOAD predates all of it.
@@ -569,11 +588,42 @@ const EXECUTION_ALTERING_ENV = [
   'PYTHONPATH',
   'PYTHONHOME',
   'PYTHONEXECUTABLE',
-  'LD_PRELOAD',
-  'LD_LIBRARY_PATH',
-  'DYLD_INSERT_LIBRARIES',
-  'DYLD_LIBRARY_PATH',
+  'PYTHONUSERBASE', // its site-packages .pth files run at interpreter start
+  'PYTHONWARNINGS', // a warning category is imported by name
+  'PERL5OPT',
+  'RUBYOPT',
+  'BASH_ENV',
+  'GCONV_PATH', // glibc loads iconv modules from here
 ];
+
+/**
+ * The dynamic loader reads every LD_* (LD_PRELOAD, LD_AUDIT, LD_LIBRARY_PATH…)
+ * and dyld every DYLD_*. Listing them one by one leaves the next one out.
+ */
+const EXECUTION_ALTERING_ENV_PREFIXES = ['LD_', 'DYLD_'];
+
+/**
+ * Whether an environment variable decides what a process loads or runs before
+ * its own code does. Such a variable given to a sandbox *launcher* (bwrap,
+ * firejail) takes effect in the launcher itself, on the host, before any
+ * namespace exists.
+ */
+export function isExecutionAlteringEnvKey(key: string): boolean {
+  const name = key.toUpperCase();
+  return (
+    EXECUTION_ALTERING_ENV.includes(name) ||
+    EXECUTION_ALTERING_ENV_PREFIXES.some((prefix) => name.startsWith(prefix))
+  );
+}
+
+/** The same environment without the variables isExecutionAlteringEnvKey names. */
+export function withoutExecutionAlteringEnv(
+  env: Record<string, string> | null | undefined
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(env ?? {}).filter(([key]) => !isExecutionAlteringEnvKey(key))
+  );
+}
 
 /**
  * Extra restrictions for a server arriving from somebody else's shared content.
@@ -597,6 +647,13 @@ export function validateImportedCommand(
   command: string | null | undefined,
   args: unknown
 ): { valid: boolean; error?: string } {
+  // A declared SSE or Streamable HTTP definition carrying the mcp-remote token
+  // still runs as a process on the host (see MCP_REMOTE), unsandboxed. So the
+  // token is allowed only where it does what it says: npx running mcp-remote.
+  if (Array.isArray(args) && args.includes(MCP_REMOTE)) {
+    return validateImportedMcpRemote(command, args);
+  }
+
   if (!command) {
     return { valid: true };
   }
@@ -667,6 +724,11 @@ function validateImportedExecutorOptions(
     if (positionals.length <= required.length) {
       return { valid: false, error: `An imported ${command} server must name a package` };
     }
+  } else if (command === 'npx') {
+    const invocation = parseNpxInvocation(list);
+    if (invocation.error) {
+      return { valid: false, error: invocation.error };
+    }
   } else if (
     !list.some((arg) => typeof arg === 'string' && !arg.startsWith('-'))
   ) {
@@ -674,6 +736,101 @@ function validateImportedExecutorOptions(
   }
 
   return { valid: true };
+}
+
+/**
+ * What an npx invocation installs and what it runs, read the way npx reads it:
+ * `-p <package>` names a package (and may repeat); the first positional is then
+ * the bin to run, and without any `-p` it is the package itself. npx stops
+ * reading its own options there, so everything after is an argument to the bin.
+ */
+function parseNpxInvocation(list: unknown[]): {
+  error?: string;
+  packages: string[];
+  target?: string;
+} {
+  const packages: string[] = [];
+
+  for (let index = 0; index < list.length; index++) {
+    const arg = list[index];
+    if (typeof arg !== 'string') continue;
+
+    if (!arg.startsWith('-')) {
+      if (packages.length > 0) {
+        if (!NPX_BIN_NAME_PATTERN.test(arg)) {
+          return { packages, error: 'An imported npx server must name a plain bin after -p' };
+        }
+        return { packages, target: arg };
+      }
+
+      // A URL or git spec here is fetched and its bin run; shell source is not
+      // a package at all.
+      if (!validateNpmPackageSpec(arg).valid) {
+        return { packages, error: 'An imported npx server must name a registry package' };
+      }
+      return { packages: [arg], target: arg };
+    }
+
+    // The one allowed option that takes a value, and the value decides what is
+    // installed - so it is read, not skipped.
+    let value: unknown;
+    if (arg === '-p') {
+      index++;
+      value = list[index];
+    } else if (arg.startsWith('-p=')) {
+      value = arg.slice('-p='.length);
+    } else {
+      continue;
+    }
+
+    if (typeof value !== 'string' || !validateNpmPackageSpec(value).valid) {
+      return { packages, error: 'An imported npx server must name a registry package after -p' };
+    }
+    packages.push(value);
+  }
+
+  return {
+    packages,
+    error:
+      packages.length > 0
+        ? 'An imported npx server must name the bin to run'
+        : 'An imported npx server must name a package',
+  };
+}
+
+/** The package name in an npm spec, without its version. */
+function npmSpecName(spec: string): string {
+  const versionAt = spec.indexOf('@', spec.startsWith('@') ? 1 : 0);
+  return versionAt === -1 ? spec : spec.slice(0, versionAt);
+}
+
+/** An imported definition that uses the mcp-remote token must run mcp-remote. */
+function validateImportedMcpRemote(
+  command: string | null | undefined,
+  args: unknown[]
+): { valid: boolean; error?: string } {
+  const refusal = {
+    valid: false,
+    error: 'An imported server may use mcp-remote only as `npx mcp-remote <url>`',
+  };
+
+  if (command && command !== 'npx') {
+    return refusal;
+  }
+
+  const options = validateImportedExecutorOptions('npx', args);
+  if (!options.valid) {
+    return options;
+  }
+
+  const { packages, target } = parseNpxInvocation(args);
+  const runsMcpRemote =
+    target !== undefined &&
+    (packages.length > 0
+      ? target === MCP_REMOTE && packages.every((spec) => npmSpecName(spec) === MCP_REMOTE)
+      : npmSpecName(target) === MCP_REMOTE);
+
+  return runsMcpRemote ? { valid: true } : refusal;
 }
 
 /**
@@ -693,7 +850,7 @@ export function validateImportedEnv(env: unknown): { valid: boolean; error?: str
   }
 
   for (const key of Object.keys(env as Record<string, unknown>)) {
-    if (EXECUTION_ALTERING_ENV.includes(key.toUpperCase())) {
+    if (isExecutionAlteringEnvKey(key)) {
       return {
         valid: false,
         error: `An imported server may not set ${key}`,

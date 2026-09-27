@@ -7,18 +7,45 @@ import { db } from '@/db';
 import { mcpServersTable, oauthPkceStatesTable,profilesTable } from '@/db/schema';
 import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
-import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
+import { sandboxedStdioLaunch } from '@/lib/mcp/client-wrapper';
 import { mcpOAuthFlows,trackOAuthFlow } from '@/lib/mcp/metrics';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
+import { refuseUnsandboxedStart } from '@/lib/mcp/sandbox-launcher';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
 import { sanitizeOAuthError } from '@/lib/oauth/error-sanitization';
 import {generateIntegrityHash } from '@/lib/oauth/integrity';
 import { safeFetch, validateUrlForSSRF } from '@/lib/oauth/ssrf-protection';
+import { assertHostResolvesPublic } from '@/lib/security/public-host';
+import { withoutExecutionAlteringEnv } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server';
 
 const triggerOAuthSchema = z.object({
   serverUuid: z.string().uuid(),
 });
+
+/**
+ * Server env keys the OAuth child must not take from the stored configuration:
+ * they change whom it trusts or where its traffic goes (TLS verification, CA
+ * bundles, proxies), or what npx runs (npm_config_script_shell and friends).
+ * The host's own proxy and CA settings still reach it through
+ * inheritableChildEnv in OAuthProcessManager.
+ */
+const OAUTH_WITHHELD_ENV =
+  /^(?:npm_config_.*|NODE_TLS_REJECT_UNAUTHORIZED|NODE_EXTRA_CA_CERTS|NODE_USE_ENV_PROXY|SSL_CERT_FILE|SSL_CERT_DIR|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
+
+/**
+ * The environment for the mcp-remote OAuth process and its sandbox launcher.
+ *
+ * The same object is the launcher's own environment - bwrap or firejail, or
+ * npx itself when neither is available - so a loader variable in it runs code
+ * on the host before any namespace exists. Stripped both before the sandbox
+ * builder sees it and after, since the builders merge server env back in.
+ */
+function oauthChildEnv(env: Record<string, string> | null | undefined): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(withoutExecutionAlteringEnv(env)).filter(([key]) => !OAUTH_WITHHELD_ENV.test(key))
+  );
+}
 
 export async function triggerMcpOAuth(serverUuid: string) {
   const startTime = Date.now();
@@ -227,7 +254,11 @@ async function handleMcpRemoteOAuth(server: McpServer) {
   // on failure, so an internal service's banner comes with it.
   if (remoteUrl) {
     try {
-      validateUrlForSSRF(remoteUrl);
+      const validated = validateUrlForSSRF(remoteUrl);
+      // The text check cannot see where a name points, and mcp-remote resolves
+      // it itself - on the host network, which the sandbox shares - so safeFetch
+      // and its pinning never apply here. Refuse a name that resolves inward.
+      await assertHostResolvesPublic(validated.hostname);
     } catch (error) {
       return {
         success: false,
@@ -245,6 +276,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
 
   // Allocate a dynamic port for OAuth callback
   let callbackPort: number;
+  let allocatedDynamically = false;
   try {
     // Check if we should use legacy port for backward compatibility
     const useLegacyPorts = process.env.OAUTH_USE_LEGACY_PORTS === 'true';
@@ -266,6 +298,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
     } else {
       // Use dynamic port allocation
       callbackPort = await portAllocator.allocatePort();
+      allocatedDynamically = true;
       console.log(`[triggerMcpOAuth] Allocated dynamic port ${callbackPort} for ${server.name}`);
     }
   } catch (error) {
@@ -276,13 +309,20 @@ async function handleMcpRemoteOAuth(server: McpServer) {
     };
   }
 
+  // Only a port this call allocated is given back; a legacy port is fixed.
+  const releaseCallbackPort = () => {
+    if (allocatedDynamically) {
+      portAllocator.releasePort(callbackPort);
+    }
+  };
+
   // Create OAuth process manager instance
   const oauthProcessManager = new OAuthProcessManager();
 
   // Prepare the command and args
   let command = 'npx';
   let args = ['-y', 'mcp-remote', remoteUrl, '--port', callbackPort.toString()];
-  let env = server.env || {};
+  let env = oauthChildEnv(server.env);
 
   // Apply sandboxing if available (reuse existing infrastructure)
   // Create a temporary server config for sandboxing
@@ -295,51 +335,64 @@ async function handleMcpRemoteOAuth(server: McpServer) {
     applySandboxing: true, // Enable sandboxing for OAuth
   };
 
-  // Try to apply sandboxing using the existing infrastructure
-  const bubblewrapConfig = createBubblewrapConfig(oauthServerConfig);
-  const firejailConfig = createFirejailConfig(oauthServerConfig);
+  // The port is kept only by a flow that got as far as a URL or a token, which
+  // gives it back itself shortly after. Every other way out of here gives it
+  // back at once — a refusal, a failed flow, and a throw from the sandbox
+  // builder or the process manager alike.
+  let portHandedToFlow = false;
+  try {
+    // The sandbox every other launch would get: MCP_ISOLATION_TYPE, then its
+    // fallback, each only if installed. Throws if this server's sandbox cannot
+    // be prepared; triggerMcpOAuth reports that.
+    const sandbox = sandboxedStdioLaunch(oauthServerConfig);
 
-  // Use sandboxing if available (prefer Bubblewrap, fallback to Firejail)
-  if (bubblewrapConfig) {
-    command = bubblewrapConfig.command;
-    args = bubblewrapConfig.args;
-    env = bubblewrapConfig.env;
-  } else if (firejailConfig) {
-    command = firejailConfig.command;
-    args = firejailConfig.args;
-    env = firejailConfig.env;
-  } else {
-  }
-
-  // Spawn mcp-remote to handle OAuth with sandboxing
-  const result = await oauthProcessManager.triggerOAuth({
-    serverName: server.name,
-    serverUuid: server.uuid,
-    serverUrl: remoteUrl,
-    command,
-    args,
-    env,
-    callbackPort,
-  });
-  
-  // Clean up the OAuth process after completion
-  if (result.success || result.oauthUrl) {
-    // Give it a moment then clean up
-    setTimeout(() => {
-      oauthProcessManager.cleanup();
-      // Release the allocated port
-      if (!process.env.OAUTH_USE_LEGACY_PORTS) {
-        portAllocator.releasePort(callbackPort);
+    if (sandbox) {
+      command = sandbox.command;
+      args = sandbox.args;
+      env = sandbox.env;
+    } else {
+      // No sandbox is available. The same decision as every other process
+      // launch: refused, unless the operator opted out.
+      try {
+        refuseUnsandboxedStart(server.name);
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'No process sandbox is available',
+        };
       }
-    }, 2000);
-  } else {
-    // Release port immediately on failure
-    if (!process.env.OAUTH_USE_LEGACY_PORTS) {
-      portAllocator.releasePort(callbackPort);
+    }
+
+    // Whatever the builder merged back in, the launcher does not get it.
+    env = oauthChildEnv(env);
+
+    // Spawn mcp-remote to handle OAuth with sandboxing
+    const result = await oauthProcessManager.triggerOAuth({
+      serverName: server.name,
+      serverUuid: server.uuid,
+      serverUrl: remoteUrl,
+      command,
+      args,
+      env,
+      callbackPort,
+    });
+
+    // Clean up the OAuth process after completion
+    if (result.success || result.oauthUrl) {
+      portHandedToFlow = true;
+      // Give it a moment then clean up
+      setTimeout(() => {
+        oauthProcessManager.cleanup();
+        releaseCallbackPort();
+      }, 2000);
+    }
+
+    return result;
+  } finally {
+    if (!portHandedToFlow) {
+      releaseCallbackPort();
     }
   }
-  
-  return result;
 }
 
 

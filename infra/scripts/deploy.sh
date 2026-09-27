@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy entry point. Decrypt → pull → up → smoke.
+# Deploy entry point. Decrypt → pull → up → recreate stale secret consumers → smoke.
 #
 # Usage:
 #   infra/scripts/deploy.sh                 # deploy the tag in IMAGE_TAG (or :latest)
@@ -7,8 +7,9 @@
 #   infra/scripts/deploy.sh --no-pull       # use whatever image is already local
 #
 # Assumes:
-#   - sops (>=3.8) and age (>=1.1) on PATH
+#   - sops (>=3.8) and age (>=1.1) on PATH; GNU coreutils
 #   - SOPS_AGE_KEY_FILE=/etc/sops/age/keys.txt (or another readable path)
+#   - secrets.env.sops holds REDIS_PASSWORD (32+ chars of [A-Za-z0-9._~-])
 #   - This script is invoked from anywhere; it cd's to the repo root.
 
 set -euo pipefail
@@ -52,7 +53,7 @@ for arg in "$@"; do
   case "$arg" in
     --no-pull) PULL=0 ;;
     -h|--help)
-      sed -n '2,12p' "$0" | sed 's/^# \?//'
+      sed -n '2,13p' "$0" | sed 's/^# \?//'
       exit 0 ;;
     *) echo "deploy.sh: unknown arg: $arg" >&2; exit 2 ;;
   esac
@@ -64,25 +65,41 @@ die() { printf '[deploy] FATAL: %s\n' "$*" >&2; exit 1; }
 # Secret files are written through a temp file and their mode is relaxed only
 # for the copy. This trap is the backstop: whatever happens - a failed decrypt,
 # a full tmpfs, a Ctrl-C between the chmod and the write - temps go away and
-# every file we touched ends up back at 0400.
+# every file we touched ends up back at its final mode (0400 unless noted).
 TMP_FILES=()
 SECRET_FILES=()
+SECRET_MODES=()
+CHANGED_SECRETS=()
 KEEP_TMP=0
 cleanup() {
   if [ "$KEEP_TMP" = "0" ] && [ ${#TMP_FILES[@]} -gt 0 ]; then
     rm -f "${TMP_FILES[@]}" 2>/dev/null || true
   fi
-  if [ ${#SECRET_FILES[@]} -gt 0 ]; then chmod 0400 "${SECRET_FILES[@]}" 2>/dev/null || true; fi
+  local i
+  for i in "${!SECRET_FILES[@]}"; do
+    chmod "${SECRET_MODES[$i]}" "${SECRET_FILES[$i]}" 2>/dev/null || true
+  done
 }
 trap cleanup EXIT
 
 # Copy $1's contents into $2 without replacing $2's inode: these files are
-# bind-mounted into pluggedin-app, postgres and traefik, and a new inode would
-# leave the running mounts pointing at a deleted file. The previous run left $2
-# at 0400 - not writable even by its owner - so the mode has to come off first.
+# bind-mounted into pluggedin-app, postgres, redis and traefik, and a new inode
+# would leave the running mounts pointing at a deleted file. The previous run
+# left $2 at its final mode (0400: not writable even by its owner), so the
+# mode has to come off first. $3 is the final mode, default 0400.
+#
+# Identical content is NOT rewritten. That keeps each file's mtime meaning
+# "when this secret last changed", which step 5a relies on to decide which
+# containers are still running with an older value.
 install_secret_file() {
-  local src="$1" dest="$2"
+  local src="$1" dest="$2" mode="${3:-0400}"
   SECRET_FILES+=("$dest")
+  SECRET_MODES+=("$mode")
+  if [ -f "$dest" ] && cmp -s "$src" "$dest"; then
+    chmod "$mode" "$dest"
+    return 0
+  fi
+  CHANGED_SECRETS+=("$dest")
   chmod u+w "$dest" 2>/dev/null || true
   # `|| copy_status=$?` is load-bearing: under `set -e` a failing cat would
   # otherwise exit here, before KEEP_TMP is set, and the trap would delete the
@@ -99,13 +116,17 @@ install_secret_file() {
     KEEP_TMP=1
     die "failed to write ${dest} (copy exit ${copy_status}) - intact copy kept at ${src}"
   fi
-  chmod 0400 "$dest"
+  chmod "$mode" "$dest"
 }
 
 # 1. Preflight
 command -v sops >/dev/null || die "sops not installed"
 command -v age >/dev/null  || die "age not installed"
 command -v docker >/dev/null || die "docker not installed"
+command -v cmp >/dev/null || die "cmp not installed (diffutils)"
+# Step 5a compares file mtimes with container start times at nanosecond
+# resolution via GNU date (-d / -r / %N).
+date -d @0 +%s%N >/dev/null 2>&1 || die "GNU date required"
 [ -r "$SECRETS_ENCRYPTED" ] || die "missing $SECRETS_ENCRYPTED"
 [ -n "${SOPS_AGE_KEY_FILE:-}" ] || export SOPS_AGE_KEY_FILE=/etc/sops/age/keys.txt
 [ -r "$SOPS_AGE_KEY_FILE" ] || die "age key not readable at $SOPS_AGE_KEY_FILE"
@@ -133,7 +154,26 @@ secrets_tmp="$(mktemp "${RUNTIME_DIR}/.secrets.env.XXXXXX")"
 TMP_FILES+=("$secrets_tmp")
 sops --decrypt --input-type dotenv --output-type dotenv \
   "$SECRETS_ENCRYPTED" > "$secrets_tmp"
-install_secret_file "$secrets_tmp" "$SECRETS_DECRYPTED"
+
+# 3-redis. Redis requires a password (see the redis service and REDIS_URL note
+#     in docker-compose.yml). Checked BEFORE anything is installed, so a
+#     secrets file without it leaves the running stack exactly as it was.
+#     The character set is URL-unreserved on purpose: the value is spliced
+#     verbatim into both a redis:// URL and a redis.conf directive, and needs
+#     no escaping in either.
+REDIS_PASSWORD_VALUE="$(grep -E '^REDIS_PASSWORD=' "$secrets_tmp" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//" || true)"
+if ! [[ "$REDIS_PASSWORD_VALUE" =~ ^[A-Za-z0-9._~-]{32,}$ ]]; then
+  die "REDIS_PASSWORD missing or invalid in ${SECRETS_ENCRYPTED}: it must be 32+ characters from [A-Za-z0-9._~-] (e.g. \`openssl rand -hex 32\`); add it with \`sops ${SECRETS_ENCRYPTED}\`. Nothing has been changed."
+fi
+# The app's REDIS_URL is derived here, never hand-maintained: one password,
+# two consumers, no way for them to disagree. Any REDIS_URL line already in
+# the file is dropped. (mawk-safe: no POSIX character classes.)
+secrets_final_tmp="$(mktemp "${RUNTIME_DIR}/.secrets.env.XXXXXX")"
+TMP_FILES+=("$secrets_final_tmp")
+awk '!/^[ \t]*(export[ \t]+)?REDIS_URL[ \t]*=/' "$secrets_tmp" > "$secrets_final_tmp"
+printf '\n# Derived by infra/scripts/deploy.sh from REDIS_PASSWORD.\nREDIS_URL=redis://default:%s@redis:6379\n' \
+  "$REDIS_PASSWORD_VALUE" >> "$secrets_final_tmp"
+install_secret_file "$secrets_final_tmp" "$SECRETS_DECRYPTED"
 
 # 3a. Project specific secrets out of the env file into single-line files
 #     under /run/sops/, because Traefik and a few other services consume
@@ -160,10 +200,38 @@ extract_secret() {
 extract_secret TRAEFIK_DASHBOARD_AUTH traefik-users
 # Postgres reads POSTGRES_PASSWORD_FILE instead of an environment variable,
 # so the password never appears in Config.Env.
+pg_pw_file="${RUNTIME_DIR}/pg-password"
+pg_pw_existed=0
+if [ -f "$pg_pw_file" ]; then pg_pw_existed=1; fi
 extract_secret POSTGRES_PASSWORD pg-password
 # traefik/dynamic/middlewares.yml references this file directly via
 # `usersFile:`. No rewriting of committed files at deploy time. Traefik's
 # TLS issuance uses HTTP-01, so no DNS-provider token needs extracting.
+
+# Redis reads `requirepass` from a config file (docker-compose.yml explains why
+# not a flag). 0444, unlike every other file here: redis-server drops to its
+# own uid (999) inside the container and could not read a 0400 file owned by
+# the deploy account. The 0700 $RUNTIME_DIR still keeps other host accounts
+# out, and the only other container that mounts this directory (Traefik) runs
+# as root and could read any file in it whatever its mode.
+redis_conf_tmp="$(mktemp "${RUNTIME_DIR}/.redis.conf.XXXXXX")"
+TMP_FILES+=("$redis_conf_tmp")
+printf 'requirepass %s\n' "$REDIS_PASSWORD_VALUE" > "$redis_conf_tmp"
+install_secret_file "$redis_conf_tmp" "${RUNTIME_DIR}/redis.conf" 0444
+unset REDIS_PASSWORD_VALUE
+
+is_changed() {
+  local f
+  for f in "${CHANGED_SECRETS[@]}"; do [ "$f" = "$1" ] && return 0; done
+  return 1
+}
+# Postgres only reads its password file when initialising an EMPTY data
+# directory, so no restart can rotate it. Say so rather than let the app
+# restart below fail on a DATABASE_URL the role no longer matches.
+if [ "$pg_pw_existed" = 1 ] && is_changed "$pg_pw_file"; then
+  log "WARN: POSTGRES_PASSWORD changed. This deploy does NOT change the database role's password -"
+  log "WARN: run ALTER ROLE ... PASSWORD with the new value (keeping DATABASE_URL in step) as part of the rotation."
+fi
 
 # NOTE: there is deliberately no `$`-escaping step here any more.
 #     While services used `env_file:`, Compose interpolated the file and
@@ -207,6 +275,80 @@ fi
 # 5. Up
 log "starting stack"
 docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+
+# 5a. Secret rotation. `up -d` only recreates a container whose image or
+#     compose config changed. New secret *contents* behind an unchanged bind
+#     mount leave the old process running on the old values, so a rotated
+#     NEXTAUTH_SECRET or CRON_SECRET kept working for whoever held it while the
+#     deploy reported success. Every consumer reads its secrets once, at
+#     start, so the rule is: it must have started after its secret files last
+#     changed (install_secret_file only touches a file whose content changed).
+#     Anything older is recreated, and the deploy fails unless every consumer
+#     is then verifiably newer. Comparing against the file's mtime rather than
+#     "did this run change it" also covers a previous deploy that installed new
+#     secrets and then died before restarting anything.
+if [ ${#CHANGED_SECRETS[@]} -gt 0 ]; then
+  changed_names=()
+  for f in "${CHANGED_SECRETS[@]}"; do changed_names+=("$(basename "$f")"); done
+  log "secret files changed by this deploy: ${changed_names[*]}"
+fi
+
+file_mtime_ns() { if [ -e "$1" ]; then date -r "$1" +%s%N; else echo 0; fi; }
+container_id() { docker compose -f "$COMPOSE_FILE" ps -a -q "$1" | head -1; }
+started_ns() {
+  # $1 = compose service. 0 when it has no container or never started.
+  local cid started
+  cid="$(container_id "$1")"
+  if [ -z "$cid" ]; then echo 0; return; fi
+  started="$(docker inspect -f '{{.State.StartedAt}}' "$cid")"
+  case "$started" in
+    ''|0001-*) echo 0 ;;
+    *) date -d "$started" +%s%N ;;
+  esac
+}
+wait_healthy() {
+  local svc="$1" timeout="$2" waited=0 cid status
+  cid="$(container_id "$svc")"
+  [ -n "$cid" ] || die "${svc}: no container after recreate"
+  while :; do
+    # "running" can only come back for a service without a healthcheck.
+    status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid")"
+    case "$status" in healthy|running) return 0 ;; esac
+    [ "$waited" -lt "$timeout" ] || die "${svc} not healthy ${timeout}s after recreate (status: ${status})"
+    sleep 3
+    waited=$((waited + 3))
+  done
+}
+ensure_started_after() {
+  # $1 = service, $2 = threshold in ns since the epoch, $3 = what it must postdate
+  local svc="$1" threshold="$2" what="$3"
+  if [ "$(started_ns "$svc")" -gt "$threshold" ]; then return 0; fi
+  log "${svc}: running since before ${what} - recreating it so it drops the old values"
+  docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate "$svc"
+  wait_healthy "$svc" 240
+  [ "$(started_ns "$svc")" -gt "$threshold" ] \
+    || die "${svc} is still running with values older than ${what}"
+  log "${svc}: now running with the current secrets"
+}
+
+# Order matters: Redis first, then the app, then Traefik.
+ensure_started_after redis "$(file_mtime_ns "${RUNTIME_DIR}/redis.conf")" \
+  "redis.conf last changed"
+# The app's Redis clients stop reconnecting after a few attempts
+# (retryStrategy in lib/rate-limiter*.ts) and production rate limiting then
+# fails closed, so the app must also have started after Redis last did.
+app_threshold="$(file_mtime_ns "$SECRETS_DECRYPTED")"
+redis_started="$(started_ns redis)"
+if [ "$redis_started" -gt "$app_threshold" ]; then app_threshold="$redis_started"; fi
+ensure_started_after pluggedin-app "$app_threshold" \
+  "secrets.env last changed or Redis last restarted"
+# basicAuth reads usersFile when the middleware is built; the file provider
+# does not watch it, and re-staging identical dynamic config is a no-op.
+ensure_started_after traefik "$(file_mtime_ns "${RUNTIME_DIR}/traefik-users")" \
+  "traefik-users last changed"
+# Postgres is deliberately absent: see the POSTGRES_PASSWORD warning above.
+# Ofelia needs nothing: each job reads CRON_SECRET from the app's mounted
+# file at run time.
 
 # 6. Smoke
 log "running verify"

@@ -34,7 +34,49 @@ export type PromotionResult = {
   /** docs is the only table carrying both profile_uuid and project_uuid. */
   docsRealigned: number;
   chunksRealigned: number;
+  /** Hubs whose moved documents must be re-embedded; see detachChunkVectors. */
+  hubsToReindex: string[];
 };
+
+/**
+ * The SET clause for document_chunks rows that are changing Hub.
+ *
+ * Each vector in zvec carries its own copy of project_uuid plus the uuid of
+ * its chunk, and RAG retrieval filters vectors by Hub and then loads chunk
+ * text by that chunk uuid alone. Re-labelling the chunk in PostgreSQL while
+ * the vector keeps the old Hub therefore left the Hub the documents left able
+ * to read them. zvec cannot be rewritten from this transaction - it is a
+ * separate single-writer store, normally locked by the running app - so the
+ * binding is cut here instead: a chunk that changes Hub gets a new uuid, and
+ * a vector still labelled with the old Hub resolves to no text. It commits or
+ * rolls back with the move itself.
+ *
+ * The moved documents are then unsearchable in either Hub until they are
+ * re-embedded from document_chunks (scripts/reindex-rag.ts, or Re-index in the
+ * Library), which writes vectors with the new chunk uuids and current Hub.
+ */
+function detachChunkVectors(projectUuid: string) {
+  return sql`project_uuid = ${projectUuid}, uuid = gen_random_uuid()`;
+}
+
+/**
+ * What the operator has to run after promotion or rollback detached chunks
+ * from their vectors. Empty when nothing moved.
+ */
+export function vectorResyncInstructions(hubsToReindex: string[]): string[] {
+  if (hubsToReindex.length === 0) return [];
+  return [
+    `Documents moved Hub in ${hubsToReindex.length} Hub(s). Their search vectors were detached so the`,
+    'Hub they left can no longer retrieve them, and they are not searchable until re-embedded:',
+    ...hubsToReindex.map((hub) => `  ${hub}`),
+    'Re-embed from document_chunks (scripts/reindex-rag.ts), either:',
+    '  - with the app stopped (zvec has a single writer), against the live ZVEC_DATA_PATH, per Hub:',
+    ...hubsToReindex.map((hub) => `      pnpm reindex:rag -- --project=${hub}`),
+    '  - or with the app running, a full rebuild into a fresh ZVEC_DATA_PATH, then restart the app on it:',
+    '      ZVEC_DATA_PATH=<new path> pnpm reindex:rag',
+    'Do not run --project into a fresh path: the app would come back with only those Hubs indexed.',
+  ];
+}
 
 /**
  * Every table keyed on a profile that has been looked at and accounted for.
@@ -277,6 +319,9 @@ export type RollbackResult = {
   recreated: number;
   /** Hubs promotion had created, now removed. */
   hubsRemoved: number;
+  chunksRealigned: number;
+  /** Hubs whose returned documents must be re-embedded; see detachChunkVectors. */
+  hubsToReindex: string[];
 };
 
 /**
@@ -301,7 +346,13 @@ export async function rollbackWorkspacePromotion(db: Db): Promise<RollbackResult
       FROM workspace_promotions ORDER BY id DESC
     `);
 
-    const result: RollbackResult = { restored: 0, recreated: 0, hubsRemoved: 0 };
+    const result: RollbackResult = {
+      restored: 0,
+      recreated: 0,
+      hubsRemoved: 0,
+      chunksRealigned: 0,
+      hubsToReindex: [],
+    };
 
     for (const row of rows as {
       profile_uuid: string;
@@ -337,10 +388,18 @@ export async function rollbackWorkspacePromotion(db: Db): Promise<RollbackResult
       await tx.execute(sql`
         UPDATE docs SET project_uuid = ${row.from_project_uuid} WHERE profile_uuid = ${row.profile_uuid}
       `);
-      await tx.execute(sql`
-        UPDATE document_chunks SET project_uuid = ${row.from_project_uuid}
+      // Whatever vectors these chunks have are labelled with the Hub being
+      // removed or, if never re-embedded, with this one as it was before
+      // promotion. Either way they are detached, as on the way out.
+      const chunks = await tx.execute(sql`
+        UPDATE document_chunks SET ${detachChunkVectors(row.from_project_uuid)}
         WHERE document_uuid IN (SELECT uuid FROM docs WHERE profile_uuid = ${row.profile_uuid})
+        RETURNING uuid
       `);
+      result.chunksRealigned += chunks.rows.length;
+      if (chunks.rows.length > 0 && !result.hubsToReindex.includes(row.from_project_uuid)) {
+        result.hubsToReindex.push(row.from_project_uuid);
+      }
       result.restored += 1;
 
       if (row.to_project_uuid) {
@@ -406,6 +465,7 @@ export async function promoteWorkspacesToHubs(db: Db): Promise<PromotionResult> 
       promoted: [],
       docsRealigned: 0,
       chunksRealigned: 0,
+      hubsToReindex: [],
     };
 
     for (const workspace of secondaries) {
@@ -451,20 +511,22 @@ export async function promoteWorkspacesToHubs(db: Db): Promise<PromotionResult> 
       `);
 
       // docs carries both keys, so its project_uuid has to follow the profile
-      // to its new Hub, and document_chunks mirrors docs.
+      // to its new Hub, and document_chunks mirrors docs - detached from the
+      // vectors still labelled with the Hub they are leaving.
       const docs = await tx.execute(sql`
         UPDATE docs SET project_uuid = ${newProjectUuid}
         WHERE profile_uuid = ${workspace.uuid} AND project_uuid IS DISTINCT FROM ${newProjectUuid}
         RETURNING uuid
       `);
       const chunks = await tx.execute(sql`
-        UPDATE document_chunks SET project_uuid = ${newProjectUuid}
+        UPDATE document_chunks SET ${detachChunkVectors(newProjectUuid)}
         WHERE document_uuid IN (SELECT uuid FROM docs WHERE profile_uuid = ${workspace.uuid})
           AND project_uuid IS DISTINCT FROM ${newProjectUuid}
         RETURNING uuid
       `);
       result.docsRealigned += docs.rows.length;
       result.chunksRealigned += chunks.rows.length;
+      if (chunks.rows.length > 0) result.hubsToReindex.push(newProjectUuid);
 
       await repointHubSelection(tx, workspace.project_uuid, workspace.uuid);
 

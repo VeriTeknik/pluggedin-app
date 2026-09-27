@@ -15,8 +15,9 @@ import { db } from '@/db';
 import { McpServerType, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { withProfileAuth } from '@/lib/auth-helpers';
-import { createBubblewrapConfig } from '@/lib/mcp/client-wrapper';
+import { resolveTransportType, sandboxedStdioLaunch } from '@/lib/mcp/client-wrapper';
 import { progressivelyInitializeMcpServers } from '@/lib/mcp/progressive-initialization';
+import { refuseUnsandboxedStart } from '@/lib/mcp/sandbox-launcher';
 import {
   addServerLog,
   clearPartialServerLog,
@@ -25,6 +26,7 @@ import {
   readServerLogs,
   setPartialServerLog,
 } from '@/lib/mcp/server-logs';
+import type { McpServer } from '@/types/mcp-server';
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
 
@@ -470,6 +472,71 @@ Be transparent about which sources you use and why. When you have both context a
   });
 }
 
+/**
+ * What the playground hands langchain-mcp-tools for one selected server, or
+ * null for a record that runs nothing. Throws when the server must not start;
+ * the caller refuses that server and carries on with the rest.
+ */
+function playgroundServerEntry(server: McpServer, mcpWorkspacePath: string): Record<string, any> | null {
+  // Launch by the transport the record actually runs with, as client-wrapper
+  // does: a remote record proxied through mcp-remote is a local process, and
+  // any other remote record runs nothing locally.
+  const transportType = resolveTransportType(server);
+
+  if (transportType === McpServerType.SSE || transportType === McpServerType.STREAMABLE_HTTP) {
+    // No process fields: the library would treat a command as one to run.
+    return {
+      url: server.url,
+      type: server.type,
+      uuid: server.uuid,
+      config: server.config,
+      transport: transportType === McpServerType.SSE ? 'sse' : 'streamable_http',
+      ...(server.streamableHTTPOptions ? { streamableHTTPOptions: server.streamableHTTPOptions } : {}),
+    };
+  }
+
+  const command = server.command || (server.args?.includes('mcp-remote') ? 'npx' : null);
+  if (transportType !== McpServerType.STDIO || !command) {
+    return null;
+  }
+
+  const isFilesystemServer = command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
+  // Special handling for filesystem server: ensure arg points within workspace
+  const args = isFilesystemServer ? [...(server.args?.slice(0, -1) ?? []), '.'] : server.args;
+
+  // The same sandbox choice as every other launch (MCP_ISOLATION_TYPE, its
+  // fallback, what is installed). Throws if this server's sandbox cannot be
+  // prepared.
+  const sandbox = sandboxedStdioLaunch({
+    uuid: server.uuid,
+    type: McpServerType.STDIO,
+    command,
+    args,
+    env: server.env,
+    name: server.name,
+  } as McpServer);
+
+  if (sandbox) {
+    console.log(`[MCP Playground] Applied ${sandbox.kind} sandbox to server: ${server.name}`);
+  } else {
+    // No sandbox is available: refused like every other process launch,
+    // unless the operator opted out.
+    refuseUnsandboxedStart(server.name);
+  }
+
+  // Never a url beside the command: the library refuses a config with both.
+  return {
+    command: sandbox?.command ?? command,
+    args: sandbox?.args ?? args,
+    env: sandbox?.env ?? server.env,
+    type: McpServerType.STDIO,
+    uuid: server.uuid,
+    config: server.config,
+    transport: 'stdio',
+    ...(isFilesystemServer ? { cwd: mcpWorkspacePath } : {}),
+  };
+}
+
 // Get or create a playground session for a profile
 export async function getOrCreatePlaygroundSession(
   profileUuid: string,
@@ -510,87 +577,26 @@ export async function getOrCreatePlaygroundSession(
     // Read workspace and local bin paths from env or use defaults
     const mcpWorkspacePath = process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace';
 
-    // Format servers for conversion and apply sandboxing for STDIO using bubblewrap
+    // Format servers for conversion, and sandbox every STDIO server
     const mcpServersConfig: Record<string, any> = {};
+    // Servers that are not started, and why; logged once the loop is done.
+    const refusedServers: Array<{ name: string; reason: string }> = [];
     selectedServers.forEach(server => {
-      const isFilesystemServer = server.command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
-
-      // Base config for all servers
-      let serverCommand = server.command;
-      let serverArgs = server.args;
-      let serverEnv = server.env;
-
-      if (isFilesystemServer && server.type === 'STDIO') {
-        // Special handling for filesystem server: ensure arg points within workspace
-        serverArgs = [...(server.args?.slice(0, -1) ?? []), '.'];
-      }
-
-      // Apply bubblewrap sandboxing for STDIO servers on Linux
-      if (server.type === McpServerType.STDIO && process.platform === 'linux') {
-        // Create a mock server config for bubblewrap
-        const mockServerConfig = {
-          uuid: server.uuid,
-          type: McpServerType.STDIO,
-          command: serverCommand,
-          args: serverArgs,
-          env: serverEnv,
-          name: server.name,
-        };
-
-        const bwrapConfig = createBubblewrapConfig(mockServerConfig as any);
-
-        if (bwrapConfig) {
-          // Use bubblewrap wrapper
-          serverCommand = bwrapConfig.command;
-          serverArgs = bwrapConfig.args;
-          serverEnv = bwrapConfig.env;
-          console.log(`[MCP Playground] Applied bubblewrap sandbox to server: ${server.name}`);
-        } else {
-          console.warn(`[MCP Playground] Bubblewrap not available for server: ${server.name}, running without sandbox`);
+      // A server that cannot be launched is refused on its own — logged below
+      // with the reason — and the session starts with the rest.
+      try {
+        const entry = playgroundServerEntry(server as McpServer, mcpWorkspacePath);
+        if (entry) {
+          mcpServersConfig[server.name] = entry;
         }
-      }
-
-      if (isFilesystemServer && server.type === 'STDIO') {
-        mcpServersConfig[server.name] = {
-          command: serverCommand,
-          args: serverArgs,
-          env: serverEnv,
-          url: server.url,
-          type: server.type,
-          uuid: server.uuid,
-          config: server.config,
-          transport: 'stdio',
-          cwd: mcpWorkspacePath
-        };
-      } else {
-        mcpServersConfig[server.name] = {
-          command: serverCommand,
-          args: serverArgs,
-          env: serverEnv,
-          url: server.url,
-          type: server.type,
-          uuid: server.uuid,
-          config: server.config,
-        };
-
-        // Add transport field based on server type
-        if (server.type === McpServerType.STDIO) {
-          mcpServersConfig[server.name].transport = 'stdio';
-        } else if (server.type === McpServerType.SSE) {
-          mcpServersConfig[server.name].transport = 'sse';
-          const serverWithOptions = server as any;
-          if (serverWithOptions.streamableHTTPOptions) {
-            mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
-          }
-        } else if (server.type === McpServerType.STREAMABLE_HTTP) {
-          mcpServersConfig[server.name].transport = 'streamable_http';
-          const serverWithOptions = server as any;
-          if (serverWithOptions.streamableHTTPOptions) {
-            mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
-          }
-        }
+      } catch (error) {
+        refusedServers.push({ name: server.name, reason: error instanceof Error ? error.message : String(error) });
       }
     });
+
+    for (const { name, reason } of refusedServers) {
+      await addServerLog(profileUuid, 'error', `Server "${name}" was not started: ${reason}`);
+    }
 
     // Initialize LLM with streaming
     const llm = initChatModel({

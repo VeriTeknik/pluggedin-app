@@ -5,6 +5,7 @@
  * to reduce duplication and ensure consistency across agent management pages.
  */
 
+import { isReservedName } from '@/lib/agent-name-policy';
 import { HEARTBEAT_INTERVALS as PAP_HEARTBEAT_INTERVALS } from '@/lib/pap-constants';
 
 // ============================================================================
@@ -220,25 +221,12 @@ export function formatDate(timestamp: string | null | undefined): string {
 // ============================================================================
 
 /**
- * Reserved agent names that cannot be used.
- * Must match backend validation in lib/agent-name-policy.ts.
+ * Reserved agent names that cannot be used. Re-exported from the server
+ * policy (lib/agent-name-policy.ts) rather than copied, so the wizard can never
+ * accept a name the API rejects or reject one it accepts. Reserved prefixes
+ * (pap-, kube-, wildcard-) are checked through isReservedName.
  */
-export const RESERVED_AGENT_NAMES = new Set([
-  'api', 'app', 'www', 'web', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'ssh', 'dns',
-  'ns', 'ns1', 'ns2', 'ns3', 'mx', 'mx1', 'mx2', 'vpn', 'proxy', 'gateway', 'gw',
-  'admin', 'administrator', 'root', 'system', 'sysadmin', 'webmaster', 'postmaster',
-  'hostmaster', 'support', 'help', 'info', 'contact', 'sales', 'billing',
-  'kubernetes', 'k8s', 'kube', 'cluster', 'node', 'pod', 'service', 'ingress',
-  'traefik', 'nginx', 'envoy', 'istio', 'linkerd',
-  'pap', 'station', 'satellite', 'control', 'control-plane', 'registry',
-  'hub', 'gateway', 'proxy', 'mcp', 'hooks', 'telemetry', 'metrics', 'heartbeat',
-  'pluggedin', 'plugged', 'is', 'a', 'focus', 'memory', 'demo', 'test', 'staging',
-  'production', 'prod', 'dev', 'development', 'sandbox', 'preview',
-  'localhost', 'local', 'internal', 'private', 'public', 'static', 'assets', 'cdn',
-  'status', 'health', 'healthz', 'ready', 'readyz', 'live', 'livez',
-  'auth', 'login', 'logout', 'signup', 'register', 'oauth', 'sso', 'callback',
-  'default', 'null', 'undefined', 'void', 'none', 'empty', 'blank',
-]);
+export { RESERVED_AGENT_NAMES } from '@/lib/agent-name-policy';
 
 /**
  * Validate agent name and return error message if invalid.
@@ -275,7 +263,7 @@ export function validateAgentName(name: string): string | null {
     return 'Name cannot contain consecutive hyphens';
   }
 
-  if (RESERVED_AGENT_NAMES.has(normalized)) {
+  if (isReservedName(normalized)) {
     return `'${normalized}' is a reserved name`;
   }
 

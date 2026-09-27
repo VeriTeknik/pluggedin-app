@@ -17,6 +17,8 @@ import { db } from '@/db';
 import { oauthClientsTable } from '@/db/schema';
 import { safeFetch } from '@/lib/oauth/ssrf-protection';
 
+import { isAllowedRedirectUri } from './redirect-uri';
+
 export const CIMD_CACHE_TTL_MS = 86_400_000; // 1 day
 export const DCR_CLIENT_TTL_MS = 2_592_000_000; // 30 days
 
@@ -62,6 +64,10 @@ export function validateCimdDocument(clientIdUrl: string, doc: unknown): CimdVal
   }
   if (!redirectUris.every((u) => typeof u === 'string')) {
     return { valid: false, reason: 'redirect_uris must contain only strings' };
+  }
+  const refused = (redirectUris as string[]).find((u) => !isAllowedRedirectUri(u));
+  if (refused !== undefined) {
+    return { valid: false, reason: `redirect_uri "${refused}" is not an allowed redirect target` };
   }
 
   const applicationType =

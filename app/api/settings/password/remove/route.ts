@@ -8,6 +8,7 @@ import { users } from '@/db/schema';
 import { createErrorResponse } from '@/lib/api-errors';
 import { authOptions } from '@/lib/auth';
 import { recordPasswordChange } from '@/lib/auth-security';
+import { verifyCurrentPassword } from '@/lib/credential-reverification';
 import { validateCSRF } from '@/lib/csrf-protection';
 import { generatePasswordRemovedEmail,sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
@@ -15,6 +16,7 @@ import { RateLimiters } from '@/lib/rate-limiter';
 
 const removePasswordSchema = z.object({
   confirmEmail: z.string().email(),
+  currentPassword: z.string().min(1),
 });
 
 /**
@@ -22,7 +24,7 @@ const removePasswordSchema = z.object({
  * /api/settings/password/remove:
  *   post:
  *     summary: Remove password from user account
- *     description: Allows users to remove their password if they have OAuth accounts linked. Requires email confirmation.
+ *     description: Allows users to remove their password if they have OAuth accounts linked. Requires email confirmation and the current password.
  *     tags:
  *       - Settings
  *     security:
@@ -35,11 +37,16 @@ const removePasswordSchema = z.object({
  *             type: object
  *             required:
  *               - confirmEmail
+ *               - currentPassword
  *             properties:
  *               confirmEmail:
  *                 type: string
  *                 format: email
  *                 description: User's email address for confirmation
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *                 description: The password being removed, re-entered to prove it is known
  *     responses:
  *       200:
  *         description: Password removed successfully
@@ -55,7 +62,7 @@ const removePasswordSchema = z.object({
  *                   type: string
  *                   example: Password removed successfully
  *       400:
- *         description: Bad Request - Invalid input or cannot remove only login method
+ *         description: Bad Request - Invalid input, incorrect current password or cannot remove only login method
  *       401:
  *         description: Unauthorized - Not authenticated
  *       429:
@@ -87,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     // Parse and validate request body
     const body = await req.json();
-    const { confirmEmail } = removePasswordSchema.parse(body);
+    const { confirmEmail, currentPassword } = removePasswordSchema.parse(body);
 
     // Get user with accounts to check login methods
     const user = await db.query.users.findFirst({
@@ -128,6 +135,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // SECURITY: Re-verify the credential being removed. The session and the
+    // account email are not enough — both are available to a session thief, who
+    // could then install a password of their own via /api/settings/password/set.
+    // The check is throttled per user (shared with the settings action) and a
+    // wrong guess counts toward the login lockout.
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    const reverified = await verifyCurrentPassword(user, currentPassword, { ipAddress, userAgent });
+    if (!reverified.ok && reverified.reason === 'throttled') {
+      return createErrorResponse(
+        'Too many attempts. Please try again later.',
+        429,
+        'RATE_LIMIT_EXCEEDED'
+      );
+    }
+    if (!reverified.ok) {
+      log.warn('Password removal attempted with incorrect current password', { userId: user.id });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Current password is incorrect',
+        },
+        { status: 400 }
+      );
+    }
+
     // CRITICAL: Check if user has at least one OAuth account
     // Don't allow removal if password is the only login method
     if (user.accounts.length === 0) {
@@ -155,8 +188,6 @@ export async function POST(req: NextRequest) {
       .where(eq(users.id, user.id));
 
     // Record password change for security audit and session management
-    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const userAgent = req.headers.get('user-agent') || 'unknown';
     await recordPasswordChange(user.id, ipAddress, userAgent);
 
     // Send email notification (non-blocking - don't fail operation if email fails)

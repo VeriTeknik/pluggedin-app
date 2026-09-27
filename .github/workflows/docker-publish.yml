@@ -20,24 +20,34 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Pushes go to Docker Hub with its own credentials; GITHUB_TOKEN only
+    # needs to read the repository. (packages: write was never used here.)
     permissions:
       contents: read
-      packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      # Runs before checkout and receives the input through env: only. An
+      # expression spliced into the script body is expanded by Actions BEFORE
+      # bash parses it, so `$(...)` or a stray quote in the input would run as
+      # shell ahead of the regex check that was meant to reject it.
       - name: Validate version input
+        id: version
         if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          if [[ ! "$VERSION" =~ ^(latest|v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "❌ Error: Invalid version format '$VERSION'"
-            echo "Version must be 'latest' or 'vX.Y.Z' (e.g., v2.16.0)"
+          set -euo pipefail
+          if [[ ! "$INPUT_VERSION" =~ ^(latest|v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Invalid version format. Version must be 'latest' or 'vX.Y.Z' (e.g., v2.16.0)"
             exit 1
           fi
-          echo "✅ Version validation passed: $VERSION"
+          echo "✅ Version validation passed: $INPUT_VERSION"
+          echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
@@ -70,7 +80,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push Docker image
         id: build
@@ -87,16 +97,18 @@ jobs:
           cache-to: type=gha,mode=min
 
       - name: Verify multi-arch manifest
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           echo "🔍 Verifying multi-arch manifest..."
           # Extract first tag from metadata output
-          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)
+          FIRST_TAG=$(printf '%s\n' "$IMAGE_TAGS" | head -n 1)
 
           # Verify manifest exists and contains both architectures
-          docker buildx imagetools inspect $FIRST_TAG
+          docker buildx imagetools inspect "$FIRST_TAG"
 
           # Check for both platforms
-          MANIFEST=$(docker buildx imagetools inspect $FIRST_TAG)
+          MANIFEST=$(docker buildx imagetools inspect "$FIRST_TAG")
           if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
             echo "✅ Manifest verification successful!"
             echo "📋 Both AMD64 and ARM64 platforms confirmed"
@@ -106,11 +118,14 @@ jobs:
           fi
 
       - name: Image digest and summary
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           echo "✅ Successfully pushed multi-arch image!"
           echo "📋 Image details:"
           echo "   - AMD64 (x86_64): ✅"
           echo "   - ARM64 (aarch64): ✅"
           echo ""
-          echo "Tags: ${{ steps.meta.outputs.tags }}"
-          echo "Digest: ${{ steps.build.outputs.digest }}"
+          echo "Tags: ${IMAGE_TAGS}"
+          echo "Digest: ${IMAGE_DIGEST}"

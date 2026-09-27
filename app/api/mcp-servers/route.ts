@@ -2,9 +2,10 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { customInstructionsTable,mcpServerOAuthTokensTable, mcpServersTable, McpServerStatus } from '@/db/schema';
+import { customInstructionsTable,mcpServerOAuthTokensTable, mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { validateAndRefreshToken } from '@/lib/oauth/token-refresh-service';
+import { validateCommand, validateCommandArgs, validateMcpUrl } from '@/lib/security/validators';
 
 import { authenticateApiKey } from '../auth';
 
@@ -131,7 +132,7 @@ export async function GET(request: Request) {
  * /api/mcp-servers:
  *   post:
  *     summary: Create a new MCP server configuration (Internal/Manual Use)
- *     description: Creates a new MCP server configuration record associated with the authenticated user's active profile. Note This endpoint might be primarily for internal use or manual setup rather than direct user interaction via the API. Requires API key authentication.
+ *     description: Creates a new MCP server configuration record associated with the authenticated user's active profile. Note This endpoint might be primarily for internal use or manual setup rather than direct user interaction via the API. Requires API key authentication. The server's uuid is assigned by the server and returned in the response; a uuid in the request body is ignored.
  *     tags:
  *       - MCP Servers
  *     security:
@@ -143,13 +144,9 @@ export async function GET(request: Request) {
  *           schema:
  *             type: object
  *             required:
- *               - uuid
  *               - name
  *               - status
  *             properties:
- *               uuid:
- *                 type: string
- *                 format: uuid
  *               name:
  *                 type: string
  *               description:
@@ -188,12 +185,30 @@ export async function POST(request: Request) {
     if (auth.error) return auth.error;
 
     const body = await request.json();
-    const { uuid, name, description, command, args, env, status, type, url } = body;
+    // No uuid from the body: it names the server's directory in the package
+    // store, which outlives the row, so the database assigns it.
+    const { name, description, command, args, env, status, type, url } = body;
+
+    // The same rules the createMcpServer action applies: a known transport, an
+    // allowlisted command for STDIO, a validated URL for a remote server — and
+    // no process fields on a remote server, which runs nothing locally.
+    const serverType: McpServerType = type ?? McpServerType.STDIO;
+    if (!Object.values(McpServerType).includes(serverType)) {
+      return NextResponse.json({ error: 'Unsupported server type' }, { status: 400 });
+    }
+    const isStdio = serverType === McpServerType.STDIO;
+    const checks = isStdio
+      ? [command != null ? validateCommand(command) : null, args != null ? validateCommandArgs(args) : null]
+      : [url != null ? validateMcpUrl(url) : null];
+    const failed = checks.find((check) => check && !check.valid);
+    if (failed) {
+      return NextResponse.json({ error: failed.error || 'Invalid server configuration' }, { status: 400 });
+    }
 
     // Encrypt sensitive fields
     const encryptedData = encryptServerData({
-      command,
-      args,
+      command: isStdio ? command : null,
+      args: isStdio ? args : [],
       env,
       url
     });
@@ -201,7 +216,6 @@ export async function POST(request: Request) {
     const newMcpServer = await db
       .insert(mcpServersTable)
       .values({
-        uuid,
         name,
         description,
         type,

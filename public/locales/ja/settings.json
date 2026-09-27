@@ -50,12 +50,17 @@
         "confirmEmailMismatch": "メールアドレスの確認が一致しません。",
         "removalFailed": "パスワードの削除に失敗しました。",
         "setFailed": "パスワードの設定に失敗しました。",
-        "alreadyExists": "パスワードは既に存在します。パスワード変更オプションを使用してください。"
+        "alreadyExists": "パスワードは既に存在します。パスワード変更オプションを使用してください。",
+        "currentPasswordRequired": "パスワードを削除するには、現在のパスワードを入力してください。",
+        "reauthRequired": "セキュリティのため、パスワードを設定する前に連携済みアカウントで再度サインインしてください。",
+        "tooManyAttempts": "試行回数が多すぎます。しばらく待ってから再度お試しください。"
       },
       "successMessages": {
         "removed": "パスワードが正常に削除されました。OAuthでのみサインインできます。",
         "set": "パスワードが正常に設定されました。メール/パスワードでサインインできます。"
-      }
+      },
+      "reauthDescription": "連携済みのアカウントのいずれかで再度サインインし、5 分以内にパスワードを設定してください。",
+      "reauthButton": "{{provider}} で続行"
     },
     "loginMethods": {
       "title": "ログイン方法",
@@ -72,6 +77,18 @@
         "google": "Google",
         "github": "GitHub",
         "twitter": "Twitter"
+      },
+      "reauth": {
+        "title": "ご本人確認",
+        "connectDescription": "セキュリティのため、{{provider}} を接続するには過去 5 分以内のサインインが必要です。",
+        "connectProvidersHint": "接続済みのアカウントでもう一度サインインしてから、再度「接続」をクリックしてください：",
+        "confirmAndConnect": "確認して接続",
+        "disconnectPasswordDescription": "{{provider}} の接続を解除するには、現在のパスワードを入力してください。",
+        "disconnectProviderDescription": "セキュリティのため、接続済みの別のアカウントでもう一度サインインし、5 分以内に {{provider}} の接続を解除してください。",
+        "confirmAndDisconnect": "確認して接続解除",
+        "passwordIncorrect": "パスワードが正しくありません。",
+        "lastLoginMethod": "唯一のサインイン方法は解除できません。先にパスワードを設定するか、別のアカウントを接続してください。",
+        "linkRefused": "前回のサインインから時間が経ちすぎているため、{{provider}} は接続されませんでした。ご本人確認のうえ、もう一度お試しください。"
       }
     },
     "account": {

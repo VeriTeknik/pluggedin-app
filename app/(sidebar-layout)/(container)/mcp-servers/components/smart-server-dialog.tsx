@@ -211,6 +211,22 @@ export function SmartServerDialog({
       else if (isGitHubUrl(trimmed)) {
         const config = await parseGitHubUrl(trimmed);
         
+        if (!config) {
+          // Nothing verifiable to offer: ask for the package rather than guess
+          // one, and drop whatever an earlier input left selected.
+          setAnalysis({
+            type: 'github',
+            error: t('mcpServers.smartDialog.githubNotInRegistry'),
+            suggestions: [
+              t('mcpServers.smartDialog.githubSuggestionCommand'),
+              t('mcpServers.smartDialog.githubSuggestionJson'),
+            ],
+          });
+          setParsedConfigs([]);
+          setSelectedConfigs(new Set());
+          return;
+        }
+
         setAnalysis({
           type: 'github',
           serverType: McpServerType.STDIO,
@@ -637,8 +653,9 @@ export function SmartServerDialog({
     }
   };
 
-  // Parse GitHub URL and transform to registry format
-  const parseGitHubUrl = async (githubUrl: string): Promise<ParsedConfig> => {
+  // Parse GitHub URL and transform to registry format. Null when the registry
+  // has no entry for the repository.
+  const parseGitHubUrl = async (githubUrl: string): Promise<ParsedConfig | null> => {
     // Extract owner and repo from GitHub URL
     const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!match) {
@@ -649,22 +666,11 @@ export function SmartServerDialog({
     const registryId = `io.github.${owner}/${repo}`;
 
     // Try to fetch from registry first
-    const registryConfig = await parseRegistryInput(registryId);
-    if (registryConfig) {
-      return registryConfig;
-    }
-
-    // If not in registry, create a basic config
-    return {
-      name: repo,
-      type: McpServerType.STDIO,
-      description: `MCP server from ${owner}/${repo}`,
-      command: 'npx',
-      args: [`@${owner}/${repo}`],
-      status: McpServerStatus.ACTIVE,
-      source: McpServerSource.COMMUNITY,
-      external_id: `${owner}/${repo}`
-    };
+    // Without a registry entry there is no package published for this
+    // repository, only a guess: GitHub owners and npm scopes are owned
+    // independently, so `npx @owner/repo` would run whoever holds that npm
+    // scope. The caller asks the user instead of guessing.
+    return parseRegistryInput(registryId);
   };
 
   const testServerConfig = async (config: ParsedConfig) => {

@@ -262,14 +262,24 @@ export async function getProjectStorageUsageFor(
  * tenant's rag pointer. Both have non-browser callers that establish identity
  * themselves — the MCP connector from an API key, app/api/documents/ai from
  * its own auth — so the identity stays an explicit parameter here and the
- * session-derived wrappers live in app/actions/library.ts.
+ * session-derived wrapper for the query lives in app/actions/library.ts.
  */
 
+/**
+ * Record that a document is indexed. Every document is indexed under its own
+ * uuid, so that is the only pointer accepted: any other value names somebody
+ * else's index, and delete and re-index used to act on it. The parameter stays
+ * so callers keep saying which index they mean, and a mismatch is refused.
+ */
 export async function updateDocRagIdFor(
   userId: string,
   docUuid: string,
   ragDocumentId: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (ragDocumentId !== docUuid) {
+    return { success: false, error: 'A document can only point at its own index' };
+  }
+
   try {
     await db
       .update(docsTable)
@@ -400,12 +410,11 @@ export async function askKnowledgeBaseFor(userId: string, query: string, project
                      d.file_name.substring(d.file_name.indexOf('-') + 1) === ragFilename)
                   );
 
+                  // Labelling only. This used to also write ragId onto the
+                  // matched document, but ragId is a different document's
+                  // index, and a pointer may only name the document itself.
                   if (doc) {
                     console.log(`Matched document by filename: ${ragFilename} -> ${doc.name}`);
-                    // Update the document's RAG ID for future queries
-                    updateDocRagIdFor(userId, doc.uuid, ragId).catch(err =>
-                      console.error(`Failed to update RAG ID for ${doc!.uuid}:`, err)
-                    );
                   }
                 }
               }

@@ -47,7 +47,8 @@ export function pinnedLookup(address: string, family: number) {
  * taking one means validating and resolving a new host.
  *
  * Responses are buffered by default. MCP transports opt into a bounded stream
- * so SSE headers and events arrive before the connection ends.
+ * so SSE headers and events arrive before the connection ends. A stream is
+ * bounded differently from a buffered body; see `limits` on pinnedFetch.
  *
  * Buffering has to be bounded, though, and node:http brings none of undici's
  * defaults:
@@ -80,15 +81,80 @@ const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 /** Inactivity, not total duration — a slow but progressing response is fine. */
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+/**
+ * How long a streamed request may wait, silent, for its response headers —
+ * undici's headersTimeout, which is what MCP transports ran with before they
+ * were pinned. A tool call can take minutes before the server answers at all.
+ */
+export const DEFAULT_STREAM_HEADERS_TIMEOUT_MS = 300_000;
+
+export interface PinnedFetchLimits {
+  /**
+   * Buffered: the whole body. Stream: the most a reader has to hold at once —
+   * one event of a `text/event-stream` body, or the whole body of any other
+   * type, which a reader consumes as a single message (JSON, say).
+   */
+  maxBytes?: number;
+  /**
+   * Buffered: socket inactivity at any point of the request (default 30 s).
+   * Stream: inactivity until the response headers arrive (default 300 s).
+   * After that a stream has no timer of its own: a quiet SSE stream is
+   * working as intended, and its life is the caller's AbortSignal.
+   */
+  timeoutMs?: number;
+  /** Hand the body back as it arrives instead of buffering it to the end. */
+  stream?: boolean;
+}
+
+/**
+ * A byte counter for an SSE body that resets at every event boundary (a blank
+ * line; lines end in CRLF, LF or CR, and chunks can split any of them).
+ * Returns false once the event in progress exceeds `maxBytes`.
+ *
+ * An event is what a reader buffers before it can act — the SDK's parser holds
+ * one until its blank line — so that is what is capped. Counting every byte a
+ * stream ever carried ended long sessions for no reason.
+ */
+function perEventByteLimit(maxBytes: number): (chunk: Buffer) => boolean {
+  let pending = 0;
+  let atLineStart = true;
+  let afterCR = false;
+  return (chunk) => {
+    for (let i = 0; i < chunk.length; i++) {
+      const byte = chunk[i];
+      if (byte === 0x0a && afterCR) {
+        afterCR = false; // the LF of a CRLF; the CR already ended the line
+        continue;
+      }
+      afterCR = byte === 0x0d;
+      if (byte === 0x0a || byte === 0x0d) {
+        if (atLineStart) pending = 0; // a blank line ends the event
+        atLineStart = true;
+        continue;
+      }
+      atLineStart = false;
+      if (++pending > maxBytes) return false;
+    }
+    return true;
+  };
+}
+
+/** A counter over the whole body. */
+function totalByteLimit(maxBytes: number): (chunk: Buffer) => boolean {
+  let received = 0;
+  return (chunk) => (received += chunk.length) <= maxBytes;
+}
+
 export async function pinnedFetch(
   url: URL,
   init: RequestInit | undefined,
   address: string,
   family: number,
-  limits: { maxBytes?: number; timeoutMs?: number; stream?: boolean } = {}
+  limits: PinnedFetchLimits = {}
 ): Promise<Response> {
   const maxBytes = limits.maxBytes ?? DEFAULT_MAX_BYTES;
-  const timeoutMs = limits.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs =
+    limits.timeoutMs ?? (limits.stream ? DEFAULT_STREAM_HEADERS_TIMEOUT_MS : DEFAULT_TIMEOUT_MS);
   const transport = url.protocol === 'https:' ? https : http;
 
   const headers = new Headers(init?.headers);
@@ -173,13 +239,23 @@ export async function pinnedFetch(
         }
 
         if (limits.stream) {
-          let received = 0;
+          // The headers are in, so the wait `timeoutMs` bounds is over. From
+          // here a silence is a stream doing its job — an SSE connection idles
+          // until the server has something to say — and the socket's idle
+          // timer would destroy it mid-body. The body now lasts as long as the
+          // caller's AbortSignal (and the SDK's request timeouts) allow.
+          // The request's `timeout` is this socket's idle timer; 0 disarms it.
+          response.socket?.setTimeout(0);
+
+          const isEventStream = (responseHeaders.get('content-type') ?? '')
+            .toLowerCase()
+            .startsWith('text/event-stream');
+          const withinLimit = isEventStream ? perEventByteLimit(maxBytes) : totalByteLimit(maxBytes);
           const bounded = new Transform({
             transform(chunk: Buffer, _encoding, callback) {
-              received += chunk.length;
-              callback(received > maxBytes
-                ? new Error(`Response body too large (over ${maxBytes} bytes)`)
-                : null, chunk);
+              callback(withinLimit(chunk)
+                ? null
+                : new Error(`Response body too large (over ${maxBytes} bytes)`), chunk);
             },
           });
           // pipeline propagates upstream failures and tears down the socket

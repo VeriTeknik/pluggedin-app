@@ -14,14 +14,14 @@ vi.mock('@/lib/library/queries', () => ({
 
 const { getServerSession } = vi.mocked(await import('next-auth'));
 const queries = vi.mocked(await import('@/lib/library/queries'));
+const library = await import('@/app/actions/library');
 const {
   getDocs,
   getDocByUuid,
   getDocumentVersions,
   getProjectStorageUsage,
   askKnowledgeBase,
-  updateDocRagId,
-} = await import('@/app/actions/library');
+} = library;
 
 const VICTIM = 'victim-user-id';
 const CALLER = 'caller-user-id';
@@ -136,18 +136,12 @@ describe('library actions derive identity from the session', () => {
     expect(queries.askKnowledgeBaseFor).not.toHaveBeenCalled();
   });
 
-  it('writes the rag id as the session user', async () => {
-    await updateDocRagId('doc-uuid', 'rag-id');
-
-    expect(queries.updateDocRagIdFor).toHaveBeenCalledWith(CALLER, 'doc-uuid', 'rag-id');
-  });
-
-  it('refuses the rag id write without a session', async () => {
-    getServerSession.mockResolvedValue(null as any);
-
-    const result = await updateDocRagId('doc-uuid', 'rag-id');
-
-    expect(result.success).toBe(false);
+  it('offers the browser no rag id write at all', () => {
+    // updateDocRagId(docUuid, ragDocumentId) wrote the caller's session user
+    // correctly but stored whatever id it was sent, and deleting or
+    // re-indexing that document then acted on another tenant's index. The
+    // server sets the pointer itself once a document's own chunks are indexed.
+    expect('updateDocRagId' in library).toBe(false);
     expect(queries.updateDocRagIdFor).not.toHaveBeenCalled();
   });
 });

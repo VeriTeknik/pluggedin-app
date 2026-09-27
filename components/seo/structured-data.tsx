@@ -1,6 +1,7 @@
 import Script from 'next/script';
 
 import { PLATFORM_METRICS } from '@/lib/constants/metrics';
+import { serializeJsonLd } from '@/lib/json-ld';
 
 interface StructuredDataProps {
   type?: 'Organization' | 'WebSite' | 'Product' | 'FAQPage' | 'BreadcrumbList';
@@ -243,7 +244,8 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
           id={`structured-data-${type}-${index}`}
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }}
+          // serializeJsonLd escapes `<`, so no value can close the script element.
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(s) }}
         />
       ))}
     </>

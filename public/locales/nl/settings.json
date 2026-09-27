@@ -50,12 +50,17 @@
         "confirmEmailMismatch": "E-mailbevestiging komt niet overeen.",
         "removalFailed": "Verwijderen wachtwoord mislukt.",
         "setFailed": "Instellen wachtwoord mislukt.",
-        "alreadyExists": "Wachtwoord bestaat al. Gebruik de optie wachtwoord wijzigen."
+        "alreadyExists": "Wachtwoord bestaat al. Gebruik de optie wachtwoord wijzigen.",
+        "currentPasswordRequired": "Voer je huidige wachtwoord in om het te verwijderen.",
+        "reauthRequired": "Meld je voor je veiligheid opnieuw aan met een gekoppeld account voordat je een wachtwoord instelt.",
+        "tooManyAttempts": "Te veel pogingen. Wacht even en probeer het later opnieuw."
       },
       "successMessages": {
         "removed": "Wachtwoord succesvol verwijderd. U kunt zich nu alleen aanmelden met OAuth.",
         "set": "Wachtwoord succesvol ingesteld. U kunt zich nu aanmelden met e-mail/wachtwoord."
-      }
+      },
+      "reauthDescription": "Meld je opnieuw aan met een van je gekoppelde accounts en stel daarna binnen 5 minuten je wachtwoord in.",
+      "reauthButton": "Doorgaan met {{provider}}"
     },
     "loginMethods": {
       "title": "Inlogmethoden",
@@ -72,6 +77,18 @@
         "google": "Google",
         "github": "GitHub",
         "twitter": "Twitter"
+      },
+      "reauth": {
+        "title": "Bevestig dat u het bent",
+        "connectDescription": "Voor uw veiligheid vereist het koppelen van {{provider}} een aanmelding van de afgelopen 5 minuten.",
+        "connectProvidersHint": "Meld u opnieuw aan met een account dat u al hebt gekoppeld en klik daarna nogmaals op Koppelen:",
+        "confirmAndConnect": "Bevestigen en koppelen",
+        "disconnectPasswordDescription": "Voer uw huidige wachtwoord in om {{provider}} te ontkoppelen.",
+        "disconnectProviderDescription": "Meld u voor uw veiligheid opnieuw aan met een ander gekoppeld account en ontkoppel {{provider}} daarna binnen 5 minuten.",
+        "confirmAndDisconnect": "Bevestigen en ontkoppelen",
+        "passwordIncorrect": "Dat wachtwoord is niet juist.",
+        "lastLoginMethod": "U kunt uw enige manier om u aan te melden niet ontkoppelen. Stel eerst een wachtwoord in of koppel een ander account.",
+        "linkRefused": "{{provider}} is niet gekoppeld omdat uw laatste aanmelding te lang geleden is. Bevestig dat u het bent en probeer het opnieuw."
       }
     },
     "account": {

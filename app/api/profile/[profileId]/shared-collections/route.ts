@@ -80,7 +80,6 @@ export async function GET(
           columns: {
             uuid: true,
             name: true,
-            project_uuid: true
           }
         }
       },
@@ -91,8 +90,14 @@ export async function GET(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
+    // Anonymous endpoint: the owner's Hub id stays private, as it does on the
+    // sibling shared-servers route.
     return NextResponse.json(
-      sortedCollections.map((c) => ({ ...c, content: sanitizeCollectionContent(c.content) }))
+      sortedCollections.map((c) => ({
+        ...c,
+        profile: c.profile ? { uuid: c.profile.uuid, name: c.profile.name } : null,
+        content: sanitizeCollectionContent(c.content),
+      }))
     );
   } catch (error) {
     console.error('Error fetching shared collections:', error);

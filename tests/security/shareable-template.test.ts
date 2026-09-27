@@ -80,6 +80,30 @@ beforeEach(() => {
 });
 
 describe('createShareableTemplate default output', () => {
+  // The default template also requires owning the server (it reads unshared
+  // custom instructions); these assertions are about what the owner gets back.
+  beforeEach(() => {
+    getAuthSession.mockResolvedValue({ user: { id: 'owner' }, expires: '2099-01-01' } as any);
+    mockedDb.query.users.findFirst.mockResolvedValue({ id: 'owner' });
+    mockedDb.select = vi.fn(() => {
+      const chain: any = {
+        from: vi.fn(() => chain),
+        where: vi.fn(() => chain),
+        innerJoin: vi.fn(() => chain),
+        limit: vi.fn(() => chain),
+        then: (resolve: any, reject: any) =>
+          Promise.resolve([
+            {
+              server: encryptedServer,
+              profile: { uuid: PROFILE_UUID, project_uuid: 'project-1' },
+              project: { uuid: 'project-1', user_id: 'owner' },
+            },
+          ]).then(resolve, reject),
+      };
+      return chain;
+    });
+  });
+
   it('carries no connection secrets', async () => {
     const template = await createShareableTemplate(encryptedServer);
 

@@ -7,6 +7,7 @@ import {
   agentsTable,
   AgentState,
 } from '@/db/schema';
+import { agentOperationHttpStatus } from '@/lib/agents/operation-status';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
@@ -160,15 +161,17 @@ export async function POST(
 
     // Perform rolling restart by patching the deployment with a restart annotation
     // This is the Kubernetes-native way to restart a deployment
+    // Refused unless the Deployment carries this agent's owner label.
     const restartResult = await kubernetesService.restartDeployment(
       deploymentName,
-      namespace
+      namespace,
+      agent.uuid
     );
 
     if (!restartResult.success) {
       return NextResponse.json(
         { error: restartResult.message },
-        { status: 500 }
+        { status: agentOperationHttpStatus(restartResult) }
       );
     }
 

@@ -223,6 +223,11 @@
     "messages": {
       "updateSuccess": "सर्वर कॉन्फ़िगरेशन सफलतापूर्वक अपडेट किया गया।"
     },
+    "smartDialog": {
+      "githubNotInRegistry": "यह रिपॉज़िटरी MCP रजिस्ट्री में नहीं है, इसलिए कोई सत्यापित पैकेज नहीं मिला। इसके बजाय इसका सटीक इंस्टॉल कमांड दर्ज करें।",
+      "githubSuggestionCommand": "रिपॉज़िटरी के README से इंस्टॉल कमांड पेस्ट करें, जैसे npx -y @scope/package",
+      "githubSuggestionJson": "या रिपॉज़िटरी द्वारा प्रलेखित MCP JSON कॉन्फ़िगरेशन पेस्ट करें"
+    },
     "test": {
       "authRequired": "Authentication required - add server to authenticate",
       "authRequiredDetail": "This server requires authentication. After adding it, click the \"Authenticate\" button to connect your account.",

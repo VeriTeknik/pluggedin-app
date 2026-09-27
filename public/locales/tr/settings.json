@@ -50,12 +50,17 @@
         "confirmEmailMismatch": "E-posta onayı eşleşmiyor.",
         "removalFailed": "Şifre kaldırılamadı.",
         "setFailed": "Şifre belirlenemedi.",
-        "alreadyExists": "Şifre zaten mevcut. Şifre değiştir seçeneğini kullanın."
+        "alreadyExists": "Şifre zaten mevcut. Şifre değiştir seçeneğini kullanın.",
+        "currentPasswordRequired": "Şifrenizi kaldırmak için mevcut şifrenizi girin.",
+        "reauthRequired": "Güvenliğiniz için, şifre belirlemeden önce bağlı bir hesapla yeniden giriş yapın.",
+        "tooManyAttempts": "Çok fazla deneme yapıldı. Lütfen bir süre bekleyip tekrar deneyin."
       },
       "successMessages": {
         "removed": "Şifre başarıyla kaldırıldı. Artık sadece OAuth ile giriş yapabilirsiniz.",
         "set": "Şifre başarıyla belirlendi. Artık e-posta/şifre ile giriş yapabilirsiniz."
-      }
+      },
+      "reauthDescription": "Bağlı hesaplarınızdan biriyle yeniden giriş yapın, ardından 5 dakika içinde şifrenizi belirleyin.",
+      "reauthButton": "{{provider}} ile devam et"
     },
     "loginMethods": {
       "title": "Giriş Yöntemleri",
@@ -72,6 +77,18 @@
         "google": "Google",
         "github": "GitHub",
         "twitter": "Twitter"
+      },
+      "reauth": {
+        "title": "Siz olduğunuzu doğrulayın",
+        "connectDescription": "Güvenliğiniz için {{provider}} bağlamak, son 5 dakika içinde yapılmış bir oturum açma gerektirir.",
+        "connectProvidersHint": "Daha önce bağladığınız bir hesapla yeniden oturum açın, ardından tekrar Bağla'ya tıklayın:",
+        "confirmAndConnect": "Doğrula ve bağla",
+        "disconnectPasswordDescription": "{{provider}} bağlantısını kaldırmak için mevcut şifrenizi girin.",
+        "disconnectProviderDescription": "Güvenliğiniz için bağlı başka bir hesapla yeniden oturum açın, ardından 5 dakika içinde {{provider}} bağlantısını kaldırın.",
+        "confirmAndDisconnect": "Doğrula ve bağlantıyı kaldır",
+        "passwordIncorrect": "Şifre doğru değil.",
+        "lastLoginMethod": "Tek oturum açma yönteminizin bağlantısını kaldıramazsınız. Önce bir şifre belirleyin veya başka bir hesap bağlayın.",
+        "linkRefused": "Son oturum açmanız çok eski olduğu için {{provider}} bağlanmadı. Siz olduğunuzu doğrulayın ve tekrar deneyin."
       }
     },
     "account": {

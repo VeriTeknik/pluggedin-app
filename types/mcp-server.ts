@@ -28,8 +28,9 @@ export interface McpServer {
   ratingCount?: number;
   installationCount?: number;
 
-  // Flag to control sandboxing. Defaults to true for STDIO servers, false for others
-  // Set to false to explicitly disable sandboxing for a specific server
+  // Every spawned process is sandboxed. false marks a server that cannot be;
+  // like one with no sandbox available, it only starts when the operator has
+  // set MCP_ALLOW_UNSANDBOXED_STDIO=true.
   applySandboxing?: boolean;
 
   // Streamable HTTP specific options

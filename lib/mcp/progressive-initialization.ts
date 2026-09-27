@@ -15,6 +15,7 @@
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
 import { pinnedHeadRequest } from '@/lib/mcp/pinned-head-request';
+import { bindProtectedMcpFetch, withProtectedMcpFetch } from '@/lib/mcp/protected-library-fetch';
 import { addServerLog } from '@/lib/mcp/server-logs';
 import { validateMcpUrl } from '@/lib/security/validators';
 import { validateTimeouts } from '@/lib/timeout-validator';
@@ -173,6 +174,20 @@ async function performServerHealthChecks(
 
 
 /**
+ * The library's tools and cleanup keep using the connection it opened long
+ * after initialization returns — each tool call is another request — so they
+ * run in the same protected fetch scope the connection was opened in.
+ */
+function protectLibraryResult(result: { tools: any[]; cleanup: McpServerCleanupFn }) {
+  for (const tool of result.tools) {
+    if (typeof tool?.func === 'function') {
+      tool.func = bindProtectedMcpFetch(tool.func.bind(tool));
+    }
+  }
+  return { tools: result.tools, cleanup: bindProtectedMcpFetch(result.cleanup) };
+}
+
+/**
  * Attempts to initialize a single MCP server with retries
  */
 async function initializeSingleServer(
@@ -189,6 +204,18 @@ async function initializeSingleServer(
 ): Promise<{ tools: any[]; cleanup: McpServerCleanupFn }> { // Return type guarantees non-null on success
   const { logger, timeout, maxRetries, profileUuid, llmProvider } = options;
   let lastError: Error | null = null;
+
+  // Streamable HTTP servers get no health check, so this is the first look
+  // their URL gets here. The same refusal the SSE check applies — and a
+  // non-http scheme such as ws: would reach a transport that does not use
+  // fetch at all.
+  const remoteUrl = serverConfig?.url;
+  if (typeof remoteUrl === 'string' && remoteUrl !== '') {
+    const urlCheck = validateMcpUrl(remoteUrl);
+    if (!urlCheck.valid) {
+      throw new Error(`Server "${serverName}" URL rejected: ${urlCheck.error}`);
+    }
+  }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) { // <= maxRetries means initial try + retries
     try {
@@ -209,10 +236,16 @@ async function initializeSingleServer(
       }
 
       
-      const initPromise = convertMcpToLangchainTools(
-        configForTool, // Pass the correctly typed config
-        { logger, llmProvider }
-      );
+      // The library builds its own transports and cannot be handed
+      // safeMcpFetch, so every request it makes for this server is routed
+      // through it here: resolved, private addresses refused, the address
+      // pinned to the socket, every redirect re-validated.
+      const initPromise = withProtectedMcpFetch(() =>
+        convertMcpToLangchainTools(
+          configForTool, // Pass the correctly typed config
+          { logger, llmProvider }
+        )
+      ).then(protectLibraryResult);
 
       // CodeQL: timeout value is validated in progressivelyInitializeMcpServers using validateTimeouts()
       // which caps the value to prevent resource exhaustion attacks

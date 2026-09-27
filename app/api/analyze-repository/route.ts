@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { createErrorResponse, ErrorResponses, getSafeErrorMessage } from '@/lib/api-errors';
+import { getAuthSession } from '@/lib/auth';
 import { RateLimiters } from '@/lib/rate-limiter';
+
+/**
+ * The server's GITHUB_PAT may be able to read private repositories, so its
+ * reach must never extend to a caller-chosen repo that is not public. Anything
+ * other than an explicit public answer (private, internal, missing fields)
+ * is treated as not public.
+ */
+function isPublicRepository(meta: unknown): boolean {
+  if (!meta || typeof meta !== 'object') return false;
+  const { private: isPrivate, visibility } = meta as { private?: unknown; visibility?: unknown };
+  if (isPrivate !== false) return false;
+  return visibility === undefined || visibility === 'public';
+}
 
 // Validate GitHub owner/repo names to prevent SSRF
 function isValidGitHubIdentifier(identifier: string): boolean {
@@ -49,7 +63,13 @@ export async function GET(request: NextRequest) {
     response.headers.set('Retry-After', Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString());
     return response;
   }
-  
+
+  // The analysis runs on the platform's GitHub credentials; only signed-in users may use it.
+  const session = await getAuthSession();
+  if (!session?.user?.id) {
+    return ErrorResponses.unauthorized();
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const repoUrl = searchParams.get('url');
@@ -104,6 +124,12 @@ export async function GET(request: NextRequest) {
         { error: `GitHub API error: ${repoCheck.status} - ${errorText}` },
         { status: repoCheck.status }
       );
+    }
+
+    // Same answer GitHub gives an anonymous caller for a private repo, so the
+    // response does not confirm that the PAT can see it.
+    if (!isPublicRepository(await repoCheck.json().catch(() => null))) {
+      return createErrorResponse('Repository not found or not public', 404, 'NOT_FOUND');
     }
 
     const envVariables: EnvVariable[] = [];

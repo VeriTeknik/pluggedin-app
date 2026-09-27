@@ -65,20 +65,24 @@ export async function GET(
       );
     }
 
-    // Find the user's profile and associated collections
+    // Find the user's profile and associated collections. Anonymous endpoint:
+    // select only what is returned — the profile's uuid and name and the
+    // owner's display fields, never the project row or the user id.
     const collections = await db.query.sharedCollectionsTable.findMany({
       where: and(
         eq(sharedCollectionsTable.is_public, true)
       ),
       with: {
         profile: {
+          columns: { uuid: true, name: true },
           with: {
             project: {
+              columns: {},
               with: {
                 user: {
                   columns: {
-                    username: true,
-                    name: true
+                    name: true,
+                    username: true
                   }
                 }
               }
@@ -98,8 +102,23 @@ export async function GET(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
+    // Project explicitly as well, so a relation change cannot widen the response.
     return NextResponse.json(
-      sortedCollections.map((c) => ({ ...c, content: sanitizeCollectionContent(c.content) }))
+      sortedCollections.map((c) => ({
+        ...c,
+        profile: c.profile
+          ? {
+              uuid: c.profile.uuid,
+              name: c.profile.name,
+              project: {
+                user: c.profile.project?.user
+                  ? { name: c.profile.project.user.name, username: c.profile.project.user.username }
+                  : null,
+              },
+            }
+          : null,
+        content: sanitizeCollectionContent(c.content),
+      }))
     );
   } catch (error) {
     console.error('Error fetching user collections:', error);

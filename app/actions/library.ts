@@ -429,17 +429,10 @@ async function processRagUpload(
   }
 }
 
-// Function to update document with RAG document ID after upload completion
-export async function updateDocRagId(
-  docUuid: string,
-  ragDocumentId: string
-): Promise<{ success: boolean; error?: string }> {
-  const userId = await sessionUserId();
-  if (!userId) {
-    return { success: false, error: 'Authentication required' };
-  }
-  return updateDocRagIdFor(userId, docUuid, ragDocumentId);
-}
+// There is deliberately no browser-callable rag pointer write here. The
+// pointer is set by the server once the document's own chunks are indexed;
+// the updateDocRagId action that used to sit here stored whatever id the
+// caller sent, and delete and re-index then acted on it.
 
 /**
  * Re-index a document by reading the stored file and re-running RAG processing.
@@ -483,10 +476,11 @@ export async function reindexDocument(
       return { success: false, error: 'No text content could be extracted from the file' };
     }
 
-    // Remove existing vectors using the ID they were indexed under.
-    // AI-generated documents may have rag_document_id !== doc.uuid.
-    const vectorDocId = doc.rag_document_id ?? doc.uuid;
-    await ragService.removeDocument(vectorDocId, ragIdentifier);
+    // Remove this document's existing vectors - by its own uuid, which is what
+    // every vector is keyed by. Not by the stored rag_document_id: that is a
+    // writable pointer, and removal by it erased whichever tenant's document
+    // it named.
+    await ragService.removeDocument(doc.uuid, ragIdentifier);
 
     // Re-process using doc.uuid (normalizes AI docs going forward)
     const result = await ragService.processDocument(
@@ -656,11 +650,15 @@ export async function deleteDoc(
       // Don't fail the operation if file deletion fails
     }
 
-    // Remove from RAG API using the stored rag_document_id (if it exists)
-    if (doc.rag_document_id) {
-      const ragIdentifier = projectUuid || userId;
+    // Remove the document's vectors, inside its own Hub. The id is the
+    // document authorized above, never the stored rag_document_id: that is a
+    // writable pointer, and removal by it erased whichever tenant's document
+    // it named. Every vector is keyed by the uuid of the document it was built
+    // from, and nothing is indexed outside a Hub.
+    if (doc.rag_document_id && doc.project_uuid) {
+      const ragIdentifier = doc.project_uuid;
 
-      ragService.removeDocument(doc.rag_document_id, ragIdentifier).catch(error => {
+      ragService.removeDocument(doc.uuid, ragIdentifier).catch(error => {
         console.error('Failed to remove document from RAG API:', error);
       });
 
@@ -739,15 +737,13 @@ export async function manualRepairDocumentRagIds(
   }
 
   try {
-    // Get the project UUID or use user ID as identifier
-    const ragIdentifier = projectUuid || userId;
-
     // Get all documents for the user
     const allDocs = await db
       .select({
         uuid: docsTable.uuid,
         name: docsTable.name,
         file_name: docsTable.file_name,
+        project_uuid: docsTable.project_uuid,
         rag_document_id: docsTable.rag_document_id,
         created_at: docsTable.created_at
       })
@@ -762,58 +758,16 @@ export async function manualRepairDocumentRagIds(
 
     const orphanedDocs = allDocs.filter(doc => !doc.rag_document_id);
 
-    // Get all RAG documents
-    let ragDocuments: Array<[string, string]> = [];
-    try {
-      const ragDocsResult = await ragService.getDocuments(ragIdentifier);
-      if (ragDocsResult.success && ragDocsResult.documents) {
-        ragDocuments = ragDocsResult.documents;
-      }
-    } catch (error) {
-      console.error('Error fetching RAG documents:', error);
-    }
-
     const repairedList: string[] = [];
     const failedList: string[] = [];
 
     // Process each orphaned document
     for (const doc of orphanedDocs) {
       try {
-        // Use the enhanced matching function
-        const ragDocId = findMatchingRagDocument(doc, ragDocuments);
-
-        if (ragDocId) {
-          console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
-          const updateResult = await updateDocRagIdFor(userId, doc.uuid, ragDocId);
-          if (updateResult.success) {
-            repairedList.push(doc.name);
-          } else {
-            failedList.push(doc.name);
-          }
+        if (await linkOwnIndex(userId, doc)) {
+          repairedList.push(doc.name);
         } else {
-          // Try fetching fresh list
-          try {
-            const freshResult = await ragService.getDocuments(ragIdentifier);
-            if (freshResult.success && freshResult.documents) {
-              const freshRagDocId = findMatchingRagDocument(doc, freshResult.documents);
-              if (freshRagDocId) {
-                console.log(`Found matching RAG document on retry for ${doc.name}: ${freshRagDocId}`);
-                const updateResult = await updateDocRagIdFor(userId, doc.uuid, freshRagDocId);
-                if (updateResult.success) {
-                  repairedList.push(doc.name);
-                } else {
-                  failedList.push(doc.name);
-                }
-              } else {
-                failedList.push(doc.name);
-              }
-            } else {
-              failedList.push(doc.name);
-            }
-          } catch (retryError) {
-            console.error(`Error on retry for document ${doc.name}:`, retryError);
-            failedList.push(doc.name);
-          }
+          failedList.push(doc.name);
         }
       } catch (error) {
         console.error(`Error processing document ${doc.name}:`, error);
@@ -886,76 +840,23 @@ async function processInBatches<T, R>(
 }
 
 /**
- * Helper function to match documents with RAG entries using various patterns
+ * Point an un-indexed document's rag_document_id at itself - and only if its
+ * own chunks are indexed in its Hub.
+ *
+ * The repairs used to match an orphan by file name against the other documents
+ * in the Hub and store *their* id, pointing it at somebody else's index. In the
+ * embedded index a document is only ever indexed under its own uuid, so that
+ * is the only repair there is; a document with no chunks needs re-indexing.
  */
-function findMatchingRagDocument(
-  doc: { file_name: string; name: string },
-  ragDocuments: Array<[string, string]>
-): string | null {
-  // Try various matching strategies
-  for (const [filename, ragId] of ragDocuments) {
-    // 1. Exact file_name match
-    if (doc.file_name === filename) {
-      return ragId;
-    }
-
-    // 2. Exact name match
-    if (doc.name === filename) {
-      return ragId;
-    }
-
-    // 3. Match after removing timestamp prefix (e.g., "1234567890-filename.ext" -> "filename.ext")
-    if (doc.file_name && doc.file_name.includes('-')) {
-      const withoutTimestamp = doc.file_name.substring(doc.file_name.indexOf('-') + 1);
-      if (withoutTimestamp === filename) {
-        return ragId;
-      }
-    }
-
-    // 4. Match by removing version suffixes (e.g., "document_v2_timestamp.md" -> "document.md")
-    const docBaseName = doc.file_name
-      ?.replace(/_v\d+_[\d-TZ]+/, '') // Remove version pattern
-      ?.replace(/\d{4}-\d{2}-\d{2}_/, '') // Remove date prefix
-      ?.replace(/^\d+-/, ''); // Remove timestamp prefix
-
-    const ragBaseName = filename
-      ?.replace(/_v\d+_[\d-TZ]+/, '')
-      ?.replace(/\d{4}-\d{2}-\d{2}_/, '')
-      ?.replace(/^\d+-/, '');
-
-    if (docBaseName && ragBaseName && docBaseName === ragBaseName) {
-      return ragId;
-    }
-
-    // 5. Fuzzy match for AI-generated documents with complex naming
-    // e.g., "2025-09-18_18-19-00-872Z_claude-opus-4-1_AI_Integration_Best_Practices_Guide.md"
-    const normalizedDocName = doc.file_name
-      ?.replace(/[-_]/g, '')
-      ?.toLowerCase();
-    const normalizedRagName = filename
-      ?.replace(/[-_]/g, '')
-      ?.toLowerCase();
-
-    if (normalizedDocName && normalizedRagName) {
-      // Check if one contains the other (for partial matches)
-      if (normalizedDocName.includes(normalizedRagName) ||
-          normalizedRagName.includes(normalizedDocName)) {
-        return ragId;
-      }
-
-      // Check for AI-generated pattern match
-      if (doc.file_name?.includes('claude') && filename.includes('claude')) {
-        // Extract the meaningful part after model name
-        const docPart = doc.file_name.split(/claude[^_]*_/)[1];
-        const ragPart = filename.split(/claude[^_]*_/)[1];
-        if (docPart && ragPart && docPart === ragPart) {
-          return ragId;
-        }
-      }
-    }
+async function linkOwnIndex(
+  userId: string,
+  doc: { uuid: string; project_uuid: string | null }
+): Promise<boolean> {
+  if (!doc.project_uuid || !(await ragService.hasIndexedChunks(doc.uuid, doc.project_uuid))) {
+    return false;
   }
-
-  return null;
+  const result = await updateDocRagIdFor(userId, doc.uuid, doc.uuid);
+  return result.success;
 }
 
 /**
@@ -984,7 +885,8 @@ export async function repairMissingRagDocumentIds(
         file_path: docsTable.file_path,
         file_name: docsTable.file_name,
         mime_type: docsTable.mime_type,
-        source: docsTable.source
+        source: docsTable.source,
+        project_uuid: docsTable.project_uuid
       })
       .from(docsTable)
       .where(
@@ -1006,53 +908,14 @@ export async function repairMissingRagDocumentIds(
       };
     }
 
-    const ragIdentifier = projectUuid || userId;
-
-    // Fetch RAG documents once to avoid repeated API calls
-    let ragDocuments: [string, string][] = [];
-    try {
-      const documentsResult = await ragService.getDocuments(ragIdentifier);
-      if (documentsResult.success && documentsResult.documents) {
-        ragDocuments = documentsResult.documents;
-      }
-    } catch (error) {
-      console.error('Error fetching RAG documents:', error);
-      // Continue with empty list - individual repairs might still work
-    }
-
     // Process documents in batches with rate limiting
     const processDocument = async (doc: typeof orphanedDocs[0]): Promise<boolean> => {
       try {
-        // Use the enhanced matching function to find the RAG document
-        const ragDocId = findMatchingRagDocument(doc, ragDocuments);
-
-        if (ragDocId) {
-          console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
-
-          // Update the document with the found RAG ID
-          const updateResult = await updateDocRagIdFor(userId, doc.uuid, ragDocId);
-          return updateResult.success;
-        } else {
-          // If not found in pre-fetched list, try individual lookup
-          // This is a fallback for recently added documents
-          try {
-            const freshResult = await ragService.getDocuments(ragIdentifier);
-            if (freshResult.success && freshResult.documents) {
-              // Use enhanced matching on fresh results
-              const freshRagDocId = findMatchingRagDocument(doc, freshResult.documents);
-              if (freshRagDocId) {
-                console.log(`Found matching RAG document on retry for ${doc.name}: ${freshRagDocId}`);
-                const updateResult = await updateDocRagIdFor(userId, doc.uuid, freshRagDocId);
-                return updateResult.success;
-              }
-            }
-          } catch (retryError) {
-            console.error(`Error on retry for document ${doc.name}:`, retryError);
-          }
-
-          console.log(`No matching RAG document found for ${doc.name}, may need re-upload`);
-          return false;
+        const linked = await linkOwnIndex(userId, doc);
+        if (!linked) {
+          console.log(`No indexed chunks found for ${doc.name}, needs re-indexing`);
         }
+        return linked;
       } catch (error) {
         console.error(`Error repairing document ${doc.uuid}:`, error);
         return false;

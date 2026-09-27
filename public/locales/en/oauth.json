@@ -21,5 +21,10 @@
       "hubs:read": "See which Hubs you have",
       "offline_access": "Stay connected without asking you again"
     }
+  },
+  "authorize": {
+    "errors": {
+      "repeatedClientParameter": "This authorization request names its client or its return address more than once, so it cannot be processed. Start the connection again from the app you are connecting."
+    }
   }
 }

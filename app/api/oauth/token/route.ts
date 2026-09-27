@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { oauthClientsTable } from '@/db/schema';
 import { redeemAuthorizationCode, rotateRefreshToken } from '@/lib/oauth/provider/grants';
-import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
+import { connectorBaseUrl, isConnectorResource } from '@/lib/oauth/provider/metadata';
 
 // RFC 6749 s4.1.3: this endpoint takes application/x-www-form-urlencoded.
 // Next.js route handlers default to JSON parsing, which returns 415 here and
@@ -52,6 +52,17 @@ export async function POST(req: NextRequest) {
   // is not a check.
   if (client.expires_at !== null && client.expires_at.getTime() <= Date.now()) {
     return oauthError('invalid_client', 'Client registration has expired', 401);
+  }
+
+  // RFC 8707 s2.2: a token request may name its resource too, on the code
+  // exchange and on every refresh. This server protects one resource, so any
+  // other is refused before a code is spent or a refresh token rotated. The
+  // parameter may repeat; every occurrence counts.
+  if (form.getAll('resource').some((r) => typeof r !== 'string' || !isConnectorResource(r))) {
+    return oauthError(
+      'invalid_target',
+      'resource is not a protected resource of this authorization server'
+    );
   }
 
   if (grantType === 'authorization_code') {

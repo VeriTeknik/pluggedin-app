@@ -91,6 +91,31 @@ The decrypted file never touches disk in the encrypted-at-rest sense; SOPS
 writes it back encrypted on save. At deploy time the script decrypts into
 `/run/sops/` (tmpfs) and removes it on exit.
 
+Rotation takes effect in the same deploy. The app, Redis and Traefik read
+their secrets once, at start, and `docker compose up -d` does not recreate a
+container just because a mounted file's contents changed. So after `up`,
+`deploy.sh` recreates any of those three that started before its secret files
+last changed (the app is also recreated if Redis restarted after it), waits
+for it to be healthy, and fails the deploy unless each one verifiably started
+after the change. Two caveats:
+
+- **`POSTGRES_PASSWORD`** is only read when Postgres initialises an empty data
+  directory. Changing it does not change the role's password — run
+  `ALTER ROLE … PASSWORD …` as part of the rotation and keep `DATABASE_URL`
+  in step. `deploy.sh` warns when it sees this value change.
+- **Leaked credentials** are only revoked by rotating them. Restarting
+  invalidates old values inside this stack (e.g. sessions signed with an old
+  `NEXTAUTH_SECRET`), not keys issued by third parties.
+
+### Redis authentication
+
+Redis requires a password: MCP servers run with `--share-net` inside the app
+container's network namespace, so tenant code can reach `redis:6379`.
+`REDIS_PASSWORD` in `secrets.env.sops` is **required** — `deploy.sh` stops
+before changing anything if it is missing. From it, `deploy.sh` renders
+`/run/sops/redis.conf` (`requirepass`) and appends the app's `REDIS_URL` to
+the decrypted secrets file. Don't set `REDIS_URL` anywhere yourself.
+
 ### Read logs
 
 ```bash

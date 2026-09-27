@@ -155,7 +155,11 @@ async function detectForTransport(
       };
     }
     
-    // Check if package exists on npm
+    // Check if package exists on npm. Only the exact name the repository
+    // declares: GitHub owners and npm names are separate namespaces, so the
+    // unscoped form or the repository name is whoever published it, not this
+    // repository. When the declared package is not published, the user has to
+    // name the package themselves.
     if (packageJson.name) {
       const exists = await checkNpmPackageExists(packageJson.name);
       
@@ -165,37 +169,6 @@ async function detectForTransport(
           command: 'npx',
           args: ['-y', packageJson.name],
           confidence: 0.9,
-          source: 'package.json'
-        };
-      }
-      
-      
-      // Try without scope
-      if (packageJson.name.includes('/')) {
-        const nameWithoutScope = packageJson.name.split('/')[1];
-        const existsWithoutScope = await checkNpmPackageExists(nameWithoutScope);
-        
-        if (existsWithoutScope) {
-          return {
-            packageName: nameWithoutScope,
-            command: 'npx',
-            args: ['-y', nameWithoutScope],
-            confidence: 0.85,
-            source: 'package.json'
-          };
-        }
-      }
-      
-      // Try repo name directly
-      const repoNameLower = repo.toLowerCase();
-      const repoExists = await checkNpmPackageExists(repoNameLower);
-      
-      if (repoExists) {
-        return {
-          packageName: repoNameLower,
-          command: 'npx',
-          args: ['-y', repoNameLower],
-          confidence: 0.8,
           source: 'package.json'
         };
       }
@@ -326,19 +299,15 @@ function generateFallback(
   owner: string,
   repo: string,
   transport: TransportType
-): PackageConfig {
+): PackageConfig | null {
   const lowerOwner = owner.toLowerCase();
   const lowerRepo = repo.toLowerCase();
   
   switch (transport) {
     case 'stdio':
-      return {
-        packageName: lowerRepo,
-        command: 'npx',
-        args: ['-y', lowerRepo],
-        confidence: 0.5,
-        source: 'fallback'
-      };
+      // No guessed package. `npx -y <repo-name>` runs whoever owns that npm
+      // name, with the user's environment; nothing ties it to this repository.
+      return null;
       
     case 'docker':
       return {

@@ -223,6 +223,11 @@
       "serverName": "Sunucu adını girin",
       "description": "Açıklama eklemek için tıklayın..."
     },
+    "smartDialog": {
+      "githubNotInRegistry": "Bu depo MCP kayıt defterinde değil, bu yüzden doğrulanmış bir paket bulunamadı. Bunun yerine tam kurulum komutunu girin.",
+      "githubSuggestionCommand": "Deponun README dosyasındaki kurulum komutunu yapıştırın, ör. npx -y @scope/package",
+      "githubSuggestionJson": "Veya deponun belgelediği MCP JSON yapılandırmasını yapıştırın"
+    },
     "test": {
       "authRequired": "Kimlik doğrulama gerekli - kimlik doğrulamak için sunucuyu ekleyin",
       "authRequiredDetail": "Bu sunucu kimlik doğrulama gerektiriyor. Ekledikten sonra hesabınızı bağlamak için \"Kimlik Doğrula\" düğmesine tıklayın.",

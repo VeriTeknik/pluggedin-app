@@ -10,7 +10,7 @@ import { sanitizeCollectionContent } from '@/lib/server-template';
  * /api/collections:
  *   get:
  *     summary: Get all public collections
- *     description: Retrieves a list of all collections that have been marked as public by their owners, including basic user information. This endpoint does not require authentication.
+ *     description: Retrieves a list of all collections that have been marked as public by their owners, with the profile's uuid and name and the owner's display name and username. This endpoint does not require authentication.
  *     tags:
  *       - Collections
  *     responses:
@@ -35,17 +35,20 @@ import { sanitizeCollectionContent } from '@/lib/server-template';
  */
 export async function GET() {
   try {
-    // Fetch all public collections with profile, project, and user info
+    // Anonymous endpoint: select only what is returned — the profile's uuid
+    // and name and the owner's display fields. Never the project row
+    // (uuid, user_id, active_profile_uuid) or the user id.
     const collections = await db.query.sharedCollectionsTable.findMany({
       where: eq(sharedCollectionsTable.is_public, true),
       with: {
         profile: {
+          columns: { uuid: true, name: true },
           with: {
             project: {
+              columns: {},
               with: {
                 user: {
                   columns: {
-                    id: true,
                     name: true,
                     username: true
                   }
@@ -58,8 +61,23 @@ export async function GET() {
       orderBy: (collections) => [collections.created_at],
     });
 
+    // Project explicitly as well, so a relation change cannot widen the response.
     return NextResponse.json(
-      collections.map((c) => ({ ...c, content: sanitizeCollectionContent(c.content) }))
+      collections.map((c) => ({
+        ...c,
+        profile: c.profile
+          ? {
+              uuid: c.profile.uuid,
+              name: c.profile.name,
+              project: {
+                user: c.profile.project?.user
+                  ? { name: c.profile.project.user.name, username: c.profile.project.user.username }
+                  : null,
+              },
+            }
+          : null,
+        content: sanitizeCollectionContent(c.content),
+      }))
     );
   } catch (error) {
     console.error('Error fetching collections:', error);

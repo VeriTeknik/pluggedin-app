@@ -92,12 +92,28 @@ export function buildSecurePath(baseDir: string, ...components: string[]): strin
   // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const finalPath = resolve(normalize(joinedPath));
 
-  // Final security check: ensure the path is within the base directory
+  // Final security check: ensure the path is within the base directory — its
+  // real location, with symlinks resolved, not just the joined string.
   if (!isPathWithinDirectory(finalPath, normalizedBase)) {
     throw new Error('Security violation: Path escapes base directory');
   }
 
   return finalPath;
+}
+
+/**
+ * Build a path inside one server's directory of a shared store:
+ * `<storeDir>/servers/<serverId>/...components`.
+ *
+ * A server's directory is writable by that server's own sandboxed process, so
+ * any component under it may be a symlink the process planted. Anchoring the
+ * containment check at the server's directory rather than at the store refuses
+ * a link into a sibling server's directory, which a store-level check accepts
+ * because it never leaves the store.
+ */
+export function buildServerScopedPath(storeDir: string, serverId: string, ...components: string[]): string {
+  const serverDir = buildSecurePath(storeDir, 'servers', serverId);
+  return components.length > 0 ? buildSecurePath(serverDir, ...components) : serverDir;
 }
 
 /**

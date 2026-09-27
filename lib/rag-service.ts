@@ -94,10 +94,15 @@ export class RagService {
         return { success: false, error: query ? 'Query too large. Maximum size is 10KB' : 'Query cannot be empty' };
       }
 
+      // buildFilter drops an empty value, and no filter at all is a search
+      // across every Hub. Fail closed instead.
+      const filter = buildFilter([['project_uuid', ragIdentifier]]);
+      if (!filter) {
+        return { success: false, error: 'A Hub is required to query documents' };
+      }
+
       // Generate query embedding
       const embedding = await generateEmbedding(query);
-
-      const filter = buildFilter([['project_uuid', ragIdentifier]]);
 
       // Search zvec via shared vector service
       const results = searchVectors({
@@ -129,6 +134,10 @@ export class RagService {
         };
       }
 
+      // The Hub is checked again here, against PostgreSQL. A vector carries
+      // its own copy of project_uuid, and when that copy is stale - a
+      // document moved between Hubs, or any other drift - the vector filter
+      // alone would hand this Hub another Hub's text.
       const chunkRows = await db
         .select({
           uuid: documentChunksTable.uuid,
@@ -136,7 +145,10 @@ export class RagService {
           document_uuid: documentChunksTable.document_uuid,
         })
         .from(documentChunksTable)
-        .where(inArray(documentChunksTable.uuid, chunkUuids));
+        .where(and(
+          inArray(documentChunksTable.uuid, chunkUuids),
+          eq(documentChunksTable.project_uuid, ragIdentifier),
+        ));
 
       // Re-order chunks by vector search score (highest relevance first)
       const chunkMap = new Map(chunkRows.map((c) => [c.uuid, c]));
@@ -153,7 +165,10 @@ export class RagService {
         ? await db
             .select({ uuid: docsTable.uuid, name: docsTable.name })
             .from(docsTable)
-            .where(inArray(docsTable.uuid, docUuids))
+            .where(and(
+              inArray(docsTable.uuid, docUuids),
+              eq(docsTable.project_uuid, ragIdentifier),
+            ))
         : [];
 
       return {
@@ -273,14 +288,27 @@ export class RagService {
 
   // ─── Document Management ─────────────────────────────────────────
 
-  /** @deprecated ragIdentifier is no longer used — removal is by documentId only */
-  async removeDocument(documentId: string, _ragIdentifier?: string): Promise<{ success: boolean; error?: string }> {
+  /**
+   * Remove a document's vectors and chunks, inside one Hub.
+   *
+   * Both deletes are scoped by the Hub as well as the document. Removal by
+   * document uuid alone let anyone who got a foreign uuid in front of this -
+   * a writable rag pointer did - erase another Hub's index. No Hub, no
+   * removal.
+   */
+  async removeDocument(documentId: string, projectUuid: string): Promise<{ success: boolean; error?: string }> {
     try {
       if (!this.isEnabled()) return { success: true };
       if (!documentId) return { success: true }; // Nothing to remove
+      if (!projectUuid) {
+        return { success: false, error: 'A Hub is required to remove a document' };
+      }
 
       // Delete vectors from zvec
-      const filter = buildFilter([['document_uuid', documentId]]);
+      const filter = buildFilter([
+        ['document_uuid', documentId],
+        ['project_uuid', projectUuid],
+      ]);
       if (filter) {
         deleteVectorsByFilter({ domain: 'rag', filter });
       }
@@ -288,7 +316,10 @@ export class RagService {
       // Delete chunks from PostgreSQL (also handled by CASCADE on doc delete)
       await db
         .delete(documentChunksTable)
-        .where(eq(documentChunksTable.document_uuid, documentId));
+        .where(and(
+          eq(documentChunksTable.document_uuid, documentId),
+          eq(documentChunksTable.project_uuid, projectUuid),
+        ));
 
       return { success: true };
     } catch (error) {
@@ -298,6 +329,25 @@ export class RagService {
         error: error instanceof Error ? error.message : 'Remove failed',
       };
     }
+  }
+
+  /**
+   * Whether the document has chunks indexed in the given Hub - the only
+   * evidence that justifies pointing its rag_document_id at itself.
+   */
+  async hasIndexedChunks(documentId: string, projectUuid: string): Promise<boolean> {
+    if (!documentId || !projectUuid) return false;
+
+    const rows = await db
+      .select({ uuid: documentChunksTable.uuid })
+      .from(documentChunksTable)
+      .where(and(
+        eq(documentChunksTable.document_uuid, documentId),
+        eq(documentChunksTable.project_uuid, projectUuid),
+      ))
+      .limit(1);
+
+    return rows.length > 0;
   }
 
   async getDocuments(ragIdentifier: string): Promise<RagDocumentsResponse> {

@@ -50,12 +50,17 @@
         "confirmEmailMismatch": "Email confirmation does not match.",
         "removalFailed": "Failed to remove password.",
         "setFailed": "Failed to set password.",
-        "alreadyExists": "Password already exists. Use the change password option instead."
+        "alreadyExists": "Password already exists. Use the change password option instead.",
+        "currentPasswordRequired": "Enter your current password to remove it.",
+        "reauthRequired": "For your security, sign in again with a connected account before setting a password.",
+        "tooManyAttempts": "Too many attempts. Please wait a while and try again."
       },
       "successMessages": {
         "removed": "Password removed successfully. You can now only sign in with OAuth.",
         "set": "Password set successfully. You can now sign in with email/password."
-      }
+      },
+      "reauthDescription": "Sign in again with one of your connected accounts, then set your password within 5 minutes.",
+      "reauthButton": "Continue with {{provider}}"
     },
     "loginMethods": {
       "title": "Login Methods",
@@ -72,6 +77,18 @@
         "google": "Google",
         "github": "GitHub",
         "twitter": "Twitter"
+      },
+      "reauth": {
+        "title": "Confirm it's you",
+        "connectDescription": "For your security, connecting {{provider}} requires a sign-in from the last 5 minutes.",
+        "connectProvidersHint": "Sign in again with an account you have already connected, then click Connect again:",
+        "confirmAndConnect": "Confirm and connect",
+        "disconnectPasswordDescription": "Enter your current password to disconnect {{provider}}.",
+        "disconnectProviderDescription": "For your security, sign in again with another connected account, then disconnect {{provider}} within 5 minutes.",
+        "confirmAndDisconnect": "Confirm and disconnect",
+        "passwordIncorrect": "That password is not correct.",
+        "lastLoginMethod": "You can't disconnect your only way to sign in. Set a password or connect another account first.",
+        "linkRefused": "{{provider}} was not connected because your last sign-in is too old. Confirm it's you, then try again."
       }
     },
     "account": {

@@ -17,11 +17,10 @@ on:
       - 'scripts/**'
       # infra/** is here so the `Validate compose + scripts` job runs on
       # PRs that touch only the compose stack, Traefik/Ofelia config, or
-      # the operational scripts. The `build` job in this workflow has its
-      # own `if:` guard which keeps it from firing on fork PRs; on internal
-      # infra-only PRs it'll still rebuild the image, which is acceptable
-      # — the image is small and the host runner has the cache warm.
+      # the operational scripts. PR image builds run in `pr-build` on a
+      # GitHub-hosted VM; the self-hosted `build` job never runs for PRs.
       - 'infra/**'
+      - '.dockerignore'
       # The root compose files were absent from this list, so a PR touching
       # only the stack end users actually run got zero compose validation.
       - 'docker-compose*.yml'
@@ -31,7 +30,7 @@ on:
   workflow_dispatch:
 
 # Default to read-only token. The build job re-grants packages:write
-# explicitly. Other jobs (stack-validate) inherit the read-only default,
+# explicitly; pr-build gets packages:read for the cache. Other jobs (stack-validate) inherit the read-only default,
 # so a compromised checkout in those jobs can't push branches, comment
 # on PRs, or write to packages.
 permissions:
@@ -44,28 +43,38 @@ env:
 jobs:
   build:
     # Runs on the self-hosted runner set up by
-    # infra/scripts/setup-gha-runner.sh on the prod host. The host's CPU has
+    # infra/scripts/isolate-gha-runner.sh on the prod host. The host's CPU has
     # the AVX2/AVX-512 instructions @zvec/zvec's native binding ships;
     # GitHub-hosted runners did not, and the build hit SIGILL inconsistently
     # depending on which Xeon Actions allocated.
     #
-    # SECURITY: this is a self-hosted runner on a public repo's prod box —
-    # the host carries the SOPS-decrypted secrets, prod DB credentials,
-    # and the docker socket. A malicious workflow run from a fork PR
-    # could exfiltrate any of that. Three guards layer here:
-    #   1. The `if:` below skips fork PRs entirely. github.event.pull_request
-    #      .head.repo.full_name only matches when the PR's head branch is in
-    #      this repo, not a fork.
-    #   2. GitHub's repo-level "Require approval for all outside
-    #      collaborators" setting (Settings → Actions → General → Fork pull
-    #      request workflows). Must stay enabled — operators verify it as
-    #      part of the runner runbook.
-    #   3. The workflow's default `permissions:` is read-only above; we
-    #      re-grant packages:write here for this job alone.
-    # If any one of those fails, the others still hold.
+    # SECURITY: this is a persistent self-hosted runner on a public repo's
+    # prod box. It must only ever execute code that is already on a protected
+    # ref, so this job runs for pushes (main and v* tags — see `on.push`) and
+    # for manual dispatches of main or a v* tag, and NEVER for pull_request.
+    # PR builds run on a disposable GitHub-hosted VM in `pr-build` below.
+    #
+    # Why the PR path moved rather than being guarded: for pull_request
+    # events GitHub evaluates the workflow file from the PR's merge ref, so an
+    # `if:` like the old `head.repo.full_name == github.repository` check is
+    # editable by the very PR it is meant to stop — a fork can delete it, or
+    # add its own job with these runner labels. Nothing written in this file
+    # can stop that; only platform controls can:
+    #   1. Settings → Actions → General → "Approval for running fork pull
+    #      request workflows from contributors": "Require approval for all
+    #      external contributors". Never approve a fork run whose diff touches
+    #      .github/.
+    #   2. Preferably, register the runner in an organisation runner group
+    #      restricted to "Selected workflows":
+    #        VeriTeknik/pluggedin-app/.github/workflows/build-image.yml@refs/heads/main
+    #      so no other workflow file or ref can schedule onto it at all.
+    # Runner labels are scheduling selectors, not authorization.
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
+    # The workflow's default `permissions:` is read-only above; packages:write
+    # is re-granted here for this job alone.
     permissions:
       contents: read
       packages: write
@@ -76,13 +85,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Don't leave the token in .git/config on a persistent runner.
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        # Login on PRs too so the registry cache (cache-from) is reachable.
-        # PRs from forks can't push (read-only GITHUB_TOKEN), so cache-to is
-        # gated separately below.
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -100,42 +109,90 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build (push on main/tag, load on PR)
+      - name: Build and push
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # PRs read the warm cache; only main / tag pushes refresh it.
-          # Writing the cache from a PR requires registry write access,
-          # which GITHUB_TOKEN withholds on fork PRs — gating cache-to to
-          # non-PR events keeps internal PRs fast and fork PRs unblocked.
+          # Only protected refs reach this job, so only they refresh the
+          # shared registry cache.
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache
-          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}:cache,mode=max', env.REGISTRY, env.IMAGE_NAME) || '' }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache,mode=max
           build-args: |
             NEXT_TELEMETRY_DISABLED=1
 
-      - name: Smoke-test the built image (PR only)
-        if: github.event_name == 'pull_request'
-        env:
-          # Pipe action outputs through env: to avoid GHA expression-injection
-          # in the run: shell. See the project's GHA workflow security guide.
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+  pr-build:
+    name: Build + smoke-test (GitHub-hosted)
+    # Untrusted code — pull requests, including forks, and manual dispatches
+    # of any other branch — is built on a throwaway GitHub-hosted VM, never on
+    # the production runner. Load-only: nothing is pushed and the registry
+    # cache is read, not written, so a PR cannot poison what `build` ships.
+    #
+    # Caveat carried over from the move to self-hosted: some GitHub-hosted
+    # CPUs lack the AVX-512 paths of the zvec binding. The Dockerfile no
+    # longer loads the binding at build time, so this is expected to pass; if
+    # it flakes with SIGILL, that is a PR-CI problem only and never affects
+    # what is published.
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      # Read-only: lets the login below pull the registry cache. A fork PR's
+      # token is read-only regardless.
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR (cache read)
+        # The cache import fails with 403 on an anonymous token, so log in
+        # even though nothing is pushed.
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (load only)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: pluggedin-app:pr-smoke
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache
+          build-args: |
+            NEXT_TELEMETRY_DISABLED=1
+
+      - name: Smoke-test the built image
         run: |
           set -euo pipefail
-          tag=$(printf '%s\n' "$IMAGE_TAGS" | head -1)
-          docker run --rm --entrypoint /bin/sh "$tag" -c '
+          # `set -e` inside: without it only the LAST check's status counted.
+          docker run --rm --entrypoint /bin/sh pluggedin-app:pr-smoke -c '
+            set -e
             node --version
             tsx --version
             test -f /app/server.js
             test -d /app/.next/static
             test -d /app/drizzle
             test -x /usr/bin/bwrap
+            # The image must not carry env files from the build context.
+            leaked=$(ls -A /app | grep -E "^\.env" | grep -vx ".env.example" || true)
+            if [ -n "$leaked" ]; then echo "env files shipped in the image: $leaked" >&2; exit 1; fi
           '
 
   stack-validate:

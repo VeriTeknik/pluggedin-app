@@ -1,10 +1,17 @@
 import Redis from 'ioredis';
 import { NextRequest } from 'next/server';
 
-import { createRateLimiter as createInMemoryRateLimiter } from './rate-limiter';
+import { createRateLimiter as createInMemoryRateLimiter, redisRetryStrategy } from './rate-limiter';
 
 // Redis client singleton
 let redisClient: Redis | null = null;
+
+// Set once the first connection attempt has either succeeded or failed. Until
+// then, commands wait in ioredis's offline queue for that connection as usual.
+// From then on, a connection that is not ready sends requests straight down the
+// Redis-failure path (fail closed in production) rather than queueing them
+// behind reconnect attempts.
+let initialConnectSettled = false;
 
 // In-memory fallback store for Redis failures
 const inMemoryFallback = new Map<string, { count: number; resetTime: number }>();
@@ -35,10 +42,9 @@ function getRedisClient(): Redis | null {
 
   if (!redisClient) {
     redisClient = new Redis(process.env.REDIS_URL, {
-      retryStrategy: (times) => {
-        if (times > 3) return null;
-        return Math.min(times * 50, 2000);
-      },
+      // Keeps reconnecting: giving up left every limiter failing closed until
+      // the app restarted, after any Redis restart.
+      retryStrategy: redisRetryStrategy,
       maxRetriesPerRequest: 3,
       enableReadyCheck: false,
       lazyConnect: true,
@@ -46,6 +52,14 @@ function getRedisClient(): Redis | null {
 
     redisClient.on('error', (err) => {
       console.error('Redis rate limiter error:', err);
+    });
+
+    redisClient.on('ready', () => {
+      initialConnectSettled = true;
+    });
+
+    redisClient.on('close', () => {
+      initialConnectSettled = true;
     });
   }
 
@@ -112,6 +126,10 @@ export function createRedisRateLimiter(config: RateLimitConfig) {
     const redisKey = `ratelimit:${key}:${windowStart}`;
 
     try {
+      if (initialConnectSettled && redis.status !== 'ready') {
+        throw new Error(`Redis connection is ${redis.status}`);
+      }
+
       // Use Redis pipeline for atomic operations
       const pipeline = redis.pipeline();
       pipeline.incr(redisKey);

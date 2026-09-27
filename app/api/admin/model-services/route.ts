@@ -17,6 +17,8 @@ import {
   users,
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
+import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
  * Check if the current user is an admin.
@@ -59,8 +61,12 @@ async function testServiceConnection(
   const startTime = Date.now();
 
   try {
+    // The URL comes from the request body: checked as text, then fetched
+    // through safeFetch, like the stored service's own test and sync.
+    const healthUrl = validateServiceUrl(url, healthEndpoint);
+
     // Test health endpoint
-    const healthResponse = await fetch(`${url}${healthEndpoint}`, {
+    const healthResponse = await safeFetch(healthUrl, {
       method: 'GET',
       signal: AbortSignal.timeout(10000), // 10s timeout
     });
@@ -82,7 +88,8 @@ async function testServiceConnection(
     // Try to discover models (optional - service may not have models yet)
     let models: string[] | null = null;
     try {
-      const modelsResponse = await fetch(`${url}${modelsEndpoint}`, {
+      const modelsUrl = validateServiceUrl(url, modelsEndpoint);
+      const modelsResponse = await safeFetch(modelsUrl, {
         method: 'GET',
         signal: AbortSignal.timeout(10000),
       });

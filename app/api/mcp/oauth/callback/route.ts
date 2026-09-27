@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthSession } from '@/lib/auth';
+import { userOwnsProfile } from '@/lib/auth/profile-ownership';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
+import { oauthCallbackListener } from '@/lib/mcp/transports/oauth-callback-listener';
 import { RateLimiters } from '@/lib/rate-limiter';
 import { escapeHtml, getAllowedRedirectHosts, getSecurityHeaders,isValidRedirectUrl } from '@/lib/security-utils';
+
+/** The authorization-response parameters (RFC 6749 s4.1.2, RFC 9207 `iss`). */
+const FORWARDED_PARAMS = ['code', 'state', 'iss'] as const;
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting
@@ -47,6 +52,13 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Invalid or expired OAuth session');
     }
 
+    // A state names a flow, not who may finish it. Only the owner of the
+    // profile that started it may complete — or cancel — it; anyone else gets
+    // the same answer as for an unknown state.
+    if (!(await userOwnsProfile(session.user.id, oauthSession.profile_uuid))) {
+      return createErrorResponse('Invalid or expired OAuth session');
+    }
+
     // Handle OAuth errors
     if (error) {
       console.error(`[OAuth Proxy] OAuth error for server ${oauthSession.server_uuid}:`, error, errorDescription);
@@ -69,34 +81,20 @@ export async function GET(request: NextRequest) {
     // Forward the callback to the MCP server's local OAuth server
     try {
 
-      // Build the callback URL with all parameters
-      const callbackUrl = new URL(oauthSession.callback_url);
-
-      // SSRF Protection: Validate the callback URL is to localhost only
-      const hostname = callbackUrl.hostname.toLowerCase();
-      const isLocalhost = hostname === 'localhost' ||
-                         hostname === '127.0.0.1' ||
-                         hostname === '::1' ||
-                         hostname === '[::1]';
-
-      if (!isLocalhost) {
-        console.error('[OAuth Proxy] Blocked non-localhost callback:', oauthSession.callback_url);
+      // SSRF Protection: only a local OAuth listener, and only the OAuth response
+      const listener = oauthCallbackListener(oauthSession.callback_url);
+      if (!listener) {
+        console.error('[OAuth Proxy] Blocked callback that is not a local OAuth listener');
         return createErrorResponse('Invalid callback URL', 'OAuth callback must be to localhost only.');
       }
 
-      // Also validate port is in reasonable range (avoid privileged ports)
-      const port = callbackUrl.port ? parseInt(callbackUrl.port, 10) : 80;
-      if (port < 1024 || port > 65535) {
-        console.error('[OAuth Proxy] Invalid port in callback URL:', port);
-        return createErrorResponse('Invalid callback port', 'OAuth callback port must be between 1024 and 65535.');
+      for (const name of FORWARDED_PARAMS) {
+        const value = searchParams.get(name);
+        if (value !== null) listener.searchParams.set(name, value);
       }
 
-      searchParams.forEach((value, key) => {
-        callbackUrl.searchParams.append(key, value);
-      });
-
       // Forward the request to the local OAuth server
-      const response = await fetch(callbackUrl.toString(), {
+      const response = await fetch(listener.toString(), {
         method: 'GET',
         headers: {
           'User-Agent': 'Plugged.in OAuth Proxy',

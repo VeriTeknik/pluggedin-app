@@ -355,6 +355,7 @@ export async function POST(
         name: normalizedName,
         dnsName: fullDnsName,
         namespace: newAgent.kubernetes_namespace || 'agents',
+        agentUuid: newAgent.uuid,
         image,
         resources: resources
           ? {

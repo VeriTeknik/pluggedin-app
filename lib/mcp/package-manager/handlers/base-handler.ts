@@ -64,6 +64,23 @@ export abstract class BasePackageHandler {
   }
   
   /**
+   * Start a host-side install from an empty directory.
+   *
+   * The server's directory is bind-mounted read-write into its own sandbox, so
+   * anything already in here was left by code the user chose to run: an
+   * interpreter in .venv/bin, an .npmrc pointing the registry inward, a
+   * .pnpmfile.cjs, a symlink out of the store. The installer runs on the host,
+   * outside that sandbox, and must read none of it. install() is only reached
+   * when the package is missing, so there is nothing here worth keeping.
+   *
+   * fs.rm does not follow a symlink - it removes the link itself.
+   */
+  protected async resetDirectory(dirPath: string): Promise<void> {
+    await fs.rm(dirPath, { recursive: true, force: true });
+    await fs.mkdir(dirPath, { recursive: true });
+  }
+
+  /**
    * Get the install directory for a server
    */
   protected getServerInstallDir(serverUuid: string): string {
@@ -94,6 +111,11 @@ export abstract class BasePackageHandler {
       const files = await fs.readdir(dirPath, { withFileTypes: true });
 
       for (const file of files) {
+        // Symlinks are neither followed nor counted: one leading out (a venv's
+        // bin/python) is refused by the path builder, one staying inside would
+        // count its target twice.
+        if (file.isSymbolicLink()) continue;
+
         // Validate file name to prevent path traversal
         validatePathComponent(file.name);
         const fullPath = buildSecurePath(dirPath, file.name);
@@ -101,7 +123,7 @@ export abstract class BasePackageHandler {
         if (file.isDirectory()) {
           totalSize += await this.getDirectorySize(fullPath);
         } else {
-          const stats = await fs.stat(fullPath);
+          const stats = await fs.lstat(fullPath);
           totalSize += stats.size;
         }
       }

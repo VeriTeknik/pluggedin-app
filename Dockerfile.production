@@ -22,8 +22,14 @@ COPY scripts ./scripts
 # Install dependencies with frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# Copy application code
+# Copy application code. Secret env files are kept out by .dockerignore; the
+# check below fails the build if one still arrives, because `next build`
+# copies loaded .env files into .next/standalone/, which the runner ships.
 COPY . .
+RUN leaked="$(find . -maxdepth 1 \( -name '.env' -o -name '.env.*' -o -name '.envrc' \) ! -name '.env.example' -print)"; \
+    if [ -n "$leaked" ]; then \
+      echo "FATAL: env files in the build context (check .dockerignore): $leaked" >&2; exit 1; \
+    fi
 
 # Build arguments for build-time configuration
 ARG NEXT_PUBLIC_API_URL

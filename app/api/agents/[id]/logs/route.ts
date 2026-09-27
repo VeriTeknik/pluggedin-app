@@ -100,10 +100,12 @@ export async function GET(
       );
     }
 
-    // Get logs from Kubernetes
+    // Get logs from Kubernetes: only pods labelled with this agent's uuid,
+    // never a leftover pod that happens to share the name.
     const logs = await kubernetesService.getAgentLogs(
       agent.kubernetes_deployment,
       agent.kubernetes_namespace || 'agents',
+      agent.uuid,
       tail
     );
 

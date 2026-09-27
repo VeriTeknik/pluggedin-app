@@ -11,6 +11,7 @@ import {
   AgentState,
 } from '@/db/schema';
 import { toClientAgent } from '@/lib/agent-response';
+import { templateKindOfAgent } from '@/lib/agents/teardown';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
@@ -157,7 +158,8 @@ export async function GET(
       agent.kubernetes_deployment
         ? kubernetesService.getDeploymentStatus(
             agent.kubernetes_deployment,
-            agent.kubernetes_namespace || 'agents'
+            agent.kubernetes_namespace || 'agents',
+            agent.uuid
           )
         : Promise.resolve(null),
     ]);
@@ -260,7 +262,9 @@ export async function DELETE(
     if (agent.kubernetes_deployment) {
       kubernetesResult = await kubernetesService.deleteAgent(
         agent.kubernetes_deployment,
-        agent.kubernetes_namespace || 'agents'
+        agent.kubernetes_namespace || 'agents',
+        agent.uuid,
+        { templateKind: await templateKindOfAgent(agent) }
       );
     }
 

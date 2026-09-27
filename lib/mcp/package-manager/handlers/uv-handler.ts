@@ -4,7 +4,7 @@ import { promisify } from 'util';
 
 import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
-import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
+import { validatePackageVersion, validatePythonPackageName } from '@/lib/security/package-name';
 
 import { PackageManagerConfig } from '../config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
@@ -12,6 +12,14 @@ import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler'
 // argv execution, never a shell: the package name and version come out of a
 // user-supplied args array, so a shell here is a command-injection sink.
 const execFileAsync = promisify(execFile);
+
+/**
+ * Every uv invocation below runs on the host, in a directory the server's own
+ * sandbox can write to. Without this, uv walks up from there for uv.toml,
+ * pyproject.toml and .python-version - and each of those can name the Python
+ * interpreter uv then executes to inspect it.
+ */
+const NO_CONFIG = '--no-config';
 
 export class UvHandler extends BasePackageHandler {
   protected packageManagerName = 'uv';
@@ -47,14 +55,19 @@ export class UvHandler extends BasePackageHandler {
 
       // If still not found, look for any executable in bin
       if (!(await this.fileExists(binaryPath))) {
-        const files = await fs.readdir(binDir);
+        const entries = await fs.readdir(binDir, { withFileTypes: true });
         const executables = [];
 
-        for (const file of files) {
+        for (const entry of entries) {
+          // Regular files only, judged without following links: a venv's
+          // bin/python is a symlink out to the system interpreter, and an
+          // entry point is never a link.
+          if (!entry.isFile()) continue;
+          const file = entry.name;
           // Validate file name to prevent path traversal
           validatePathComponent(file);
           const filePath = buildSecurePath(binDir, file);
-          const stats = await fs.stat(filePath);
+          const stats = await fs.lstat(filePath);
           if (stats.isFile() && (stats.mode & 0o111)) { // Check if executable
             executables.push(file);
           }
@@ -94,8 +107,10 @@ export class UvHandler extends BasePackageHandler {
     // The name and version come out of a user-supplied args array. argv
     // execution above already keeps them away from a shell; this keeps a
     // malformed value out of the filesystem-path builders too, and fails the
-    // install before anything is spawned.
-    const nameCheck = validatePackageName(packageName);
+    // install before anything is spawned. It has to be a PyPI name: uv fetches
+    // a URL (or a `name@url` direct reference) itself, from the host, outside
+    // safeFetch, and reads a path or archive name from disk.
+    const nameCheck = validatePythonPackageName(packageName);
     if (!nameCheck.valid) {
       throw new Error(`Invalid package name: ${nameCheck.error}`);
     }
@@ -110,34 +125,37 @@ export class UvHandler extends BasePackageHandler {
 
     this.log('Installing Python package', { serverUuid, packageName, version, installDir });
     
-    // Ensure directory exists
-    await this.ensureDirectory(installDir);
-    
+    // Always a fresh virtualenv. The sandbox can write here, and `uv pip
+    // install` executes the environment's own bin/python to inspect it - so a
+    // venv that already exists is an interpreter somebody else chose.
+    await this.resetDirectory(installDir);
+
     try {
-      // Create virtual environment if it doesn't exist
-      if (!(await this.fileExists(venvDir))) {
-        await execFileAsync('uv', ['venv'], {
-          cwd: installDir,
-          env: {
-            ...inheritableChildEnv(),
+      await execFileAsync('uv', ['venv', NO_CONFIG], {
+        cwd: installDir,
+        env: {
+          ...inheritableChildEnv(),
           // PATH is not in the allowlist; without it execFile cannot find the binary
           PATH: approvedChildPath(),
-            UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
-            UV_PROJECT_ENVIRONMENT: venvDir,
-          },
-          timeout: PackageManagerConfig.STARTUP_TIMEOUT_MS,
-        });
-        
-        this.log('Created virtual environment', { venvDir });
-      }
-      
+          UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
+          UV_PROJECT_ENVIRONMENT: venvDir,
+        },
+        timeout: PackageManagerConfig.STARTUP_TIMEOUT_MS,
+      });
+
+      this.log('Created virtual environment', { venvDir });
+
       // Construct package spec
       const packageSpec = version ? `${packageName}==${version}` : packageName;
-      
-      // Install package using uv
+
+      // Install package using uv. Wheels only: building a source distribution
+      // runs its PEP 517 backend (setup.py and friends), which is the package
+      // author's code, and this is the host, before the sandbox exists. A
+      // package that ships only an sdist is not installed here; the server's
+      // own uvx, inside the sandbox, still builds and runs it.
       const { stdout, stderr } = await execFileAsync(
         'uv',
-        ['pip', 'install', packageSpec],
+        ['pip', 'install', NO_CONFIG, '--no-build', packageSpec],
         {
           cwd: installDir,
           env: {
@@ -170,7 +188,7 @@ export class UvHandler extends BasePackageHandler {
         // `| grep Version` needed a shell; filter in JS instead.
         const { stdout: versionOutput } = await execFileAsync(
           'uv',
-          ['pip', 'show', packageName],
+          ['pip', 'show', NO_CONFIG, packageName],
           {
             cwd: installDir,
             env: {
@@ -223,7 +241,7 @@ export class UvHandler extends BasePackageHandler {
     try {
       const { stdout } = await execFileAsync(
         'uv',
-        ['pip', 'show', packageName],
+        ['pip', 'show', NO_CONFIG, packageName],
         {
           cwd: installDir,
           env: {

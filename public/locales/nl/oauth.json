@@ -21,5 +21,10 @@
       "hubs:read": "Zien welke Hubs u heeft",
       "offline_access": "Verbonden blijven zonder het opnieuw te vragen"
     }
+  },
+  "authorize": {
+    "errors": {
+      "repeatedClientParameter": "Dit autorisatieverzoek noemt de client of het terugkeeradres meer dan eens en kan daarom niet worden verwerkt. Start de koppeling opnieuw vanuit de app die u koppelt."
+    }
   }
 }

@@ -19,7 +19,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { updateEmailPreferences } from '../actions';
 
 interface EmailPreferencesProps {
-  userId: string;
   preferences?: {
     welcomeEmails?: boolean;
     productUpdates?: boolean;
@@ -29,7 +28,7 @@ interface EmailPreferencesProps {
   };
 }
 
-export function EmailPreferencesSection({ userId, preferences }: EmailPreferencesProps) {
+export function EmailPreferencesSection({ preferences }: EmailPreferencesProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +50,7 @@ export function EmailPreferencesSection({ userId, preferences }: EmailPreference
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const result = await updateEmailPreferences(userId, emailPrefs);
+      const result = await updateEmailPreferences(emailPrefs);
 
       if (result.success) {
         toast({
@@ -82,7 +81,7 @@ export function EmailPreferencesSection({ userId, preferences }: EmailPreference
     };
 
     try {
-      const result = await updateEmailPreferences(userId, allOff);
+      const result = await updateEmailPreferences(allOff);
 
       if (result.success) {
         setEmailPrefs(allOff);

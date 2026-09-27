@@ -7,6 +7,7 @@ import {
   agentsTable,
   AgentState,
 } from '@/db/schema';
+import { agentOperationHttpStatus } from '@/lib/agents/operation-status';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
@@ -147,16 +148,18 @@ export async function POST(
     const deploymentName = agent.kubernetes_deployment;
 
     // Scale deployment back to 1 replica
+    // Refused unless the Deployment carries this agent's owner label.
     const scaleResult = await kubernetesService.scaleAgent(
       deploymentName,
       1, // Scale to 1 replica
-      namespace
+      namespace,
+      agent.uuid
     );
 
     if (!scaleResult.success) {
       return NextResponse.json(
         { error: scaleResult.message },
-        { status: 500 }
+        { status: agentOperationHttpStatus(scaleResult) }
       );
     }
 
@@ -202,7 +205,7 @@ export async function POST(
     // Check if update succeeded (no rows affected means state changed concurrently)
     if (updateResult.length === 0) {
       // Attempt to undo the Kubernetes scale (best effort)
-      await kubernetesService.scaleAgent(deploymentName, 0, namespace).catch(() => {});
+      await kubernetesService.scaleAgent(deploymentName, 0, namespace, agent.uuid).catch(() => {});
       return NextResponse.json(
         {
           error: 'Resume failed due to concurrent modification',

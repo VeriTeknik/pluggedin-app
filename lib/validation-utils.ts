@@ -2,6 +2,8 @@
  * Shared validation utilities for input sanitization and security
  */
 
+import { ipLiteralFromHost, isPrivateAddress } from '@/lib/security/validators';
+
 /**
  * Validates external IDs to prevent SSRF and path traversal attacks
  *
@@ -92,32 +94,20 @@ const BLOCKED_HOSTNAMES = [
 ];
 
 /**
- * Check if hostname is a private/internal IP address.
- * Covers RFC 1918, link-local, CGNAT, and IPv6 private ranges.
- */
-function isPrivateNetwork(hostname: string): boolean {
-  const privatePatterns = [
-    /^10\./,                              // 10.0.0.0/8
-    /^172\.(1[6-9]|2[0-9]|3[01])\./,     // 172.16.0.0/12
-    /^192\.168\./,                        // 192.168.0.0/16
-    /^169\.254\./,                        // Link-local
-    /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./, // CGNAT
-    /^fe80:/i,                            // IPv6 link-local
-    /^fc00:/i,                            // IPv6 unique local
-    /^fd[0-9a-f]{2}:/i,                   // IPv6 unique local
-  ];
-  return privatePatterns.some((p) => p.test(hostname));
-}
-
-/**
  * Validates a service URL to prevent SSRF attacks.
  *
  * Checks:
  * - URL is parseable
  * - Protocol is http: or https:
  * - Hostname is not a blocked host (localhost, metadata, K8s internal)
- * - Hostname is not in a private/internal IP range (RFC 1918, link-local, CGNAT)
- *   (private IPs allowed in development mode)
+ * - An IP literal is judged by the shared classifier safeFetch uses, on the
+ *   parsed address, so every non-global one is refused however it is spelled
+ *   (all of 127/8, bracketed and IPv4-mapped IPv6) rather than by a second set
+ *   of hostname regexes (private IPs allowed in development mode)
+ *
+ * This reads the URL's text only. A name can still resolve anywhere, so the
+ * request itself must go through safeFetch, which resolves, checks and pins
+ * the address and re-validates each redirect.
  *
  * @param baseUrl - The base URL of the service (e.g., "https://models.example.com")
  * @param path - The path to append (e.g., "/health")
@@ -131,16 +121,18 @@ export function validateServiceUrl(baseUrl: string, path: string): string {
     throw new Error(`Invalid URL protocol: ${fullUrl.protocol} — only http: and https: are allowed`);
   }
 
-  const hostname = fullUrl.hostname.toLowerCase();
+  // A trailing dot root-qualifies a name: `localhost.` is `localhost`.
+  const hostname = fullUrl.hostname.toLowerCase().replace(/\.+$/, '');
 
   // Block known dangerous hostnames
-  if (BLOCKED_HOSTNAMES.includes(hostname)) {
+  if (BLOCKED_HOSTNAMES.includes(hostname) || hostname.endsWith('.localhost')) {
     throw new Error(`Blocked URL: requests to ${hostname} are not allowed`);
   }
 
   // Block private/internal IP ranges (except in development)
   const isDevelopment = process.env.NODE_ENV === 'development';
-  if (!isDevelopment && isPrivateNetwork(hostname)) {
+  const literal = ipLiteralFromHost(hostname);
+  if (!isDevelopment && literal !== null && isPrivateAddress(literal)) {
     throw new Error(`Blocked URL: requests to private network addresses are not allowed`);
   }
 

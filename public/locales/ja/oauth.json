@@ -21,5 +21,10 @@
       "hubs:read": "所有している Hub の確認",
       "offline_access": "再度確認せずに接続を維持"
     }
+  },
+  "authorize": {
+    "errors": {
+      "repeatedClientParameter": "この認可リクエストはクライアントまたは戻り先アドレスを複数回指定しているため、処理できません。接続するアプリから接続をやり直してください。"
+    }
   }
 }

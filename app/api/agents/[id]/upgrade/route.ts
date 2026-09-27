@@ -9,6 +9,7 @@ import {
 } from '@/db/schema';
 import { validateContainerImage, validateResourceLimits } from '@/lib/agent-helpers';
 import { toClientAgent } from '@/lib/agent-response';
+import { agentOperationHttpStatus } from '@/lib/agents/operation-status';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { kubernetesService } from '@/lib/services/kubernetes-service';
 
@@ -251,10 +252,13 @@ export async function POST(
       resources: resources || previousMetadata.resources,
     };
 
-    // Update Kubernetes deployment with rolling update
+    // Update Kubernetes deployment with rolling update. Refused unless the
+    // Deployment carries this agent's owner label: re-imaging a leftover
+    // would run new code with its previous owner's credentials.
     const upgradeResult = await kubernetesService.upgradeAgent({
       name: agent.kubernetes_deployment,
       namespace: agent.kubernetes_namespace || 'agents',
+      agentUuid: agent.uuid,
       image: finalImage,
       resources,
       strategy: {
@@ -265,6 +269,14 @@ export async function POST(
         },
       },
     });
+
+    // Nothing was changed in the cluster: record no upgrade.
+    if (!upgradeResult.success) {
+      return NextResponse.json(
+        { error: upgradeResult.message },
+        { status: agentOperationHttpStatus(upgradeResult) }
+      );
+    }
 
     // Update agent metadata with upgrade info
     const [updatedAgent] = await db

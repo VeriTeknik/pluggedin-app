@@ -1,0 +1,101 @@
+# Least-privilege RBAC for the pluggedin-app agent manager
+# (lib/services/kubernetes-service.ts), bound to the ServiceAccount whose
+# token the app uses as K8S_SERVICE_ACCOUNT_TOKEN (`pap-agent-manager`, see
+# .env.example).
+#
+# Apply BEFORE deploying the release that contains the agent-ownership
+# changes. The runbook with the full order is
+# docs/ops/agent-ownership-and-isolation-migration.md.
+#
+#   kubectl apply -f docs/ops/pap-agent-manager-rbac.yaml
+#
+# The rules are exactly AGENT_MANAGER_PERMISSIONS in
+# lib/services/kubernetes-service.ts (tests/deepsec/r2c-k8s-teardown-rbac.test.ts
+# keeps them identical and checks them against every request the code makes).
+# Keep the flow-style lists below: the test parses them.
+#
+# Deliberately NOT granted:
+# - get/list/watch on secrets: the token must not be able to read other
+#   tenants' credentials. Teardown uses deletecollection with an owner-label
+#   selector, and a deploy refuses an existing Secret without reading it.
+# - delete (single object): every delete is a label-scoped deletecollection.
+# - patch on anything but deployments; deployments/scale; pods/exec;
+#   pods/portforward; anything cluster-scoped.
+#
+# Every namespace in K8S_ALLOWED_NAMESPACES that the app deploys to needs its
+# own copy of the Role and RoleBinding (change metadata.namespace; the
+# subject stays the ServiceAccount in `agents`).
+#
+# Afterwards remove any broader binding the ServiceAccount still has (for
+# example a ClusterRoleBinding to cluster-admin or edit), otherwise this Role
+# restricts nothing:
+#   kubectl get clusterrolebindings,rolebindings -A -o wide | grep pap-agent-manager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pap-agent-manager
+  namespace: agents
+  labels:
+    app.kubernetes.io/part-of: pluggedin
+rules:
+  # Deployments: create; get = ownership check before every scale/restart/
+  # upgrade/status; patch = scale/restart/upgrade (with a uid precondition);
+  # list = admin cluster view; deletecollection = teardown and rollback.
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create", "patch", "deletecollection"]
+  # Pods are only listed by owner label; logs via the log subresource.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list"]
+  # get on the following = owner check when a create hits 409 AlreadyExists.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "create", "deletecollection"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "deletecollection"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "create", "deletecollection"]
+  # No get/list/watch: see above.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "deletecollection"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "create", "deletecollection"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "create", "deletecollection"]
+  - apiGroups: ["traefik.io"]
+    resources: ["middlewares"]
+    verbs: ["get", "create", "deletecollection"]
+  - apiGroups: ["traefik.io"]
+    resources: ["ingressroutes"]
+    verbs: ["get", "create", "deletecollection"]
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates"]
+    verbs: ["get", "create", "deletecollection"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pap-agent-manager
+  namespace: agents
+  labels:
+    app.kubernetes.io/part-of: pluggedin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pap-agent-manager
+subjects:
+  - kind: ServiceAccount
+    name: pap-agent-manager
+    namespace: agents

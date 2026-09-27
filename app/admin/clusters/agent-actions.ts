@@ -11,9 +11,9 @@ import {
   DeploymentStatus,
   users,
 } from '@/db/schema';
+import { type AgentTeardownTarget, teardownAgent } from '@/lib/agents/teardown';
 import { getAuthSession } from '@/lib/auth';
 import { sendNotification } from '@/lib/server-actions/notifications';
-import { kubernetesService } from '@/lib/services/kubernetes-service';
 
 type ActionResult<T = void> = {
   success: boolean;
@@ -45,6 +45,25 @@ async function checkAdminAuth(): Promise<{ userId: string; email: string } | nul
   }
 
   return { userId: session.user.id, email: session.user.email };
+}
+
+/**
+ * Remove an agent's Kubernetes resources. Returns an error message on failure.
+ *
+ * Terminate, kill and hard delete all stop when this fails: a TERMINATED or
+ * KILLED row can be hard-deleted, which frees the agent's globally unique
+ * name, and a name freed while its Deployment/Secret/PVC still exist hands
+ * them to whoever registers it next. Idempotent, so re-running it on an
+ * already-terminated agent only confirms the resources are gone.
+ */
+async function removeKubernetesResources(agent: AgentTeardownTarget): Promise<string | null> {
+  const teardown = await teardownAgent(agent);
+  if (teardown.ok) {
+    return null;
+  }
+  console.error('Failed to delete Kubernetes resources:', { agentUuid: agent.uuid, failed: teardown.failed });
+  const detail = teardown.failed.map((failure) => failure.message).join('; ');
+  return `Failed to delete Kubernetes resources (${detail}). Agent state was not changed; retry once the cluster is reachable.`;
 }
 
 type Agent = {
@@ -308,17 +327,12 @@ export async function terminateAgent(
 
     const previousState = agent.state;
 
-    // Delete from Kubernetes if deployed
-    if (agent.kubernetes_deployment && agent.kubernetes_namespace) {
-      try {
-        await kubernetesService.deleteAgent(
-          agent.kubernetes_deployment,
-          agent.kubernetes_namespace
-        );
-      } catch (k8sError) {
-        console.error('Failed to delete Kubernetes resources:', k8sError);
-        // Continue with database update even if K8s deletion fails
-      }
+    // Delete from Kubernetes if deployed. On failure the agent stays in its
+    // current state, so it cannot be hard-deleted (freeing its name) while
+    // its resources are still in the cluster.
+    const k8sError = await removeKubernetesResources(agent);
+    if (k8sError) {
+      return { success: false, error: k8sError };
     }
 
     // Update agent state to TERMINATED
@@ -398,17 +412,11 @@ export async function killAgent(
 
     const previousState = agent.state;
 
-    // Forcefully delete from Kubernetes if deployed
-    if (agent.kubernetes_deployment && agent.kubernetes_namespace) {
-      try {
-        await kubernetesService.deleteAgent(
-          agent.kubernetes_deployment,
-          agent.kubernetes_namespace
-        );
-      } catch (k8sError) {
-        console.error('Failed to delete Kubernetes resources:', k8sError);
-        // Continue with database update even if K8s deletion fails
-      }
+    // Forcefully delete from Kubernetes if deployed. As with terminate, a
+    // failure leaves the state unchanged: KILLED agents can be hard-deleted.
+    const k8sError = await removeKubernetesResources(agent);
+    if (k8sError) {
+      return { success: false, error: k8sError };
     }
 
     // Update agent state to KILLED
@@ -493,6 +501,14 @@ export async function deleteAgent(
         success: false,
         error: `Cannot delete agent in ${agent.state} state. Terminate or kill the agent first.`,
       };
+    }
+
+    // Deleting the row frees the agent's name. Confirm its Kubernetes
+    // resources are gone first — agents terminated before terminate checked
+    // the result may still have them.
+    const k8sError = await removeKubernetesResources(agent);
+    if (k8sError) {
+      return { success: false, error: k8sError };
     }
 
     // Send notification before deletion if requested

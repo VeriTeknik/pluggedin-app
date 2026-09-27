@@ -2,14 +2,13 @@
 
 import { and, eq } from 'drizzle-orm';
 import { promises as fs } from 'fs';
-import path from 'path';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
-import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
+import { buildServerScopedPath, validatePathComponent } from '@/lib/secure-path-builder';
 
 const checkOAuthSchema = z.object({
   serverUuid: z.string().uuid(),
@@ -67,16 +66,19 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
       return { success: false, isAuthenticated: false, error: 'Not an mcp-remote server' };
     }
 
-    // Check OAuth directory for tokens
-    const oauthDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth', '.mcp-auth');
-
-    // Also check without .mcp-auth subdirectory (some versions store directly in oauth/)
-    const oauthDirAlt = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth');
+    // Every path below is inside the server's own directory. Its oauth/ is
+    // writable by the server's sandboxed child, which can turn anything in it
+    // into a symlink; anchored at the server directory, a link into another
+    // server's tokens is refused rather than counted as this server's.
+    const serverPath = (...components: string[]) =>
+      buildServerScopedPath(PackageManagerConfig.PACKAGE_STORE_DIR, validated.serverUuid, ...components);
 
     let hasTokens = false;
     
     // Check primary location - mcp-remote stores tokens in subdirectories
     try {
+      // Check OAuth directory for tokens
+      const oauthDir = serverPath('oauth', '.mcp-auth');
       await fs.access(oauthDir);
       const entries = await fs.readdir(oauthDir);
 
@@ -84,7 +86,7 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
       for (const entry of entries) {
         // Validate entry name to prevent path traversal
         validatePathComponent(entry);
-        const entryPath = buildSecurePath(oauthDir, entry);
+        const entryPath = serverPath('oauth', '.mcp-auth', entry);
         const stat = await fs.stat(entryPath);
 
         if (stat.isDirectory()) {
@@ -103,12 +105,14 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
     // Check alternate location if not found
     if (!hasTokens) {
       try {
+        // Also check without .mcp-auth subdirectory (some versions store directly in oauth/)
+        const oauthDirAlt = serverPath('oauth');
         await fs.access(oauthDirAlt);
         const files = await fs.readdir(oauthDirAlt);
 
         // Check for .mcp-auth directory
         if (files.includes('.mcp-auth')) {
-          const mcpAuthPath = buildSecurePath(oauthDirAlt, '.mcp-auth');
+          const mcpAuthPath = serverPath('oauth', '.mcp-auth');
           const stat = await fs.stat(mcpAuthPath);
 
           if (stat.isDirectory()) {
@@ -117,7 +121,7 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
             for (const entry of mcpAuthEntries) {
               // Validate entry name to prevent path traversal
               validatePathComponent(entry);
-              const entryPath = buildSecurePath(mcpAuthPath, entry);
+              const entryPath = serverPath('oauth', '.mcp-auth', entry);
               const entryStat = await fs.stat(entryPath);
 
               if (entryStat.isDirectory()) {

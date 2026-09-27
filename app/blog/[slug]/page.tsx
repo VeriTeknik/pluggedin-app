@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { serializeJsonLd } from '@/lib/json-ld';
 
 import { getBlogPostBySlug } from '../actions';
 import { BlogContent } from './blog-content';
@@ -142,11 +143,11 @@ export default async function BlogPostPage({ params }: Props) {
       {/* Content */}
       <BlogContent post={post} />
 
-      {/* Structured Data */}
+      {/* Structured Data — serializeJsonLd escapes `<` so author-controlled text cannot close the tag */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             '@context': 'https://schema.org',
             '@type': 'BlogPosting',
             headline: enTranslation.title,

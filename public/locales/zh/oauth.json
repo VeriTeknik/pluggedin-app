@@ -21,5 +21,10 @@
       "hubs:read": "查看您拥有哪些 Hub",
       "offline_access": "保持连接而不再询问您"
     }
+  },
+  "authorize": {
+    "errors": {
+      "repeatedClientParameter": "此授权请求多次指定了客户端或返回地址，因此无法处理。请从您要连接的应用重新开始连接。"
+    }
   }
 }

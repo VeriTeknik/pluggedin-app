@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { modelRouterServicesTable, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { safeFetch } from '@/lib/oauth/ssrf-protection';
 import { validateServiceUrl } from '@/lib/validation-utils';
 
 /**
@@ -71,11 +72,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let success = false;
 
     try {
-      // Validate URLs to prevent SSRF (e.g., requests to cloud metadata endpoints)
+      // Validate URLs to prevent SSRF (e.g., requests to cloud metadata endpoints).
+      // The text check cannot see where a name resolves or redirects to;
+      // safeFetch does, as the sync routes use it.
       const healthUrl = validateServiceUrl(service.url, service.health_endpoint || '/health');
 
       // Test health endpoint
-      const healthResponse = await fetch(healthUrl, {
+      const healthResponse = await safeFetch(healthUrl, {
         method: 'GET',
         signal: AbortSignal.timeout(10000),
       });
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       if (success) {
         try {
           const modelsUrl = validateServiceUrl(service.url, service.models_endpoint || '/v1/models');
-          const modelsResponse = await fetch(modelsUrl, {
+          const modelsResponse = await safeFetch(modelsUrl, {
             method: 'GET',
             signal: AbortSignal.timeout(10000),
           });

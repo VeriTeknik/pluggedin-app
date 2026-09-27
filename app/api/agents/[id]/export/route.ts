@@ -212,7 +212,8 @@ export async function POST(
     if (agent.kubernetes_deployment) {
       const deploymentStatus = await kubernetesService.getDeploymentStatus(
         agent.kubernetes_deployment,
-        agent.kubernetes_namespace || 'agents'
+        agent.kubernetes_namespace || 'agents',
+        agent.uuid
       );
 
       if (deploymentStatus) {

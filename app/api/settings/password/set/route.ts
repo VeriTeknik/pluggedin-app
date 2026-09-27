@@ -9,6 +9,7 @@ import { users } from '@/db/schema';
 import { createErrorResponse } from '@/lib/api-errors';
 import { authOptions } from '@/lib/auth';
 import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
+import { hasRecentOAuthSignIn } from '@/lib/credential-reverification';
 import { validateCSRF } from '@/lib/csrf-protection';
 import { generatePasswordSetEmail,sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
@@ -38,7 +39,7 @@ const setPasswordSchema = z.object({
  * /api/settings/password/set:
  *   post:
  *     summary: Set password for OAuth-only user
- *     description: Allows users who registered with OAuth to add a password for email/password login.
+ *     description: Allows users who registered with OAuth to add a password for email/password login. The session must have signed in through a linked provider within the last 5 minutes.
  *     tags:
  *       - Settings
  *     security:
@@ -80,6 +81,8 @@ const setPasswordSchema = z.object({
  *         description: Bad Request - Invalid input or password already exists
  *       401:
  *         description: Unauthorized - Not authenticated
+ *       403:
+ *         description: Re-authentication required (code REAUTH_REQUIRED) - sign in again with a linked provider
  *       429:
  *         description: Too Many Requests - Rate limit exceeded
  *       500:
@@ -114,6 +117,9 @@ export async function POST(req: NextRequest) {
     // Get user
     const user = await db.query.users.findFirst({
       where: eq(users.id, session.user.id),
+      with: {
+        accounts: true,
+      },
     });
 
     if (!user) {
@@ -128,6 +134,20 @@ export async function POST(req: NextRequest) {
           error: 'Password already exists. Use the change password option instead.',
         },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Adding a credential requires that this session signed in
+    // recently through a linked provider, so a stolen session cannot mint a
+    // permanent password login.
+    if (!hasRecentOAuthSignIn(session, user.accounts ?? [])) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'REAUTH_REQUIRED',
+          error: 'For your security, sign in again with a connected account, then set your password.',
+        },
+        { status: 403 }
       );
     }
 

@@ -330,7 +330,7 @@ export async function updateMcpServer(
     let serverType: McpServerType | undefined = data.type;
   
   // If type is not being updated but we need to validate type-specific fields, get current server type
-  if (!serverType && (data.url !== undefined || data.command !== undefined || data.streamableHTTPOptions !== undefined)) {
+  if (!serverType && (data.url !== undefined || data.command !== undefined || data.args !== undefined || data.streamableHTTPOptions !== undefined)) {
     const currentServer = await getMcpServerByUuid(profileUuid, uuid);
     if (currentServer) {
       serverType = currentServer.type;
@@ -385,7 +385,15 @@ export async function updateMcpServer(
   if (data.args !== undefined) sensitiveData.args = data.args;
   if (data.env !== undefined) sensitiveData.env = data.env;
   if (data.url !== undefined) sensitiveData.url = data.url;
-  
+
+  // A remote server runs no local process, so it keeps no command or args:
+  // supplied ones are dropped, and switching to a remote type clears old ones.
+  const isRemoteType = serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP;
+  if (isRemoteType && (data.type !== undefined || data.command !== undefined || data.args !== undefined)) {
+    sensitiveData.command = null;
+    sensitiveData.args = [];
+  }
+
   // Handle transport-specific options separately
   if (data.transport !== undefined) sensitiveData.transport = data.transport;
   if (data.streamableHTTPOptions !== undefined) sensitiveData.streamableHTTPOptions = data.streamableHTTPOptions;
@@ -608,8 +616,9 @@ export async function createMcpServer({
       name,
       description,
       type: serverType,
+      // Process fields belong to STDIO only; a remote server runs nothing locally.
       command: serverType === McpServerType.STDIO ? command : null,
-      args: args || [],
+      args: serverType === McpServerType.STDIO ? (args || []) : [],
       env: env || {},
       url: (serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) ? url : null,
       profile_uuid: profileUuid,
@@ -794,11 +803,13 @@ export async function bulkImportMcpServers(
       }
     }
     
+    // Process fields belong to STDIO only; a remote server runs nothing locally.
+    const isStdio = serverType === McpServerType.STDIO;
     const serverData = {
       name,
       description: serverConfig.description || '',
-      command: serverConfig.command || null,
-      args: serverConfig.args || [],
+      command: isStdio ? serverConfig.command || null : null,
+      args: isStdio ? serverConfig.args || [] : [],
       env: serverConfig.env || {},
       url: serverConfig.url || null,
       type: serverType,
@@ -940,12 +951,14 @@ export async function importSharedServer(
     }
     
     // Use the template values or the original server values with appropriate defaults
+    // Process fields belong to STDIO only; a remote server runs nothing locally.
+    const isStdio = type === McpServerType.STDIO;
     const serverToImport = {
       name: serverName,
       description: serverData.description, // Ensure description is properly transferred
       type: serverData.type,
-      command: serverData.command,
-      args: sanitizedArgs,
+      command: isStdio ? serverData.command : null,
+      args: isStdio ? sanitizedArgs : [],
       // If it's a template, use the sanitized env, otherwise use empty object
       env: isTemplate && serverData.env ? serverData.env : {}, 
       url: serverData.url,
@@ -1015,43 +1028,48 @@ export async function importSharedServer(
  * Create a shareable template from an MCP server by removing sensitive information
  * but preserving structure with placeholders
  *
+ * This is a public server action and everything it reads is unpublished: the
+ * server's custom instructions, and on request its connection fields. So the
+ * caller must own `server.uuid` before anything is read, and the template is
+ * built from the stored row rather than whatever object the caller passed in.
+ *
  * The connection fields - command, args, env, url, transport and
  * streamableHTTPOptions - are encrypted at rest because they carry the server's
  * credentials. They are left out entirely by default. The share wizard asks for
  * them via `includeConnectionFields` so the owner can review the install recipe
- * before publishing; that path re-reads the server under an ownership check
- * rather than decrypting whatever ciphertext the caller passed in, since this is
- * a public server action.
+ * before publishing.
  *
  * Either way the result goes through `sanitizeServerTemplate`, so what comes
  * back is structure - command, args, env keys - with the values redacted.
  *
- * @param server The original MCP server
+ * @param server The original MCP server; only its `uuid` is used
  * @param options.includeConnectionFields Include the connection structure.
- *   Requires an authenticated session that owns `server.uuid`.
  * @returns A sanitized version for sharing
  */
 export async function createShareableTemplate(
   server: McpServer,
   options: { includeConnectionFields?: boolean } = {}
 ): Promise<any> {
+  // withServerAuth hands over the whole stored row; its signature only names
+  // the two columns every caller needs.
+  const storedServer = await withServerAuth(
+    server.uuid,
+    async (_session, ownedServer) => ownedServer as typeof mcpServersTable.$inferSelect
+  );
+
   // Create template with basic server information (non-sensitive fields)
   const template: any = {
-    uuid: server.uuid,
-    name: server.name,
-    description: server.description,
-    type: server.type,
-    source: server.source,
-    status: server.status,
-    created_at: server.created_at,
-    updated_at: (server as any).updated_at,
+    uuid: storedServer.uuid,
+    name: storedServer.name,
+    description: storedServer.description,
+    type: storedServer.type,
+    source: storedServer.source,
+    status: storedServer.status,
+    created_at: storedServer.created_at,
+    updated_at: (storedServer as any).updated_at,
   };
 
   if (options.includeConnectionFields) {
-    const storedServer = await withServerAuth(
-      server.uuid,
-      async (_session, ownedServer) => ownedServer
-    );
     const decryptedServer = decryptServerData(storedServer as any);
 
     template.transport = (decryptedServer as any).transport;
@@ -1063,12 +1081,12 @@ export async function createShareableTemplate(
   }
 
   // Add metadata about the source server
-  template.originalServerUuid = server.uuid;
+  template.originalServerUuid = storedServer.uuid;
   
   try {
     // Get profile information with user data
     const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, server.profile_uuid),
+      where: eq(profilesTable.uuid, storedServer.profile_uuid),
       with: {
         project: {
           with: {
@@ -1084,7 +1102,7 @@ export async function createShareableTemplate(
     });
     
     if (profile?.project?.user) {
-      template.sharedBy = profile.project.user.username || profile.project.user.name || server.profile_uuid;
+      template.sharedBy = profile.project.user.username || profile.project.user.name || storedServer.profile_uuid;
     }
   } catch (error) {
     console.error("Error fetching profile information:", error);
@@ -1094,7 +1112,7 @@ export async function createShareableTemplate(
   // Fetch and include custom instructions if they exist
   try {
     const customInstructions = await db.query.customInstructionsTable.findFirst({
-      where: eq(customInstructionsTable.mcp_server_uuid, server.uuid),
+      where: eq(customInstructionsTable.mcp_server_uuid, storedServer.uuid),
     });
     
     if (customInstructions) {

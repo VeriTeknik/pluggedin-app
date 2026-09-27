@@ -46,7 +46,18 @@ x-app-environment: &app-env
   MCP_ISOLATION_TYPE: bubblewrap
   MCP_ISOLATION_FALLBACK: none
   MCP_ENABLE_NETWORK_ISOLATION: "false"
-  REDIS_URL: redis://redis:6379
+  # REDIS_URL is deliberately NOT set here. It carries the Redis password, so
+  # deploy.sh derives it from REDIS_PASSWORD and writes it into the mounted
+  # secrets file. It must not be set here at all: dotenv never overrides a
+  # variable already in the environment, so a value here would shadow the
+  # authenticated one and the app would connect without a password.
+  #
+  # Why Redis needs a password on a private bridge: MCP_ENABLE_NETWORK_ISOLATION
+  # is false, so bubblewrap runs tenant STDIO servers with --share-net, i.e. in
+  # this container's network namespace. Anything a user registers as an MCP
+  # server can open redis:6379 directly. The sandbox cannot read the password:
+  # /run/secrets is not bound into it, its PID namespace is private, and its
+  # environment is allowlisted (lib/mcp/child-env.ts).
   UPLOADS_DIR: /app/uploads
 
 services:
@@ -329,10 +340,23 @@ services:
     container_name: redis
     volumes:
       - redisdata:/data
+      # `requirepass <REDIS_PASSWORD>`, rendered by deploy.sh into tmpfs. A
+      # config file rather than a --requirepass argument, because arguments
+      # land in Config.Cmd and in `top`, both readable through the socket
+      # proxy. create_host_path=false: if deploy.sh has not rendered it, fail
+      # to start instead of letting Docker create a directory in its place.
+      - type: bind
+        source: /run/sops/redis.conf
+        target: /usr/local/etc/redis/redis.conf
+        read_only: true
+        bind:
+          create_host_path: false
     networks:
       - pluggedin
     command:
       - redis-server
+      # Must be the first argument: redis-server only takes a config file there.
+      - /usr/local/etc/redis/redis.conf
       - --appendonly
       - "yes"
       - --appendfsync
@@ -342,7 +366,9 @@ services:
       - --maxmemory-policy
       - allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # With requirepass an unauthenticated PING gets NOAUTH, so authenticate.
+      # REDISCLI_AUTH keeps the password off the redis-cli command line.
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(sed -n 's/^requirepass //p' /usr/local/etc/redis/redis.conf)\" redis-cli ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 5

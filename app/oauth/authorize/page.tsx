@@ -3,7 +3,11 @@ import { getServerSession } from 'next-auth/next';
 
 import { getProjects } from '@/app/actions/projects';
 import { authOptions } from '@/lib/auth';
-import { buildErrorRedirect, parseAuthorizeParams } from '@/lib/oauth/provider/authorize';
+import {
+  buildErrorRedirect,
+  findRepeatedParam,
+  parseAuthorizeParams,
+} from '@/lib/oauth/provider/authorize';
 import { describeClient } from '@/lib/oauth/provider/client-display';
 import { resolveClient } from '@/lib/oauth/provider/clients';
 import { issueConsentTicket } from '@/lib/oauth/provider/consent-ticket';
@@ -11,6 +15,7 @@ import { connectorBaseUrl } from '@/lib/oauth/provider/metadata';
 import { isLoopbackRedirect, redirectUriMatches } from '@/lib/oauth/provider/redirect-uri';
 
 import { ConsentForm } from './consent-form';
+import { AuthorizeRequestError } from './request-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +25,15 @@ export default async function AuthorizePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const raw = await searchParams;
-  const params = new URLSearchParams(
-    Object.entries(raw).flatMap(([k, v]) =>
-      v === undefined ? [] : [[k, Array.isArray(v) ? v[0] : v] as [string, string]]
-    )
-  );
+  // Every value of a repeated key is kept. Keeping only the first let
+  // `resource=<connector>&resource=<attacker>` reach the parser as a request
+  // for the connector alone; judging repeats is the parser's job (RFC 6749
+  // s3.1, RFC 8707 s2).
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(raw)) {
+    if (value === undefined) continue;
+    for (const item of Array.isArray(value) ? value : [value]) params.append(key, item);
+  }
 
   // Order matters here, and RFC 6749 s4.1.2.1 dictates it: when the client
   // identifier or the redirect URI is missing, invalid or unregistered, the
@@ -32,7 +41,11 @@ export default async function AuthorizePage({
   // redirect URI" — it has to tell the user instead. So the redirect URI earns
   // the right to receive errors only after it has been matched against a
   // resolved client. Everything before that point renders; everything after it
-  // may redirect.
+  // may redirect. A repeated client_id or redirect_uri is ambiguous about both.
+  if (findRepeatedParam(params, ['client_id', 'redirect_uri'])) {
+    return <AuthorizeRequestError reason="repeatedClientParameter" />;
+  }
+
   const clientId = params.get('client_id');
   const redirectUri = params.get('redirect_uri');
   if (!clientId || !redirectUri) {

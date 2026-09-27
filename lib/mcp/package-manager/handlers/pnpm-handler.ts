@@ -4,7 +4,7 @@ import { promisify } from 'util';
 
 import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
-import { validatePackageName, validatePackageVersion } from '@/lib/security/package-name';
+import { validateNpmPackageSpec, validatePackageVersion } from '@/lib/security/package-name';
 
 import { PackageManagerConfig } from '../config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
@@ -22,8 +22,9 @@ export class PnpmHandler extends BasePackageHandler {
     // The name and version come out of a user-supplied args array. argv
     // execution above already keeps them away from a shell; this keeps a
     // malformed value out of the filesystem-path builders too, and fails the
-    // install before anything is spawned.
-    const nameCheck = validatePackageName(packageName);
+    // install before anything is spawned. It has to be a registry name: pnpm
+    // fetches a URL, git or GitHub spec itself, from the host, outside safeFetch.
+    const nameCheck = validateNpmPackageSpec(packageName);
     if (!nameCheck.valid) {
       throw new Error(`Invalid package name: ${nameCheck.error}`);
     }
@@ -37,8 +38,9 @@ export class PnpmHandler extends BasePackageHandler {
     
     this.log('Installing package', { serverUuid, packageName, version, installDir });
     
-    // Ensure directory exists
-    await this.ensureDirectory(installDir);
+    // An empty directory, not an existing one: the server's sandbox can write
+    // here, and pnpm reads .npmrc and .pnpmfile.cjs from its project root.
+    await this.resetDirectory(installDir);
 
     // Create minimal package.json if not exists
     const packageJsonPath = buildSecurePath(installDir, 'package.json');
@@ -57,8 +59,18 @@ export class PnpmHandler extends BasePackageHandler {
     const packageSpec = version ? `${packageName}@${version}` : packageName;
     
     try {
-      // Install package using pnpm
-      const { stdout, stderr } = await execFileAsync('pnpm', ['add', packageSpec], {
+      // Install package using pnpm. This runs on the host, before the sandbox
+      // exists, so nothing package- or server-controlled may execute: no
+      // lifecycle scripts, no pnpmfile hooks, and no pnpm-workspace.yaml picked
+      // up from the (sandbox-writable) server directory above. The server runs
+      // its package inside the sandbox, where scripts are the sandbox's problem.
+      const { stdout, stderr } = await execFileAsync('pnpm', [
+        'add',
+        '--ignore-scripts',
+        '--ignore-pnpmfile',
+        '--ignore-workspace',
+        packageSpec,
+      ], {
         cwd: installDir,
         env: {
           ...inheritableChildEnv(),

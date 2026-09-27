@@ -1,8 +1,11 @@
 /**
  * Seed script for OpenCode Chamber Template
  *
- * AI-first chat interface with web terminal.
- * Uses OpenChamber UI with OpenCode serve API backend.
+ * AI-first chat interface for coding.
+ * Uses OpenChamber UI with a per-agent OpenCode serve API backend. The OpenCode
+ * API and the ttyd maintenance shell listen on loopback inside the pod only
+ * (see lib/agents/opencode-manifests.ts), so the template must not advertise
+ * them as endpoints.
  *
  * Run with: pnpm tsx scripts/seed-opencode-chamber-template.ts
  */
@@ -16,7 +19,7 @@ const OPENCODE_CHAMBER_TEMPLATE = {
   name: 'opencode-chamber',
   version: '1.0.0',
   display_name: 'OpenCode Chamber',
-  description: 'AI-first chat interface for coding. Clean, modern chat UI with real-time streaming and web terminal.',
+  description: 'AI-first chat interface for coding. Clean, modern chat UI with real-time streaming and a persistent workspace.',
   long_description: `# OpenCode Chamber
 
 A modern, AI-first chat interface for coding with OpenCode.
@@ -25,8 +28,7 @@ A modern, AI-first chat interface for coding with OpenCode.
 
 - **Chat UI**: Clean, modern chat interface built with React 19
 - **Real-time Streaming**: Watch AI responses stream in real-time
-- **Web Terminal**: Full terminal access via ttyd
-- **OpenCode API**: Powerful AI coding backend
+- **OpenCode API**: Powerful AI coding backend, private to your agent and reached only through the chat UI
 - **Persistent Workspace**: Your files are saved in a persistent volume
 
 ## How It Works
@@ -34,7 +36,6 @@ A modern, AI-first chat interface for coding with OpenCode.
 1. **Access Your Agent**: Open your agent URL to get the chat interface
 2. **Start Chatting**: Type your coding requests in natural language
 3. **View Progress**: Watch as OpenCode writes and edits your code
-4. **Use Terminal**: Access \`/terminal\` for full shell access
 
 ## Features
 
@@ -42,7 +43,6 @@ A modern, AI-first chat interface for coding with OpenCode.
 - ✅ Real-time streaming responses
 - ✅ Code syntax highlighting
 - ✅ Tool execution visualization
-- ✅ Web terminal access
 - ✅ Persistent workspace storage (10Gi default)
 - ✅ Password-protected access
 - ✅ Multiple AI model support via Model Router
@@ -53,11 +53,16 @@ A modern, AI-first chat interface for coding with OpenCode.
 | Path | Description |
 |------|-------------|
 | \`/\` | Chat UI (OpenChamber) |
-| \`/terminal\` | Web terminal (ttyd) |
-| \`/opencode\` | OpenCode API |
-| \`/api\` | Agent API |
+| \`/code\` | Chat UI (OpenChamber) |
+| \`/api\` | OpenChamber API (password-protected; talks to OpenCode for you) |
+| \`/auth\` | OpenChamber sign-in |
+| \`/pap-api\` | Agent API (PAP) |
 | \`/health\` | Health check |
 | \`/metrics\` | Prometheus metrics |
+
+The OpenCode API itself is not published: it listens on localhost inside your
+agent and is reached only through the password-protected chat UI. There is no
+public web terminal.
 
 ## Lifecycle Management
 
@@ -169,18 +174,22 @@ OpenCode Chamber is designed to work well on mobile devices, making it perfect f
         idle_timeout: '30m',
       },
       {
+        // Unauthenticated API: bound to 127.0.0.1, reached only via openchamber.
         name: 'opencode-serve',
         image: 'ghcr.io/veriteknik/opencode-server:latest',
         port: 4000,
         essential: false,
         idle_timeout: '30m',
+        loopback_only: true,
       },
       {
+        // Maintenance shell: bound to loopback, `kubectl port-forward` only.
         name: 'ttyd',
         image: 'tsl0922/ttyd:alpine',
         port: 7681,
         essential: false,
         idle_timeout: '15m',
+        loopback_only: true,
       },
       {
         name: 'pap-client',
@@ -205,16 +214,19 @@ OpenCode Chamber is designed to work well on mobile devices, making it perfect f
       { name: 'workspace', type: 'pvc', size: '10Gi' },
       { name: 'opencode-config', type: 'emptyDir' }, // Init writes here
     ],
+    // Mirrors the IngressRoute in lib/agents/opencode-manifests.ts. There is
+    // deliberately no route to ttyd or opencode-serve.
     routing: {
       '/': { target: 'openchamber', port: 3000 },
-      '/terminal': { target: 'ttyd', port: 7681 },
-      '/opencode': { target: 'opencode-serve', port: 4000 },
-      '/api': { target: 'agent-api', port: 8080 },
+      '/code': { target: 'openchamber', port: 3000 },
+      '/api': { target: 'openchamber', port: 3000 },
+      '/auth': { target: 'openchamber', port: 3000 },
+      '/pap-api': { target: 'agent-api', port: 8080 },
       '/health': { target: 'agent-api', port: 8080 },
       '/metrics': { target: 'agent-api', port: 9090 },
     },
   },
-  tags: ['ai', 'development', 'chat', 'coding', 'opencode', 'terminal', 'mobile'],
+  tags: ['ai', 'development', 'chat', 'coding', 'opencode', 'mobile'],
   category: 'development',
   is_public: true,
   is_verified: true,

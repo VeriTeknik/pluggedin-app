@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable } from '@/db/schema';
+import { teardownAgentsInProject } from '@/lib/agents/teardown';
 import { withAuth, withProjectAuth } from '@/lib/auth-helpers';
 import { createDefaultProject } from '@/lib/default-project-creation';
 
@@ -112,6 +113,22 @@ export async function deleteProject(projectUuid: string) {
 
     if (projectCount.length === 1) {
       throw new Error('Cannot delete the last project');
+    }
+
+    // The FK cascade (projects → profiles → agents) frees the agents' globally
+    // unique names. Remove their Kubernetes resources first, and keep the Hub
+    // if that fails, so no Deployment/Secret/PVC outlives the name it is
+    // addressed by. Thrown (not returned) like the guard above, so the caller
+    // does not report success.
+    const teardown = await teardownAgentsInProject(project.uuid);
+    if (!teardown.ok) {
+      console.error('Project deletion blocked: agent teardown failed', {
+        projectUuid: project.uuid,
+        failed: teardown.failed,
+      });
+      throw new Error(
+        "Could not remove this Hub's agent infrastructure. The Hub was not deleted; please try again later."
+      );
     }
 
     await db.delete(projectsTable).where(eq(projectsTable.uuid, project.uuid));

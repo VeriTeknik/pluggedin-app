@@ -4,7 +4,7 @@
 #
 #  - Traefik: /ping returns OK
 #  - Postgres: pg_isready and SELECT 1
-#  - Redis:    PING returns PONG
+#  - Redis:    authenticated PING returns PONG; unauthenticated is refused
 #  - App:      /api/health returns 200 with status "healthy" and database true
 #  - RAG:      the "GSLB" canary query returns the VeriTeknik doc
 #              (this is exactly the failure mode that motivated the docker
@@ -50,8 +50,21 @@ if [ "$MODE" != "app" ]; then
     && pass "SELECT 1" || fail "SELECT 1"
 
   hdr "redis"
-  "${COMPOSE[@]}" exec -T redis redis-cli PING | grep -q PONG \
-    && pass "PING" || fail "PING"
+  # Authenticate from inside the container, so the password never appears on
+  # the host command line. The single quotes are intentional: the redis
+  # container's shell expands them, not this one.
+  # shellcheck disable=SC2016
+  "${COMPOSE[@]}" exec -T redis sh -c \
+    'REDISCLI_AUTH="$(sed -n "s/^requirepass //p" /usr/local/etc/redis/redis.conf)" redis-cli PING' \
+    | grep -q PONG \
+    && pass "PING (authenticated)" || fail "PING (authenticated)"
+  # Tenant MCP sandboxes share the app's network namespace and can reach
+  # redis:6379, so an unauthenticated client must be refused.
+  UNAUTH=$("${COMPOSE[@]}" exec -T redis redis-cli PING 2>&1 || true)
+  case "$UNAUTH" in
+    *NOAUTH*) pass "unauthenticated PING refused" ;;
+    *) fail "redis did not refuse an unauthenticated PING: ${UNAUTH:-<no response>}" ;;
+  esac
 fi
 
 hdr "pluggedin-app /api/health"

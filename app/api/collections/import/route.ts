@@ -259,13 +259,16 @@ export async function POST(request: Request) {
       });
 
       if (!existingServer) {
-        // Prepare server data
+        // Prepare server data. Process fields belong to STDIO only; a remote
+        // server runs nothing locally.
+        const type = (serverConfig as any).type || McpServerType.STDIO;
+        const isStdio = type === McpServerType.STDIO;
         const serverData = {
           name: serverName,
           description: (serverConfig as any).description || '',
-          type: (serverConfig as any).type || McpServerType.STDIO,
-          command: (serverConfig as any).command || null,
-          args: (serverConfig as any).args || [],
+          type,
+          command: isStdio ? (serverConfig as any).command || null : null,
+          args: isStdio ? (serverConfig as any).args || [] : [],
           env: (serverConfig as any).env || {},
           url: (serverConfig as any).url || null,
           oauth_token: (serverConfig as any).oauth_token || null,

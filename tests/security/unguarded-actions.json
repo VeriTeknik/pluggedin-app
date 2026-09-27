@@ -9,8 +9,6 @@
   "app/actions/mcp-server-metrics.ts#trackServerInstallation",
   "app/actions/mcp-server-user-rating.ts#getUserRating",
   "app/actions/mcp-server-user-rating.ts#getUserRatingsForServers",
-  "app/actions/playground-settings.ts#getPlaygroundSettings",
-  "app/actions/playground-settings.ts#updatePlaygroundSettings",
   "app/actions/profiles.ts#getProfile",
   "app/actions/profiles.ts#setActiveProfile",
   "app/actions/registry-servers.ts#getClaimableServers",

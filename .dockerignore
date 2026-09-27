@@ -15,3 +15,61 @@ LICENSE
 # TypeDoc
 typedoc.json
 docs/api/
+
+# ─── Secrets: never part of the build context ────────────────────────
+# Both Dockerfiles run `COPY . .`, and .gitignore does NOT filter a local
+# build context — so without these a `docker build` from a configured
+# checkout (the prod host, a self-hoster's box, a laptop) copies the live
+# .env into the builder layer. Next.js standalone output then copies loaded
+# .env files into .next/standalone/, which the runtime stage ships, and
+# `cache-to ... mode=max` would also export the builder layer itself to the
+# registry cache. CI checkouts carry none of these, so excluding them only
+# changes what a local build can leak.
+#
+# `**/` also matches the context root. The trailing re-include keeps the
+# committed template available.
+**/.env
+**/.env.*
+**/.envrc
+!.env.example
+**/.npmrc
+**/.yarnrc
+**/.yarnrc.yml
+**/.netrc
+**/.pgpass
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/id_rsa*
+**/id_ecdsa*
+**/id_ed25519*
+**/.ssh
+**/.aws
+**/.docker
+**/.kube
+**/*.tfstate
+**/*.tfstate.*
+# Local secret directories and the SOPS blob. Root-anchored on purpose:
+# `**/secrets` would also drop any source directory that merely has that name.
+secrets
+.secrets
+infra/sops
+# Local tool settings can carry tokens (e.g. settings.local.json env blocks).
+.claude
+.vercel
+
+# ─── Runtime data and dumps: user content, not source ────────────────
+# Root-anchored: `**/logs` would drop app/api/agents/[id]/logs/, which is
+# a route, not a log directory.
+uploads
+data
+logs
+backups
+console-log-backup-*
+z_reports
+memory-bank
+coverage
+**/*.dump
+**/*.sql.gz
+**/*.tar.age

@@ -13,6 +13,13 @@
  *
  * Both templates include essential containers (pap-client, agent-api) that
  * never shut down, and non-essential containers that scale down on idle.
+ *
+ * Isolation: every tenant's pod runs in the same namespace, so anything a pod
+ * listens on is reachable from every other tenant's pod unless it is bound to
+ * loopback. Unauthenticated listeners (the ttyd shell, the OpenCode API) are
+ * therefore `loopbackOnly`: bound to 127.0.0.1 and never published on the
+ * Service. A NetworkPolicy additionally limits ingress to the ingress
+ * controller and the agent's own pods.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,6 +33,10 @@ export interface ContainerSpec {
   portName: string;
   essential: boolean; // Never scales down if true
   idleTimeoutMinutes?: number; // For non-essential containers
+  // Listener is bound to 127.0.0.1 and reachable only from inside the pod (or
+  // `kubectl port-forward`). It is never added to the Service or declared as a
+  // container port. Required for anything that does not authenticate callers.
+  loopbackOnly?: boolean;
   env?: Array<{ name: string; value?: string; valueFrom?: object }>;
   resources: {
     cpuRequest: string;
@@ -100,6 +111,42 @@ export interface OpenCodeAgentConfig {
 
   // Optional overrides
   workspaceStorageSize?: string; // e.g., '10Gi'
+  // Namespace of the ingress controller (Traefik) allowed through the
+  // NetworkPolicy. K3s runs its bundled Traefik in kube-system.
+  ingressControllerNamespace?: string;
+}
+
+const DEFAULT_INGRESS_CONTROLLER_NAMESPACE = 'kube-system';
+
+/**
+ * Owner label: binds a resource to the immutable agent identity, so
+ * management code can tell whose resource it is instead of trusting a
+ * reusable name. Must match AGENT_UUID_LABEL in lib/services/kubernetes-service.ts.
+ */
+export const AGENT_OWNER_LABEL = 'pap.plugged.in/agent-uuid';
+
+/** Labels on every resource (and on the pods), including the owner label. */
+function resourceLabels(config: OpenCodeAgentConfig): Record<string, string> {
+  return {
+    app: config.name,
+    'pap-agent': 'true',
+    [AGENT_OWNER_LABEL]: config.agentUuid,
+  };
+}
+
+/**
+ * Health check for a loopback-only listener: the kubelet probes the pod IP, so
+ * an httpGet probe cannot reach it. Runs inside the container with whichever
+ * of wget/curl the image has; with neither, the probe passes (no worse than
+ * having no probe) rather than restart-looping the container.
+ */
+function loopbackHealthCheck(url: string): string[] {
+  return [
+    '/bin/sh',
+    '-c',
+    `if command -v wget >/dev/null 2>&1; then exec wget -q -O /dev/null ${url}; ` +
+      `elif command -v curl >/dev/null 2>&1; then exec curl -fsS -o /dev/null ${url}; fi`,
+  ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -248,8 +295,10 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       `],
       env: [
         ...COMMON_ENV(config),
-        // Connect to opencode-serve via Kubernetes service DNS (localhost has IPv4/IPv6 issues)
-        { name: 'OPENCODE_URL', value: `http://${config.name}.${config.namespace}.svc.cluster.local:4000` },
+        // opencode-serve listens on 127.0.0.1 only. Use the IPv4 literal, not
+        // `localhost` (which can resolve to ::1), and never the Service DNS:
+        // the OpenCode API is unauthenticated, so it must not be published.
+        { name: 'OPENCODE_URL', value: 'http://127.0.0.1:4000' },
         { name: 'OPENCHAMBER_UI_PASSWORD', valueFrom: { secretKeyRef: { name: config.secretName, key: 'ui-password' } } },
       ],
       resources: {
@@ -272,7 +321,8 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
         periodSeconds: 10,
       },
     },
-    // OpenCode API server (per-pod for tenant isolation)
+    // OpenCode API server (per-pod for tenant isolation). It has no auth of
+    // its own — openchamber in front of it does — so it is loopback-only.
     {
       name: 'opencode-serve',
       image: 'ghcr.io/veriteknik/opencode-server:latest',
@@ -280,10 +330,11 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       portName: 'opencode',
       essential: false,
       idleTimeoutMinutes: 30,
+      loopbackOnly: true,
       env: [
         ...COMMON_ENV(config),
         { name: 'PORT', value: '4000' },
-        { name: 'HOST', value: '0.0.0.0' },
+        { name: 'HOST', value: '127.0.0.1' },
       ],
       resources: {
         cpuRequest: '200m',
@@ -297,19 +348,22 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       ],
       workingDir: '/workspace',
       livenessProbe: {
-        httpGet: { path: '/global/health', port: 4000 },
+        exec: { command: loopbackHealthCheck('http://127.0.0.1:4000/global/health') },
         initialDelaySeconds: 15,
         periodSeconds: 30,
         timeoutSeconds: 5,
       },
       readinessProbe: {
-        httpGet: { path: '/global/health', port: 4000 },
+        exec: { command: loopbackHealthCheck('http://127.0.0.1:4000/global/health') },
         initialDelaySeconds: 10,
         periodSeconds: 10,
         timeoutSeconds: 5,
       },
     },
-    // Web terminal (ttyd)
+    // Web terminal (ttyd): a writable shell with no authentication. Bound to
+    // loopback (`-i lo`), so it is reachable only with `kubectl port-forward`
+    // (cluster credentials) — never from another tenant's pod. It gets no Hub,
+    // PAP or model-router credentials; a maintenance shell does not need them.
     {
       name: 'ttyd',
       image: 'tsl0922/ttyd:alpine',
@@ -317,7 +371,13 @@ function getOpenCodeChamberContainers(config: OpenCodeAgentConfig): ContainerSpe
       portName: 'terminal',
       essential: false,
       idleTimeoutMinutes: 15,
-      command: ['ttyd', '-W', '-p', '7681', 'sh'],
+      loopbackOnly: true,
+      command: ['ttyd', '-W', '-i', 'lo', '-p', '7681', 'sh'],
+      env: [
+        { name: 'AGENT_NAME', value: config.name },
+        { name: 'AGENT_UUID', value: config.agentUuid },
+        { name: 'AGENT_DOMAIN', value: config.dnsName },
+      ],
       resources: {
         cpuRequest: '50m',
         memoryRequest: '64Mi',
@@ -345,7 +405,7 @@ function buildPvcManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: `${config.name}-workspace`,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true' },
+      labels: resourceLabels(config),
     },
     spec: {
       accessModes: ['ReadWriteOnce'],
@@ -369,7 +429,7 @@ function buildSecretManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: config.secretName,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true' },
+      labels: resourceLabels(config),
     },
     type: 'Opaque',
     data: {
@@ -415,7 +475,7 @@ function buildConfigMapManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: config.configMapName,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true' },
+      labels: resourceLabels(config),
     },
     data: {
       'opencode.json': JSON.stringify(opencodeConfig, null, 2),
@@ -462,14 +522,16 @@ function buildDeploymentManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: config.name,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true', template: config.templateType },
+      labels: { ...resourceLabels(config), template: config.templateType },
     },
     spec: {
       replicas: 1,
       selector: { matchLabels: { app: config.name } },
       template: {
         metadata: {
-          labels: { app: config.name, 'pap-agent': 'true', template: config.templateType },
+          // Owner label on the pods too: logs, events and status select pods
+          // by it rather than by the reusable `app` name.
+          labels: { ...resourceLabels(config), template: config.templateType },
           annotations: {
             ...lifecycleAnnotations,
             'pap.plugged.in/template': config.templateType,
@@ -497,7 +559,8 @@ function buildDeploymentManifest(config: OpenCodeAgentConfig): object {
           containers: containers.map((c) => ({
             name: c.name,
             image: c.image,
-            ports: [{ containerPort: c.port, name: c.portName }],
+            // A loopback-only listener is not a pod port; declaring it would suggest otherwise.
+            ports: c.loopbackOnly ? undefined : [{ containerPort: c.port, name: c.portName }],
             command: c.command,
             args: c.args,
             env: c.env || COMMON_ENV(config),
@@ -536,8 +599,9 @@ function buildServiceManifest(config: OpenCodeAgentConfig): object {
     ? getOpenCodeIdeContainers(config)
     : getOpenCodeChamberContainers(config);
 
-  // Build multi-port service
-  const ports = containers.map((c) => ({
+  // Build multi-port service. Loopback-only listeners (ttyd, opencode-serve)
+  // are unauthenticated and must never be reachable from other pods.
+  const ports = containers.filter((c) => !c.loopbackOnly).map((c) => ({
     name: c.portName,
     port: c.port,
     targetPort: c.port,
@@ -558,7 +622,7 @@ function buildServiceManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: config.name,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true' },
+      labels: resourceLabels(config),
     },
     spec: {
       selector: { app: config.name },
@@ -581,7 +645,7 @@ function buildMiddlewaresManifest(config: OpenCodeAgentConfig): object[] {
       metadata: {
         name: `${config.name}-strip-opencode`,
         namespace: config.namespace,
-        labels: { app: config.name, 'pap-agent': 'true' },
+        labels: resourceLabels(config),
       },
       spec: {
         stripPrefix: {
@@ -595,7 +659,7 @@ function buildMiddlewaresManifest(config: OpenCodeAgentConfig): object[] {
       metadata: {
         name: `${config.name}-strip-code`,
         namespace: config.namespace,
-        labels: { app: config.name, 'pap-agent': 'true' },
+        labels: resourceLabels(config),
       },
       spec: {
         stripPrefix: {
@@ -613,7 +677,7 @@ function buildCertificateManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: `${config.name}-tls`,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true' },
+      labels: resourceLabels(config),
     },
     spec: {
       secretName: `${config.name}-tls`,
@@ -666,13 +730,14 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
         middlewares: [{ name: `${config.name}-strip-code` }],
       },
       // OpenCode is reachable only through the authenticated chamber proxy.
-      // No public /terminal route. The ttyd container runs `ttyd -W -p 7681 sh`
-      // — writable, a shell — and this route carried a stripPrefix middleware
+      // No public /terminal route. The ttyd container runs a writable shell
+      // (`ttyd -W ... sh`) and this route carried a stripPrefix middleware
       // and nothing else, so reaching the host was reaching a root shell in the
       // pod, with its workspace and its service-account token.
       //
-      // ttyd is still in the Deployment and still reachable with
-      // `kubectl port-forward`, which requires cluster credentials. `uiPassword`
+      // ttyd is still in the Deployment, bound to loopback and absent from the
+      // Service, so it is reachable only with `kubectl port-forward`, which
+      // requires cluster credentials. `uiPassword`
       // exists in the config and lands in the Secret, but nothing wires it to
       // Traefik, so there is no authenticated route to publish instead. Adding
       // one is a change worth making deliberately, not a way to keep an
@@ -720,7 +785,7 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
     metadata: {
       name: config.name,
       namespace: config.namespace,
-      labels: { app: config.name, 'pap-agent': 'true' },
+      labels: resourceLabels(config),
     },
     spec: {
       entryPoints: ['web', 'websecure'],
@@ -729,6 +794,39 @@ function buildIngressRouteManifest(config: OpenCodeAgentConfig): object {
         secretName: `${config.name}-tls`,
         domains: [{ main: config.dnsName }],
       },
+    },
+  };
+}
+
+/**
+ * Ingress to this agent's pods only from the ingress controller and from the
+ * agent's own pods. Every tenant shares the namespace, so without this any pod
+ * can reach any other agent's pod IP on every port it listens on. Policies are
+ * additive: selecting the pod makes everything not allowed here denied.
+ * Egress is untouched (agents call the collector, Hub and model router).
+ */
+function buildNetworkPolicyManifest(config: OpenCodeAgentConfig): object {
+  const ingressNamespace = config.ingressControllerNamespace || DEFAULT_INGRESS_CONTROLLER_NAMESPACE;
+
+  return {
+    apiVersion: 'networking.k8s.io/v1',
+    kind: 'NetworkPolicy',
+    metadata: {
+      name: `${config.name}-netpol`,
+      namespace: config.namespace,
+      labels: resourceLabels(config),
+    },
+    spec: {
+      podSelector: { matchLabels: { app: config.name } },
+      policyTypes: ['Ingress'],
+      ingress: [
+        {
+          from: [
+            { namespaceSelector: { matchLabels: { 'kubernetes.io/metadata.name': ingressNamespace } } },
+            { podSelector: { matchLabels: { app: config.name } } },
+          ],
+        },
+      ],
     },
   };
 }
@@ -746,6 +844,9 @@ export interface OpenCodeManifests {
   middlewares: object[];
   certificate: object;
   ingressRoute: object;
+  // Must be applied to POST /apis/networking.k8s.io/v1/namespaces/{ns}/networkpolicies
+  // and removed with the agent (`${name}-netpol`).
+  networkPolicy: object;
 }
 
 /**
@@ -761,7 +862,21 @@ export function buildOpenCodeManifests(config: OpenCodeAgentConfig): OpenCodeMan
     middlewares: buildMiddlewaresManifest(config),
     certificate: buildCertificateManifest(config),
     ingressRoute: buildIngressRouteManifest(config),
+    networkPolicy: buildNetworkPolicyManifest(config),
   };
+}
+
+/**
+ * Containers whose listener is loopback-only (unauthenticated, never on the
+ * Service), with their ports. The isolation migration for agents deployed
+ * before this existed uses it to know which Service ports and routes to drop
+ * and which containers to rebind (scripts/migrate-opencode-agent-isolation.ts).
+ */
+export function getLoopbackOnlyContainers(config: OpenCodeAgentConfig): Array<{ name: string; port: number }> {
+  const containers = config.templateType === 'opencode-ide'
+    ? getOpenCodeIdeContainers(config)
+    : getOpenCodeChamberContainers(config);
+  return containers.filter((c) => c.loopbackOnly).map((c) => ({ name: c.name, port: c.port }));
 }
 
 /**

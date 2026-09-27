@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ImagePlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signIn, signOut } from 'next-auth/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -46,6 +46,7 @@ import { type ConnectedAccount, removeConnectedAccount, removePassword, setPassw
 import { AppearanceSection } from './appearance-section';
 import { CurrentProjectSection } from './current-project-section';
 import { LoginMethodsCard } from './login-methods-card';
+import { ReauthDialog } from './reauth-dialog';
 import { RemovePasswordDialog } from './remove-password-dialog';
 type User = {
   id: string;
@@ -58,7 +59,19 @@ type User = {
 interface SettingsFormProps {
   user: User;
   connectedAccounts: ConnectedAccount[];
+  /**
+   * Until when (ms) this session's sign-in counts as a re-authentication, which
+   * linking a new provider requires (lib/auth.ts); null when it does not.
+   */
+  reauthValidUntil?: number | null;
+  /** A provider whose link the server refused for want of a recent sign-in. */
+  refusedLink?: string | null;
 }
+
+/** A sign-in method change waiting for the user to prove it is them. */
+type PendingReauth =
+  | { action: 'connect'; provider: string }
+  | { action: 'disconnect'; provider: string; via: 'password' | 'provider' };
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -82,7 +95,12 @@ const setPasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
-export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
+export function SettingsForm({
+  user,
+  connectedAccounts,
+  reauthValidUntil = null,
+  refusedLink = null,
+}: SettingsFormProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const { toast } = useToast();
@@ -95,6 +113,25 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const [removePasswordDialogOpen, setRemovePasswordDialogOpen] = useState(false);
   const [isRemovingPassword, setIsRemovingPassword] = useState(false);
   const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [reauthRequired, setReauthRequired] = useState(false);
+  const [pendingReauth, setPendingReauth] = useState<PendingReauth | null>(
+    refusedLink ? { action: 'connect', provider: refusedLink } : null
+  );
+  const [isReauthenticating, setIsReauthenticating] = useState(false);
+
+  const providerName = (provider: string) => t(`settings.loginMethods.providers.${provider}`);
+
+  // The server refused a link (lib/auth.ts signIn callback): say why.
+  useEffect(() => {
+    if (!refusedLink) return;
+    toast({
+      title: t('common.error'),
+      description: t('settings.loginMethods.reauth.linkRefused', { provider: providerName(refusedLink) }),
+      variant: 'destructive',
+    });
+    // Only on arrival with the refusal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refusedLink]);
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({ // Explicitly type useForm
     resolver: zodResolver(profileSchema),
@@ -265,23 +302,74 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
     }
   };
 
-  const handleRemoveAccount = async (provider: string) => {
+  const showError = (description: string) =>
+    toast({ title: t('common.error'), description, variant: 'destructive' });
+
+  // Linking a new provider needs a sign-in from the last few minutes; the
+  // server refuses it otherwise (lib/auth.ts), so ask for one up front.
+  const handleConnect = (provider: string) => {
+    if (reauthValidUntil !== null && Date.now() < reauthValidUntil) {
+      void signIn(provider, { callbackUrl: '/settings' });
+      return;
+    }
+    setPendingReauth({ action: 'connect', provider });
+  };
+
+  // A fresh password sign-in re-authenticates this session, then the link starts.
+  const confirmPasswordThenConnect = async (provider: string, password: string) => {
+    try {
+      setIsReauthenticating(true);
+      const result = await signIn('credentials', {
+        email: user.email ?? '',
+        password,
+        redirect: false,
+      });
+      if (!result?.ok || result.error) {
+        showError(t('settings.loginMethods.reauth.passwordIncorrect'));
+        return;
+      }
+      await signIn(provider, { callbackUrl: '/settings' });
+    } finally {
+      setIsReauthenticating(false);
+    }
+  };
+
+  // Disconnecting needs the current password, or (without one) a fresh sign-in
+  // through another connected provider; removeConnectedAccount checks it.
+  const handleDisconnect = async (provider: string) => {
+    if (user.hasPassword) {
+      setPendingReauth({ action: 'disconnect', provider, via: 'password' });
+      return;
+    }
+    await handleRemoveAccount(provider);
+  };
+
+  const handleRemoveAccount = async (provider: string, currentPassword?: string) => {
     try {
       setIsRemovingAccount(provider);
-      const result = await removeConnectedAccount(provider);
+      const result = currentPassword
+        ? await removeConnectedAccount(provider, { currentPassword })
+        : await removeConnectedAccount(provider);
 
       if (result.success) {
+        setPendingReauth(null);
         toast({
           title: t('common.success'),
-          description: t('settings.connectedAccounts.removed', `${provider} account disconnected successfully`),
+          description: t('settings.connectedAccounts.removed', { provider: providerName(provider) }),
         });
         router.refresh();
+      } else if (result.code === 'REAUTH_REQUIRED') {
+        setPendingReauth({ action: 'disconnect', provider, via: 'provider' });
+      } else if (result.code === 'RATE_LIMITED') {
+        showError(t('settings.password.errors.tooManyAttempts'));
+      } else if (result.code === 'INCORRECT_PASSWORD' || result.code === 'PASSWORD_REQUIRED') {
+        showError(t('settings.loginMethods.reauth.passwordIncorrect'));
+      } else if (result.code === 'LAST_LOGIN_METHOD') {
+        setPendingReauth(null);
+        showError(t('settings.loginMethods.reauth.lastLoginMethod'));
       } else {
-        toast({
-          title: t('common.error'),
-          description: result.error || t('settings.connectedAccounts.error', 'Failed to disconnect account'),
-          variant: 'destructive',
-        });
+        setPendingReauth(null);
+        showError(result.error || t('settings.connectedAccounts.error'));
       }
     } catch (error) {
       toast({
@@ -294,10 +382,27 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
     }
   };
 
+  // Removing a password re-verifies it: the current password is taken from the
+  // form's "Current Password" field and checked on the server.
+  const openRemovePasswordDialog = () => {
+    if (!passwordForm.getValues('currentPassword')) {
+      passwordForm.setError('currentPassword', {
+        type: 'manual',
+        message: t('settings.password.errors.currentPasswordRequired'),
+      });
+      return;
+    }
+    passwordForm.clearErrors('currentPassword');
+    setRemovePasswordDialogOpen(true);
+  };
+
   const handleRemovePassword = async (confirmEmail: string) => {
     try {
       setIsRemovingPassword(true);
-      const result = await removePassword(confirmEmail);
+      const result = await removePassword({
+        confirmEmail,
+        currentPassword: passwordForm.getValues('currentPassword'),
+      });
 
       if (result.success) {
         toast({
@@ -305,7 +410,10 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
           description: t('settings.password.successMessages.removed'),
         });
         setRemovePasswordDialogOpen(false);
+        passwordForm.reset();
         router.refresh();
+      } else if ('code' in result && result.code === 'RATE_LIMITED') {
+        showError(t('settings.password.errors.tooManyAttempts'));
       } else {
         toast({
           title: t('common.error'),
@@ -335,7 +443,16 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
           description: t('settings.password.successMessages.set'),
         });
         setPasswordForm.reset();
+        setReauthRequired(false);
         router.refresh();
+      } else if ('code' in result && result.code === 'REAUTH_REQUIRED') {
+        // Adding a credential needs a fresh sign-in with a linked provider.
+        setReauthRequired(true);
+        toast({
+          title: t('common.error'),
+          description: t('settings.password.errors.reauthRequired'),
+          variant: 'destructive',
+        });
       } else {
         toast({
           title: t('common.error'),
@@ -454,12 +571,62 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
           provider: acc.provider,
           providerAccountId: acc.provider,
         }))}
-        onDisconnect={handleRemoveAccount}
-        onConnect={(provider) => signIn(provider)}
+        onDisconnect={handleDisconnect}
+        onConnect={handleConnect}
         canRemoveAccount={
           connectedAccounts.length > 1 || (connectedAccounts.length === 1 && !!user.hasPassword)
         }
       />
+
+      {/* Confirm it's you before a sign-in method is connected or disconnected */}
+      {pendingReauth && (
+        <ReauthDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPendingReauth(null);
+          }}
+          isLoading={isReauthenticating || isRemovingAccount !== null}
+          {...(pendingReauth.action === 'connect'
+            ? {
+                description: t('settings.loginMethods.reauth.connectDescription', {
+                  provider: providerName(pendingReauth.provider),
+                }),
+                providers: connectedAccounts.map((account) => account.provider),
+                providersHint: t('settings.loginMethods.reauth.connectProvidersHint'),
+                password: user.hasPassword
+                  ? {
+                      submitLabel: t('settings.loginMethods.reauth.confirmAndConnect'),
+                      onSubmit: (password: string) =>
+                        confirmPasswordThenConnect(pendingReauth.provider, password),
+                    }
+                  : undefined,
+              }
+            : pendingReauth.via === 'password'
+              ? {
+                  description: t('settings.loginMethods.reauth.disconnectPasswordDescription', {
+                    provider: providerName(pendingReauth.provider),
+                  }),
+                  providers: [],
+                  password: {
+                    submitLabel: t('settings.loginMethods.reauth.confirmAndDisconnect'),
+                    onSubmit: (password: string) =>
+                      handleRemoveAccount(pendingReauth.provider, password),
+                  },
+                }
+              : {
+                  description: t('settings.loginMethods.reauth.disconnectProviderDescription', {
+                    provider: providerName(pendingReauth.provider),
+                  }),
+                  // Only a provider that stays connected can vouch for the removal.
+                  providers: connectedAccounts
+                    .map((account) => account.provider)
+                    .filter((provider) => provider !== pendingReauth.provider),
+                })}
+          onProvider={(provider) => {
+            void signIn(provider, { callbackUrl: '/settings' });
+          }}
+        />
+      )}
 
       {/* Password Section - Smart UI based on user state */}
       <Card>
@@ -480,6 +647,25 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               <p className="text-sm text-muted-foreground mb-4">
                 {t('settings.password.noPasswordSet')}
               </p>
+              {reauthRequired && connectedAccounts.length > 0 && (
+                <div className="space-y-2 rounded-md border p-4">
+                  <p className="text-sm text-muted-foreground">
+                    {t('settings.password.reauthDescription')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {connectedAccounts.map((account) => (
+                      <Button
+                        key={account.provider}
+                        type="button"
+                        variant="outline"
+                        onClick={() => signIn(account.provider, { callbackUrl: '/settings' })}
+                      >
+                        {t('settings.password.reauthButton', { provider: account.provider })}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <Form {...setPasswordForm}>
                 <form
                   onSubmit={setPasswordForm.handleSubmit(onSetPasswordSubmit)}
@@ -591,7 +777,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                       <Button
                         type="button"
                         variant="destructive"
-                        onClick={() => setRemovePasswordDialogOpen(true)}
+                        onClick={openRemovePasswordDialog}
                       >
                         {t('settings.password.removeButton')}
                       </Button>

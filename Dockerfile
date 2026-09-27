@@ -60,6 +60,15 @@ RUN test -e node_modules/@zvec/bindings-linux-x64/zvec_node_binding.node \
 # (see lib/vectors/vector-service.ts callers).
 
 COPY . .
+# Fail closed if a secret-bearing env file reached the build context. The
+# .dockerignore excludes them, but a build run with a different ignore file
+# or a hand-rolled context would otherwise let `next build` copy the loaded
+# .env into .next/standalone/, which the runtime stage ships. Failing here
+# also stops the build before any cache export for this run.
+RUN leaked="$(find . -maxdepth 1 \( -name '.env' -o -name '.env.*' -o -name '.envrc' \) ! -name '.env.example' -print)"; \
+    if [ -n "$leaked" ]; then \
+      echo "FATAL: env files in the build context (check .dockerignore): $leaked" >&2; exit 1; \
+    fi
 # Raise V8's heap limit for the build. `next build` on this app exceeds V8's
 # default old-space cap and aborts with "JavaScript heap out of memory"
 # (exit 134) on memory-constrained Docker engines (e.g. an 8 GB Docker Desktop).

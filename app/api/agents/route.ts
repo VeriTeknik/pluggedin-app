@@ -16,6 +16,7 @@ import { parseConfigurable, validateConfigValues } from '@/lib/agent-config';
 import { buildAgentEnv, validateContainerImage, validateEnvKey, validateResourceLimits } from '@/lib/agent-helpers';
 import { validateAgentName } from '@/lib/agent-name-policy';
 import { toClientAgent } from '@/lib/agent-response';
+import { openCodeTemplateType } from '@/lib/agents/template-kind';
 import { generateModelRouterToken } from '@/lib/model-router/token';
 import { EnhancedRateLimiters } from '@/lib/rate-limiter-redis';
 import { serializeForJson } from '@/lib/serialize-for-json';
@@ -447,6 +448,17 @@ export async function POST(request: NextRequest) {
     // Resolve image: explicit > template > none
     const resolvedImage = image || template?.docker_image || undefined;
 
+    // OpenCode templates use the multi-container deploy, which needs a UI
+    // password. Checked before the agent row (and its name) is created.
+    const openCodeType = openCodeTemplateType(template);
+    const uiPassword = config_values?.ui_password || config_values?.password || '';
+    if (openCodeType && (!uiPassword || uiPassword.length < 8)) {
+      return NextResponse.json(
+        { error: 'UI password is required and must be at least 8 characters' },
+        { status: 400 }
+      );
+    }
+
     // Require either an image or a template to be specified
     if (!resolvedImage && !template_uuid) {
       return NextResponse.json(
@@ -468,7 +480,10 @@ export async function POST(request: NextRequest) {
 
     // Create agent in database with NEW state
     // SECURITY: Use atomic insert with unique constraint instead of check-then-insert
-    // to prevent TOCTOU race conditions on dns_name uniqueness
+    // to prevent TOCTOU race conditions on dns_name uniqueness.
+    // kubernetes_deployment stays unset until a deploy has succeeded: every
+    // name-addressed operation (logs, scale, upgrade, teardown) acts on it, and
+    // a refused deploy means the name is held by someone else's leftovers.
     let newAgent;
     try {
       const [insertedAgent] = await db
@@ -481,7 +496,6 @@ export async function POST(request: NextRequest) {
           access_level: access_level || AccessLevel.PRIVATE,
           state: AgentState.NEW,
           kubernetes_namespace: 'agents',
-          kubernetes_deployment: normalizedName,
           config_values: config_values || {},
           metadata: {
             description: description || template?.description,
@@ -618,33 +632,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Deploy to Kubernetes
-    // Check if this is an OpenCode multi-container template
-    const isOpenCodeTemplate = template?.namespace === 'veriteknik' &&
-      (template.name === 'opencode-ide' || template.name === 'opencode-chamber');
-
     let deploymentResult;
 
-    if (isOpenCodeTemplate && template) {
+    if (openCodeType) {
       // OpenCode templates use multi-container deployment
-      const templateType = template.name === 'opencode-ide' ? 'opencode-ide' : 'opencode-chamber';
-
-      // Extract config values for OpenCode templates
-      const uiPassword = config_values?.ui_password || config_values?.password || '';
+      // (UI password validated before the agent row was created)
       const defaultModel = config_values?.default_model || 'claude-sonnet-4-20250514';
       const workspaceSize = config_values?.workspace_size || '10Gi';
-
-      if (!uiPassword || uiPassword.length < 8) {
-        return NextResponse.json(
-          { error: 'UI password is required and must be at least 8 characters' },
-          { status: 400 }
-        );
-      }
 
       deploymentResult = await kubernetesService.deployOpenCodeAgent({
         name: normalizedName,
         dnsName: fullDnsName,
         namespace: 'agents',
-        templateType,
+        templateType: openCodeType,
         agentUuid: newAgent.uuid,
         uiPassword,
         defaultModel,
@@ -660,6 +660,7 @@ export async function POST(request: NextRequest) {
         name: normalizedName,
         dnsName: fullDnsName,
         namespace: 'agents',
+        agentUuid: newAgent.uuid,
         image: resolvedImage,
         containerPort: template?.container_port || 3000,
         resources: resources ? {
@@ -672,15 +673,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Update agent state based on deployment result
+    // Update agent state based on deployment result. Only now does the row
+    // name its Deployment; a failed deploy removed what it created, and an
+    // ownership conflict (deploymentResult.ownershipConflict) means nothing
+    // under the name is this agent's.
     if (deploymentResult.success) {
+      const provisioned = {
+        state: AgentState.PROVISIONED,
+        kubernetes_deployment: normalizedName,
+        provisioned_at: new Date(),
+      };
       await db
         .update(agentsTable)
-        .set({
-          state: AgentState.PROVISIONED,
-          provisioned_at: new Date(),
-        })
+        .set(provisioned)
         .where(eq(agentsTable.uuid, newAgent.uuid));
+      newAgent = { ...newAgent, ...provisioned };
 
       // Log provisioning event
       await db.insert(agentLifecycleEventsTable).values({
@@ -702,6 +709,7 @@ export async function POST(request: NextRequest) {
         to_state: AgentState.NEW,
         metadata: {
           error_message: deploymentResult.message,
+          ownership_conflict: deploymentResult.ownershipConflict === true,
           triggered_by: 'system',
         },
       });

@@ -351,7 +351,9 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         description: sharedServer.description || '',
         command: template.command || '',
         args: template.args || [],
-        envs: Array.isArray(template.env) ? template.env : Object.keys(template.env || {}),
+        // Names only. The sanitizer normalises env to { NAME: placeholder }; an
+        // env list returned as-is here used to carry `NAME=value` verbatim.
+        envs: Object.keys(template.env || {}),
         url: template.url || null,
         source: McpServerSource.COMMUNITY,
         external_id: sharedServer.uuid,

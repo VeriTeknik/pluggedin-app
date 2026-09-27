@@ -7,6 +7,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
+import { verifyCurrentPassword } from '@/lib/credential-reverification';
 import { validateCSRF } from '@/lib/csrf-protection';
 import { generatePasswordChangedEmail,sendEmail } from '@/lib/email';
 import log from '@/lib/logger';
@@ -85,11 +86,16 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Password change not allowed for this account type', { status: 400 });
     }
 
-    // Verify current password with timing-safe comparison
-    const isValid = await compare(currentPassword, user.password);
-    if (!isValid) {
-      // Add fixed delay to prevent timing attacks
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Verify the current password: throttled per user (shared with the other
+    // re-verification paths), wrong guesses count toward the login lockout,
+    // and a wrong guess is delayed (lib/credential-reverification).
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    const reverified = await verifyCurrentPassword(user, currentPassword, { ipAddress, userAgent });
+    if (!reverified.ok && reverified.reason === 'throttled') {
+      return new NextResponse('Too many password change attempts. Please try again later.', { status: 429 });
+    }
+    if (!reverified.ok) {
       return new NextResponse('Current password is incorrect', { status: 400 });
     }
 
@@ -113,8 +119,6 @@ export async function POST(req: NextRequest) {
       .where(eq(users.id, session.user.id));
 
     // Record password change for security audit and session invalidation
-    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const userAgent = req.headers.get('user-agent') || 'unknown';
     await recordPasswordChange(session.user.id, ipAddress, userAgent);
 
     // Send email notification (non-blocking - don't fail operation if email fails)

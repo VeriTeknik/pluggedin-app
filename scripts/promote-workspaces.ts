@@ -18,8 +18,20 @@ import {
   planWorkspacePromotion,
   promoteWorkspacesToHubs,
   rollbackWorkspacePromotion,
+  vectorResyncInstructions,
   verifyOneWorkspacePerHub,
 } from '@/lib/db/workspace-promotion';
+
+/**
+ * Moving documents between Hubs detaches their chunks from the search vectors
+ * still labelled with the Hub they left (see detachChunkVectors), so they stay
+ * unsearchable until re-embedded. Loud, because nothing else will say so.
+ */
+function warnAboutVectors(hubsToReindex: string[]): void {
+  for (const line of vectorResyncInstructions(hubsToReindex)) {
+    console.warn(line);
+  }
+}
 
 function targetDescription(): string {
   const url = process.env.DATABASE_URL ?? '';
@@ -60,8 +72,10 @@ async function main() {
     const result = await rollbackWorkspacePromotion(db);
     console.log(
       `Rolled back: ${result.restored} Workspace(s) returned to their original Hub, ` +
-        `${result.recreated} recreated, ${result.hubsRemoved} Hub(s) removed.`
+        `${result.recreated} recreated, ${result.hubsRemoved} Hub(s) removed, ` +
+        `${result.chunksRealigned} chunk(s) realigned.`
     );
+    warnAboutVectors(result.hubsToReindex);
     return;
   }
 
@@ -82,6 +96,7 @@ async function main() {
     `Promoted ${result.promoted.length}, deleted ${result.deleted.length}, ` +
       `realigned ${result.docsRealigned} doc(s) and ${result.chunksRealigned} chunk(s).`
   );
+  warnAboutVectors(result.hubsToReindex);
 
   await enforceOneWorkspacePerHub(db);
   console.log('One Workspace per Hub is now enforced by the database.');

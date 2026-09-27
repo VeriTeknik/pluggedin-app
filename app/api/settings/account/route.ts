@@ -6,6 +6,7 @@ import { join } from 'path';
 import { db } from '@/db';
 import { sessions, users } from '@/db/schema';
 import { notifyAdmins } from '@/lib/admin-notifications';
+import { teardownAgentsOwnedByUser } from '@/lib/agents/teardown';
 import { getAuthSession } from '@/lib/auth';
 import { validateCSRF } from '@/lib/csrf-protection';
 
@@ -34,6 +35,22 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
+      );
+    }
+
+    // Tear down the user's agents in Kubernetes before the cascade frees their
+    // names. Resources are addressed by name, so leftovers would be adopted by
+    // whoever registers the same agent name next. If teardown fails, keep the
+    // account (and the name reservations) so the user can retry.
+    const teardown = await teardownAgentsOwnedByUser(session.user.id);
+    if (!teardown.ok) {
+      console.error('Account deletion blocked: agent teardown failed', {
+        userId: session.user.id,
+        failed: teardown.failed,
+      });
+      return NextResponse.json(
+        { error: 'Could not shut down your deployed agents. Please try again later or contact support.' },
+        { status: 503 }
       );
     }
 

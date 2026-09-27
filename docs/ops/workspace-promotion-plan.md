@@ -67,9 +67,49 @@ docker compose run --rm pluggedin-app node_modules/.bin/tsx scripts/promote-work
 # 4. Confirm it actually landed. Exits non-zero if not.
 docker compose run --rm pluggedin-app node_modules/.bin/tsx scripts/promote-workspaces.ts --verify
 
+# 5. Re-embed the documents that changed Hub (see "Search vectors" below).
+#    Step 3 prints the Hub uuids and the exact commands; run them per Hub.
+
 # If it needs undoing:
 docker compose run --rm pluggedin-app node_modules/.bin/tsx scripts/promote-workspaces.ts --rollback
+# ...and then step 5 again, for the Hubs the rollback prints.
 ```
+
+### Search vectors: re-embed after promotion and after rollback
+
+Moving a document to another Hub is not finished when the transaction commits.
+Each vector in zvec carries its own copy of `project_uuid` and the uuid of its
+chunk, and retrieval filters vectors by Hub, then loads chunk text by chunk uuid
+alone. zvec is a separate single-writer store the transaction cannot touch, so
+promotion (and rollback) gives every chunk that changes Hub a **new uuid**: a
+vector still labelled with the old Hub then resolves to no text, and the Hub the
+documents left can no longer read them.
+
+The price is that the moved documents are **not searchable in either Hub until
+they are re-embedded**. `--execute` and `--rollback` print a warning listing the
+affected Hubs (`lib/db/workspace-promotion.ts`, `vectorResyncInstructions()`).
+Re-embed from `document_chunks` (`scripts/reindex-rag.ts`), either:
+
+- with the app stopped (zvec has a single writer), against the live
+  `ZVEC_DATA_PATH`, per target Hub:
+
+  ```bash
+  pnpm reindex:rag -- --project=<hub uuid>
+  # in the compose deployment, with the app container stopped:
+  docker compose run --rm pluggedin-app node_modules/.bin/tsx scripts/reindex-rag.ts --project=<hub uuid>
+  ```
+
+- or with the app running, a full rebuild into a fresh `ZVEC_DATA_PATH`, then
+  restart the app on it:
+
+  ```bash
+  ZVEC_DATA_PATH=<new path> pnpm reindex:rag
+  ```
+
+Do not run `--project` into a fresh path: the app would come back with only
+those Hubs indexed. Re-index in the Library does the same for a single Hub from
+the UI. A rollback detaches the returned documents the same way, so it needs its
+own re-embed for the Hubs it prints.
 
 Freeze first if there is any doubt: `UPDATE users SET show_workspace_ui = false`.
 The only path that creates a second Workspace under an existing Hub is
@@ -113,7 +153,9 @@ Postgres, skipping when `INTEGRATION_DATABASE_URL` is unset:
   Emptiness decides deletion, so this test is the one standing between a stale
   list and deleted data.
 - Colliding slugs survive untouched; no profile-scoped row moves.
-- `docs` and `document_chunks` follow their profile to the new Hub.
+- `docs` and `document_chunks` follow their profile to the new Hub, and moved
+  chunks get new uuids so vectors still labelled with the old Hub resolve to
+  nothing (`tests/deepsec/d-workspace-promotion-vectors.test.ts`, no database).
 - The whole run is one transaction: a failure part-way leaves nothing behind.
 - The invariant rejects a second Workspace, and refuses to be applied while any
   Hub still holds two.

@@ -8,6 +8,7 @@ import { accounts, McpServerSource,projectsTable, registryServersTable, serverCl
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportType, transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import { sanitizeServerTemplate } from '@/lib/server-template';
 import { validateExternalUrl } from '@/lib/url-validator';
 
 import { getRegistryOAuthToken } from './registry-oauth-session';
@@ -687,6 +688,17 @@ function detectTransportConfig(wizardData: WizardSubmissionData) {
 }
 
 /**
+ * The server template kept in registry_servers.metadata. It is built from the
+ * live connection - the URL as entered, the user's headers, OAuth settings - so
+ * it is sanitized like every other stored template. The packages are registry
+ * descriptors (package names, versions, env var names) that the template
+ * allowlist does not cover, and are kept.
+ */
+function registryTemplateMetadata(template: Record<string, any>) {
+  return { ...sanitizeServerTemplate(template), packages: template.packages };
+}
+
+/**
  * Create a community server in the local database
  */
 async function createCommunityServer(
@@ -788,7 +800,7 @@ async function createCommunityServer(
     description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
     is_claimed: false,
     is_published: false,
-    metadata: template,
+    metadata: registryTemplateMetadata(template),
   }).returning();
 
   return {
@@ -1360,7 +1372,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
         is_claimed: false, // Community server
         is_published: false, // Not published to registry, only to frontend
-        metadata: template,
+        metadata: registryTemplateMetadata(template),
       }).returning();
 
       return {

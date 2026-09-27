@@ -1,13 +1,14 @@
 import { ChildProcess, spawn } from 'child_process';
 import { EventEmitter } from 'events';
-import { promises as fs } from 'fs';
+import { constants as fsConstants, promises as fs } from 'fs';
+import type { FileHandle } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
 import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
-import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
+import { buildSecurePath, buildServerScopedPath, validatePathComponent } from '@/lib/secure-path-builder';
 
 export interface OAuthProcessResult {
   success: boolean;
@@ -32,6 +33,84 @@ export interface OAuthProcessOptions {
   env?: Record<string, string>;
   timeout?: number;
   callbackPort?: number;
+}
+
+/*
+ * Token files live under `<server>/oauth/.mcp-auth`, which the server's
+ * sandboxed child writes. Their paths are realpath-checked when they are built,
+ * but the child can swap `.mcp-auth`, or any name in it, for a symlink (to
+ * another server's tokens), a FIFO or something huge at any moment after that
+ * — an OAuth flow runs for minutes. So the host never follows a name in there
+ * at the time of use:
+ *
+ * - a read opens the last name without following a link or blocking, takes
+ *   only a regular file of token size, and checks where the opened file
+ *   actually is;
+ * - a clear acts through the directory opened without following a link.
+ */
+
+/** A token file is a few hundred bytes of JSON; anything far larger is not one. */
+const MAX_TOKEN_FILE_BYTES = 1024 * 1024;
+
+const OPEN_DIRECTORY_NOFOLLOW = fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW;
+
+/**
+ * A path that reaches the directory `handle` has open, whatever the name it
+ * was opened by points at now: Linux's /proc/self/fd/<n>. A name looked up
+ * through it is looked up in that very directory, which is what openat and
+ * unlinkat do in C. Without procfs — macOS, where there is no sandboxed child
+ * to race — the path it was opened by.
+ */
+async function pinnedDirectoryPath(handle: FileHandle, openedAs: string): Promise<string> {
+  const viaDescriptor = `/proc/self/fd/${handle.fd}`;
+  try {
+    await fs.access(viaDescriptor);
+    return viaDescriptor;
+  } catch {
+    return openedAs;
+  }
+}
+
+/**
+ * Where the file `handle` has open really is. Linux reports it for the
+ * descriptor itself, which no link swapped in later can change; elsewhere the
+ * resolved path is the best answer there is.
+ */
+async function openedFileLocation(handle: FileHandle, openedAs: string): Promise<string> {
+  try {
+    return await fs.readlink(`/proc/self/fd/${handle.fd}`);
+  } catch {
+    return fs.realpath(openedAs);
+  }
+}
+
+/** Reads a token file that must really be inside `root`, a directory the child cannot swap. */
+async function readConfinedTokenFile(filepath: string, root: string): Promise<string> {
+  const handle = await fs.open(
+    filepath,
+    fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK
+  );
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.size > MAX_TOKEN_FILE_BYTES) {
+      throw new Error('Not a token file');
+    }
+    const [location, realRoot] = await Promise.all([openedFileLocation(handle, filepath), fs.realpath(root)]);
+    if (!location.startsWith(realRoot + path.sep)) {
+      throw new Error('Token file is outside the server\'s OAuth directory');
+    }
+    // No more than was there when it was checked: the child can keep writing.
+    const buffer = Buffer.alloc(stat.size);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    return buffer.subarray(0, filled).toString('utf-8');
+  } finally {
+    await handle.close();
+  }
 }
 
 /**
@@ -62,8 +141,9 @@ export class OAuthProcessManager extends EventEmitter {
       if (serverUuid) {
         // Validate serverUuid to prevent path traversal
         validatePathComponent(serverUuid);
-        // Use server-specific OAuth directory
-        oauthHome = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'oauth');
+        // Use server-specific OAuth directory. The server's sandboxed child can
+        // write there, so anchor at its own directory, not the shared store.
+        oauthHome = buildServerScopedPath(PackageManagerConfig.PACKAGE_STORE_DIR, serverUuid, 'oauth');
         await fs.mkdir(oauthHome, { recursive: true });
         isolatedMcpAuthDir = buildSecurePath(oauthHome, '.mcp-auth');
       } else {
@@ -440,6 +520,9 @@ export class OAuthProcessManager extends EventEmitter {
    * Different MCP servers may store tokens in different formats
    */
   private async checkMcpAuthToken(serverName: string, mcpAuthDir: string = this.MCP_AUTH_DIR): Promise<OAuthProcessResult | null> {
+    // Reads are confined to the directory holding .mcp-auth (the server's
+    // `oauth`), not to .mcp-auth itself, which the child can swap for a link.
+    const readToken = (filepath: string) => readConfinedTokenFile(filepath, path.dirname(mcpAuthDir));
     try {
       // First check for mcp-remote subdirectory structure
       try {
@@ -463,7 +546,7 @@ export class OAuthProcessManager extends EventEmitter {
                   validatePathComponent(file);
                   const filepath = buildSecurePath(subDir, file);
                   try {
-                    const content = await fs.readFile(filepath, 'utf-8');
+                    const content = await readToken(filepath);
                     const data = JSON.parse(content);
                     
                     // mcp-remote stores tokens in a specific format
@@ -512,7 +595,7 @@ export class OAuthProcessManager extends EventEmitter {
         const filepath = buildSecurePath(mcpAuthDir, filename);
 
         try {
-          const content = await fs.readFile(filepath, 'utf-8');
+          const content = await readToken(filepath);
           const data = JSON.parse(content);
           
           // Extract token from various possible formats
@@ -554,7 +637,7 @@ export class OAuthProcessManager extends EventEmitter {
               // Validate file name to prevent path traversal
               validatePathComponent(file);
               const filepath = buildSecurePath(serverDir, file);
-              const content = await fs.readFile(filepath, 'utf-8');
+              const content = await readToken(filepath);
               const data = JSON.parse(content);
               
               const token = data.access_token || data.accessToken || data.token;
@@ -592,7 +675,7 @@ export class OAuthProcessManager extends EventEmitter {
           validatePathComponent(filename);
           const filepath = buildSecurePath(mcpAuthDir, filename);
           try {
-            const content = await fs.readFile(filepath, 'utf-8');
+            const content = await readToken(filepath);
             const data = JSON.parse(content);
             
             if (data.access_token || data.accessToken || data.token) {
@@ -647,7 +730,19 @@ export class OAuthProcessManager extends EventEmitter {
    * Clear existing OAuth tokens for a server
    */
   private async clearExistingTokens(serverName: string, mcpAuthDir: string = this.MCP_AUTH_DIR): Promise<void> {
+    // Everything goes through the directory opened here, without following a
+    // link, so nothing outside it is touched whatever the path points at by
+    // the time each file is removed. Missing, or a link: nothing to clear.
+    let authDir: FileHandle;
     try {
+      authDir = await fs.open(mcpAuthDir, OPEN_DIRECTORY_NOFOLLOW);
+    } catch {
+      return;
+    }
+
+    try {
+      const base = await pinnedDirectoryPath(authDir, mcpAuthDir);
+
       // Clear tokens from common locations
       const possibleFiles = [
         `${serverName}.json`,
@@ -655,28 +750,39 @@ export class OAuthProcessManager extends EventEmitter {
         'tokens.json',
         'auth.json'
       ];
-      
+
       for (const filename of possibleFiles) {
-        // Validate filename to prevent path traversal
-        validatePathComponent(filename);
-        const filepath = buildSecurePath(mcpAuthDir, filename);
         try {
-          await fs.unlink(filepath);
+          // unlink never follows the last name: a link is removed, not its target.
+          await fs.unlink(path.join(base, validatePathComponent(filename)));
         } catch (_e) {
           // File doesn't exist, that's ok
         }
       }
 
-      // Also clear server-specific subdirectories
+      // Also clear the server-specific subdirectory. Token directories are
+      // flat — the reader only looks one level down — so it is emptied one
+      // level deep through its own descriptor, then removed.
       try {
-        // Validate serverName to prevent path traversal
-        validatePathComponent(serverName);
-        const serverDir = buildSecurePath(mcpAuthDir, serverName);
-        await fs.rm(serverDir, { recursive: true, force: true });
+        const serverDirPath = path.join(base, validatePathComponent(serverName));
+        const serverDir = await fs.open(serverDirPath, OPEN_DIRECTORY_NOFOLLOW);
+        try {
+          const inner = await pinnedDirectoryPath(serverDir, serverDirPath);
+          for (const entry of await fs.readdir(inner)) {
+            await fs.unlink(path.join(inner, entry)).catch(() => {
+              // A nested directory: left alone.
+            });
+          }
+        } finally {
+          await serverDir.close();
+        }
+        await fs.rmdir(serverDirPath);
       } catch (_e) {
-        // Directory doesn't exist, that's ok
+        // Directory doesn't exist (or is a link, left alone), that's ok
       }
     } catch (_error) {
+    } finally {
+      await authDir.close();
     }
   }
 

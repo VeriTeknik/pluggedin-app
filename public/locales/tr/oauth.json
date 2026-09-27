@@ -21,5 +21,10 @@
       "hubs:read": "Hangi Hub'larınız olduğunu görme",
       "offline_access": "Tekrar sormadan bağlı kalma"
     }
+  },
+  "authorize": {
+    "errors": {
+      "repeatedClientParameter": "Bu yetkilendirme isteği istemcisini veya dönüş adresini birden fazla kez belirtiyor, bu yüzden işlenemiyor. Bağlantıyı bağladığınız uygulamadan yeniden başlatın."
+    }
   }
 }

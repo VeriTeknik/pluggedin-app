@@ -21,6 +21,42 @@ export function connectorBaseUrl(): string {
   return raw.replace(/\/+$/, '');
 }
 
+/** The protected resource — the connector's MCP endpoint — tokens are issued for. */
+export function connectorResourceUrl(): string {
+  return `${connectorBaseUrl()}/api/mcp`;
+}
+
+/**
+ * RFC 8707: does a `resource` indicator name what this server protects?
+ *
+ * This authorization server issues tokens for one resource. Honouring a request
+ * for any other one mints a token the client will hand to that other server —
+ * which can replay it here, since a bearer token does not know who holds it.
+ * Refusing foreign resources is what keeps every token's audience the connector.
+ *
+ * Compared as parsed URLs (case, default port and a trailing slash are spelling)
+ * and on the whole origin: a tenant's agent at {name}.is.plugged.in is another
+ * origin and another resource. The bare issuer origin is accepted too, for
+ * clients that name the server rather than its endpoint.
+ */
+export function isConnectorResource(resource: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(resource);
+  } catch {
+    return false;
+  }
+  if (resource.includes('#') || url.search || url.username || url.password) return false;
+
+  const path = (u: URL) => u.pathname.replace(/\/+$/, '');
+  const connector = new URL(connectorResourceUrl());
+  const issuer = new URL(connectorBaseUrl());
+  return (
+    url.origin === connector.origin &&
+    (path(url) === path(connector) || path(url) === path(issuer))
+  );
+}
+
 export function buildAuthorizationServerMetadata(issuer: string): Record<string, unknown> {
   return {
     issuer,

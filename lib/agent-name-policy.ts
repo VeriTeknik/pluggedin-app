@@ -8,8 +8,11 @@
 /**
  * Reserved agent names that cannot be used by users.
  * These are typically system routes, common subdomains, or infrastructure names.
+ *
+ * The single source of truth: the deploy wizard (lib/pap-ui-utils.ts) reads
+ * this same constant, so edit it here only. Pure data, safe to bundle client-side.
  */
-const RESERVED_AGENT_NAMES = new Set([
+export const RESERVED_AGENT_NAMES: ReadonlySet<string> = new Set([
   // System routes
   'api',
   'app',
@@ -75,6 +78,15 @@ const RESERVED_AGENT_NAMES = new Set([
   'clusters',
   'node',
   'nodes',
+  'model-router',
+
+  // Cluster components
+  'kubernetes',
+  'kube',
+  'k8s',
+  'traefik',
+  'cert-manager',
+  'coredns',
 
   // Generic
   'test',
@@ -98,6 +110,25 @@ const RESERVED_AGENT_NAMES = new Set([
   'true',
   'false',
 ]);
+
+/**
+ * Reserved prefixes. An agent's name is used as-is for Kubernetes resources in
+ * the shared agents namespace, and deleting the agent deletes `<name>`,
+ * `<name>-config`, `<name>-secrets`, `<name>-tls` and `<name>-workspace` by
+ * name. Shared infrastructure lives in that namespace under these prefixes:
+ * - `pap-`: pap-collector (+ -headless, -config, -secrets), pap-heartbeat-collector,
+ *   pap-model-router
+ * - `kube-`: Kubernetes system objects
+ * - `wildcard-`: the shared wildcard TLS certificate and its secret
+ */
+const RESERVED_AGENT_NAME_PREFIXES = ['pap-', 'kube-', 'wildcard-'];
+
+function isReservedNormalized(normalizedName: string): boolean {
+  return (
+    RESERVED_AGENT_NAMES.has(normalizedName) ||
+    RESERVED_AGENT_NAME_PREFIXES.some((prefix) => normalizedName.startsWith(prefix))
+  );
+}
 
 export type NameValidationResult =
   | { ok: true; normalizedName: string; dnsName: string }
@@ -142,7 +173,7 @@ export function validateAgentName(
   }
 
   // Reserved name check
-  if (RESERVED_AGENT_NAMES.has(normalizedName)) {
+  if (isReservedNormalized(normalizedName)) {
     return {
       ok: false,
       message: `Name '${normalizedName}' is reserved and cannot be used`,
@@ -160,5 +191,5 @@ export function validateAgentName(
  * Check if a name is reserved.
  */
 export function isReservedName(name: string): boolean {
-  return RESERVED_AGENT_NAMES.has(name.toLowerCase().trim());
+  return isReservedNormalized(name.toLowerCase().trim());
 }

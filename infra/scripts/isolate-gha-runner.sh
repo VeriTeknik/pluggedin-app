@@ -35,6 +35,22 @@ set -euo pipefail
 RUNNER_USER="${RUNNER_USER:-ghrunner}"
 OLD_HOME="/home/pluggedin/actions-runner"
 NEW_HOME="/home/${RUNNER_USER}/actions-runner"
+RUNNER_NAME="${RUNNER_USER}-rootless"
+# The unit name the runner's own svc.sh would derive for this repo + name.
+SVC_PREFIX="actions.runner.VeriTeknik-pluggedin-app."
+SVC="${SVC_PREFIX}${RUNNER_NAME}.service"
+UNIT_DIR="/etc/systemd/system"
+
+# ROOT NEVER EXECUTES OR CONSUMES ANYTHING FROM A RUNNER-WRITABLE DIRECTORY.
+#
+# The runner's svc.sh, its bin/ unit template and runsvc.sh all live in the
+# runner's home, which that account can rewrite — and it runs workflow code.
+# An earlier version ran `./svc.sh install|start` (and the old runner's
+# `./svc.sh uninstall`) as root, so a job that compromised the runner account
+# could replace svc.sh and get root the next time an operator re-ran this
+# script. Everything privileged below is done by this script's own code with
+# systemctl and a unit file written from a fixed template. Anything that has
+# to touch the runner's files is done AS the runner account (sudo -u).
 
 # ---------------------------------------------------------------------------
 # PREFLIGHT — every requirement is checked BEFORE anything is stopped.
@@ -93,13 +109,28 @@ fi
 echo "==> preflight ok: rootless prerequisites present"
 
 echo "==> 1. stop and unregister the existing runner"
-# Anything already present is by definition the previous runner; the new one
-# does not exist yet at this point.
-OLD_SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print $1}' | head -1)
-if [ -n "$OLD_SVC" ]; then
-  systemctl stop "$OLD_SVC" || true
-  if [ -x "${OLD_HOME}/svc.sh" ]; then ( cd "$OLD_HOME" && ./svc.sh uninstall ) || true; fi
-  echo "    stopped ${OLD_SVC}"
+# Every runner unit for this repo is stopped. The previous runner's unit is
+# also disabled and removed — with systemctl and rm on the root-owned unit
+# directory, NOT by running its svc.sh, which sits in a directory the old
+# runner account could rewrite. The new runner's own unit (present on a
+# re-run) is only stopped here; step 5 rewrites and restarts it.
+while IFS= read -r unit; do
+  [ -n "$unit" ] || continue
+  systemctl stop "$unit" || true
+  if [ "$unit" != "$SVC" ]; then
+    systemctl disable "$unit" 2>/dev/null || true
+    rm -f "${UNIT_DIR:?}/${unit}"
+    echo "    stopped and removed ${unit}"
+  else
+    echo "    stopped ${unit} (reinstalled in step 5)"
+  fi
+done < <(systemctl list-units --all --plain --no-legend "${SVC_PREFIX}*" | awk '{print $1}')
+systemctl daemon-reload
+# svc.sh uninstall also deleted the old runner's `.service` marker, without
+# which `config.sh remove` refuses to run. Delete it as that directory's
+# owner, never as root, and never through a symlinked directory.
+if [ -d "$OLD_HOME" ] && [ ! -L "$OLD_HOME" ]; then
+  sudo -u "$(stat -c %U "$OLD_HOME")" rm -f "${OLD_HOME}/.service" || true
 fi
 cat <<'MSG'
     NOTE: the old runner is still registered with GitHub. Remove it at
@@ -167,9 +198,33 @@ echo "==> 5. install and register the runner"
 # is easy to paste literally, and it told the operator to run
 # `sudo ./svc.sh install` from inside ${RUNNER_USER}'s shell — which cannot
 # work, because that account deliberately has no sudo rights. This script is
-# already root, so it does the privileged half itself.
-if [ -z "${RUNNER_TOKEN:-}" ]; then
-  cat >&2 <<MSG
+# already root, so it does the privileged half itself — with its own code, not
+# the runner's svc.sh (see the note at the top).
+RUNNER_VERSION="${RUNNER_VERSION:-2.328.0}"
+RUNNER_TARBALL_SHA256="${RUNNER_TARBALL_SHA256:-}"  # optional pin; checked if set
+TARBALL="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
+RUNNER_UID="$(id -u "$RUNNER_USER")"
+DOCKER_SOCK="unix:///run/user/${RUNNER_UID}/docker.sock"
+
+# The runner home is created BY the runner account, and refused if it is a
+# symlink or someone else's: an earlier `install -d -o ...` run as root would
+# have chowned whatever a planted symlink pointed at.
+if [ -L "$NEW_HOME" ]; then
+  echo "${NEW_HOME} is a symlink; refusing to use it" >&2; exit 1
+fi
+[ -d "$NEW_HOME" ] || sudo -u "$RUNNER_USER" mkdir -p "$NEW_HOME"
+if [ "$(stat -c %U "$NEW_HOME")" != "$RUNNER_USER" ]; then
+  echo "${NEW_HOME} is not owned by ${RUNNER_USER}; refusing to use it" >&2; exit 1
+fi
+
+if [ -f "${NEW_HOME}/.runner" ]; then
+  # config.sh refuses to configure an already-configured runner, so a re-run
+  # (e.g. to reinstall the unit below) keeps the existing registration.
+  echo "    ${RUNNER_NAME} already registered; keeping the registration"
+  echo "    (to re-register: as ${RUNNER_USER}, ./config.sh remove --token <REMOVE_TOKEN>, then re-run)"
+else
+  if [ -z "${RUNNER_TOKEN:-}" ]; then
+    cat >&2 <<MSG
 
 Set RUNNER_TOKEN and re-run. Get a fresh one (valid ~1h) from:
   Settings -> Actions -> Runners -> New self-hosted runner
@@ -179,62 +234,84 @@ Set RUNNER_TOKEN and re-run. Get a fresh one (valid ~1h) from:
 
 Everything up to this point is already done and is safe to re-run.
 MSG
-  exit 1
+    exit 1
+  fi
+
+  if [ ! -x "${NEW_HOME}/config.sh" ]; then
+    sudo -u "$RUNNER_USER" curl -fsSL -o "${NEW_HOME}/${TARBALL}" \
+      "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${TARBALL}"
+    if [ -n "$RUNNER_TARBALL_SHA256" ]; then
+      echo "${RUNNER_TARBALL_SHA256}  ${NEW_HOME}/${TARBALL}" | sha256sum -c -
+    fi
+    sudo -u "$RUNNER_USER" tar xzf "${NEW_HOME}/${TARBALL}" -C "$NEW_HOME"
+    sudo -u "$RUNNER_USER" rm -f "${NEW_HOME}/${TARBALL}"
+  fi
+
+  # Unattended registration as the runner user. --replace takes over the name
+  # if a stale registration is still present.
+  sudo -u "$RUNNER_USER" env DOCKER_HOST="$DOCKER_SOCK" \
+    "${NEW_HOME}/config.sh" \
+      --url "https://github.com/VeriTeknik/pluggedin-app" \
+      --token "$RUNNER_TOKEN" \
+      --name "$RUNNER_NAME" \
+      --labels self-hosted,linux,x64,plugged-in-prod \
+      --unattended --replace
 fi
 
-RUNNER_VERSION="${RUNNER_VERSION:-2.328.0}"
-TARBALL="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
-RUNNER_UID="$(id -u "$RUNNER_USER")"
-DOCKER_SOCK="unix:///run/user/${RUNNER_UID}/docker.sock"
+# What svc.sh install did, minus running anything the runner can write:
+#  - runsvc.sh is copied into place AS the runner (svc.sh did this as root,
+#    and root writing into a runner-owned directory follows planted symlinks);
+#  - the unit is rendered from the fixed template below, not from the
+#    runner-writable bin/actions.runner.service.template;
+#  - the unit and its drop-in are root-owned 0644 in a root-only directory.
+# The unit runs runsvc.sh as ${RUNNER_USER}, so the runner being able to edit
+# runsvc.sh gains it nothing it does not already have.
+sudo -u "$RUNNER_USER" cp "${NEW_HOME}/bin/runsvc.sh" "${NEW_HOME}/runsvc.sh"
+sudo -u "$RUNNER_USER" chmod 0755 "${NEW_HOME}/runsvc.sh"
+# config.sh remove checks for this marker to insist the service is removed
+# first; svc.sh wrote it, so keep writing it (as the runner).
+printf '%s\n' "$SVC" | sudo -u "$RUNNER_USER" tee "${NEW_HOME}/.service" >/dev/null
 
-install -d -o "$RUNNER_USER" -g "$RUNNER_USER" "$NEW_HOME"
-if [ ! -x "${NEW_HOME}/config.sh" ]; then
-  sudo -u "$RUNNER_USER" curl -fsSL -o "${NEW_HOME}/${TARBALL}" \
-    "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${TARBALL}"
-  sudo -u "$RUNNER_USER" tar xzf "${NEW_HOME}/${TARBALL}" -C "$NEW_HOME"
-  rm -f "${NEW_HOME}/${TARBALL}"
-fi
+echo "    installing ${SVC}"
+unit_tmp="$(mktemp "${UNIT_DIR}/.${SVC}.XXXXXX")"
+cat > "$unit_tmp" <<EOF
+[Unit]
+Description=GitHub Actions Runner (VeriTeknik-pluggedin-app.${RUNNER_NAME})
+After=network.target
 
-# Unattended registration as the runner user. --replace takes over the name if
-# a stale registration is still present.
-sudo -u "$RUNNER_USER" env DOCKER_HOST="$DOCKER_SOCK" \
-  "${NEW_HOME}/config.sh" \
-    --url "https://github.com/VeriTeknik/pluggedin-app" \
-    --token "$RUNNER_TOKEN" \
-    --name "${RUNNER_USER}-rootless" \
-    --labels self-hosted,linux,x64,plugged-in-prod \
-    --unattended --replace
+[Service]
+ExecStart=${NEW_HOME}/runsvc.sh
+User=${RUNNER_USER}
+WorkingDirectory=${NEW_HOME}
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
 
-# svc.sh must run as root; that is why this is in the script and not a
-# copy-paste block aimed at an account with no sudo.
-( cd "$NEW_HOME" && ./svc.sh install "$RUNNER_USER" )
+[Install]
+WantedBy=multi-user.target
+EOF
+chown root:root "$unit_tmp"
+chmod 0644 "$unit_tmp"
+mv -f "$unit_tmp" "${UNIT_DIR}/${SVC}"
 
 # DOCKER_HOST has to reach the service, or every build talks to the SYSTEM
 # daemon and the isolation this whole script exists for is silently undone.
-# Match the service by the runner NAME we registered, not by "whatever
-# actions.runner unit sorts first". If the old service failed to uninstall,
-# `head -1` could select it — the DOCKER_HOST drop-in would land on the wrong
-# unit, the verification below would then inspect that same wrong unit and
-# pass, and the real runner would quietly build against the SYSTEM daemon.
-# That is the exact failure this whole script exists to prevent, arriving
-# silently and with a green check next to it.
-RUNNER_NAME="${RUNNER_USER}-rootless"
-SVC=$(systemctl list-units --all --plain --no-legend 'actions.runner.*' \
-      | awk '{print $1}' | grep -F ".${RUNNER_NAME}.service" | head -1)
-if [ -z "$SVC" ]; then
-  echo "runner service for '${RUNNER_NAME}' not found after install" >&2
-  echo "units present:" >&2
-  systemctl list-units --all --plain --no-legend 'actions.runner.*' | awk '{print "  "$1}' >&2
-  exit 1
-fi
+# The unit name is fixed above from the runner NAME we registered, not taken
+# from "whatever actions.runner unit sorts first" — that could have selected
+# a stale unit, put the drop-in on it, verified the same wrong unit and
+# passed, while the real runner quietly built against the SYSTEM daemon.
 echo "    configuring ${SVC}"
-mkdir -p "/etc/systemd/system/${SVC}.d"
-cat > "/etc/systemd/system/${SVC}.d/10-rootless-docker.conf" <<EOF
+install -d -m 0755 -o root -g root "${UNIT_DIR}/${SVC}.d"
+dropin_tmp="$(mktemp "${UNIT_DIR}/${SVC}.d/.10-rootless-docker.conf.XXXXXX")"
+cat > "$dropin_tmp" <<EOF
 [Service]
 Environment=DOCKER_HOST=${DOCKER_SOCK}
 EOF
+chmod 0644 "$dropin_tmp"
+mv -f "$dropin_tmp" "${UNIT_DIR}/${SVC}.d/10-rootless-docker.conf"
 systemctl daemon-reload
-( cd "$NEW_HOME" && ./svc.sh start ) || systemctl start "$SVC"
+systemctl enable "$SVC"
+systemctl restart "$SVC"
 
 echo "==> 6. verify"
 sleep 5

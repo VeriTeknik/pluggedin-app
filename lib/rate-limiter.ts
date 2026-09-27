@@ -55,10 +55,24 @@ class MemoryRateLimitStore implements RateLimitBackend {
   }
 }
 
+/**
+ * ioredis reconnect delay, shared with lib/rate-limiter-redis.ts.
+ *
+ * Never gives up. Returning null ends the client for good, and it used to after
+ * three attempts: one Redis restart then left rate limiting broken until the
+ * app restarted. Capped, so a long outage costs one attempt every two seconds.
+ */
+export function redisRetryStrategy(times: number): number {
+  return Math.min(times * 50, 2000);
+}
+
 // Redis store implementation (optional)
 class RedisRateLimitStore implements RateLimitBackend {
   private client: any;
   private connected: boolean = false;
+  // While Redis is unreachable, limit per instance instead of not at all: a
+  // missing entry reads as a fresh window, so without this every request passed.
+  private fallback = new MemoryRateLimitStore();
 
   constructor(redisUrl: string) {
     // Lazy load Redis client - gracefully handle if not installed
@@ -67,10 +81,7 @@ class RedisRateLimitStore implements RateLimitBackend {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Redis = require('ioredis');
       this.client = new Redis(redisUrl, {
-        retryStrategy: (times: number) => {
-          if (times > 3) return null;
-          return Math.min(times * 50, 2000);
-        },
+        retryStrategy: redisRetryStrategy,
         maxRetriesPerRequest: 3,
         lazyConnect: false,
       });
@@ -88,6 +99,10 @@ class RedisRateLimitStore implements RateLimitBackend {
       this.client.on('ready', () => {
         this.connected = true;
       });
+
+      this.client.on('close', () => {
+        this.connected = false;
+      });
     } catch (error) {
       // This typically happens in Edge Runtime where Node.js APIs aren't available
       console.warn('[RateLimit] Cannot load ioredis (likely Edge Runtime limitation, not missing package)');
@@ -98,7 +113,7 @@ class RedisRateLimitStore implements RateLimitBackend {
   }
 
   async get(key: string) {
-    if (!this.connected) return null;
+    if (!this.connected) return this.fallback.get(key);
     try {
       const data = await this.client.get(`ratelimit:${key}`);
       return data ? JSON.parse(data) : null;
@@ -109,7 +124,7 @@ class RedisRateLimitStore implements RateLimitBackend {
   }
 
   async set(key: string, value: { count: number; resetTime: number }) {
-    if (!this.connected) return;
+    if (!this.connected) return this.fallback.set(key, value);
     try {
       const ttl = Math.ceil((value.resetTime - Date.now()) / 1000);
       await this.client.setex(`ratelimit:${key}`, ttl, JSON.stringify(value));
@@ -135,6 +150,10 @@ class RedisRateLimitStore implements RateLimitBackend {
     } catch (error) {
       console.error('[RateLimit] Redis delete error:', error);
     }
+  }
+
+  cleanup() {
+    this.fallback.cleanup();
   }
 }
 
@@ -180,10 +199,10 @@ if (process.env.REDIS_URL) {
 // Legacy in-memory store for backward compatibility
 const store: RateLimitStore = {};
 
-// Clean up expired entries periodically (only for memory store)
-if (rateLimitBackend instanceof MemoryRateLimitStore) {
+// Clean up expired entries periodically (memory store, or the Redis store's outage fallback)
+if (rateLimitBackend instanceof MemoryRateLimitStore || rateLimitBackend instanceof RedisRateLimitStore) {
   setInterval(() => {
-    (rateLimitBackend as MemoryRateLimitStore).cleanup();
+    (rateLimitBackend as MemoryRateLimitStore | RedisRateLimitStore).cleanup();
   }, 60000); // Clean every minute
 }
 

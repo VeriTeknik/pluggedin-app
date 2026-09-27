@@ -26,8 +26,14 @@ import { approvedChildPath, inheritableChildEnv } from '@/lib/mcp/child-env';
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { safeMcpFetch } from '@/lib/mcp/safe-fetch';
+import {
+  refuseUnsandboxedStart,
+  resolveSandboxLauncher,
+  splitServerEnv,
+  TRUSTED_LAUNCHER_DIRS,
+} from '@/lib/mcp/sandbox-launcher';
 import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
-import { buildSecurePath, validatePathComponent } from '@/lib/secure-path-builder';
+import { buildSecurePath, buildServerScopedPath, validatePathComponent } from '@/lib/secure-path-builder';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
@@ -144,10 +150,20 @@ function validateUUID(uuid: string | undefined): void {
   }
 }
 
+/**
+ * A path inside one server's own directory, <store>/servers/<uuid>. That
+ * directory is bind-mounted writable into the server's sandbox, so its child
+ * can replace anything in it with a symlink; the scoped builder refuses one
+ * that leads out of it, into another server's directory included.
+ */
+function serverPath(uuid: string, ...components: string[]): string {
+  validateUUID(uuid);
+  return buildServerScopedPath(PackageManagerConfig.PACKAGE_STORE_DIR, uuid, ...components);
+}
+
 function privateRuntimeCaches(serverConfig: McpServer): Record<string, string> {
   if (!serverConfig.uuid) throw new Error('A server UUID is required for sandbox isolation');
-  validateUUID(serverConfig.uuid);
-  const workspace = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace');
+  const workspace = serverPath(serverConfig.uuid, 'workspace');
   return {
     UV_CACHE_DIR: path.join(workspace, '.cache/uv'),
     PNPM_STORE_DIR: path.join(workspace, '.cache/pnpm'),
@@ -202,11 +218,23 @@ async function isCommandAvailable(command: string): Promise<boolean> {
  * bubblewrap or firejail at all — the whole isolation, disabled by a package
  * name. A uvx package is not Docker; it runs under uv like every other one.
  *
- * A server that genuinely wraps Docker opts out explicitly with
- * `applySandboxing: false`, which createMcpClientAndTransport already honours.
+ * A server that genuinely wraps Docker cannot be sandboxed, so — like one with
+ * `applySandboxing: false` — createMcpClientAndTransport starts it only under
+ * the operator opt-out, MCP_ALLOW_UNSANDBOXED_STDIO=true.
  */
 export function requiresDockerSocket(command: string, _args: string[]): boolean {
   return command === 'docker';
+}
+
+/**
+ * The launcher to spawn, as an absolute path from a fixed system directory.
+ * Never a bare name: that was resolved through the launch environment's PATH,
+ * which the server's configuration and the package manager both write. When
+ * the launcher is not installed this is still an absolute path, so the spawn
+ * fails instead of finding something else.
+ */
+function sandboxLauncherPath(name: 'bwrap' | 'firejail'): string {
+  return resolveSandboxLauncher(name) ?? path.join(TRUSTED_LAUNCHER_DIRS[0], name);
 }
 
 export function createBubblewrapConfig(
@@ -225,9 +253,8 @@ export function createBubblewrapConfig(
   // This ensures OAuth tokens, workspace files, and other data are isolated per server
   let serverSpecificHome: string;
   if (serverConfig.uuid) {
-    // Validate UUID to prevent path traversal
-    validateUUID(serverConfig.uuid);
-    serverSpecificHome = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace');
+    // Validated, and anchored at the server's own directory
+    serverSpecificHome = serverPath(serverConfig.uuid, 'workspace');
   } else {
     serverSpecificHome = buildSecurePath(actualHome, 'mcp-workspace');
   }
@@ -245,6 +272,35 @@ export function createBubblewrapConfig(
   } catch (err) {
   }
 
+  // The server's own directory is mounted read-only below; its OAuth
+  // directory (mcp-remote keeps tokens there) is re-mounted writable, so it
+  // must exist before launch — the child cannot create it.
+  const serverDirs = serverConfig.uuid
+    ? { root: serverPath(serverConfig.uuid), oauth: serverPath(serverConfig.uuid, 'oauth') }
+    : null;
+  if (serverDirs) {
+    fs.mkdirSync(serverDirs.oauth, { recursive: true });
+  }
+
+  // privateRuntimeCaches puts the package caches in the server's own
+  // workspace. By default that workspace is HOME and bound writable where it
+  // is. When FIREJAIL_USER_HOME moves HOME it is bound at HOME's path instead,
+  // leaving its own path visible only through the read-only server directory,
+  // and every install fails with EROFS — so it is bound in place as well. Its
+  // entry sits in that read-only directory, so the child cannot swap it for a
+  // symlink before bwrap resolves it.
+  const privateWorkspace =
+    serverConfig.uuid && paths.userHome !== serverSpecificHome ? serverSpecificHome : null;
+  if (privateWorkspace) {
+    fs.mkdirSync(privateWorkspace, { recursive: true });
+  }
+
+  // By default HOME *is* the workspace bound below, so the per-tool
+  // directories under HOME are already inside that bind. Binding them again
+  // adds nothing but a host-side resolution of a path the child can turn into
+  // a symlink — to /run/secrets, or another server's directory.
+  const homeIsWorkspace = paths.userHome === paths.mcpWorkspace;
+
   // Resource limits are imported at the top
 
   // Base bubblewrap arguments for security and isolation
@@ -261,16 +317,18 @@ export function createBubblewrapConfig(
     '--dev', '/dev',
     '--tmpfs', '/tmp',
     
-    // Bind mount server-specific workspace as home
+    // The server's own directory, read-only. It also holds this server's
+    // package-manager installs, which the host writes and then executes; a
+    // writable view let a running server swap them under the installer.
+    ...(serverDirs ? ['--ro-bind', serverDirs.root, serverDirs.root] : []),
+
+    // Then, on top of it, only what the server writes: the workspace as home,
     '--bind', paths.mcpWorkspace, paths.userHome,
-    
-    // For servers with OAuth, ensure OAuth directory is accessible
-    // Mount the parent servers directory to allow access to oauth subdirectory
-    ...(serverConfig.uuid ? (() => {
-      const serverDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid!);
-      return ['--bind', serverDir, serverDir];
-    })() : []),
-    
+    // and its OAuth directory (mcp-remote's HOME, where it keeps tokens).
+    ...(serverDirs ? ['--bind', serverDirs.oauth, serverDirs.oauth] : []),
+    // and, when HOME is elsewhere, the workspace holding its package caches.
+    ...(privateWorkspace ? ['--bind', privateWorkspace, privateWorkspace] : []),
+
     // Read-only system directories
     '--ro-bind', '/usr', '/usr',
     '--ro-bind', '/lib', '/lib',
@@ -300,10 +358,11 @@ export function createBubblewrapConfig(
     '--ro-bind-try', paths.localBin, paths.localBin,
     
     // Pipx venvs directory (needed for uvx and other pipx-installed tools)
-    '--ro-bind-try', `${paths.userHome}/.local/share/pipx`, `${paths.userHome}/.local/share/pipx`,
-    
-    // UV tools directory (needs write access for uvx)
-    '--bind-try', `${paths.userHome}/.local/share/uv`, `${paths.userHome}/.local/share/uv`,
+    // and UV tools directory (needs write access for uvx)
+    ...(homeIsWorkspace ? [] : [
+      '--ro-bind-try', `${paths.userHome}/.local/share/pipx`, `${paths.userHome}/.local/share/pipx`,
+      '--bind-try', `${paths.userHome}/.local/share/uv`, `${paths.userHome}/.local/share/uv`,
+    ]),
     
     // MCP Interpreter directories (mount from config)
     '--ro-bind', PackageManagerConfig.NODEJS_BIN_DIR, PackageManagerConfig.NODEJS_BIN_DIR,
@@ -314,7 +373,7 @@ export function createBubblewrapConfig(
     '--ro-bind-try', `${actualHome}/.nvm`, `${actualHome}/.nvm`,
     
     // UV cache directory
-    '--bind-try', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
+    ...(homeIsWorkspace ? [] : ['--bind-try', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`]),
     
     // Only the server-specific directory above is mounted. The shared store
     // contains other tenants' packages and OAuth credentials; a Docker socket
@@ -349,6 +408,9 @@ export function createBubblewrapConfig(
     pnpmPath = `${actualHome}/.nvm/versions/node/v22.17.0/bin:${actualHome}/.nvm/versions/node/v20.18.2/bin`;
   }
 
+  // Variables that act on the launcher itself only reach the sandboxed process.
+  const { launcherEnv, sandboxOnlyEnv } = splitServerEnv(serverConfig.env);
+
   // Construct the final environment
   const finalEnv = {
     // Allowlisted host vars first: everything below deliberately overrides them
@@ -369,14 +431,15 @@ export function createBubblewrapConfig(
     PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
     NODE_ENV: 'production',
     // Apply server-specific env vars
-    ...(serverConfig.env || {}),
+    ...launcherEnv,
     ...privateRuntimeCaches(serverConfig),
   };
 
   return {
-    command: 'bwrap', // The bubblewrap command
+    command: sandboxLauncherPath('bwrap'),
     args: [
       ...baseBubblewrapArgs,
+      ...Object.entries(sandboxOnlyEnv).flatMap(([key, value]) => ['--setenv', key, value]),
       '--',
       commandToExecute,
       ...(serverConfig.args || [])
@@ -402,9 +465,8 @@ export function createFirejailConfig(
   // This ensures OAuth tokens, workspace files, and other data are isolated per server
   let serverSpecificHome: string;
   if (serverConfig.uuid) {
-    // Validate UUID to prevent path traversal
-    validateUUID(serverConfig.uuid);
-    serverSpecificHome = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace');
+    // Validated, and anchored at the server's own directory
+    serverSpecificHome = serverPath(serverConfig.uuid, 'workspace');
   } else {
     serverSpecificHome = buildSecurePath(actualHome, 'mcp-workspace');
   }
@@ -420,6 +482,15 @@ export function createFirejailConfig(
   try {
     fs.mkdirSync(paths.mcpWorkspace, { recursive: true });
   } catch (err) {
+  }
+
+  // As in createBubblewrapConfig: the server directory is read-only, bar its
+  // workspace and its OAuth directory, which therefore must exist up front.
+  const serverDirs = serverConfig.uuid
+    ? { root: serverPath(serverConfig.uuid), oauth: serverPath(serverConfig.uuid, 'oauth') }
+    : null;
+  if (serverDirs) {
+    fs.mkdirSync(serverDirs.oauth, { recursive: true });
   }
   
   // Only apply firejail to STDIO servers with a command
@@ -458,13 +529,16 @@ export function createFirejailConfig(
       `--whitelist=${paths.userHome}/.cache/uv`, // UV cache
       `--whitelist=${paths.userHome}/.venv`, // Virtual envs
       // For servers with OAuth, ensure access to OAuth directories
-      ...(serverConfig.uuid ? [
-        `--whitelist=${path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')}`,
-        `--whitelist=${path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid)}`
+      ...(serverDirs ? [
+        `--whitelist=${serverDirs.oauth}`,
+        `--whitelist=${serverDirs.root}`,
+        `--read-only=${serverDirs.root}`,
+        `--read-write=${paths.mcpWorkspace}`,
+        `--read-write=${serverDirs.oauth}`,
       ] : []),
       
-      // Docker socket (only if not using network isolation)
-      ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : [`--whitelist=/var/run/docker.sock`]),
+      // No Docker socket: it is root on the host, and --net=none does not stop
+      // a unix socket. The bubblewrap builder dropped it for the same reason.
 
       // Read-only system dirs
       '--read-only=/usr/bin',
@@ -500,6 +574,9 @@ export function createFirejailConfig(
     pnpmPathFirejail = `${actualHome}/.nvm/versions/node/v22.17.0/bin:${actualHome}/.nvm/versions/node/v20.18.2/bin`;
   }
 
+  // Variables that act on the launcher itself only reach the sandboxed process.
+  const { launcherEnv, sandboxOnlyEnv } = splitServerEnv(serverConfig.env);
+
   // Construct the final environment, prioritizing serverConfig.env
   const finalEnv = {
     // Allowlisted host vars first: everything below deliberately overrides them
@@ -520,14 +597,15 @@ export function createFirejailConfig(
     PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
     NODE_ENV: 'production',
     // Apply server-specific env vars, overriding inherited ones
-    ...(serverConfig.env || {}),
+    ...launcherEnv,
   };
 
 
   return {
-    command: 'firejail', // The actual command to run is firejail
+    command: sandboxLauncherPath('firejail'),
     args: [
       ...baseFirejailArgs, // Firejail's own arguments first
+      ...Object.entries(sandboxOnlyEnv).map(([key, value]) => `--env=${key}=${value}`),
       commandToExecute,   // Then the command firejail should execute
       ...(serverConfig.args || []) // Finally, the arguments for the original command
     ],
@@ -535,6 +613,91 @@ export function createFirejailConfig(
   };
 }
 
+
+/**
+ * The transport a stored configuration is actually run with.
+ *
+ * Remote records proxied through the mcp-remote CLI predate storing those as
+ * STDIO. Running that CLI is a local process, so such a record is STDIO for
+ * every purpose — sandboxing included — and it may only be that CLI. Choosing
+ * STDIO from the marker while sandboxing only records *stored* as STDIO let any
+ * command on an SSE or Streamable HTTP record run unsandboxed.
+ */
+export function resolveTransportType(serverConfig: McpServer): McpServerType | null {
+  switch (serverConfig.type) {
+    case McpServerType.STDIO:
+      return McpServerType.STDIO;
+    case McpServerType.SSE:
+    case McpServerType.STREAMABLE_HTTP:
+      if (!serverConfig.args?.includes('mcp-remote')) {
+        return serverConfig.type;
+      }
+      if (serverConfig.command && serverConfig.command !== 'npx') {
+        throw new Error('A remote server can only be proxied through `npx mcp-remote`');
+      }
+      return McpServerType.STDIO;
+    default:
+      return null;
+  }
+}
+
+type SandboxKind = 'bubblewrap' | 'firejail';
+
+interface SandboxLaunch extends FirejailConfig {
+  kind: SandboxKind;
+}
+
+const isSandboxKind = (kind: string): kind is SandboxKind => kind === 'bubblewrap' || kind === 'firejail';
+
+/**
+ * The sandboxes that can isolate a STDIO server, in order: the configured
+ * isolation, then the configured fallback, each only if its launcher is
+ * installed. Empty when isolation is configured off (`none`) or nothing is
+ * installed — which callers treat as a refusal, not as permission to run bare.
+ */
+function availableSandboxes(): SandboxKind[] {
+  if (!isSandboxKind(PackageManagerConfig.ISOLATION_TYPE)) return [];
+  return [PackageManagerConfig.ISOLATION_TYPE, PackageManagerConfig.ISOLATION_FALLBACK]
+    .filter(isSandboxKind)
+    .filter((kind) => resolveSandboxLauncher(kind === 'bubblewrap' ? 'bwrap' : 'firejail') !== null);
+}
+
+/** The sandboxed launch for a STDIO server, from the first sandbox that builds one. */
+function buildSandboxLaunch(
+  sandboxes: SandboxKind[],
+  stdioConfig: McpServer,
+  command: string,
+  args: string[],
+  packageManagerEnv: Record<string, string>
+): SandboxLaunch | null {
+  const launchConfig: McpServer = { ...stdioConfig, command, args };
+
+  for (const kind of sandboxes) {
+    const built = kind === 'bubblewrap' ? createBubblewrapConfig(launchConfig) : createFirejailConfig(launchConfig);
+    if (built) {
+      return { kind, command: built.command, args: built.args, env: { ...built.env, ...packageManagerEnv } };
+    }
+  }
+  return null;
+}
+
+/**
+ * The sandboxed launch for a STDIO server that is started somewhere other than
+ * createMcpClientAndTransport — the playground, the mcp-remote OAuth helper —
+ * chosen by the same policy: MCP_ISOLATION_TYPE, then MCP_ISOLATION_FALLBACK,
+ * each only if its launcher is installed, and none for a record that opts out
+ * of sandboxing.
+ *
+ * Null when nothing can isolate the server; the caller then applies
+ * refuseUnsandboxedStart, as createMcpClientAndTransport does. Throws what the
+ * builders throw (a server directory that is a symlink out of itself, one that
+ * cannot be created), which the caller treats as a refusal of that server.
+ */
+export function sandboxedStdioLaunch(serverConfig: McpServer): SandboxLaunch | null {
+  if (!serverConfig.command) return null;
+  const sandboxes = serverConfig.applySandboxing === false ? [] : availableSandboxes();
+  return buildSandboxLaunch(sandboxes, serverConfig, serverConfig.command, serverConfig.args ?? [], {});
+}
 
 // --- Core Client Logic ---
 
@@ -548,50 +711,60 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
   const clientName = 'PluggedinAppClient'; // Or get from config/package.json
   const clientVersion = '0.1.0'; // Or get from config/package.json
 
-  // Check if this is an mcp-remote server (regardless of the configured type)
+  // Marks a (legacy) mcp-remote proxy, which may default its command to npx
   const isMcpRemoteServer = serverConfig.args?.some(arg => arg === 'mcp-remote') || false;
-  
-  if (isMcpRemoteServer) {
-  }
 
   try {
-    // Force STDIO transport for mcp-remote servers
-    if (serverConfig.type === McpServerType.STDIO || isMcpRemoteServer) {
-      // For mcp-remote servers, ensure we have a command
-      if (!serverConfig.command && isMcpRemoteServer) {
-        serverConfig.command = 'npx';
-      }
-      
-      if (!serverConfig.command) {
+    const transportType = resolveTransportType(serverConfig);
+
+    if (transportType === McpServerType.STDIO) {
+      // Everything here starts a process, so it works on a copy normalised to
+      // STDIO — what the sandbox builders isolate — rather than trusting the
+      // stored type, and without mutating the caller's config.
+      const stdioConfig: McpServer = {
+        ...serverConfig,
+        type: McpServerType.STDIO,
+        command: serverConfig.command || (isMcpRemoteServer ? 'npx' : null),
+      };
+
+      if (!stdioConfig.command) {
         return null;
       }
       
       // Validate command for security
-      const commandValidation = validateCommand(serverConfig.command);
+      const commandValidation = validateCommand(stdioConfig.command);
       if (!commandValidation.valid) {
         throw new Error(`Invalid command: ${commandValidation.error}`);
       }
 
       // Validate command arguments
-      if (serverConfig.args) {
-        const argsValidation = validateCommandArgs(serverConfig.args);
+      if (stdioConfig.args) {
+        const argsValidation = validateCommandArgs(stdioConfig.args);
         if (!argsValidation.valid) {
           throw new Error(`Invalid arguments: ${argsValidation.error}`);
         }
       }
 
+      // Decide how the process will be isolated before the package manager
+      // runs, since its install happens on the host. A config asking to skip
+      // isolation gets no sandbox, and is refused like one with none available.
+      const sandboxes = stdioConfig.applySandboxing === false ? [] : availableSandboxes();
+      if (sandboxes.length === 0) {
+        refuseUnsandboxedStart(stdioConfig.name);
+      }
+
       // Transform command for package managers (npx, uvx, etc.)
-      let transformedCommand = serverConfig.command;
-      let transformedArgs = serverConfig.args || [];
+      let transformedCommand = stdioConfig.command;
+      let transformedArgs = stdioConfig.args || [];
       let packageManagerEnv: Record<string, string> = {};
       
       // Skip transformation if requested (e.g., during discovery)
       if (!skipCommandTransformation) {
         try {
           const transformation = await packageManager.transformCommand(
-            serverConfig.command,
-            serverConfig.args || [],
-            serverConfig.uuid || serverConfig.name // Use UUID if available, fallback to name
+            stdioConfig.command,
+            stdioConfig.args || [],
+            stdioConfig.uuid || stdioConfig.name // Use UUID if available, fallback to name
           );
           
           transformedCommand = transformation.command;
@@ -600,8 +773,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         } catch (error) {
           // Log more details about the failure
           console.error(`[MCP Wrapper] Command transformation details:`, {
-            command: serverConfig.command,
-            args: serverConfig.args,
+            command: stdioConfig.command,
+            args: stdioConfig.args,
             error: error instanceof Error ? error.message : String(error)
           });
           // Continue with original command if transformation fails
@@ -609,8 +782,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       } else {
         
         // Even in discovery mode, we need to set up proper environment for uvx
-        if (serverConfig.command === 'uvx') {
-          const serverUuid = serverConfig.uuid || serverConfig.name;
+        if (stdioConfig.command === 'uvx') {
+          const serverUuid = stdioConfig.uuid || stdioConfig.name;
           // Use validatePathComponent since serverUuid could be a name (not necessarily UUID)
           validatePathComponent(serverUuid);
           const installDir = buildSecurePath(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'uv');
@@ -625,105 +798,15 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       // function with tests rather than inline.
       const isDockerServer = requiresDockerSocket(transformedCommand, transformedArgs);
 
-      // Apply sandboxing by default for all STDIO servers (unless explicitly disabled)
-      let sandboxConfig: FirejailConfig | null = null;
-      // Only skip sandboxing if explicitly set to false or if it's a Docker server
-      if (serverConfig.applySandboxing !== false && serverConfig.type === McpServerType.STDIO && !isDockerServer) {
-        // Package manager config is imported at the top
-        
-        // Check availability of isolation tools
-        const [bwrapAvailable, firejailAvailable] = await Promise.all([
-          isCommandAvailable('bwrap'),
-          isCommandAvailable('firejail')
-        ]);
-        
-        // Try to use the configured isolation type
-        if (PackageManagerConfig.ISOLATION_TYPE === 'bubblewrap' && bwrapAvailable) {
-          const bubblewrapConfig = createBubblewrapConfig(serverConfig);
-          if (bubblewrapConfig) {
-            // Update bubblewrap args with transformed command
-            const bwrapArgs = [...bubblewrapConfig.args];
-            // Find the index of '--' separator
-            const separatorIndex = bwrapArgs.indexOf('--');
-            if (separatorIndex >= 0) {
-              // Replace command and args after '--'
-              bwrapArgs.splice(separatorIndex + 1, bwrapArgs.length - separatorIndex - 1, transformedCommand, ...transformedArgs);
-            }
-            sandboxConfig = {
-              command: bubblewrapConfig.command,
-              args: bwrapArgs,
-              env: {
-                ...bubblewrapConfig.env,
-                ...packageManagerEnv
-              }
-            };
-          } else if (PackageManagerConfig.ISOLATION_FALLBACK === 'firejail' && firejailAvailable) {
-            // Fall back to firejail if bubblewrap config failed
-            const firejailConfig = createFirejailConfig(serverConfig);
-            if (firejailConfig) {
-              // Update firejail args with transformed command
-              const fjArgs = [...firejailConfig.args];
-              // Find where the command starts (after all firejail flags)
-              const commandIndex = fjArgs.findIndex(arg => arg === serverConfig.command);
-              if (commandIndex >= 0) {
-                // Replace command and args
-                fjArgs.splice(commandIndex, fjArgs.length - commandIndex, transformedCommand, ...transformedArgs);
-              }
-              sandboxConfig = {
-                command: firejailConfig.command,
-                args: fjArgs,
-                env: {
-                  ...firejailConfig.env,
-                  ...packageManagerEnv
-                }
-              };
-            }
-          }
-        } else if (PackageManagerConfig.ISOLATION_TYPE === 'firejail' && firejailAvailable) {
-          // Use firejail as primary isolation
-          const firejailConfig = createFirejailConfig(serverConfig);
-          if (firejailConfig) {
-            // Update firejail args with transformed command
-            const fjArgs = [...firejailConfig.args];
-            // Find where the command starts (after all firejail flags)
-            const commandIndex = fjArgs.findIndex(arg => arg === serverConfig.command);
-            if (commandIndex >= 0) {
-              // Replace command and args
-              fjArgs.splice(commandIndex, fjArgs.length - commandIndex, transformedCommand, ...transformedArgs);
-            }
-            sandboxConfig = {
-              command: firejailConfig.command,
-              args: fjArgs,
-              env: {
-                ...firejailConfig.env,
-                ...packageManagerEnv
-              }
-            };
-          }
-        } else if (PackageManagerConfig.ISOLATION_TYPE === 'bubblewrap' && !bwrapAvailable && firejailAvailable) {
-          // Bubblewrap was requested but not available, try fallback
-          const firejailConfig = createFirejailConfig(serverConfig);
-          if (firejailConfig) {
-            // Update firejail args with transformed command
-            const fjArgs = [...firejailConfig.args];
-            // Find where the command starts (after all firejail flags)
-            const commandIndex = fjArgs.findIndex(arg => arg === serverConfig.command);
-            if (commandIndex >= 0) {
-              // Replace command and args
-              fjArgs.splice(commandIndex, fjArgs.length - commandIndex, transformedCommand, ...transformedArgs);
-            }
-            sandboxConfig = {
-              command: firejailConfig.command,
-              args: fjArgs,
-              env: {
-                ...firejailConfig.env,
-                ...packageManagerEnv
-              }
-            };
-          }
-        } else {
-          // No isolation tools available
-        }
+      // Every process is sandboxed. One that cannot be — it needs the Docker
+      // socket, or no sandbox builds on this platform — is treated exactly like
+      // one with no sandbox available: refused, unless the operator opted out.
+      const sandboxConfig = sandboxes.length === 0 || isDockerServer
+        ? null
+        : buildSandboxLaunch(sandboxes, stdioConfig, transformedCommand, transformedArgs, packageManagerEnv);
+
+      if (!sandboxConfig && sandboxes.length > 0) {
+        refuseUnsandboxedStart(stdioConfig.name);
       }
 
       // Get actual home directory for fallback
@@ -731,8 +814,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
 
       // For mcp-remote servers, ensure HOME points to OAuth directory
       const isMcpRemote = transformedCommand === 'npx' && transformedArgs?.includes('mcp-remote');
-      const serverOAuthHome = serverConfig.uuid && isMcpRemote
-        ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
+      const serverOAuthHome = stdioConfig.uuid && isMcpRemote
+        ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', stdioConfig.uuid, 'oauth')
         : actualHome;
 
       const stdioParams: StdioServerParameters = sandboxConfig ? {
@@ -742,10 +825,10 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         env: {
           ...sandboxConfig.env,
           // For mcp-remote, override HOME to OAuth directory
-          ...(isMcpRemote && serverConfig.uuid ? { HOME: serverOAuthHome } : {}),
+          ...(isMcpRemote && stdioConfig.uuid ? { HOME: serverOAuthHome } : {}),
           ...packageManagerEnv,
           // Enforce this after both package-manager and caller environment merges.
-          ...(sandboxConfig.command === 'bwrap' ? privateRuntimeCaches(serverConfig) : {}),
+          ...(sandboxConfig.kind === 'bubblewrap' ? privateRuntimeCaches(stdioConfig) : {}),
         }
       } : {
         // Use transformed configuration
@@ -774,7 +857,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           // Apply package manager env
           ...packageManagerEnv,
           // Apply server-specific env vars, overriding anything above
-          ...(serverConfig.env || {})
+          ...(stdioConfig.env || {})
         }
       };
       
@@ -794,7 +877,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         
         throw error;
       }
-    } else if (serverConfig.type === McpServerType.SSE && !isMcpRemoteServer) {
+    } else if (transportType === McpServerType.SSE) {
       // Log deprecation warning
 
       if (!serverConfig.url) {
@@ -850,7 +933,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         requestInit: transportOptions.requestInit,
         fetch: safeMcpFetch,
       });
-    } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP && !isMcpRemoteServer) {
+    } else if (transportType === McpServerType.STREAMABLE_HTTP) {
       if (!serverConfig.url) {
         return null;
       }
@@ -956,8 +1039,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             serverConfig.profile_uuid
           );
         } else {
-          // Fallback to direct transport if we don't have server/profile UUIDs
-          transport = new StreamableHTTPClientTransport(url, transportOptions);
+          // Fallback to direct transport if we don't have server/profile UUIDs,
+          // with the same SSRF-pinned fetch the wrapper uses
+          transport = new StreamableHTTPClientTransport(url, { ...transportOptions, fetch: safeMcpFetch });
         }
       } catch (error) {
         throw error; // Propagate the error instead of falling back
@@ -981,6 +1065,11 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
     return { client, transport };
 
   } catch (error) {
+    // Callers only see "failed to create"; a refused launch must be diagnosable.
+    console.error(
+      `[MCP Wrapper] Not starting MCP server "${serverConfig.name}":`,
+      error instanceof Error ? error.message : String(error)
+    );
     return null;
   }
 }

@@ -223,6 +223,11 @@
     "messages": {
       "updateSuccess": "Serverconfiguratie succesvol bijgewerkt."
     },
+    "smartDialog": {
+      "githubNotInRegistry": "Deze repository staat niet in het MCP-register, dus er is geen geverifieerd pakket gevonden. Voer in plaats daarvan het exacte installatiecommando in.",
+      "githubSuggestionCommand": "Plak het installatiecommando uit de README van de repository, bijv. npx -y @scope/package",
+      "githubSuggestionJson": "Of plak de MCP JSON-configuratie die de repository documenteert"
+    },
     "test": {
       "authRequired": "Authenticatie vereist - voeg server toe om te authenticeren",
       "authRequiredDetail": "Deze server vereist authenticatie. Klik na toevoegen op de knop \"Authenticeren\" om uw account te koppelen.",
