@@ -4,14 +4,16 @@ _Last updated: 2026-10-06_
 
 plugged.in, the hosted service, is moving to a new, separately developed platform. After that move, the
 open-source repositories listed below will no longer run plugged.in. They stay open source under their current
-licenses and continue as community projects with open collaboration.
+licenses, and the community is welcome to carry them on.
 
 ## What changes
 
 - The hosted service at [plugged.in](https://plugged.in) will run on the new platform instead of this codebase.
-- After the cutover, the hosted plugged.in API that the SDKs, the Claude Code plugin and `pluggedin-mcp` talk to
-  today will no longer serve them. Point them at your own `pluggedin-app` instance instead.
-- The cutover date will be announced in this repository at least 60 days in advance.
+- At the cutover, the current service moves to [v1.plugged.in](https://v1.plugged.in) and keeps running there
+  until December 31, 2026. After that, v1.plugged.in shuts down.
+- Before the cutover, we will release new versions of the SDKs, the Claude Code plugin and `pluggedin-mcp` that
+  point to v1.plugged.in. After December 31, 2026, point them at your own `pluggedin-app` instance.
+- The cutover date will be announced in this repository.
 
 ## What does not change
 
@@ -22,9 +24,11 @@ licenses and continue as community projects with open collaboration.
 
 ## For hosted plugged.in users
 
-- The cutover date will be announced here at least 60 days in advance.
-- Your account will move to the new platform at the cutover.
-- You will be able to export your content. Export instructions will come with the cutover announcement.
+- The cutover date will be announced here.
+- Your account keeps working at v1.plugged.in until December 31, 2026.
+- Moving your account to the new platform is your choice. Nothing moves without your consent.
+- You can export your content from v1.plugged.in until December 31, 2026. Export instructions will come with the
+  cutover announcement.
 - If you prefer, you can self-host `pluggedin-app` and keep using this codebase as it is.
 
 ## For contributors
