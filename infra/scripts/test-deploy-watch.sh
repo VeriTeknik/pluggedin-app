@@ -1,0 +1,929 @@
+#!/usr/bin/env bash
+# Test harness for deploy-watch.sh.
+#
+# Stubs docker/git/curl by putting fake executables first on PATH, then
+# sources deploy-watch.sh (whose main() is guarded) and calls its functions
+# directly. Run: infra/scripts/test-deploy-watch.sh
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PASS=0
+FAIL=0
+
+ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; PASS=$((PASS + 1)); }
+bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; FAIL=$((FAIL + 1)); }
+is()   { # is <actual> <expected> <label>
+  if [ "$1" = "$2" ]; then ok "$3"; else bad "$3 (got '$1', want '$2')"; fi
+}
+
+setup() {
+  TESTROOT="$(mktemp -d)"
+  export STATE_DIR="${TESTROOT}/state"
+  export DEPLOY_TREE="${TESTROOT}/tree"
+  mkdir -p "$STATE_DIR" "$DEPLOY_TREE"
+}
+teardown() { rm -rf "$TESTROOT"; }
+
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/deploy-watch.sh"
+# Sourcing the script under test inherits set -e, which would abort on
+# the first non-zero assertion. Reset it so the harness can report all failures.
+set +e
+
+printf '\n[test] state file\n'
+setup
+state_set last_check "2026-08-11T00:00:00Z"
+state_set running_rev "abc123"
+is "$(state_get last_check)" "2026-08-11T00:00:00Z" "state_get reads back what state_set wrote"
+is "$(state_get running_rev)" "abc123" "second key stored independently"
+state_set running_rev "def456"
+is "$(state_get running_rev)" "def456" "state_set replaces rather than appends"
+is "$(grep -c '^running_rev=' "${STATE_DIR}/deploy-watch.state")" "1" "no duplicate keys accumulate"
+is "$(state_get never_set)" "" "missing key yields empty string"
+teardown
+
+printf '\n[test] revision resolution\n'
+setup
+# A real git repo, so short_sha and fetch_tree exercise real git behaviour.
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+echo one > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt
+git -C "$DEPLOY_TREE" commit -qm one
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+is "$(short_sha "$REV")" "${REV:0:7}" "short_sha abbreviates to exactly 7 characters"
+is "${#REV}" "40" "test fixture revision is a full SHA"
+
+# Stub docker so image_exists is deterministic.
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+cat > "$STUBS/docker" <<'STUB'
+#!/usr/bin/env bash
+# manifest inspect <repo>:<tag> — only sha-present resolves
+if [ "$1" = "manifest" ] && [ "$2" = "inspect" ]; then
+  case "$3" in
+    *:sha-present) exit 0 ;;
+    *) echo "manifest unknown" >&2; exit 1 ;;
+  esac
+fi
+if [ "$1" = "inspect" ]; then
+  # inspect <container> --format ... — print the fixture revision
+  if [ -n "${STUB_RUNNING_REV:-}" ]; then echo "$STUB_RUNNING_REV"; exit 0; fi
+  echo "No such object" >&2; exit 1
+fi
+exit 0
+STUB
+chmod +x "$STUBS/docker"
+PATH="$STUBS:$PATH"
+
+image_exists "sha-present" && ok "image_exists true for a tag the registry resolves" \
+  || bad "image_exists true for a tag the registry resolves"
+image_exists "sha-absent" && bad "image_exists false for an absent tag" \
+  || ok "image_exists false for an absent tag"
+
+STUB_RUNNING_REV="$REV" is "$(STUB_RUNNING_REV="$REV" running_revision)" "$REV" \
+  "running_revision reads the container label"
+is "$(running_revision)" "" "running_revision is empty when the container is absent"
+teardown
+
+printf '\n[test] infra gate\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE"/{app,infra/scripts,.github/workflows,drizzle}
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+BASE="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+commit_file() { # commit_file <path> <content> -> prints new SHA
+  mkdir -p "$(dirname "${DEPLOY_TREE}/$1")"
+  echo "$2" > "${DEPLOY_TREE}/$1"
+  git -C "$DEPLOY_TREE" add -A
+  git -C "$DEPLOY_TREE" commit -qm "touch $1"
+  git -C "$DEPLOY_TREE" rev-parse HEAD
+}
+
+APP="$(commit_file app/page.tsx changed)"
+is "$(gate_blocked_files "$BASE" "$APP")" "" "app-only change is not blocked"
+
+INFRA="$(commit_file infra/scripts/deploy.sh changed)"
+is "$(gate_blocked_files "$APP" "$INFRA")" "infra/scripts/deploy.sh" "infra/ change is blocked"
+
+COMPOSE="$(commit_file docker-compose.production.yml changed)"
+is "$(gate_blocked_files "$INFRA" "$COMPOSE")" "docker-compose.production.yml" "root compose change is blocked"
+
+DOCKERFILE="$(commit_file Dockerfile changed)"
+is "$(gate_blocked_files "$COMPOSE" "$DOCKERFILE")" "Dockerfile" "Dockerfile change is blocked"
+
+WF="$(commit_file .github/workflows/build-image.yml changed)"
+is "$(gate_blocked_files "$DOCKERFILE" "$WF")" ".github/workflows/build-image.yml" "workflow change is blocked"
+
+# Paths that merely look like the protected ones must NOT be blocked.
+DECOY="$(commit_file app/infra/helper.ts changed)"
+is "$(gate_blocked_files "$WF" "$DECOY")" "" "app/infra/ is not the protected infra/ prefix"
+DECOY2="$(commit_file app/Dockerfile.md changed)"
+is "$(gate_blocked_files "$DECOY" "$DECOY2")" "" "a nested Dockerfile.md is not the root Dockerfile"
+DECOY3="$(commit_file drizzle/0001_x.sql changed)"
+is "$(gate_blocked_files "$DECOY2" "$DECOY3")" "" "migrations are app changes, not infra"
+
+# The range, not just the tip: an infra commit buried behind an app commit
+# must still block.
+# The infra commit's own SHA is deliberately not captured — the assertion
+# spans DECOY3..BURIED_APP precisely so the infra change sits buried inside
+# the range rather than at either endpoint.
+commit_file infra/docker-compose.yml changed >/dev/null
+BURIED_APP="$(commit_file app/page.tsx again)"
+is "$(gate_blocked_files "$DECOY3" "$BURIED_APP")" "infra/docker-compose.yml" \
+  "an infra commit behind a later app commit still blocks the range"
+
+# Fail-closed: an unknown starting revision cannot be evaluated.
+if gate_blocked_files "0000000000000000000000000000000000000000" "$BURIED_APP" >/dev/null 2>&1; then
+  bad "unknown revision must not evaluate as allowed"
+else
+  ok "unknown revision fails closed"
+fi
+teardown
+
+printf '\n[test] infra gate: rename bypass\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE/infra/scripts"
+echo x > "$DEPLOY_TREE/infra/scripts/verify.sh"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm "add verify.sh"
+R1="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+mkdir -p "$DEPLOY_TREE/scripts"
+git -C "$DEPLOY_TREE" mv infra/scripts/verify.sh scripts/verify.sh
+git -C "$DEPLOY_TREE" commit -qm "move verify.sh out of infra/"
+R2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+is "$(gate_blocked_files "$R1" "$R2")" "infra/scripts/verify.sh" \
+  "renaming a gated path to a non-gated path still blocks (old path surfaces via --no-renames)"
+teardown
+
+printf '\n[test] infra gate: widened scope\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE"/{app,.github/workflows,.github/actions/build}
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+BASE2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+DFVAR="$(commit_file Dockerfile.production changed)"
+is "$(gate_blocked_files "$BASE2" "$DFVAR")" "Dockerfile.production" \
+  "a root Dockerfile variant is blocked"
+
+ACTION="$(commit_file .github/actions/build/action.yml changed)"
+is "$(gate_blocked_files "$DFVAR" "$ACTION")" ".github/actions/build/action.yml" \
+  "a composite action under .github/ is blocked, not just .github/workflows/"
+
+DOCKERIGNORE="$(commit_file .dockerignore changed)"
+is "$(gate_blocked_files "$ACTION" "$DOCKERIGNORE")" ".dockerignore" \
+  "root .dockerignore is blocked"
+
+# Newly covered patterns must still respect root-only anchoring.
+DECOY_DF="$(commit_file app/Dockerfile.x changed)"
+is "$(gate_blocked_files "$DOCKERIGNORE" "$DECOY_DF")" "" \
+  "Dockerfile.x nested under a subdirectory is not the root Dockerfile"
+
+DECOY_GH="$(commit_file app/.github/workflows/x.yml changed)"
+is "$(gate_blocked_files "$DECOY_DF" "$DECOY_GH")" "" \
+  "a nested .github under a subdirectory is not the protected root .github/"
+teardown
+
+printf '\n[test] infra gate: git diff failure fails closed\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+echo one > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt
+git -C "$DEPLOY_TREE" commit -qm one
+R1="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo two > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt
+git -C "$DEPLOY_TREE" commit -qm two
+R2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+# Force git diff itself to fail (distinct from grep finding no match) by
+# intercepting only the `-C <tree> diff ...` invocation; everything else
+# (including cat-file, used by the fail-closed revision check) passes
+# through to the real git.
+REALGIT="$(command -v git)"
+GITSTUB="${TESTROOT}/gitstub"; mkdir -p "$GITSTUB"
+cat > "$GITSTUB/git" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "-C" ] && [ "\$3" = "diff" ]; then
+  echo "fatal: forced failure for test" >&2
+  exit 128
+fi
+exec "$REALGIT" "\$@"
+STUB
+chmod +x "$GITSTUB/git"
+
+if PATH="$GITSTUB:$PATH" gate_blocked_files "$R1" "$R2" >/dev/null 2>&1; then
+  bad "a genuine git diff failure must not read as clean"
+else
+  ok "a genuine git diff failure fails closed"
+fi
+teardown
+
+printf '\n[test] migration detection and dry run\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+mkdir -p "$DEPLOY_TREE"/{app,drizzle}
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+B="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo x > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app
+A="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo y > "$DEPLOY_TREE/drizzle/0002_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig
+M="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+range_touches_migrations "$B" "$A" && bad "app-only range must not request a backup" \
+  || ok "app-only range does not request a backup"
+range_touches_migrations "$A" "$M" && ok "range touching drizzle/ requests a backup" \
+  || bad "range touching drizzle/ requests a backup"
+teardown
+
+printf '\n[test] range_touches_migrations: fails closed on a genuine git diff failure\n'
+setup
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+echo one > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt; git -C "$DEPLOY_TREE" commit -qm one
+R1="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+echo two > "$DEPLOY_TREE/a.txt"
+git -C "$DEPLOY_TREE" add a.txt; git -C "$DEPLOY_TREE" commit -qm two
+R2="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+# Force `git diff` (specifically) to fail, distinct from grep finding no
+# match, the same way the infra-gate git-diff-failure test above does.
+REALGIT="$(command -v git)"
+GITSTUB="${TESTROOT}/gitstub-mig"; mkdir -p "$GITSTUB"
+cat > "$GITSTUB/git" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "-C" ] && [ "\$3" = "diff" ]; then
+  echo "fatal: forced failure for test" >&2
+  exit 128
+fi
+exec "$REALGIT" "\$@"
+STUB
+chmod +x "$GITSTUB/git"
+
+if PATH="$GITSTUB:$PATH" range_touches_migrations "$R1" "$R2"; then
+  ok "a git diff failure fails closed toward 'might touch migrations' (triggers backup+migrate)"
+else
+  bad "a git diff failure fails closed toward 'might touch migrations' (triggers backup+migrate)"
+fi
+teardown
+
+# --- do_deploy stub harness -------------------------------------------------
+# Real git repo, because checkout and diff need real git behaviour. docker,
+# curl, deploy.sh, and backup.sh are stubs on PATH (or dropped straight into
+# DEPLOY_TREE/infra/scripts, since do_deploy invokes them by absolute path)
+# that log every call to CALL_LOG and whose outcome is controlled by env
+# vars — the real deploy.sh/backup.sh/docker are never invoked.
+setup_deploy_fixture() {
+  setup
+  git -C "$DEPLOY_TREE" init -q
+  git -C "$DEPLOY_TREE" config user.email t@example.com
+  git -C "$DEPLOY_TREE" config user.name  Test
+  mkdir -p "$DEPLOY_TREE"/{app,drizzle,infra/scripts}
+  echo base > "$DEPLOY_TREE/app/page.tsx"
+  git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+  FROM_REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+
+  CALL_LOG="${TESTROOT}/calls.log"; : > "$CALL_LOG"
+  export CALL_LOG
+
+  cat > "$DEPLOY_TREE/infra/scripts/deploy.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "deploy.sh $*" >> "$CALL_LOG"
+[ "${STUB_DEPLOY_FAIL:-0}" = "1" ] && exit 1
+exit 0
+STUB
+  chmod +x "$DEPLOY_TREE/infra/scripts/deploy.sh"
+
+  cat > "$DEPLOY_TREE/infra/scripts/backup.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "backup.sh $*" >> "$CALL_LOG"
+[ "${STUB_BACKUP_FAIL:-0}" = "1" ] && exit 1
+exit 0
+STUB
+  chmod +x "$DEPLOY_TREE/infra/scripts/backup.sh"
+
+  STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+  cat > "$STUBS/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "docker $*" >> "$CALL_LOG"
+case "$1" in
+  inspect)
+    if [ -n "${STUB_PREV_IMAGE:-}" ]; then echo "$STUB_PREV_IMAGE"; exit 0; fi
+    echo "no such object" >&2; exit 1 ;;
+  compose)
+    [ "${STUB_MIGRATE_FAIL:-0}" = "1" ] && exit 1
+    exit 0 ;;
+  pull)
+    [ "${STUB_PULL_FAIL:-0}" = "1" ] && exit 1
+    exit 0 ;;
+  tag)
+    [ "${STUB_TAG_FAIL:-0}" = "1" ] && exit 1
+    exit 0 ;;
+  manifest) exit 0 ;;
+  *) exit 0 ;;
+esac
+STUB
+  chmod +x "$STUBS/docker"
+
+  # external_check makes ONE curl call per attempt: body and status code
+  # together, split back apart via the trailing "\n%{http_code}" that -w
+  # appends. STUB_HEALTH_COUNTER_FILE, if set and containing N > 0, reports
+  # unhealthy (code 000, no body) for the next N attempts (decrementing on
+  # each) before reporting healthy — lets a test make the Nth external_check
+  # attempt (not just every attempt) fail, e.g. "forward check fails,
+  # rollback check passes" without needing real retry delays.
+  cat > "$STUBS/curl" <<'STUB'
+#!/usr/bin/env bash
+bad_left=0
+if [ -n "${STUB_HEALTH_COUNTER_FILE:-}" ] && [ -f "$STUB_HEALTH_COUNTER_FILE" ]; then
+  bad_left="$(cat "$STUB_HEALTH_COUNTER_FILE")"
+fi
+if [ "$bad_left" -gt 0 ]; then
+  [ -n "${STUB_HEALTH_COUNTER_FILE:-}" ] && echo $((bad_left - 1)) > "$STUB_HEALTH_COUNTER_FILE"
+  printf '\n000'
+else
+  printf '{"status":"healthy"}\n200'
+fi
+exit 0
+STUB
+  chmod +x "$STUBS/curl"
+
+  PATH="$STUBS:$PATH"; export PATH
+  # No real retry delay in tests; scenarios that need a failing attempt use
+  # STUB_HEALTH_COUNTER_FILE instead of the timeout/interval loop.
+  EXTERNAL_CHECK_INTERVAL=0 EXTERNAL_CHECK_TIMEOUT=0
+  export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+}
+
+printf '\n[test] do_deploy: migration failure leaves the stack untouched\n'
+setup_deploy_fixture
+echo y > "$DEPLOY_TREE/drizzle/0002_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+STUB_MIGRATE_FAIL=1 STUB_PREV_IMAGE=sha256:prev do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when migration fails"
+is "$(state_get last_outcome)" "failed: migration (stack untouched)" \
+  "migration failure records the stack-untouched outcome"
+is "$(grep -c 'backup.sh' "$CALL_LOG")" "1" "backup ran before the migration (range touches drizzle/)"
+# I3: pull/tag now run BEFORE backup/migrate (design order: pull -> backup ->
+# migrate -> up), so a migration failure happens after the pull/tag already
+# landed locally. "(stack untouched)" still holds: it describes the RUNNING
+# CONTAINER, which deploy.sh (invoked below) never touches on this path.
+is "$(grep -c 'docker pull' "$CALL_LOG")" "1" "the image was already pulled before migrate ran (pull precedes backup/migrate)"
+is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "deploy.sh never runs after a migration failure — the running container is untouched"
+teardown
+
+printf '\n[test] do_deploy: verify failure triggers a rollback (rolled back and verified)\n'
+setup_deploy_fixture
+echo app > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+COUNTER="${TESTROOT}/health_counter"; echo 1 > "$COUNTER"
+STUB_PREV_IMAGE=sha256:prev STUB_HEALTH_COUNTER_FILE="$COUNTER" do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero even when the rollback itself succeeds"
+case "$(state_get last_outcome)" in
+  "rolled back and verified: ${SHORT} at "*) ok "a failed verification rolls back and records verification of the rollback" ;;
+  *) bad "a failed verification rolls back and records verification of the rollback (got '$(state_get last_outcome)')" ;;
+esac
+is "$(grep -c 'deploy.sh --no-pull' "$CALL_LOG")" "2" "deploy.sh runs once forward and once for the rollback"
+teardown
+
+printf '\n[test] do_deploy: rollback after a successful migration needs a human\n'
+setup_deploy_fixture
+echo y > "$DEPLOY_TREE/drizzle/0002_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+COUNTER="${TESTROOT}/health_counter"; echo 1 > "$COUNTER"
+STUB_PREV_IMAGE=sha256:prev STUB_HEALTH_COUNTER_FILE="$COUNTER" do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero after a post-migration rollback"
+case "$(state_get last_outcome)" in
+  *"MIGRATION ALREADY APPLIED, needs a human"*)
+    ok "a rollback after a successful migration says plainly that the schema was not reverted" ;;
+  *)
+    bad "a rollback after a successful migration says plainly that the schema was not reverted (got '$(state_get last_outcome)')" ;;
+esac
+case "$(state_get last_outcome)" in
+  "rolled back and verified:"*) ok "the image rollback itself is still reported as verified" ;;
+  *) bad "the image rollback itself is still reported as verified (got '$(state_get last_outcome)')" ;;
+esac
+teardown
+
+printf '\n[test] do_deploy: no previous image means no rollback is possible\n'
+setup_deploy_fixture
+echo app2 > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app2
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+COUNTER="${TESTROOT}/health_counter"; echo 1 > "$COUNTER"
+unset STUB_PREV_IMAGE
+STUB_HEALTH_COUNTER_FILE="$COUNTER" do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when there is nothing to roll back to"
+case "$(state_get last_outcome)" in
+  "NO ROLLBACK POSSIBLE"*) ok "an unknown previous image is never reported as a completed rollback" ;;
+  *) bad "an unknown previous image is never reported as a completed rollback (got '$(state_get last_outcome)')" ;;
+esac
+is "$(grep -c 'docker tag' "$CALL_LOG")" "1" "only the forward tag runs — no rollback tag attempt without a previous image"
+teardown
+
+printf '\n[test] set -e safety: guarded failures are recorded, not fatal\n'
+setup_deploy_fixture
+# The real script runs under `set -euo pipefail`; the test harness disabled
+# -e after sourcing so it can report every assertion. Re-enable it in a
+# subshell here to reproduce the actual production condition these guards
+# exist for: a bare (unguarded) failing command would abort mid-do_deploy
+# under set -e, skipping both the rollback branch and every state_set below
+# it, per the CRITICAL finding in fix round 1.
+(
+  set -euo pipefail
+  do_deploy "deadbee" "0000000000000000000000000000000000000000" "$FROM_REV"
+)
+rc=$?
+is "$rc" "1" "checking out an unknown revision fails the deploy, not the whole process"
+is "$(state_get last_outcome)" "failed: checkout 0000000000000000000000000000000000000000 (stack untouched)" \
+  "a checkout failure is recorded even under set -e"
+
+echo app3 > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app3
+REV3="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT3="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV3")"
+(
+  set -euo pipefail
+  STUB_TAG_FAIL=1 do_deploy "$SHORT3" "$REV3" "$FROM_REV"
+)
+rc=$?
+is "$rc" "1" "a forward tag failure fails the deploy, not the whole process"
+is "$(state_get last_outcome)" "failed: tag (stack untouched)" \
+  "a forward tag failure is recorded even under set -e"
+teardown
+
+printf '\n[test] main: a stale block clears once the running revision catches up\n'
+setup
+ORIGIN="${TESTROOT}/origin.git"
+git init -q --bare "$ORIGIN"
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+git -C "$DEPLOY_TREE" remote add origin "$ORIGIN"
+mkdir -p "$DEPLOY_TREE/app"
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+BLOCKED_REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+BLOCKED_SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$BLOCKED_REV")"
+
+state_set blocked_rev "$BLOCKED_REV"
+state_set blocked_short "$BLOCKED_SHORT"
+state_set blocked_files "infra/docker-compose.yml"
+
+# A human hand-deployed the previously blocked commit: the container is now
+# running it, even though this script never saw a clean range for it.
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+cat > "$STUBS/docker" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "inspect" ]; then echo "$BLOCKED_REV"; exit 0; fi
+exit 0
+STUB
+chmod +x "$STUBS/docker"
+
+( PATH="$STUBS:$PATH"; export PATH; main )
+is "$(state_get blocked_rev)" "" "blocked_rev clears once the running revision matches (or is past) it"
+is "$(state_get blocked_files)" "" "blocked_files clears along with blocked_rev"
+teardown
+
+# --- main() fixture: gate-blocked and deploy-failed paths ------------------
+# main() has exactly one test above ("a stale block clears..."), which only
+# reaches that path before returning early at "up to date". Everything past
+# it — both gate-blocking branches, and above all the deploy-failed/no-retry
+# handoff CRITICAL C1 lives in — was untested. This fixture builds on
+# setup_deploy_fixture (real git repo, stub docker/curl/deploy.sh/backup.sh
+# that log to CALL_LOG) and adds a bare "origin" so fetch_tree has something
+# real to fetch from, the same trick the stale-block test above uses.
+#
+# It replaces setup_deploy_fixture's docker stub with one that answers TWO
+# different `docker inspect` questions with different values — the
+# container's revision LABEL (what running_revision(), and so main(), reads)
+# versus the previous image ID (what do_deploy reads for a possible
+# rollback) — disambiguated by the --format string each call passes. The
+# do_deploy-only tests above never needed this because they call
+# running_revision() at most once, indirectly, and never check its value;
+# main() calls it directly and compares it against a real commit SHA, so the
+# two questions can no longer share one canned answer.
+setup_main_fixture() {
+  setup_deploy_fixture
+  ORIGIN="${TESTROOT}/origin.git"
+  git init -q --bare "$ORIGIN"
+  git -C "$DEPLOY_TREE" remote add origin "$ORIGIN"
+  git -C "$DEPLOY_TREE" push -q origin HEAD:main
+
+  cat > "$STUBS/docker" <<STUB
+#!/usr/bin/env bash
+echo "docker \$*" >> "$CALL_LOG"
+case "\$1" in
+  manifest) exit 0 ;;
+  inspect)
+    case "\$*" in
+      *Config.Labels*) printf '%s\n' "\${STUB_RUNNING_REV:-}"; exit 0 ;;
+      *)
+        if [ -n "\${STUB_PREV_IMAGE:-}" ]; then echo "\$STUB_PREV_IMAGE"; exit 0; fi
+        echo "no such object" >&2; exit 1 ;;
+    esac ;;
+  compose)
+    [ "\${STUB_MIGRATE_FAIL:-0}" = "1" ] && exit 1
+    exit 0 ;;
+  pull)
+    [ "\${STUB_PULL_FAIL:-0}" = "1" ] && exit 1
+    exit 0 ;;
+  tag)
+    [ "\${STUB_TAG_FAIL:-0}" = "1" ] && exit 1
+    exit 0 ;;
+  *) exit 0 ;;
+esac
+STUB
+  chmod +x "$STUBS/docker"
+}
+
+printf '\n[test] main: gate-blocked path records the block and never reaches do_deploy\n'
+setup_main_fixture
+echo changed > "$DEPLOY_TREE/infra/docker-compose.yml"
+# Stage only the one intended file: setup_deploy_fixture drops stub
+# deploy.sh/backup.sh into infra/scripts/ AFTER the base commit, untracked;
+# `git add -A` here would sweep those in too and pollute the gated-files
+# list this test asserts on.
+git -C "$DEPLOY_TREE" add infra/docker-compose.yml
+git -C "$DEPLOY_TREE" commit -qm "touch infra/docker-compose.yml"
+TARGET="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+TARGET_SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$TARGET")"
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+
+( PATH="$STUBS:$PATH"; export PATH
+  STUB_RUNNING_REV="$FROM_REV"; export STUB_RUNNING_REV
+  main )
+rc=$?
+is "$rc" "0" "a gate-blocked cycle exits 0 — recorded, not treated as this cycle's failure"
+is "$(state_get blocked_rev)" "$TARGET" "blocked_rev is set to the gated target"
+is "$(state_get blocked_short)" "$TARGET_SHORT" "blocked_short matches"
+case "$(state_get blocked_files)" in
+  *infra/docker-compose.yml*) ok "blocked_files names the gated path" ;;
+  *) bad "blocked_files names the gated path (got '$(state_get blocked_files)')" ;;
+esac
+is "$(state_get failed_rev)" "" "a gate block is not a deploy failure — failed_rev stays empty"
+is "$(grep -c 'docker pull' "$CALL_LOG")" "0" "do_deploy is never reached for a blocked target — no pull"
+is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "do_deploy is never reached for a blocked target — deploy.sh never runs"
+teardown
+
+printf '\n[test] main: blocked_short clears on the clean path alongside blocked_rev and blocked_files\n'
+setup_main_fixture
+# Leftover state from some earlier, unrelated block — must not survive a
+# cycle whose target clears the gate. Before the fix, the clean-path clear
+# reset blocked_rev and blocked_files but forgot blocked_short, leaving a
+# stale short SHA behind (invisible via --status only because it gates on
+# blocked_rev being non-empty — a latent inconsistency, not a user-visible
+# bug, but the stale-clear branch already clears all three and the two
+# should match).
+state_set blocked_rev "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+state_set blocked_short "deadbee"
+state_set blocked_files "some/unrelated/path"
+
+echo appclean > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add app/page.tsx
+git -C "$DEPLOY_TREE" commit -qm appclean
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+
+( PATH="$STUBS:$PATH"; export PATH
+  STUB_RUNNING_REV="$FROM_REV"; export STUB_RUNNING_REV
+  main )
+rc=$?
+is "$rc" "0" "a clean, gate-passing deploy succeeds"
+is "$(state_get blocked_rev)" "" "blocked_rev clears on the clean path"
+is "$(state_get blocked_short)" "" "blocked_short clears on the clean path alongside blocked_rev and blocked_files"
+is "$(state_get blocked_files)" "" "blocked_files clears on the clean path"
+teardown
+
+printf '\n[test] main: a deploy failure records failed_rev; a second cycle does NOT retry the same target (C1)\n'
+setup_main_fixture
+echo app1 > "$DEPLOY_TREE/app/page.tsx"
+# Stage only the app file — see the comment in the gate-blocked test above
+# for why `-A` here would falsely trip the infra gate on this app-only
+# commit via the untracked deploy.sh/backup.sh stubs.
+git -C "$DEPLOY_TREE" add app/page.tsx
+git -C "$DEPLOY_TREE" commit -qm app1
+TARGET="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+TARGET_SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$TARGET")"
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+
+# Cycle 1: the pull step fails (do_deploy's first guarded step after
+# checkout, per the I3 reorder), so this cycle's deploy fails outright.
+( PATH="$STUBS:$PATH"; export PATH
+  STUB_RUNNING_REV="$FROM_REV"; export STUB_RUNNING_REV
+  STUB_PULL_FAIL=1; export STUB_PULL_FAIL
+  main )
+rc=$?
+is "$rc" "1" "cycle 1: main propagates do_deploy's failure as its own exit code"
+is "$(state_get failed_rev)" "$TARGET" "cycle 1: failed_rev records the exact target that failed"
+is "$(state_get failed_short)" "$TARGET_SHORT" "cycle 1: failed_short matches"
+is "$(state_get last_outcome)" "failed: pull (stack untouched)" "cycle 1: last_outcome explains why"
+pulls_after_1="$(grep -c 'docker pull' "$CALL_LOG")"
+is "$pulls_after_1" "1" "cycle 1: exactly one pull attempt"
+
+status_output="$(cmd_status)"
+case "$status_output" in
+  *"DEPLOY FAILED for target ${TARGET}"*) ok "--status names the failed target plainly" ;;
+  *) bad "--status names the failed target plainly (got: $status_output)" ;;
+esac
+case "$status_output" in
+  *"--clear-failed"*) ok "--status tells the operator the exact command to clear it" ;;
+  *) bad "--status tells the operator the exact command to clear it" ;;
+esac
+
+# Cycle 2: origin/main hasn't moved — same target. The pull would now
+# SUCCEED if attempted (STUB_PULL_FAIL is unset in this subshell): if main()
+# retried, the pull count would grow to 2 and last_outcome would flip to
+# "ok ...". Proving neither happens is exactly what CRITICAL C1 requires —
+# a failed target must not be retried automatically by a later cycle.
+( PATH="$STUBS:$PATH"; export PATH
+  STUB_RUNNING_REV="$FROM_REV"; export STUB_RUNNING_REV
+  main )
+rc=$?
+is "$rc" "0" "cycle 2: main does not treat a skipped retry as a failure"
+is "$(grep -c 'docker pull' "$CALL_LOG")" "$pulls_after_1" "cycle 2: no additional pull attempt — the failed target was not retried"
+is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "cycle 2: deploy.sh still never ran"
+is "$(state_get failed_rev)" "$TARGET" "cycle 2: failed_rev is unchanged — still marked failed"
+is "$(state_get last_outcome)" "failed: pull (stack untouched)" "cycle 2: last_outcome is unchanged, not overwritten"
+
+# A NEWER commit must be unaffected by the marker — proceeding normally is
+# the whole point of the feature. Simulate it by clearing the marker the
+# same way a fix-forward commit would (main() compares failed_rev against
+# the exact target SHA; a new SHA never matches it in the first place), then
+# confirm the operator's explicit escape hatch also works and unblocks the
+# SAME target.
+( PATH="$STUBS:$PATH"; export PATH; main --clear-failed )
+is "$(state_get failed_rev)" "" "--clear-failed empties the marker"
+
+( PATH="$STUBS:$PATH"; export PATH
+  STUB_RUNNING_REV="$FROM_REV"; export STUB_RUNNING_REV
+  main )
+rc=$?
+is "$rc" "0" "cycle 3 (after --clear-failed): the same target now deploys and succeeds"
+case "$(state_get last_outcome)" in
+  "ok ${TARGET_SHORT} at "*) ok "cycle 3: last_outcome reports a clean deploy of the previously-failed target" ;;
+  *) bad "cycle 3: last_outcome reports a clean deploy of the previously-failed target (got '$(state_get last_outcome)')" ;;
+esac
+teardown
+
+printf '\n[test] do_deploy: rollback attempted but not verified when deploy.sh itself fails\n'
+setup_deploy_fixture
+echo app4 > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app4
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+# The exact "|| true"-swallowing case fix round 1 addressed: forward
+# deploy.sh fails (triggering the rollback branch) AND the rollback's own
+# deploy.sh call fails too. Must not read as a clean rollback.
+STUB_PREV_IMAGE=sha256:prev STUB_DEPLOY_FAIL=1 do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when deploy.sh fails on both the forward and rollback attempts"
+case "$(state_get last_outcome)" in
+  "rollback attempted but NOT verified:"*) ok "a failing rollback deploy.sh is reported as unverified, not a clean rollback" ;;
+  *) bad "a failing rollback deploy.sh is reported as unverified, not a clean rollback (got '$(state_get last_outcome)')" ;;
+esac
+is "$(grep -c 'deploy.sh --no-pull' "$CALL_LOG")" "2" "deploy.sh is invoked once forward and once for the attempted rollback"
+teardown
+
+printf '\n[test] do_deploy: backup failure leaves the stack untouched\n'
+setup_deploy_fixture
+echo y > "$DEPLOY_TREE/drizzle/0003_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig2
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+STUB_BACKUP_FAIL=1 do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when the backup fails"
+is "$(state_get last_outcome)" "failed: backup (stack untouched)" "backup failure is recorded"
+is "$(grep -c 'docker compose' "$CALL_LOG")" "0" "migration never runs after a failed backup"
+# I3: pull happens before backup now, so it has already succeeded by the
+# time backup fails. "(stack untouched)" still holds for the RUNNING
+# CONTAINER — deploy.sh, asserted below, is what actually touches it.
+is "$(grep -c 'docker pull' "$CALL_LOG")" "1" "the image was already pulled before backup ran (pull precedes backup)"
+is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "deploy.sh never runs after a failed backup — the running container is untouched"
+teardown
+
+printf '\n[test] do_deploy: pull runs before backup, matching the design order (I3)\n'
+setup_deploy_fixture
+echo y > "$DEPLOY_TREE/drizzle/0004_x.sql"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm mig3
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+STUB_PREV_IMAGE=sha256:prev do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "0" "a full success run (pull, backup, migrate, deploy) reports ok"
+pull_line="$(grep -n 'docker pull' "$CALL_LOG" | head -1 | cut -d: -f1)"
+backup_line="$(grep -n 'backup.sh' "$CALL_LOG" | head -1 | cut -d: -f1)"
+if [ -n "$pull_line" ] && [ -n "$backup_line" ] && [ "$pull_line" -lt "$backup_line" ]; then
+  ok "docker pull is logged before backup.sh, matching the design's pull -> backup -> migrate -> up"
+else
+  bad "docker pull is logged before backup.sh, matching the design's pull -> backup -> migrate -> up (pull at line ${pull_line:-?}, backup at line ${backup_line:-?})"
+fi
+teardown
+
+printf '\n[test] do_deploy: pull failure leaves the stack untouched\n'
+setup_deploy_fixture
+echo app5 > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm app5
+REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$REV")"
+STUB_PULL_FAIL=1 do_deploy "$SHORT" "$REV" "$FROM_REV"
+rc=$?
+is "$rc" "1" "do_deploy returns non-zero when the image pull fails"
+is "$(state_get last_outcome)" "failed: pull (stack untouched)" "pull failure is recorded"
+is "$(grep -c 'docker tag' "$CALL_LOG")" "0" "no tag after a failed pull — stack untouched"
+is "$(grep -c 'deploy.sh' "$CALL_LOG")" "0" "deploy.sh never runs after a failed pull — stack untouched"
+teardown
+
+printf '\n[test] external_check: bounded by a wall-clock deadline, not accumulated sleep\n'
+setup
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+cat > "$STUBS/curl" <<'STUB'
+#!/usr/bin/env bash
+# A backend that never answers quickly: every call takes 2s, and the
+# %{http_code} probe always reports unhealthy, so external_check never
+# succeeds and must eventually give up on its own.
+sleep 2
+case "$*" in
+  *-w*) printf '000' ;;
+  *) printf '{"status":"degraded"}' ;;
+esac
+exit 0
+STUB
+chmod +x "$STUBS/curl"
+PATH="$STUBS:$PATH"; export PATH
+
+# Reproduces the reviewer's exact fix-round-2 repro: INTERVAL=1s, TIMEOUT=3s,
+# each curl call takes 2s. The old accumulated-sleep implementation measured
+# ~8s here because it only counted `sleep` calls toward the budget and never
+# looked at how long curl itself took (three full attempts: 2s curl + 1s
+# sleep, twice, plus a third 2s curl before the counter finally tripped). A
+# wall-clock deadline anchored to $SECONDS bounds this to roughly TIMEOUT
+# plus one in-flight attempt's own duration, however long that turns out to
+# be — not a multiple of it.
+EXTERNAL_CHECK_INTERVAL=1 EXTERNAL_CHECK_TIMEOUT=3
+export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+start=$SECONDS
+external_check
+rc=$?
+elapsed=$((SECONDS - start))
+is "$rc" "1" "external_check still reports failure when the backend never turns healthy"
+if [ "$elapsed" -le 6 ]; then
+  ok "wall-clock bound holds: ${elapsed}s elapsed for a 3s budget with 2s curls (accumulated-sleep code measured ~8s here)"
+else
+  bad "wall-clock bound holds: ${elapsed}s elapsed for a 3s budget with 2s curls (want <= 6s; accumulated-sleep code measured ~8s)"
+fi
+teardown
+
+printf '\n[test] external_check: a zero interval does not busy-spin\n'
+setup
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+ATTEMPT_LOG="${TESTROOT}/attempts.log"; : > "$ATTEMPT_LOG"
+cat > "$STUBS/curl" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+  *-w*) echo x >> "$ATTEMPT_LOG"; printf '000' ;;
+  *) printf '{"status":"degraded"}' ;;
+esac
+exit 0
+STUB
+chmod +x "$STUBS/curl"
+PATH="$STUBS:$PATH"; export PATH
+# EXTERNAL_CHECK_INTERVAL=0 is reachable by configuration (documented as
+# overridable) and, pre-fix, would never advance a sleep-accumulated budget
+# — an unbounded busy loop. The wall-clock deadline (previous test) already
+# bounds total wall time regardless, but a busy-spin still burns CPU making
+# far more attempts than a 1s-floored interval would in the same window: at
+# a genuine 1s floor against a 2s budget, 2-3 curl calls is expected; an
+# unfloored interval=0 would make orders of magnitude more.
+EXTERNAL_CHECK_INTERVAL=0 EXTERNAL_CHECK_TIMEOUT=2
+export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+start=$SECONDS
+external_check
+rc=$?
+elapsed=$((SECONDS - start))
+attempts="$(wc -l < "$ATTEMPT_LOG")"
+is "$rc" "1" "external_check still returns (does not hang) with a zero interval"
+if [ "$elapsed" -le 6 ] && [ "$attempts" -le 6 ]; then
+  ok "a zero interval is floored rather than spun on: ${attempts} attempts in ${elapsed}s for a 2s budget"
+else
+  bad "a zero interval is floored rather than spun on: ${attempts} attempts in ${elapsed}s for a 2s budget (want <= 6 attempts, <= 6s)"
+fi
+teardown
+
+printf '\n[test] external_check: requires both a 200 status AND a healthy body (single curl call, not a pipeline)\n'
+setup
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+# A dedicated stub, independent of setup_deploy_fixture's: this test drives
+# the exact HTTP code and body external_check sees, to prove neither
+# condition alone is sufficient. Mirrors the "\n%{http_code}" shape the real
+# -w format produces so the split-back-apart logic under test is exercised
+# for real, not bypassed.
+cat > "$STUBS/curl" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n%s' "${STUB_HTTP_BODY:-}" "${STUB_HTTP_CODE:-000}"
+exit 0
+STUB
+chmod +x "$STUBS/curl"
+PATH="$STUBS:$PATH"; export PATH
+EXTERNAL_CHECK_INTERVAL=0 EXTERNAL_CHECK_TIMEOUT=0
+export EXTERNAL_CHECK_INTERVAL EXTERNAL_CHECK_TIMEOUT
+
+STUB_HTTP_CODE=200 STUB_HTTP_BODY='{"status":"degraded"}' external_check
+is "$?" "1" "a 200 status with an unhealthy body still fails — status alone is not enough"
+
+STUB_HTTP_CODE=500 STUB_HTTP_BODY='{"status":"healthy"}' external_check
+is "$?" "1" "a healthy body with a non-200 status still fails — body alone is not enough"
+
+STUB_HTTP_CODE=200 STUB_HTTP_BODY='{"status":"healthy"}' external_check
+is "$?" "0" "a 200 status with a healthy body passes"
+teardown
+
+printf '\n[test] main: an unresolvable running revision leaves a stale block in place and logs why\n'
+setup
+ORIGIN="${TESTROOT}/origin.git"
+git init -q --bare "$ORIGIN"
+git -C "$DEPLOY_TREE" init -q
+git -C "$DEPLOY_TREE" config user.email t@example.com
+git -C "$DEPLOY_TREE" config user.name  Test
+git -C "$DEPLOY_TREE" remote add origin "$ORIGIN"
+mkdir -p "$DEPLOY_TREE/app"
+echo base > "$DEPLOY_TREE/app/page.tsx"
+git -C "$DEPLOY_TREE" add -A; git -C "$DEPLOY_TREE" commit -qm base
+git -C "$DEPLOY_TREE" push -q origin HEAD:main
+BLOCKED_REV="$(git -C "$DEPLOY_TREE" rev-parse HEAD)"
+BLOCKED_SHORT="$(git -C "$DEPLOY_TREE" rev-parse --short=7 "$BLOCKED_REV")"
+
+state_set blocked_rev "$BLOCKED_REV"
+state_set blocked_short "$BLOCKED_SHORT"
+state_set blocked_files "infra/docker-compose.yml"
+
+# A running revision this deploy tree has never fetched — a force-push, a
+# pruned branch, or a container built from a commit that never landed here.
+# merge-base cannot be asked about it at all, and that must never be
+# silently treated the same as a resolvable "not yet caught up".
+BOGUS_REV="0123456789abcdef0123456789abcdef01234567"
+
+STUBS="${TESTROOT}/bin"; mkdir -p "$STUBS"
+cat > "$STUBS/docker" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "inspect" ]; then echo "$BOGUS_REV"; exit 0; fi
+# image_exists must report false so main() returns right after the
+# block-staleness check above, before ever reaching gate_blocked_files —
+# keeps this test isolated to the one code path it exercises.
+if [ "\$1" = "manifest" ]; then exit 1; fi
+exit 0
+STUB
+chmod +x "$STUBS/docker"
+
+output="$( PATH="$STUBS:$PATH"; export PATH; main )"
+rc=$?
+is "$rc" "0" "an unresolvable running revision does not crash the cycle"
+is "$(state_get blocked_rev)" "$BLOCKED_REV" "the block is NOT cleared when the running revision cannot be resolved"
+is "$(state_get blocked_short)" "$BLOCKED_SHORT" "blocked_short is likewise left in place"
+is "$(state_get blocked_files)" "infra/docker-compose.yml" "blocked_files is likewise left in place"
+case "$output" in
+  *"cannot tell whether the block on ${BLOCKED_REV} is stale"*"${BOGUS_REV}"*)
+    ok "logs which revision could not be resolved" ;;
+  *)
+    bad "logs which revision could not be resolved (got: $output)" ;;
+esac
+case "$output" in
+  *"clearing the block"*) bad "must not log a clearing message when the block was left in place" ;;
+  *) ok "does not log a clearing message when the block was left in place" ;;
+esac
+teardown
+
+printf '\n[test] summary\n'
+printf '  %d passed, %d failed\n' "$PASS" "$FAIL"
+[ "$FAIL" -eq 0 ]

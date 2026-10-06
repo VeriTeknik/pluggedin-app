@@ -1,3 +1,10 @@
+# Project name is pinned rather than inherited from this file's parent
+# directory. deploy-watch.sh runs compose from a second checkout
+# (/home/pluggedin/deploy-tree); without this, the project identity — and
+# therefore which containers Compose considers "ours" — would depend on the
+# directory a deploy happened to run from.
+name: infra
+
 # Plugged.in production stack.
 #
 # Run with the wrapper:
