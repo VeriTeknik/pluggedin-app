@@ -8,6 +8,7 @@ import { Footer } from '@/components/footer';
 import { LandingNavbar } from '@/components/landing-navbar';
 // Critical above-the-fold component loaded immediately
 import { HeroPluginSection } from '@/components/landing-sections/hero-plugin';
+import { ProjectStatusNotice } from '@/components/landing-sections/project-status-notice';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { MetricsProvider } from '@/contexts/metrics-context';
 
@@ -74,6 +75,7 @@ export default function Home() {
     <MetricsProvider>
       <div className="flex flex-col min-h-screen">
         <LandingNavbar />
+        <ProjectStatusNotice />
         <main className="flex-grow">
           {/* Section 1: Hero — plugin install CTA */}
           <ErrorBoundary sectionName="Hero">

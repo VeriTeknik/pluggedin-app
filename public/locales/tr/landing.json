@@ -992,5 +992,10 @@
       "setupGuide": "Kurulum Kılavuzu",
       "getApiKey": "Ücretsiz API Anahtarı Al"
     }
+  },
+  "projectStatus": {
+    "title": "Proje durumu (Ekim 2026): açık kaynak, topluluk odaklı.",
+    "body": "Barındırılan servis olan plugged.in, ayrı olarak geliştirilen yeni bir platforma taşınıyor. Bu taşınmanın ardından plugged.in artık bu depodan çalışmayacak. Kod mevcut lisansıyla açık kaynak olarak kalıyor ve topluluk onu sürdürmekte özgür: issue'lar, pull request'ler, fork'lar ve yeni bakımcılar memnuniyetle karşılanır; kendi sunucunuzda barındırma desteklenmeye devam ediyor. Geçiş tarihi burada duyurulacak. Geçişle birlikte mevcut servis v1.plugged.in adresine taşınacak ve orada 31 Aralık 2026'ya kadar çalışmaya devam edecek.",
+    "link": "Bu ne anlama geliyor"
   }
 }
