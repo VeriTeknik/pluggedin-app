@@ -1009,5 +1009,10 @@
       "setupGuide": "Setupgids",
       "getApiKey": "Gratis API-sleutel"
     }
+  },
+  "projectStatus": {
+    "title": "Projectstatus (oktober 2026): open source, gedreven door de community.",
+    "body": "plugged.in, de gehoste dienst, verhuist naar een nieuw, afzonderlijk ontwikkeld platform. Na die verhuizing draait plugged.in niet langer op deze repository. De code blijft open source onder de huidige licentie en de community is welkom om het voort te zetten: issues, pull requests, forks en nieuwe maintainers zijn welkom, en self-hosting blijft ondersteund. De overstapdatum wordt hier aangekondigd. Bij de overstap verhuist de huidige dienst naar v1.plugged.in en blijft daar draaien tot 31 december 2026.",
+    "link": "Wat dit betekent"
   }
 }
