@@ -79,5 +79,3 @@ uploads/
 z_reports/
 
 CLAUDE.md
-# Sentry Config File
-.env.sentry-build-plugin

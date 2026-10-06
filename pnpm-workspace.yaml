@@ -167,7 +167,6 @@ allowBuilds:
   bcrypt: true
   esbuild: true
   sharp: true
-  '@sentry/cli': false
   canvas: false
   msw: false
   protobufjs: false
