@@ -5,6 +5,8 @@
 #   infra/scripts/deploy.sh                 # deploy the tag in IMAGE_TAG (or :latest)
 #   IMAGE_TAG=sha-abc123 infra/scripts/deploy.sh
 #   infra/scripts/deploy.sh --no-pull       # use whatever image is already local
+#   infra/scripts/deploy.sh --prepare-only  # decrypt + stage only; no docker calls.
+#                                           # Run at boot by pluggedin-secrets.service
 #
 # Assumes:
 #   - sops (>=3.8) and age (>=1.1) on PATH; GNU coreutils
@@ -49,11 +51,13 @@ SECRETS_DECRYPTED="${RUNTIME_DIR}/secrets.env"
 COMPOSE_FILE="${COMPOSE_FILE:-${INFRA_DIR}/docker-compose.yml}"
 
 PULL=1
+PREPARE_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --no-pull) PULL=0 ;;
+    --prepare-only) PREPARE_ONLY=1 ;;
     -h|--help)
-      sed -n '2,13p' "$0" | sed 's/^# \?//'
+      sed -n '2,15p' "$0" | sed 's/^# \?//'
       exit 0 ;;
     *) echo "deploy.sh: unknown arg: $arg" >&2; exit 2 ;;
   esac
@@ -100,6 +104,16 @@ install_secret_file() {
     return 0
   fi
   CHANGED_SECRETS+=("$dest")
+  # After a reboot /run/sops is empty, and if Docker restarts the stack before
+  # anything has decrypted, it creates every missing bind-mount source as an
+  # empty root-owned DIRECTORY. `cat > dir` would then fail. An empty
+  # directory holds nothing to lose and the 0700 parent is ours, so remove it;
+  # anything non-empty is not ours to guess about.
+  if [ -d "$dest" ]; then
+    rmdir "$dest" 2>/dev/null \
+      || die "${dest} is a non-empty directory where a secret file belongs - inspect and remove it by hand"
+    log "removed stray directory at ${dest} (left by a container start before decrypt)"
+  fi
   chmod u+w "$dest" 2>/dev/null || true
   # `|| copy_status=$?` is load-bearing: under `set -e` a failing cat would
   # otherwise exit here, before KEEP_TMP is set, and the trap would delete the
@@ -122,7 +136,7 @@ install_secret_file() {
 # 1. Preflight
 command -v sops >/dev/null || die "sops not installed"
 command -v age >/dev/null  || die "age not installed"
-command -v docker >/dev/null || die "docker not installed"
+[ "$PREPARE_ONLY" -eq 1 ] || command -v docker >/dev/null || die "docker not installed"
 command -v cmp >/dev/null || die "cmp not installed (diffutils)"
 # Step 5a compares file mtimes with container start times at nanosecond
 # resolution via GNU date (-d / -r / %N).
@@ -265,6 +279,14 @@ for src in "${INFRA_DIR}"/traefik/dynamic/*.yml; do
 done
 [ "$staged" -gt 0 ] || die "no dynamic config staged — Traefik would start with no middlewares"
 log "staged ${staged} dynamic config file(s)"
+
+# Boot path: pluggedin-secrets.service runs this before docker.service, so the
+# containers Docker restarts on its own find their files in place. It must not
+# touch Docker - the daemon is not up yet.
+if [ "$PREPARE_ONLY" -eq 1 ]; then
+  log "prepare-only: secrets and traefik config in place, not touching docker"
+  exit 0
+fi
 
 # 4. Pull image (skip with --no-pull)
 if [ "$PULL" -eq 1 ]; then
